@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!-- This file holds the setup configuration for the portal_skins tool -->
+
+<object name="portal_skins">
+
+  <object name="plone_widgets"
+    meta_type="Filesystem Directory View"
+    directory="plone.widgets:skins/plone_widgets" />
+
+  <skin-path name="*">
+    <layer name="plone_widgets" insert-after="custom" />
+  </skin-path>
+
+</object>
