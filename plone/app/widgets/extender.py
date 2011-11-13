@@ -31,3 +31,15 @@ class WidgetsModifier(object):
                     'allow_sortable': True
                 })
             subject.vocabulary_factory = 'plone.app.vocabularies.Keywords'
+
+        if 'contributors' in schema:
+            contributors_field = schema['contributors']
+            contributors_widget = contributors_field.widget
+            contributors_field.widget = ChosenWidget(
+                label=contributors_widget.label,
+                description=contributors_widget.description,
+                queryView='widget-user-query',
+                js_options={
+                    'allow_sortable': True
+                }
+            )
