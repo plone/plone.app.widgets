@@ -7,7 +7,10 @@
   <five:registerPackage package="." initialize=".initialize" />
 
   <include package="archetypes.schemaextender" />
-  <adapter factory=".extender.WidgetsModifier" />
+  <adapter name="plone.app.widgets.modifier"
+           factory=".extender.WidgetsModifier"
+           for="Products.ATContentTypes.interface.IATContentType"
+           provides="archetypes.schemaextender.interfaces.ISchemaModifier" />
 
   <genericsetup:registerProfile
     name="default"
