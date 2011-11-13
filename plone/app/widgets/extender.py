@@ -27,6 +27,7 @@ class WidgetsModifier(object):
                 description=subject_widget.description,
                 js_options={
                     'allow_add_new': True,
-                    'no_results_text': 'No results. Press enter to add'
+                    'no_results_text': 'No results. Press enter to add',
+                    'allow_sortable': True
                 })
             subject.vocabulary_factory = 'plone.app.vocabularies.Keywords'
