@@ -44,3 +44,13 @@ class WidgetsModifier(object):
                         'allow_sortable': True
                     }
                 )
+        if 'customViewFields' in schema:
+            field = schema['customViewFields']
+            widget = field.widget
+            field.widget = ChosenWidget(
+                label=widget.label,
+                description=widget.description,
+                js_options={
+                    'allow_sortable': True
+                }
+            )
