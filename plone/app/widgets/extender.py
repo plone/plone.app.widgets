@@ -54,3 +54,15 @@ class WidgetsModifier(object):
                     'allow_sortable': True
                 }
             )
+
+        if 'relatedItems' in schema:
+            field = schema['relatedItems']
+            widget = field.widget
+            field.widget = ChosenWidget(
+                label=widget.label,
+                description=widget.description,
+                js_options={
+                    'allow_sortable': True
+                },
+                queryView='widget-catalog-query'
+            )

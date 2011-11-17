@@ -1,3 +1,4 @@
+from Products.CMFCore.utils import getToolByName
 from zope.component import getMultiAdapter
 from Acquisition import aq_inner
 import json
@@ -18,3 +19,12 @@ class UserQuery(BaseQuery):
         results = [search(**{f: query}) for f in _user_search_fields]
         results = searchView.merge(chain(*results), 'userid')
         return json.dumps([(r['userid'], r['description']) for r in results])
+
+
+class CatalogQuery(BaseQuery):
+
+    def __call__(self):
+        catalog = getToolByName(self.context, 'portal_catalog')
+        query = '*%s*' % self.request.get('term', '')
+        results = catalog(SearchableText=query)
+        return json.dumps([(r.UID, r.Title) for r in results])

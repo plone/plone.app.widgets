@@ -28,5 +28,12 @@
     permission="zope2.View"
     layer=".interfaces.ILayer"
     />
+  <browser:page
+    name="widget-catalog-query"
+    for="*"
+    class=".query.CatalogQuery"
+    permission="zope2.View"
+    layer=".interfaces.ILayer"
+    />
 
 </configure>
