@@ -1,4 +1,5 @@
 from plone.widgets.archetypes import ChosenWidget
+from plone.widgets.archetypes import AjaxChosenWidget
 from archetypes.schemaextender.interfaces import ISchemaModifier
 from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 from zope.component import adapts
@@ -36,13 +37,10 @@ class WidgetsModifier(object):
             if fieldname in schema:
                 field = schema[fieldname]
                 widget = field.widget
-                field.widget = ChosenWidget(
+                field.widget = AjaxChosenWidget(
                     label=widget.label,
                     description=widget.description,
-                    queryView='widget-user-query',
-                    js_options={
-                        'allow_sortable': True
-                    }
+                    queryView='widget-user-query'
                 )
         if 'customViewFields' in schema:
             field = schema['customViewFields']
@@ -58,11 +56,8 @@ class WidgetsModifier(object):
         if 'relatedItems' in schema:
             field = schema['relatedItems']
             widget = field.widget
-            field.widget = ChosenWidget(
+            field.widget = AjaxChosenWidget(
                 label=widget.label,
                 description=widget.description,
-                js_options={
-                    'allow_sortable': True
-                },
                 queryView='widget-catalog-query'
             )

@@ -1,7 +1,7 @@
 from Products.CMFCore.utils import getToolByName
+import json
 from zope.component import getMultiAdapter
 from Acquisition import aq_inner
-import json
 from plone.widgets.query import BaseQuery
 from itertools import chain
 
