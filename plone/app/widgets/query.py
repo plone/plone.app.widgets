@@ -1,3 +1,4 @@
+from zope.app.component.hooks import getSite
 from Products.CMFCore.utils import getToolByName
 import json
 from zope.component import getMultiAdapter
@@ -23,8 +24,21 @@ class UserQuery(BaseQuery):
 
 class CatalogQuery(BaseQuery):
 
+    @property
+    def site_path(self):
+        if not hasattr(self, '_site_path'):
+            site = getSite()
+            self._site_path = '/'.join(site.getPhysicalPath())
+        return self._site_path
+
+    def getTitle(self, brain):
+        return "%s %s" % (
+            brain.Title,
+            brain.getPath()[len(self.site_path):]
+        )
+
     def __call__(self):
         catalog = getToolByName(self.context, 'portal_catalog')
         query = '*%s*' % self.request.get('term', '')
         results = catalog(SearchableText=query)
-        return json.dumps([(r.UID, r.Title) for r in results])
+        return json.dumps([(r.UID, self.getTitle(r)) for r in results])
