@@ -1,5 +1,6 @@
 from plone.widgets.archetypes import ChosenWidget
 from plone.widgets.archetypes import AjaxChosenWidget
+from plone.widgets.archetypes import DateChosenWidget
 from archetypes.schemaextender.interfaces import ISchemaModifier
 from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 from zope.component import adapts
@@ -60,4 +61,20 @@ class WidgetsModifier(object):
                 label=widget.label,
                 description=widget.description,
                 queryView='widget-catalog-query'
+            )
+
+        if 'effectiveDate' in schema:
+            field = schema['effectiveDate']
+            widget = field.widget
+            field.widget = DateChosenWidget(
+                label=widget.label,
+                description=widget.description
+            )
+
+        if 'expirationDate' in schema:
+            field = schema['expirationDate']
+            widget = field.widget
+            field.widget = DateChosenWidget(
+                label=widget.label,
+                description=widget.description
             )
