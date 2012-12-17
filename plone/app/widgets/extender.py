@@ -41,7 +41,7 @@ class WidgetsModifier(object):
                 field.widget = AjaxChosenWidget(
                     label=widget.label,
                     description=widget.description,
-                    queryView='widget-user-query'
+                    ajax_rel_url='widget-user-query'
                 )
         if 'customViewFields' in schema:
             field = schema['customViewFields']
@@ -60,7 +60,7 @@ class WidgetsModifier(object):
             field.widget = AjaxChosenWidget(
                 label=widget.label,
                 description=widget.description,
-                queryView='widget-catalog-query'
+                ajax_rel_url='widget-catalog-query'
             )
 
         if 'effectiveDate' in schema:
