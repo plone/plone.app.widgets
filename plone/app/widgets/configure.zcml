@@ -1,39 +1,44 @@
 <configure
     xmlns="http://namespaces.zope.org/zope"
-    xmlns:five="http://namespaces.zope.org/five"
-    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
     xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     i18n_domain="plone.app.widgets">
 
-  <five:registerPackage package="." initialize=".initialize" />
-
-  <include package="archetypes.schemaextender" />
-  <adapter name="plone.app.widgets.modifier"
-           factory=".extender.WidgetsModifier"
-           for="Products.ATContentTypes.interface.IATContentType"
-           provides="archetypes.schemaextender.interfaces.ISchemaModifier" />
-
-  <genericsetup:registerProfile
-    name="default"
-    title="Plone Widgets"
-    directory="profiles/default"
-    description="Better widgets for Plone"
-    provides="Products.GenericSetup.interfaces.EXTENSION"
-  />
+  <browser:resourceDirectory
+    name="plone.app.widgets"
+    directory="resources/build"
+    />
 
   <browser:page
     name="widget-user-query"
     for="*"
     class=".query.UserQuery"
     permission="zope2.View"
-    layer=".interfaces.ILayer"
+    layer=".interfaces.IWidgetsLayer"
     />
+
   <browser:page
     name="widget-catalog-query"
     for="*"
     class=".query.CatalogQuery"
     permission="zope2.View"
-    layer=".interfaces.ILayer"
+    layer=".interfaces.IWidgetsLayer"
+    />
+
+  <!-- Archetypes -->
+  <include
+     zcml:condition="installed Products.Archetypes"
+     package=".at"
+     />
+
+  <!-- default profile -->
+  <genericsetup:registerProfile
+    name="default"
+    title="Plone Widgets"
+    directory="profiles/default"
+    description="Better widgets for Plone"
+    provides="Products.GenericSetup.interfaces.EXTENSION"
     />
 
 </configure>

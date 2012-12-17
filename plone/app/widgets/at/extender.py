@@ -1,21 +1,20 @@
-from plone.widgets.archetypes import ChosenWidget
-from plone.widgets.archetypes import AjaxChosenWidget
-from plone.widgets.archetypes import DateChosenWidget
-from archetypes.schemaextender.interfaces import ISchemaModifier
-from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 from zope.component import adapts
 from zope.interface import implements
 from Products.ATContentTypes.interface import IATContentType
-from plone.app.widgets.interfaces import ILayer
+from archetypes.schemaextender.interfaces import ISchemaModifier
+from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
+from plone.app.widgets.interfaces import IWidgetsLayer
+from plone.app.widgets.at import ChosenWidget
+from plone.app.widgets.at import ChosenAjaxWidget
+from plone.app.widgets.at import BootstrapDatepickerWidget
 
 
-class WidgetsModifier(object):
-    """
-    change any content...
+class ATWidgetsExtender(object):
+    """ change any content...
     """
     implements(ISchemaModifier, IBrowserLayerAwareExtender)
     adapts(IATContentType)
-    layer = ILayer
+    layer = IWidgetsLayer
 
     def __init__(self, context):
         self.context = context
@@ -38,7 +37,7 @@ class WidgetsModifier(object):
             if fieldname in schema:
                 field = schema[fieldname]
                 widget = field.widget
-                field.widget = AjaxChosenWidget(
+                field.widget = ChosenAjaxWidget(
                     label=widget.label,
                     description=widget.description,
                     ajax_rel_url='widget-user-query'
@@ -57,7 +56,7 @@ class WidgetsModifier(object):
         if 'relatedItems' in schema:
             field = schema['relatedItems']
             widget = field.widget
-            field.widget = AjaxChosenWidget(
+            field.widget = ChosenAjaxWidget(
                 label=widget.label,
                 description=widget.description,
                 ajax_rel_url='widget-catalog-query'
@@ -66,7 +65,7 @@ class WidgetsModifier(object):
         if 'effectiveDate' in schema:
             field = schema['effectiveDate']
             widget = field.widget
-            field.widget = DateChosenWidget(
+            field.widget = BootstrapDatepickerWidget(
                 label=widget.label,
                 description=widget.description
             )
@@ -74,7 +73,7 @@ class WidgetsModifier(object):
         if 'expirationDate' in schema:
             field = schema['expirationDate']
             widget = field.widget
-            field.widget = DateChosenWidget(
+            field.widget = BootstrapDatepickerWidget(
                 label=widget.label,
                 description=widget.description
             )

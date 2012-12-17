@@ -27,8 +27,8 @@ setup(
         'setuptools',
     ],
     extras_require={
-        'archetypes': [
-            'archetypes.schemaextender',
+        'test': [
+            'plone.app.testing',
         ]
     },
     entry_points="""

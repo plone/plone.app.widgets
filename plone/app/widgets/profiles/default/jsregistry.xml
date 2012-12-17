@@ -1,17 +1,49 @@
 <?xml version="1.0"?>
 <object name="portal_javascripts">
 
-    <javascript bundle="widgets"
-        id="++resource++plonewidgets/jqueryui-sorting.js" />
-    <javascript bundle="widgets"
-        id="++resource++plonewidgets/chosen.js" />
-    <javascript bundle="widgets"
-        id="++resource++plonewidgets/chosen.ajax.js" />
-    <javascript bundle="widgets"
-        id="++resource++plonewidgets/date.js" />
-    <javascript bundle="widgets"
-        id="++resource++plonewidgets/chosen.date.js" />
-    <javascript bundle="widgets"
-        id="++resource++plonewidgets/chosen.init.js" />
+
+    <!-- ================= External libraries ============================= -->
+
+    <!-- chosen & ajax-chosen -->
+    <javascript 
+        cacheable="False" compression="none" cookable="False"
+        enabled="True" inline="False" bundle="chosen"
+        id="++resource++plone.app.widgets/chosen.js"
+        />
+    <javascript 
+        cacheable="False" compression="none" cookable="False"
+        enabled="True" inline="False" bundle="chosen"
+        id="++resource++plone.app.widgets/chosen.ajax.js"
+        />
+
+    <!-- pickadate -->
+    <javascript 
+        cacheable="False" compression="none" cookable="False"
+        enabled="True" inline="False" bundle="pickadate"
+        id="++resource++plone.app.widgets/pickadate.js"
+        />
+
+
+    <!-- ================= Plone libraries =============================== -->
+
+
+    <!-- registry for plone widgets/patterns -->
+    <javascript
+        cacheable="False" compression="none" cookable="False"
+        enabled="True" inline="False" bundle="widgets"
+        id="++resource++plone.app.widgets/plone.init.js"
+        />
+
+    <!-- plone integration for above listed widgets -->
+    <javascript 
+        cacheable="False" compression="none" cookable="False"
+        enabled="True" inline="False" bundle="widgets"
+        id="++resource++plone.app.widgets/plone.chosen.js"
+        />
+    <javascript 
+        cacheable="False" compression="none" cookable="False"
+        enabled="True" inline="False" bundle="widgets"
+        id="++resource++plone.app.widgets/plone.pickadate.js"
+        />
 
 </object>

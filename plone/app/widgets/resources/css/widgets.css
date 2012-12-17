@@ -1,0 +1,14 @@
+.pickadate__calendar--wrap {
+  max-width: 20em;
+  min-width: 20em;
+}
+.pickadate__holder--opened .pickadate__calendar--wrap {
+  top: 2em;
+}
+.pickadate__day {
+  margin: 0;
+  padding: 0.25em;
+}
+.plone-calendar > span {
+  vertical-align: middle;
+}

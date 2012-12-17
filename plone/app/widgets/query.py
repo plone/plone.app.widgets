@@ -1,19 +1,25 @@
-try:
-    from zope.app.component.hooks import getSite
-except ImportError:
-    from zope.component.hooks import getSite
-from Products.CMFCore.utils import getToolByName
 import json
+from itertools import chain
+from zope.interface import implements
 from zope.component import getMultiAdapter
 from Acquisition import aq_inner
-from plone.widgets.query import BaseQuery
-from itertools import chain
+from Products.Five import BrowserView
+from Products.CMFCore.utils import getToolByName
+from plone.app.widgets.interfaces import IQueryResult
+
+try:
+    from zope.app.component.hooks import getSite
+    assert getSite
+except ImportError:
+    from zope.component.hooks import getSite
 
 
 _user_search_fields = ['login', 'fullname', 'email']
 
 
-class UserQuery(BaseQuery):
+class UserQuery(BrowserView):
+
+    implements(IQueryResult)
 
     def __call__(self):
         searchView = getMultiAdapter((aq_inner(self.context), self.request),
@@ -25,7 +31,9 @@ class UserQuery(BaseQuery):
         return json.dumps([(r['userid'], r['description']) for r in results])
 
 
-class CatalogQuery(BaseQuery):
+class CatalogQuery(BrowserView):
+
+    implements(IQueryResult)
 
     @property
     def site_path(self):
