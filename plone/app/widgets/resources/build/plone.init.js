@@ -25,6 +25,39 @@
 // this program; if not, write to the Free Software Foundation, Inc., 51
 // Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
+
 /*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true,
   newcap:true, noarg:true, noempty:true, nonew:true, plusplus:true,
-  undef:true, strict:true, trailing:true, browser:true, evil:true *//*global jQuery:false */(function(e,t){"use strict";e.plone=e.plone||{},e.plone.init=e.plone.init||{_items:[]},e.plone.init.register=function(t){e.plone.init._items.push(t)},e.fn.ploneInit=function(){var t=this;e.each(e.plone.init._items,function(e,n){n.apply(t,[t])})},e(document).ready(function(){e(document).ploneInit()})})(window.jQuery);
+  undef:true, strict:true, trailing:true, browser:true, evil:true */
+/*global jQuery:false */
+
+
+(function($, undefined) {
+"use strict";
+
+// Namespace
+$.plone = $.plone || {};
+$.plone.init = $.plone.init || { _items: [] };
+
+
+// Register
+$.plone.init.register = function(callback) {
+  $.plone.init._items.push(callback);
+};
+
+
+// jQuery Integration
+$.fn.ploneInit = function() {
+  var self = this;
+  $.each($.plone.init._items, function(i, callable) {
+    callable.apply(self, [ self ]);
+  });
+};
+
+
+// Initial initialization
+$(document).ready(function() {
+  $(document).ploneInit();
+});
+
+}(window.jQuery));

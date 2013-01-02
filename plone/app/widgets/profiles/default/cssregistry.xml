@@ -4,7 +4,7 @@
     <stylesheet
         cacheable="False" compression="none" cookable="True"
         enabled="True" bundle="chosen"
-        id="++resource++plone.app.widgets/chosen.css"
+        id="++resource++plone.app.widgets/textext.css"
         />
 
     <stylesheet

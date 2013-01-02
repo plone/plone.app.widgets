@@ -4,3 +4,6 @@
 [submodule "plone/app/widgets/resources/lib/pickadate"]
 	path = plone/app/widgets/resources/lib/pickadate
 	url = git://github.com/amsul/pickadate.js.git
+[submodule "plone/app/widgets/resources/lib/jquery-textext"]
+	path = plone/app/widgets/resources/lib/jquery-textext
+	url = git://github.com/alexgorbatchev/jquery-textext.git

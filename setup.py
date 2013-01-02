@@ -29,10 +29,13 @@ setup(
     extras_require={
         'test': [
             'plone.app.testing',
-        ]
+        ],
+        'archetypes': [
+            'archetypes.schemaextender',
+        ],
     },
     entry_points="""
     [z3c.autoinclude.plugin]
-    target = plone
+    target = plone,
     """,
 )

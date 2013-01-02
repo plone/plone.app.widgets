@@ -10,7 +10,7 @@
     directory="resources/build"
     />
 
-  <browser:page
+  <!--browser:page
     name="widget-user-query"
     for="*"
     class=".query.UserQuery"
@@ -24,11 +24,10 @@
     class=".query.CatalogQuery"
     permission="zope2.View"
     layer=".interfaces.IWidgetsLayer"
-    />
+    /-->
 
   <!-- Archetypes -->
-  <include
-     zcml:condition="installed Products.Archetypes"
+  <include zcml:condition="installed archetypes.schemaextender"
      package=".at"
      />
 

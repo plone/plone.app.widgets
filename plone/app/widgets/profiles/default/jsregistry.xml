@@ -4,16 +4,11 @@
 
     <!-- ================= External libraries ============================= -->
 
-    <!-- chosen & ajax-chosen -->
+    <!-- textext -->
     <javascript 
         cacheable="False" compression="none" cookable="False"
         enabled="True" inline="False" bundle="chosen"
-        id="++resource++plone.app.widgets/chosen.js"
-        />
-    <javascript 
-        cacheable="False" compression="none" cookable="False"
-        enabled="True" inline="False" bundle="chosen"
-        id="++resource++plone.app.widgets/chosen.ajax.js"
+        id="++resource++plone.app.widgets/textext.js"
         />
 
     <!-- pickadate -->
@@ -38,12 +33,12 @@
     <javascript 
         cacheable="False" compression="none" cookable="False"
         enabled="True" inline="False" bundle="widgets"
-        id="++resource++plone.app.widgets/plone.chosen.js"
+        id="++resource++plone.app.widgets/plone.widget.autocomplete.js"
         />
     <javascript 
         cacheable="False" compression="none" cookable="False"
         enabled="True" inline="False" bundle="widgets"
-        id="++resource++plone.app.widgets/plone.pickadate.js"
+        id="++resource++plone.app.widgets/plone.widget.calendar.js"
         />
 
 </object>

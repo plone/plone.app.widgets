@@ -1,18 +1,21 @@
 <configure
     xmlns="http://namespaces.zope.org/zope"
     xmlns:cmf="http://namespaces.zope.org/cmf"
-    xmlns:monkey="http://namespaces.plone.org/monkey"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="plone.app.widgets">
-
-  <include package="collective.monkeypatcher" />
 
   <cmf:registerDirectory name="plone_widgets" />
 
-  <!--monkey:patch
-    description="replace CalendarWidget"
-    class="Products.Archetypes.Widget"
-    original="CalendarWidget"
-    replacement=".calendar.CalendarWidget"
-    /-->
+  <include package="archetypes.schemaextender" />
+
+  <adapter
+     name="plone.app.widgets"
+     factory=".ATWidgetsExtender"
+     for="Products.ATContentTypes.interface.IATContentType"
+     provides="archetypes.schemaextender.interfaces.ISchemaModifier"
+     />
 
 </configure>
