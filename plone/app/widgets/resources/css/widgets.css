@@ -23,9 +23,8 @@
 }
 #content textarea#subject-tags {
   width: 400px;
-  font-size: 13px;
+  height: 25px;
+  font: 11px/13px "lucida grande",tahoma,verdana,arial,sans-serif;
   font-weight: normal;
-  line-height: 7px;
-  font-family: "lucida grande",tahoma,verdana,arial,sans-serif;
   overflow: hidden;
 }

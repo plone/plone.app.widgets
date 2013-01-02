@@ -63,7 +63,10 @@ Autocomplete.prototype = {
     self.$el = $el;
     self.prefix = 'autocomplete';
     self.options = $.extend(getOptions($el, this.prefix), options);
-    self.$el.css('height', '22px');
+    // FIXME: there is a bug in textext that reuqires textarea to be visible so
+    // wrappers height is set according to textarea ... for now we manually set
+    // this which probably now how it should be
+    self.$el.css('height', '35px');
     self.$el.textext({
       plugins: self.options.plugins
     });
