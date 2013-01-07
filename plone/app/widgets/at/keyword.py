@@ -15,6 +15,7 @@ class KeywordWidget(Base):
     security = ClassSecurityInfo()
 
     security.declarePublic('process_form')
+
     def process_form(self, instance, field, form, empty_marker=None,
                      emptyReturnsMarker=False, validating=True):
         fieldName = field.getName()

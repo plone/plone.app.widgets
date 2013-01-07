@@ -65,4 +65,3 @@ class ATWidgetsExtender(object):
         #        description=widget.description,
         #        ajax_rel_url='widget-catalog-query'
         #    )
-
