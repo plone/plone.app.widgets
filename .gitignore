@@ -1,4 +1,7 @@
 *.py?
 *.sw?
 
+/.installed.cfg
 /plone.app.widgets.egg-info/
+/bin/
+/parts/

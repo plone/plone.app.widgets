@@ -1,0 +1,10 @@
+language: python
+python:
+  - 2.7
+before_install:
+install:
+  - python bootstrap.py
+  - bin/buildout -c buildout.cfg -q
+script:
+  - bin/flake8 setup.py
+  - bin/flake8 plone
