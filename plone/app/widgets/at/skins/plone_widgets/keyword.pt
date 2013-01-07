@@ -40,7 +40,12 @@
 
       <textarea row="1" data-pattern="autocomplete"
         data-autocomplete-plugins="arrow autocomplete focus tags"
-        tal:attributes="id string:$fieldName-tags">
+        data-autocomplete-prompt="Add tag..."
+        tal:content="python:'\n'.join(accessor())"
+        tal:attributes="
+          data-autocomplete-ajaxurl string:${portal_url}/@@sources?name=${widget/vocabulary};
+          name string:$fieldName;
+          id string:$fieldName">
       </textarea>
 
     </tal:define>

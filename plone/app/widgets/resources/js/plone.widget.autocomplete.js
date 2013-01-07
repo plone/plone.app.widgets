@@ -47,7 +47,17 @@ function getOptions($el, prefix, options) {
   if($el.length) {
     $.each($el[0].attributes, function(index, attr) {
       if (attr.name.substr(0, ('data-'+prefix).length) === 'data-'+prefix) {
-        options[attr.name.substr(('data-'+prefix).length+1)] = attr.value;
+        var attrName = attr.name.substr(('data-'+prefix).length+1);
+        switch (attr.value) {
+          case 'true':
+            options[attrName] = true;
+            break;
+          case 'false':
+            options[attrName] = false;
+            break;
+          default:
+            options[attrName] = attr.value;
+        }
       }
     });
   }
@@ -58,18 +68,37 @@ function getOptions($el, prefix, options) {
 var Autocomplete = function($el, options) { this.init($el, options); };
 Autocomplete.prototype = {
   constructor: Autocomplete,
+  prefix: 'autocomplete',
+  defaults: {
+    prompt: '...',
+    ajaxdatatype: 'json',
+    ajaxcacheresults: 'true'
+  },
   init: function($el, options) {
     var self = this;
     self.$el = $el;
-    self.prefix = 'autocomplete';
-    self.options = $.extend(getOptions($el, this.prefix), options);
+    self.options = $.extend(self.defaults, getOptions($el, self.prefix), options);
+    var textextOptions = {
+      tagsItems: self.$el.val().split("\n"),
+      plugins: self.options.plugins,
+      prompt: self.options.prompt
+    };
+    if (self.options.ajaxurl) {
+      $.extend(textextOptions, {
+        ajax : {
+          url: self.options.ajaxurl,
+          dataType: self.options.ajaxdatatype,
+          cacheResults:  self.options.ajaxcacheresults
+        }
+      });
+    }
+    self.$el.val('');
+
     // FIXME: there is a bug in textext that reuqires textarea to be visible so
     // wrappers height is set according to textarea ... for now we manually set
     // this which probably now how it should be
     self.$el.css('height', '35px');
-    self.$el.textext({
-      plugins: self.options.plugins
-    });
+    self.$el.textext(textextOptions);
     self.$el.css('height', 'auto');
   }
 };

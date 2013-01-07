@@ -25,6 +25,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'plone.app.vocabularies',
     ],
     extras_require={
         'test': [
@@ -36,6 +37,6 @@ setup(
     },
     entry_points="""
     [z3c.autoinclude.plugin]
-    target = plone,
+    target = plone
     """,
 )

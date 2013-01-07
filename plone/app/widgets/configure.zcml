@@ -10,21 +10,13 @@
     directory="resources/build"
     />
 
-  <!--browser:page
-    name="widget-user-query"
+  <browser:page
+    name="sources"
     for="*"
-    class=".query.UserQuery"
+    class=".query.SourcesView"
     permission="zope2.View"
     layer=".interfaces.IWidgetsLayer"
     />
-
-  <browser:page
-    name="widget-catalog-query"
-    for="*"
-    class=".query.CatalogQuery"
-    permission="zope2.View"
-    layer=".interfaces.IWidgetsLayer"
-    /-->
 
   <!-- Archetypes -->
   <include zcml:condition="installed archetypes.schemaextender"
