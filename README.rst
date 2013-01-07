@@ -2,39 +2,39 @@
 the widgets of some of the fields in plone.
 
 
-Used Libraries
-==============
-
- - Chosen
- - Chosen with drag n drop sorting
- - Chosen with ajax
- - Chosen with date/time
+.. image:: https://travis-ci.org/plone/plone.app.widgets.png?branch=master
 
 
-Fields overridden 
-=================
+Introduction
+============
 
- - tag widget with auto-complete, sortable Chosen widget
- - contributors, creators with Chosen ajax widget
- - collection field selector with sortable Chosen widget
- - related items with ajax Chosen widget
+TODO: explain plone.init.js and how to register a widget
 
 
-Roadmap
+Widgets
 =======
 
-0.5
----
+List of widgets this package provides.
 
-All archetypes archetypes mult-select widgets overriden and date/time widgets
+CalendarWidget
+--------------
 
-0.9
----
+`pickadate.js`_
 
-z3cform widgets overridden
 
-1.0
----
+AutocompleteWidget
+------------------
 
-formlib widgets done
+`textext.js`_
 
+
+Fields overridden
+=================
+
+ - ``effectiveDate`` field with CalendarWidget
+ - ``expirationDate`` field with CalendatWidget
+ - ``subject`` field with AutocompleteWidget
+
+
+.. _`pickadate.js`: http://amsul.github.com/pickadate.js
+.. _`textext.js`: http://textextjs.com
