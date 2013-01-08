@@ -19,6 +19,9 @@ class PatternsWidget(TypesWidget):
         if value is None:
             value = ''
 
+        if hasattr(self, 'formatAccessor'):
+            value = self.formatAccessor(value)
+
         el = etree.Element('input')
         el.attrib['type'] = 'text'
         el.attrib['name'] = field.getName()

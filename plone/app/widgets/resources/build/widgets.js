@@ -6857,7 +6857,7 @@ var Calendar = Patterns.Base.extend({
     klassWrapper: 'pattern-calendar',
     klassIcon: 'pattern-calendar-icon',
     format: 'd-mmmm-yyyy@HH:MM',
-    formatSubmit: 'yyyy-mm-dd HH:MM',
+    formatSubmit: 'yyyy-m-d H:M',
     showAMPM: true,
     AMPM: ['AM', 'PM'],
     minuteStep: '5'
@@ -6884,7 +6884,8 @@ var Calendar = Patterns.Base.extend({
           self.$months.val(),
           self.$days.val(),
           self.$hours.val(),
-          self.$minutes.val()
+          self.$minutes.val(),
+          self.$ampm.val()
         );
       }
     });
@@ -6914,7 +6915,8 @@ var Calendar = Patterns.Base.extend({
         self.$months.val(),
         self.$days.val(),
         self.$hours.val(),
-        self.$minutes.val()
+        self.$minutes.val(),
+        self.$ampm.val()
       );
     }
 
@@ -6963,12 +6965,33 @@ var Calendar = Patterns.Base.extend({
       self.$wrapper.append($item);
     });
 
-    self.$ampm = $('<select/>').append(self._getAMPM());
+    self.$ampm = $('<select/>')
+      .append(self._getAMPM())
+      .on('change', changePickadateDate);
     if (self.options.showAMPM) {
       self.$wrapper.append($('<span> </span>'));
       self.$wrapper.append(self.$ampm);
     }
 
+    // populate dropdowns and calendar
+    // TODO: should be done with self._strtime
+    if (self.$el.val() !== '') {
+      var tmp = self.$el.val().split(' '),
+          date = tmp[0].split('-'),
+          time = tmp[1].split(':'),
+          ampm = (parseInt(time[0], 10) >= 12) && 'PM' || 'AM';
+      time[0] -= (parseInt(time[0], 10) >= 12) && 12 || 0;
+      self.setDate(
+          date[0], date[1], date[2],
+          time[0], time[1], ampm
+          );
+      self.$years.val('' + parseInt(date[0], 10));
+      self.$months.val('' + parseInt(date[1], 10));
+      self.$days.val('' + parseInt(date[2], 10));
+      self.$hours.val('' + parseInt(time[0], 10));
+      self.$minutes.val('' + parseInt(time[1], 10));
+      self.$ampm.val(ampm);
+    }
   },
   _strftime: function(format, action, options) {
     var self = this, result = [];
@@ -7140,7 +7163,7 @@ var Calendar = Patterns.Base.extend({
     }
     return $el;
   },
-  setDate: function(year, month, day, hour, minutes) {
+  setDate: function(year, month, day, hour, minutes, ampm) {
      var self = this;
      self._rawDate = undefined;
      self.$el.attr('value', '');
@@ -7153,7 +7176,7 @@ var Calendar = Patterns.Base.extend({
          parseInt(year, 10),
          parseInt(month, 10),
          parseInt(day, 10),
-         parseInt(hour, 10),
+         parseInt(hour, 10) + (ampm === 'PM' && 12 || 0),
          parseInt(minutes, 10)
          );
        self.$el.attr('value', self.getDate(self.options.formatSubmit));

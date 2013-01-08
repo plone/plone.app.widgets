@@ -24,12 +24,12 @@ class ATWidgetsExtender(object):
         for field in schema.fields():
             old = field.widget
 
-            if field.__name__ == 'subject':
-                field.widget = KeywordWidget(
-                    label=old.label,
-                    description=old.description,
-                    vocabulary_factory='plone.app.vocabularies.Keywords',
-                )
+            #if field.__name__ == 'subject':
+            #    field.widget = KeywordWidget(
+            #        label=old.label,
+            #        description=old.description,
+            #        vocabulary_factory='plone.app.vocabularies.Keywords',
+            #    )
 
             if field.__name__ in ['effectiveDate', 'expirationDate']:
                 field.widget = CalendarWidget(
