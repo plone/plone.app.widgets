@@ -3,20 +3,8 @@
 
     <stylesheet
         cacheable="False" compression="none" cookable="True"
-        enabled="True" bundle="chosen"
-        id="++resource++plone.app.widgets/textext.css"
-        />
-
-    <stylesheet
-        cacheable="False" compression="none" cookable="True"
-        enabled="True" bundle="chosen"
-        id="++resource++plone.app.widgets/pickadate.css"
-        />
-
-    <stylesheet
-        cacheable="False" compression="none" cookable="True"
         enabled="True" bundle="widgets"
-        id="++resource++plone.app.widgets/widgets.css"
+        id="++resource++plone.app.widgets.css"
         />
 
 </object>

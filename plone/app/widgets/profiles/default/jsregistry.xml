@@ -1,44 +1,10 @@
 <?xml version="1.0"?>
 <object name="portal_javascripts">
 
-
-    <!-- ================= External libraries ============================= -->
-
-    <!-- textext -->
-    <javascript 
-        cacheable="False" compression="none" cookable="False"
-        enabled="True" inline="False" bundle="chosen"
-        id="++resource++plone.app.widgets/textext.js"
-        />
-
-    <!-- pickadate -->
-    <javascript 
-        cacheable="False" compression="none" cookable="False"
-        enabled="True" inline="False" bundle="pickadate"
-        id="++resource++plone.app.widgets/pickadate.js"
-        />
-
-
-    <!-- ================= Plone libraries =============================== -->
-
-
-    <!-- registry for plone widgets/patterns -->
     <javascript
         cacheable="False" compression="none" cookable="False"
         enabled="True" inline="False" bundle="widgets"
-        id="++resource++plone.app.widgets/plone.init.js"
-        />
-
-    <!-- plone integration for above listed widgets -->
-    <javascript 
-        cacheable="False" compression="none" cookable="False"
-        enabled="True" inline="False" bundle="widgets"
-        id="++resource++plone.app.widgets/plone.widget.autocomplete.js"
-        />
-    <javascript 
-        cacheable="False" compression="none" cookable="False"
-        enabled="True" inline="False" bundle="widgets"
-        id="++resource++plone.app.widgets/plone.widget.calendar.js"
+        id="++resource++plone.app.widgets.js"
         />
 
 </object>

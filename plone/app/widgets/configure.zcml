@@ -5,25 +5,35 @@
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     i18n_domain="plone.app.widgets">
 
-  <browser:resourceDirectory
-    name="plone.app.widgets"
-    directory="resources/build"
+  <browser:resource
+    name="plone.app.widgets.css"
+    file="resources/build/widgets.css"
+    layer=".interfaces.IWidgetsLayer"
+    />
+
+  <browser:resource
+    name="plone.app.widgets.js"
+    file="resources/build/widgets.js"
+    layer=".interfaces.IWidgetsLayer"
+    />
+
+  <browser:resource
+    name="plone.app.widgets.png"
+    file="resources/build/widgets.png"
+    layer=".interfaces.IWidgetsLayer"
     />
 
   <browser:page
-    name="sources"
+    name="vocabularies"
     for="*"
     class=".query.SourcesView"
     permission="zope2.View"
     layer=".interfaces.IWidgetsLayer"
     />
 
-  <!-- Archetypes -->
-  <include zcml:condition="installed archetypes.schemaextender"
-     package=".at"
-     />
+  <include zcml:condition="installed archetypes.schemaextender" package=".at" />
+  <!--include zcml:condition="installed plone.app.dexterity" package=".dx" /-->
 
-  <!-- default profile -->
   <genericsetup:registerProfile
     name="default"
     title="Plone Widgets"

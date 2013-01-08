@@ -1,9 +1,12 @@
-from Products.Archetypes.Widget import CalendarWidget as Base
+from plone.app.widgets.at.base import PatternsWidget
 
 
-class CalendarWidget(Base):
-    _properties = Base._properties.copy()
+class CalendarWidget(PatternsWidget):
+    _properties = PatternsWidget._properties.copy()
     _properties.update({
-        'helper_js': (),
-        'helper_css': (),
+        'pattern': 'calendar',
+        'pattern_options': {},
+        'pattern_extra_options': {
+            'pickadate': {}
+        },
     })
