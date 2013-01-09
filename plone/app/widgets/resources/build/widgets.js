@@ -6770,7 +6770,7 @@ function registerPattern(Pattern) {
 
 // Base Pattern
 var BasePattern = function($el, options) {
-  this.$el = $el;
+  this.$el = $el.addClass('pattern-' + this.name);
   this.options = options;
   if (this.init) {
     this.init();
@@ -7345,8 +7345,8 @@ var Autocomplete = Patterns.Base.extend({
   name: 'autocomplete',
   jqueryPlugin: 'patternAutocomplete',
   defaults: {
-    plugins: 'autocomplete tags ajax prompt focus',
-    prompt: '...',
+    plugins: 'autocomplete tags ajax prompt focus arrow',
+    'prompt': '...',
     ajaxDataType: 'json',
     ajaxCacheResults: true
   },
@@ -7356,9 +7356,9 @@ var Autocomplete = Patterns.Base.extend({
     self.options = $.extend({}, self.defaults, self.options);
 
     self.textextOptions = {
-      tagsItems: self.$el.val().split("\n"),
+      tagsItems: JSON.parse(self.$el.val()),
       plugins: self.options.plugins,
-      prompt: self.options.prompt,
+      'prompt': self.options['prompt'],
       ext: {
         core: {
           onSetFormData: function(e, data) {
@@ -7403,13 +7403,12 @@ var Autocomplete = Patterns.Base.extend({
     }
     self.$el.val('');
 
-    // FIXME: there is a bug in textext that reuqires textarea to be visible so
-    // wrappers height is set according to textarea ... for now we manually set
-    // this which probably now how it should be
-    self.$el.css('height', '35px');
-    self.$el.css('width', '320px');
+    var visible = self.$el.is(':visible');
+    if (!visible) { self.$el.parents(':hidden').last().show(); }
     self.$el.textext(self.textextOptions);
-    self.$el.css('height', 'auto');
+    if (!visible) { self.$el.parents(':hidden').last().hide(); }
+
+
 
     self._textext = self.$el.textext()[0];
 

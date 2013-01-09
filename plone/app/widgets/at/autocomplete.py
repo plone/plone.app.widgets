@@ -6,7 +6,6 @@ from plone.app.widgets.at.base import PatternsWidget
 class AutocompleteWidget(PatternsWidget):
     _properties = PatternsWidget._properties.copy()
     _properties.update({
-        'input_type': 'textarea',
         'pattern': 'autocomplete',
         'pattern_options': {
             'prompt': 'Add tag...',
@@ -18,7 +17,7 @@ class AutocompleteWidget(PatternsWidget):
     })
 
     def formatAccessor(self, value):
-        return '\n'.join(value)
+        return json.dumps(value)
 
     def getAjaxUrl(self, context, request, field):
         state = getMultiAdapter((context, request), name=u'plone_portal_state')
