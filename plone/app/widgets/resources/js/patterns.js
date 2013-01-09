@@ -104,7 +104,7 @@ function registerPattern(Pattern) {
 
 // Base Pattern
 var BasePattern = function($el, options) {
-  this.$el = $el;
+  this.$el = $el.addClass('pattern-' + this.name);
   this.options = options;
   if (this.init) {
     this.init();
