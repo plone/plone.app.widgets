@@ -24,9 +24,9 @@
     />
 
   <browser:page
-    name="vocabularies"
+    name="autocomplete"
     for="*"
-    class=".query.SourcesView"
+    class=".autocomplete.AutocompleteView"
     permission="zope2.View"
     layer=".interfaces.IWidgetsLayer"
     />

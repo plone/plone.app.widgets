@@ -6,6 +6,7 @@ class PatternsWidget(TypesWidget):
     _properties = TypesWidget._properties.copy()
     _properties.update({
         'macro': "patterns_widgets",
+        'input_type': 'input',
         'pattern': '',
         'pattern_options': {},
         'pattern_extra_options': {},
@@ -22,15 +23,24 @@ class PatternsWidget(TypesWidget):
         if hasattr(self, 'formatAccessor'):
             value = self.formatAccessor(value)
 
-        el = etree.Element('input')
-        el.attrib['type'] = 'text'
+        el = etree.Element(self.input_type)
         el.attrib['name'] = field.getName()
-        el.attrib['value'] = value
+
+        if self.input_type == 'input':
+            el.attrib['type'] = 'text'
+            el.attrib['value'] = value
+        elif self.input_type == 'textarea':
+            el.text = value
 
         if self.pattern:
             el.attrib['data-pattern'] = self.pattern
             for option_name, options_value in self.pattern_options.items():
                 attrib_name = 'data-%s-%s' % (self.pattern, option_name)
+                if options_value.startswith('!'):
+                    options_value = getattr(self, options_value[1:])
+                    if callable(options_value):
+                        options_value = options_value(context, request, field)
+
                 el.attrib[attrib_name] = options_value
             for pattern_name in self.pattern_extra_options.keys():
                 for option_name, options_value in \

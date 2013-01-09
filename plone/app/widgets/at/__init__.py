@@ -5,7 +5,7 @@ from archetypes.schemaextender.interfaces import ISchemaModifier
 from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 
 from plone.app.widgets.interfaces import IWidgetsLayer
-from plone.app.widgets.at.keyword import KeywordWidget
+from plone.app.widgets.at.autocomplete import AutocompleteWidget
 from plone.app.widgets.at.calendar import CalendarWidget
 
 
@@ -24,12 +24,12 @@ class ATWidgetsExtender(object):
         for field in schema.fields():
             old = field.widget
 
-            #if field.__name__ == 'subject':
-            #    field.widget = KeywordWidget(
-            #        label=old.label,
-            #        description=old.description,
-            #        vocabulary_factory='plone.app.vocabularies.Keywords',
-            #    )
+            if field.__name__ == 'subject':
+                field.widget = AutocompleteWidget(
+                    label=old.label,
+                    description=old.description,
+                    vocabulary_factory='plone.app.vocabularies.Keywords',
+                )
 
             if field.__name__ in ['effectiveDate', 'expirationDate']:
                 field.widget = CalendarWidget(
