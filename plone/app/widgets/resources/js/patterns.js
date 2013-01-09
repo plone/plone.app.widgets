@@ -51,7 +51,13 @@ function getOptions($el, prefix, options) {
   if($el.length) {
     $.each($el[0].attributes, function(index, attr) {
       if (attr.name.substr(0, ('data-'+prefix).length) === 'data-'+prefix) {
-        options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = attr.value;
+        if (attr.value === 'true') {
+          options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = true;
+        } else if (attr.value === 'false') {
+          options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = false;
+        } else {
+          options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = attr.value;
+        }
       }
     });
   }
