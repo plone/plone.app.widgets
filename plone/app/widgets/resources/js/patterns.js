@@ -51,7 +51,7 @@ function getOptions($el, prefix, options) {
   if($el.length) {
     $.each($el[0].attributes, function(index, attr) {
       if (attr.name.substr(0, ('data-'+prefix).length) === 'data-'+prefix) {
-        options[attr.name.substr(('data-'+prefix).length+1)] = attr.value;
+        options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = attr.value;
       }
     });
   }

@@ -3,8 +3,7 @@
 // Author: Rok Garbas
 // Contact: rok@garbas.si
 // Version: 1.0
-// Depends:
-//    ++resource++plone.app.jquery.js
+// Depends: jquery.js patterns.js pickadate.js
 //
 // Description:
 //

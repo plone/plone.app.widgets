@@ -6,7 +6,7 @@ class CalendarWidget(PatternsWidget):
     _properties.update({
         'pattern': 'calendar',
         'pattern_options': {
-            'formatSubmit': 'yyyy-m-d H:M',
+            'format-submit': 'yyyy-m-d H:M',
         },
         'pattern_extra_options': {
             'pickadate': {}
