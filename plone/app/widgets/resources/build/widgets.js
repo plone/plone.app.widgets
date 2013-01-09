@@ -6717,7 +6717,13 @@ function getOptions($el, prefix, options) {
   if($el.length) {
     $.each($el[0].attributes, function(index, attr) {
       if (attr.name.substr(0, ('data-'+prefix).length) === 'data-'+prefix) {
-        options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = attr.value;
+        if (attr.value === 'true') {
+          options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = true;
+        } else if (attr.value === 'false') {
+          options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = false;
+        } else {
+          options[$.camelCase(attr.name.substr(('data-'+prefix).length+1))] = attr.value;
+        }
       }
     });
   }
@@ -7341,12 +7347,14 @@ AutocompleteItemManager.prototype = {
   }
 };
 
+
 var Autocomplete = Patterns.Base.extend({
   name: 'autocomplete',
   jqueryPlugin: 'patternAutocomplete',
   defaults: {
+    createItems: true,
     plugins: 'autocomplete tags ajax prompt focus arrow',
-    'prompt': '...',
+    'prompt': 'Add...',
     ajaxDataType: 'json',
     ajaxCacheResults: true
   },
@@ -7356,6 +7364,7 @@ var Autocomplete = Patterns.Base.extend({
     self.options = $.extend({}, self.defaults, self.options);
 
     self.textextOptions = {
+      itemManager: AutocompleteItemManager,
       tagsItems: JSON.parse(self.$el.val()),
       plugins: self.options.plugins,
       'prompt': self.options['prompt'],
@@ -7372,7 +7381,7 @@ var Autocomplete = Patterns.Base.extend({
           onSetSuggestions: function(e, data) {
             var suggestions = [],
                 old_suggestions = this._suggestions = data.result,
-                existing = JSON.parse(self._textext.hiddenInput().val());
+                existing = JSON.parse(self.$el.textext()[0].hiddenInput().val());
 
             $.each(old_suggestions, function(i, item) {
               if ($.inArray(item, existing) === -1) {
@@ -7385,12 +7394,23 @@ var Autocomplete = Patterns.Base.extend({
               this.trigger(suggestions === null || suggestions.length === 0 ? 'hideDropdown': 'showDropdown');
             }
           }
+        },
+        tags: {
+          onIsTagAllowed: function(e, data) {
+            data.result = false;
+            if (this.isValueAllowed(data.tag) &&
+                $.inArray(data.tag.trim(), JSON.parse(self.$el.textext()[0].hiddenInput().val())) !== -1) {
+              data.result = true;
+              if (!self.options.createItems && $.inArray(data.tag, this._suggestions) !== 1) {
+                data.result = false;
+              }
+            }
+          }
         }
       }
     };
     if (self.options.ajaxUrl) {
       $.extend(self.textextOptions, {
-        itemManager: AutocompleteItemManager,
         ajax : {
           url: self.options.ajaxUrl,
           dataType: self.options.ajaxDataType,
@@ -7407,17 +7427,6 @@ var Autocomplete = Patterns.Base.extend({
     if (!visible) { self.$el.parents(':hidden').last().show(); }
     self.$el.textext(self.textextOptions);
     if (!visible) { self.$el.parents(':hidden').last().hide(); }
-
-
-
-    self._textext = self.$el.textext()[0];
-
-    self.$el
-      .on('isTagAllowed', function(e, data) {
-        if ($.inArray(data.tag.trim(), JSON.parse(self._textext.hiddenInput().val())) !== -1) {
-          data.result = false;
-        }
-      });
   }
 });
 
