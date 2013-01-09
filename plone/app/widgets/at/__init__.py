@@ -24,11 +24,14 @@ class ATWidgetsExtender(object):
         for field in schema.fields():
             old = field.widget
 
-            if field.__name__ == 'subject':
+            if field.__name__ in ['subject']:
                 field.widget = AutocompleteWidget(
                     label=old.label,
                     description=old.description,
-                    vocabulary_factory='plone.app.vocabularies.Keywords',
+                    vocabulary='plone.app.vocabularies.Keywords',
+                    pattern_options={
+                        'prompt': 'Add tag...',  # TODO: i18n
+                    },
                 )
 
             if field.__name__ in ['effectiveDate', 'expirationDate']:
@@ -37,14 +40,24 @@ class ATWidgetsExtender(object):
                     description=old.description
                 )
 
+            if field.__name__ in ['contributors', 'creators']:
+                field.widget = AutocompleteWidget(
+                    label=old.label,
+                    description=old.description,
+                    vocabulary='plone.app.vocabularies.Users',
+                    pattern_options={
+                        'prompt': 'Add ' + field.__name__ + '...',  # TODO: i18n
+                        'ajax-cache-results': 'false',
+                    },
+                )
+
         #for fieldname in ['contributors', 'creators']:
         #    if fieldname in schema:
         #        field = schema[fieldname]
         #        widget = field.widget
-        #        field.widget = ChosenAjaxWidget(
+        #        field.widget = AutocompleteWidget(
         #            label=widget.label,
         #            description=widget.description,
-        #            ajax_rel_url='widget-user-query'
         #        )
         #if 'customViewFields' in schema:
         #    field = schema['customViewFields']
