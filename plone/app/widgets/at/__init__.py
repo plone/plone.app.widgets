@@ -46,7 +46,8 @@ class ATWidgetsExtender(object):
                     description=old.description,
                     vocabulary='plone.app.vocabularies.Users',
                     pattern_options={
-                        'prompt': 'Add ' + field.__name__ + '...',  # TODO: i18n
+                        # TODO: i18n
+                        'prompt': 'Add ' + field.__name__ + '...',
                         'ajax-cache-results': 'false',
                     },
                 )
