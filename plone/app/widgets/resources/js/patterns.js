@@ -3,8 +3,7 @@
 // Author: Rok Garbas
 // Contact: rok@garbas.si
 // Version: 1.0
-// Dependencies:
-//    ++resource++plone.app.jquery.js
+// Depends: jquery.js
 //
 // Description: 
 //
@@ -35,7 +34,7 @@
 "use strict";
 
 var error = jQuery.error,
-    _registry = [];
+    _registry = {};
 
 // Get options from element's data attributes
 // Collect options from parent tree of elements
@@ -65,16 +64,32 @@ function getOptions($el, prefix, options) {
   return options;
 }
 
+
+function initializePattern($el, patternName, extra_options) {
+  $el.data('pattern-' + patternName,
+      new _registry[patternName]($el, getOptions($el, patternName, extra_options)));
+}
+
+function initializePatternsForElement($el) {
+  $.each($el.data('pattern').split(' '), function(i, patternName) {
+    if (_registry[patternName] === undefined) {
+      error('Pattern you try to initialize "' + patternName + '" does not exists.');
+      return;
+    }
+    initializePattern($el, patternName);
+  });
+}
+
 // Initialize patterns over some context/dom element.
 // Patterns already initialized won't be initialized again.
 function initializePatterns(context) {
-  $.each(_registry, function(i, Pattern) {
-    $('[data-pattern="' + Pattern.prototype.name + '"]').each(function() {
-      if ($(this).data('_pattern') === undefined) {
-        $(this).data('_pattern', new Pattern($(this),
-            getOptions($(this), Pattern.prototype.name)));
-      }
-    });
+  // first initialize patterns for current context
+  if ($(context)[0] !== $(document)[0]) {
+    initializePatternsForElement($(context));
+  }
+  // then initialize for its childrens
+  $('[data-pattern]', context).each(function() {
+      initializePatternsForElement($(this));
   });
 }
 
@@ -84,18 +99,25 @@ function registerPattern(Pattern) {
     error('Pattern you try to register has no name.');
     return;
   }
+  if (_registry[Pattern.prototype.name] !== undefined) {
+    error('Pattern with name "' + Pattern.prototype.name + '" was already ' +
+          'registered. Please select different name.');
+    return;
+  }
+
+  _registry[Pattern.prototype.name] = Pattern;
+
   if (Pattern.prototype.jqueryPlugin) {
     $.fn[Pattern.prototype.jqueryPlugin] = function(method, options) {
       $(this).each(function() {
         var $el = $(this),
-            pattern = $el.data('_pattern');
+            pattern = $el.data('pattern-' - Pattern.prototype.name);
         if (typeof method === "object") {
           options = method;
           method = undefined;
         }
-        if (!pattern) {
-          $el.data('_pattern',
-            new Pattern($el, getOptions($el, Pattern.prototype.name, options)));
+        if (typeof(pattern) === 'string') {
+          initializePattern($el, Pattern.prototype.name, options);
         } else if (method && pattern[method]) {
           pattern[method].apply(pattern, [options]);
         }
@@ -105,7 +127,6 @@ function registerPattern(Pattern) {
     };
     $.fn[Pattern.prototype.jqueryPlugin].Constructor = Pattern.constructor;
   }
-  _registry.push(Pattern);
 }
 
 // Base Pattern
