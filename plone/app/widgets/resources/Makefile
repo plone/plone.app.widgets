@@ -1,5 +1,5 @@
 LESSC = lessc
-UGLIFYJS = cat
+UGLIFYJS = uglifyjs
 CSSMIN = cssmin
 TARGETS = build/widgets.css build/widgets.js build/widgets.png
 
@@ -25,9 +25,13 @@ build/widgets.js: build
 	$(UGLIFYJS) lib/jquery-textext/src/js/textext.plugin.prompt.js >> $@
 	$(UGLIFYJS) lib/jquery-textext/src/js/textext.plugin.suggestions.js >> $@
 	$(UGLIFYJS) lib/jquery-textext/src/js/textext.plugin.tags.js >> $@
+	$(UGLIFYJS) lib/bootstrap/js/bootstrap-transition.js >> $@
+	$(UGLIFYJS) lib/bootstrap/js/bootstrap-tab.js >> $@
 	$(UGLIFYJS) js/patterns.js >> $@
 	$(UGLIFYJS) js/pattern.calendar.js >> $@
 	$(UGLIFYJS) js/pattern.autocomplete.js >> $@
+	$(UGLIFYJS) js/pattern.tabs.js >> $@
+	$(UGLIFYJS) js/plone.tabs.js >> $@
 
 build/widgets.css: build
 	$(CSSMIN) lib/pickadate/themes/pickadate.02.classic.css > $@
