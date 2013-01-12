@@ -2,38 +2,12 @@
 <registry>
 
   <record name="Products.ResourceRegistries.interfaces.settings.IResourceRegistriesSettings.resourceBundlesForThemes">
-    <value purge="false">
+    <value>
 
-      <element key="Plone Classic Theme" purge="false">
+      <element key="Sunburst Theme">
         <element>default</element>
         <element>jquery</element>
-        <element>modernizr</element>
         <element>tinymce</element>
-        <element>chosen</element>
-        <element>pickadate</element>
-        <element>jquery.highlightsearchterms</element>
-        <element>widgets</element>
-      </element>
-
-      <element key="Plone Default" purge="false">
-        <element>default</element>
-        <element>jquery</element>
-        <element>modernizr</element>
-        <element>tinymce</element>
-        <element>chosen</element>
-        <element>pickadate</element>
-        <element>jquery.highlightsearchterms</element>
-        <element>widgets</element>
-      </element>
-
-      <element key="Sunburst Theme" purge="false">
-        <element>default</element>
-        <element>jquery</element>
-        <element>modernizr</element>
-        <element>tinymce</element>
-        <element>chosen</element>
-        <element>pickadate</element>
-        <element>jquery.highlightsearchterms</element>
         <element>widgets</element>
       </element>
 
