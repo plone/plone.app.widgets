@@ -168,10 +168,13 @@ var Autocomplete = Patterns.Base.extend({
     }
     self.$el.val('');
 
-    var visible = self.$el.is(':visible');
-    if (!visible) { self.$el.parents(':hidden').last().show(); }
-    self.$el.textext(self.textextOptions);
-    if (!visible) { self.$el.parents(':hidden').last().hide(); }
+    if (!self.$el.is(':visible')) {
+      var $fieldset = self.$el.parents(':hidden').last().show();
+      self.$el.textext(self.textextOptions);
+      $fieldset.hide();
+    } else {
+      self.$el.textext(self.textextOptions);
+    }
   }
 });
 
