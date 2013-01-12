@@ -28,6 +28,12 @@
     layer=".interfaces.IWidgetsLayer"
     />
 
+  <browser:resourceDirectory
+    name="tinymce"
+    directory="resources/lib/tinymce/jscripts/tiny_mce"
+    layer=".interfaces.IWidgetsLayer"
+    />
+
   <browser:page
     name="widgets"
     for="*"
