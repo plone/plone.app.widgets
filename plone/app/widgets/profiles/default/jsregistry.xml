@@ -3,6 +3,7 @@
 
     <!-- deprecated -->
     <javascript bundle="deprecated" id="calendar_formfield.js"  />
+    <javascript bundle="deprecated" id="form_tabbing.js"  />
     <javascript bundle="deprecated" id="jquery.tinymce.js"  />
     <javascript bundle="tinymce" id="++resource++tinymce/jquery.tinymce.js"  />
     <javascript bundle="tinymce" id="tiny_mce_gzip.js"  />
