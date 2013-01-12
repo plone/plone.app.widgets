@@ -18,7 +18,7 @@ class AutocompleteWidget(PatternsWidget):
 
     def getAjaxUrl(self, context, request, field):
         state = getMultiAdapter((context, request), name=u'plone_portal_state')
-        return '%s/@@autocomplete?source=%s' % (
+        return '%s/@@widgets/getVocabulary?factory=%s' % (
             state.portal_url(), self.vocabulary)
 
     def process_form(self, instance, field, form, empty_marker=None,

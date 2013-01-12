@@ -13,14 +13,15 @@ class PatternsWidget(TypesWidget):
     })
 
     def _process_args(self, **kwargs):
-        self.__dict__.update(self._properties)
         new_kwargs = {}
         for kwarg in kwargs:
             if kwarg in ['pattern_options', 'pattern_extra_options']:
-                self.__dict__[kwarg].update(kwargs[kwarg])
+                new_kwargs[kwarg] = {}
+                new_kwargs[kwarg].update(self._properties[kwarg])
+                new_kwargs[kwarg].update(kwargs[kwarg])
             else:
                 new_kwargs[kwarg] = kwargs[kwarg]
-        self.__dict__.update(new_kwargs)
+        super(PatternsWidget, self)._process_args(**new_kwargs)
 
     def view(self, context, field, request):
         return field.getAccessor(context)()
