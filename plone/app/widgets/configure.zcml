@@ -5,7 +5,6 @@
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     i18n_domain="plone.app.widgets">
 
-  <include package="Products.ResourceRegistries" />
   <include package="Products.CMFPlone" />
   <include package="Products.TinyMCE" />
   <include package="plone.app.vocabularies" />
@@ -29,12 +28,13 @@
     layer=".interfaces.IWidgetsLayer"
     />
 
-  <browser:page                                                                
-    name="autocomplete"                                                        
-    for="*"                                                                    
-    class=".autocomplete.AutocompleteView"                                     
-    permission="zope2.View"                                                    
-    layer=".interfaces.IWidgetsLayer"                                          
+  <browser:page
+    name="widgets"
+    for="*"
+    class=".browser.WidgetsView"
+    permission="zope2.View"
+    layer=".interfaces.IWidgetsLayer"
+    allowed_interface=".interfaces.IWidgetsView"
     />
 
   <include zcml:condition="installed archetypes.schemaextender" package=".at" />
