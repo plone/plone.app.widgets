@@ -46,10 +46,10 @@ var Calendar = Patterns.Base.extend({
     AMPM: ['AM', 'PM'],
     minuteStep: '5'
   },
-  init: function($el, options) {
+  init: function() {
     var self = this;
 
-    self.options = $.extend({}, self.defaults, options);
+    self.options = $.extend({}, self.defaults, self.options);
 
     self.pickadateOptions = $.extend({}, $.fn.pickadate.defaults, {
       monthSelector: true,
