@@ -142,7 +142,7 @@
 //
 /*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true,
   newcap:true, noarg:true, noempty:true, nonew:true, plusplus:true,
-  undef:true, strict:true, trailing:true, browser:true, evil:true *//*global jQuery:false, console:false */(function(e,t){"use strict";function i(t,n,r){return r=r||{},e.nodeName(t[0],"body")||(r=i(t.parent(),n,r)),t.length&&e.each(t[0].attributes,function(t,i){i.name.substr(0,("data-"+n).length)==="data-"+n&&(i.value==="true"?r[e.camelCase(i.name.substr(("data-"+n).length+1))]=!0:i.value==="false"?r[e.camelCase(i.name.substr(("data-"+n).length+1))]=!1:r[e.camelCase(i.name.substr(("data-"+n).length+1))]=i.value)}),r}function s(e,t,n){e.data("pattern-"+t,new r[t](e,i(e,t,n)))}function o(i){e.each(i.data("pattern").split(" "),function(e,o){if(r[o]===t){n('Pattern you try to initialize "'+o+'" does not exists.');return}s(i,o)})}function u(t){e(t)[0]!==e(document)[0]&&o(e(t)),e("[data-pattern]",t).each(function(){o(e(this))})}function a(i){if(!i.prototype.name){n("Pattern you try to register has no name.");return}if(r[i.prototype.name]!==t){n('Pattern with name "'+i.prototype.name+'" was already '+"registered. Please select different name.");return}r[i.prototype.name]=i,i.prototype.jqueryPlugin&&(e.fn[i.prototype.jqueryPlugin]=function(n,r){return e(this).each(function(){var o=e(this),u=o.data("pattern-"-i.prototype.name);typeof n=="object"&&(r=n,n=t),typeof u=="string"?s(o,i.prototype.name,r):n&&u[n]&&u[n].apply(u,[r])}),this},e.fn[i.prototype.jqueryPlugin].Constructor=i.constructor)}var n=jQuery.error,r={},f=function(e,t){this.$el=e.addClass("pattern-"+this.name),this.options=t,this.init&&this.init()};f.prototype={constructor:f},f.extend=function(t){var n=this,r;t&&t.hasOwnProperty("constructor")?r=t.constructor:r=function(){n.apply(this,arguments)};var i=function(){this.constructor=r};return i.prototype=n.prototype,r.prototype=new i,e.extend(!0,r.prototype,t),r.__super__=n.prototype,r},e(document).ready(function(){u(e(document))}),window.Patterns={_registry:r,initialize:u,register:a,getOptions:i,Base:f}})(window.jQuery);// plone integration for pickadate.
+  undef:true, strict:true, trailing:true, browser:true, evil:true *//*global jQuery:false, console:false */(function(e,t){"use strict";function i(t,n,r){return r=r||{},e.nodeName(t[0],"body")||(r=i(t.parent(),n,r)),t.length&&e.each(t[0].attributes,function(t,i){i.name.substr(0,("data-"+n).length)==="data-"+n&&(i.value==="true"?r[e.camelCase(i.name.substr(("data-"+n).length+1))]=!0:i.value==="false"?r[e.camelCase(i.name.substr(("data-"+n).length+1))]=!1:r[e.camelCase(i.name.substr(("data-"+n).length+1))]=i.value)}),r}function s(e,t,n){var s=new r[t](e,i(e,t,n));return s}function o(i){e.each((i.data("pattern")||"").split(" "),function(e,o){if(o.length!==0){if(r[o]===t){n('Pattern you try to initialize "'+o+'" does not exists.');return}i.data("pattern-"+o,s(i,o))}})}function u(t){e(t)[0]!==e(document)[0]&&o(e(t)),e("[data-pattern]",t).each(function(){o(e(this))})}function a(i){if(!i.prototype.name){n("Pattern you try to register has no name.");return}if(r[i.prototype.name]!==t){n('Pattern with name "'+i.prototype.name+'" was already '+"registered. Please select different name.");return}r[i.prototype.name]=i,i.prototype.jqueryPlugin&&(e.fn[i.prototype.jqueryPlugin]=function(n,r){return e(this).each(function(){var o=e(this),u=o.data("pattern-"+i.prototype.name);typeof n=="object"&&(r=n,n=t),typeof u=="string"?(u=s(o,i.prototype.name,r),o.data("pattern-"+i.prototype.name,u)):n&&u&&u[n]&&u[n].apply(u,[r])}),this},e.fn[i.prototype.jqueryPlugin].Constructor=i.constructor)}var n=jQuery.error,r={},f=function(e,t){this.$el=e.addClass("pattern-"+this.name),this.options=t,this.init&&this.init()};f.prototype={constructor:f},f.extend=function(t){var n=this,r;t&&t.hasOwnProperty("constructor")?r=t.constructor:r=function(){n.apply(this,arguments)};var i=function(){this.constructor=r};return i.prototype=n.prototype,r.prototype=new i,e.extend(!0,r.prototype,t),r.__super__=n.prototype,r},e(document).ready(function(){u(e(document))}),window.Patterns={_registry:r,initialize:u,register:a,getOptions:i,Base:f}})(window.jQuery);// plone integration for pickadate.
 //
 // Author: Rok Garbas
 // Contact: rok@garbas.si
@@ -256,4 +256,32 @@
 //
 /*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true,
   newcap:true, noarg:true, noempty:true, nonew:true, plusplus:true,
-  undef:true, strict:true, trailing:true, browser:true, evil:true *//*global jQuery:false */(function(e,t,n){"use strict";var r=t.Base.extend({name:"plonetabs",jqueryPlugin:"ploneTabs",defaults:{panels:".enableFormTabbing fieldset",panelKlass:"formPanel",tabKlass:"formTab",tabsKlass:"formTabs"},init:function(){var n=this;n.options=e.extend({},n.defaults,n.options),n.$panels=e(n.options.panels,n.$el);if(!n.$panels.size())return;n.$tabs=e("<ul/>").addClass(n.options.tabsKlass).insertBefore(n.$panels.parent()).attr({"data-pattern":"tabs"}),n.$panels.each(function(){var t=e(this).addClass(n.options.panelKlass),r=e("> legend",t).hide();n.$tabs.append(e("<li/>").addClass(n.options.tabKlass).append(e("<a/>").attr({id:r.attr("id"),href:"#"+t.attr("id")}).append(e("<span/>").html(r.text()))))}),t.initialize(n.$tabs)}});t.register(r)})(window.jQuery,window.Patterns);
+  undef:true, strict:true, trailing:true, browser:true, evil:true *//*global jQuery:false */(function(e,t,n){"use strict";var r=t.Base.extend({name:"plonetabs",jqueryPlugin:"ploneTabs",defaults:{panels:".enableFormTabbing fieldset",panelKlass:"formPanel",tabKlass:"formTab",tabsKlass:"formTabs"},init:function(){var n=this;n.options=e.extend({},n.defaults,n.options),n.$panels=e(n.options.panels,n.$el);if(!n.$panels.size())return;n.$tabs=e("<ul/>").addClass(n.options.tabsKlass).insertBefore(n.$panels.parent()).attr({"data-pattern":"tabs"}),n.$panels.each(function(){var t=e(this).addClass(n.options.panelKlass),r=e("> legend",t).hide();n.$tabs.append(e("<li/>").addClass(n.options.tabKlass).append(e("<a/>").attr({id:r.attr("id"),href:"#"+t.attr("id")}).append(e("<span/>").html(r.text()))))}),t.initialize(n.$tabs)}});t.register(r)})(window.jQuery,window.Patterns);// tabs pattern.
+//
+// Author: Rok Garbas
+// Contact: rok@garbas.si
+// Version: 1.0
+// Depends: jquery.js patterns.js bootstrap-transition.js bootstrap-tab.js
+//
+// Description:
+//
+// License:
+//
+// Copyright (C) 2010 Plone Foundation
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the Free
+// Software Foundation; either version 2 of the License.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+// more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program; if not, write to the Free Software Foundation, Inc., 51
+// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true,
+  newcap:true, noarg:true, noempty:true, nonew:true, plusplus:true,
+  undef:true, strict:true, trailing:true, browser:true, evil:true *//*global jQuery:false */(function(e,t,n){"use strict";var r=t.Base.extend({name:"toggle",jqueryPlugin:"patternToggle",defaults:{name:"class",event:"click"},init:function(){var t=this;t.options=e.extend({},t.defaults,t.options),t.options.target?t.$target=t.$el.closest(t.options.target):t.$target=t.$el,t.$el.on(t.options.event,function(e){e.preventDefault(),e.stopPropagation(),t.toggle()})},isMarked:function(){var e=this;return e.options.name==="class"?this.$target.hasClass(this.options.value):this.$target.attr(this.options.name)!==this.options.value},toggle:function(){var e=this;e.isMarked()?e.remove():e.add()},remove:function(){var e=this;e.options.name==="class"?e.$target.removeClass(e.options.value):e.$target.removeAttr(e.options.name),e.$el.trigger("patterns.toggle.remove")},add:function(){var e=this;e.options.name==="class"?e.$target.addClass(e.options.value):e.$target.attr(e.options.name,e.options.value),e.$el.trigger("patterns.toggle.add")}});t.register(r)})(window.jQuery,window.Patterns);

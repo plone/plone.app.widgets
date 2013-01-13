@@ -66,17 +66,20 @@ function getOptions($el, prefix, options) {
 
 
 function initializePattern($el, patternName, extra_options) {
-  $el.data('pattern-' + patternName,
-      new _registry[patternName]($el, getOptions($el, patternName, extra_options)));
+  var pattern = new _registry[patternName]($el, getOptions(
+        $el, patternName, extra_options));
+  return pattern;
 }
 
 function initializePatternsForElement($el) {
-  $.each($el.data('pattern').split(' '), function(i, patternName) {
-    if (_registry[patternName] === undefined) {
-      error('Pattern you try to initialize "' + patternName + '" does not exists.');
-      return;
+  $.each(($el.data('pattern') || '').split(' '), function(i, patternName) {
+    if (patternName.length !== 0) {
+      if (_registry[patternName] === undefined) {
+        error('Pattern you try to initialize "' + patternName + '" does not exists.');
+        return;
+      }
+      $el.data('pattern-' + patternName, initializePattern($el, patternName));
     }
-    initializePattern($el, patternName);
   });
 }
 
@@ -111,14 +114,15 @@ function registerPattern(Pattern) {
     $.fn[Pattern.prototype.jqueryPlugin] = function(method, options) {
       $(this).each(function() {
         var $el = $(this),
-            pattern = $el.data('pattern-' - Pattern.prototype.name);
+            pattern = $el.data('pattern-' + Pattern.prototype.name);
         if (typeof method === "object") {
           options = method;
           method = undefined;
         }
         if (typeof(pattern) === 'string') {
-          initializePattern($el, Pattern.prototype.name, options);
-        } else if (method && pattern[method]) {
+          pattern = initializePattern($el, Pattern.prototype.name, options);
+          $el.data('pattern-' + Pattern.prototype.name, pattern);
+        } else if (method && pattern && pattern[method]) {
           pattern[method].apply(pattern, [options]);
         }
 

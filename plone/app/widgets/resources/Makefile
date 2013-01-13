@@ -32,6 +32,7 @@ build/widgets.js: build
 	$(UGLIFYJS) js/pattern.autocomplete.js >> $@
 	$(UGLIFYJS) js/pattern.tabs.js >> $@
 	$(UGLIFYJS) js/plone.tabs.js >> $@
+	$(UGLIFYJS) js/pattern.toggle.js >> $@
 
 build/widgets.css: build
 	$(CSSMIN) lib/pickadate/themes/pickadate.02.classic.css > $@
