@@ -27,7 +27,7 @@ setup(
         'setuptools',
         'Products.ResourceRegistries>=2.1',
         'Products.CMFPlone>=4.3b1',
-        'Products.TinyMCE>=1.3b8',
+        'Products.TinyMCE>1.3b8',
         'plone.app.vocabularies>2.1.8',
         'five.pt',
 
