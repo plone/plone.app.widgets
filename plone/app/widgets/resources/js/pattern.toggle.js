@@ -76,21 +76,23 @@ var Toggle = Patterns.Base.extend({
   },
   remove: function() {
     var self = this;
+    self.$el.trigger('patterns.toggle.remove');
     if (self.options.name === 'class') {
       self.$target.removeClass(self.options.value);
     } else {
       self.$target.removeAttr(self.options.name);
     }
-    self.$el.trigger('patterns.toggle.remove');
+    self.$el.trigger('patterns.toggle.removed');
   },
   add: function() {
     var self = this;
+    self.$el.trigger('patterns.toggle.add');
     if (self.options.name === 'class') {
       self.$target.addClass(self.options.value);
     } else {
       self.$target.attr(self.options.name, self.options.value);
     }
-    self.$el.trigger('patterns.toggle.add');
+    self.$el.trigger('patterns.toggle.added');
   }
 });
 
