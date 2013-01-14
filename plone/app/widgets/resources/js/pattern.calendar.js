@@ -40,6 +40,13 @@ var Calendar = Patterns.Base.extend({
   defaults: {
     klassWrapper: 'pattern-calendar',
     klassIcon: 'pattern-calendar-icon',
+    klassYearInput: 'pattern-calendar-year',
+    klassMonthInput: 'pattern-calendar-month',
+    klassDayInput: 'pattern-calendar-day',
+    klassHourInput: 'pattern-calendar-hour',
+    klassMinuteInput: 'pattern-calendar-minute',
+    klassAMPMInput: 'pattern-calendar-ampm',
+    klassDelimiter: 'pattern-calendar-delimiter',
     format: 'd-mmmm-yyyy@HH:MM',
     formatSubmit: 'yyyy-m-d H:M',
     showAMPM: true,
@@ -104,11 +111,21 @@ var Calendar = Patterns.Base.extend({
       );
     }
 
-    self.$years = $('<select/>').on('change', changePickadateDate);
-    self.$months = $('<select/>').on('change', changePickadateDate);
-    self.$days = $('<select/>').on('change', changePickadateDate);
-    self.$hours = $('<select/>').on('change', changePickadateDate);
-    self.$minutes = $('<select/>').on('change', changePickadateDate);
+    self.$years = $('<select/>')
+      .addClass(self.options.klassYearInput)
+      .on('change', changePickadateDate);
+    self.$months = $('<select/>')
+      .addClass(self.options.klassMonthInput)
+      .on('change', changePickadateDate);
+    self.$days = $('<select/>')
+      .addClass(self.options.klassDayInput)
+      .on('change', changePickadateDate);
+    self.$hours = $('<select/>')
+      .addClass(self.options.klassHourInput)
+      .on('change', changePickadateDate);
+    self.$minutes = $('<select/>')
+      .addClass(self.options.klassMinuteInput)
+      .on('change', changePickadateDate);
     self.$icon = $('<span class="' + self.options.klassIcon + '"/>')
       .on('click', function(e) {
         e.stopPropagation();
@@ -142,7 +159,8 @@ var Calendar = Patterns.Base.extend({
           case '@':
             return self.$icon;
           default:
-            return $('<span> ' + format + ' </span>');
+            return $('<span> ' + format + ' </span>')
+              .addClass(self.options.klassDelimiter);
         }
       }
     ), function(i, $item) {
@@ -150,6 +168,7 @@ var Calendar = Patterns.Base.extend({
     });
 
     self.$ampm = $('<select/>')
+      .addClass(self.options.klassAMPMInput)
       .append(self._getAMPM())
       .on('change', changePickadateDate);
     if (self.options.showAMPM) {
