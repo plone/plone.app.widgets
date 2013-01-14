@@ -48,5 +48,5 @@ class WidgetsView(BrowserView):
 
     def bodyDataOptions(self):
         return {
-            'data-pattern': 'plonetabs'
+            'data-pattern': 'plone-tabs'
         }

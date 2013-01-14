@@ -35,7 +35,7 @@
 "use strict";
 
 var PloneTabs = Patterns.Base.extend({
-  name: 'plonetabs',
+  name: 'plone-tabs',
   jqueryPlugin: 'ploneTabs',
   defaults: {
     panels: '.enableFormTabbing fieldset',
