@@ -119,7 +119,7 @@ function registerPattern(Pattern) {
           options = method;
           method = undefined;
         }
-        if (typeof(pattern) === 'string') {
+        if (!pattern || typeof(pattern) === 'string') {
           pattern = initializePattern($el, Pattern.prototype.name, options);
           $el.data('pattern-' + Pattern.prototype.name, pattern);
         } else if (method && pattern && pattern[method]) {
