@@ -2,6 +2,7 @@ import json
 import inspect
 from zope.interface import implements
 from zope.component import queryUtility
+from zope.component import getMultiAdapter
 from zope.schema.interfaces import IVocabularyFactory
 from Products.Five import BrowserView
 from plone.app.widgets.interfaces import IWidgetsView
@@ -47,6 +48,10 @@ class WidgetsView(BrowserView):
         return json.dumps(items)
 
     def bodyDataOptions(self):
+        portal_state = getMultiAdapter(
+            (self.context, self.request), name=u'plone_portal_state')
         return {
-            'data-pattern': 'plone-tabs'
+            'data-portal-navigation-url': portal_state.navigation_root_url(),
+            'data-portal-url': portal_state.portal_url(),
+            'data-pattern': 'plone-tabs',
         }
