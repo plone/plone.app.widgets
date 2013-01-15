@@ -53,5 +53,6 @@ class WidgetsView(BrowserView):
         return {
             'data-portal-navigation-url': portal_state.navigation_root_url(),
             'data-portal-url': portal_state.portal_url(),
+            'data-context-url': self.context.absolute_url(),
             'data-pattern': 'plone-tabs',
         }
