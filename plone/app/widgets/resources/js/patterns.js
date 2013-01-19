@@ -42,7 +42,7 @@ function getOptions($el, prefix, options) {
   options = options || {};
 
   // get options from parent element first, stop if element tag name is 'body'
-  if (!$.nodeName($el[0], 'body')) {
+  if ($el.size() !== 0 && !$.nodeName($el[0], 'body')) {
     options = getOptions($el.parent(), prefix, options);
   }
 
