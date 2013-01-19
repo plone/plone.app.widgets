@@ -38,7 +38,7 @@ var Toggle = Patterns.Base.extend({
   name: 'toggle',
   jqueryPlugin: 'patternToggle',
   defaults: {
-    name: 'class',
+    attribute: 'class',
     event: 'click'
   },
   init: function() {
@@ -50,20 +50,40 @@ var Toggle = Patterns.Base.extend({
       self.$target = self.$el;
     } else {
       self.$target = self.$el.closest(self.options.target);
+      if (self.$target.size() === 0) {
+        self.$target = self.closest(self.$el, self.options.target);
+      }
+    }
+
+    if (!self.$target) {
+      $.error('No target found for "' + self.options.target + '".');
     }
 
     self.$el.on(self.options.event, function(e) {
-      e.preventDefault();
       e.stopPropagation();
+      if ($.nodeName(e.target, 'a') || $(e.target).parents('a').size() !== 0) {
+        e.preventDefault();
+      }
       self.toggle();
     });
   },
+  closest: function($el, selector) {
+    var self = this,
+        $target = $(selector, $el);
+    if ($target.size() === 0) {
+      if ($el.size() === 0 || $.nodeName($el[0], 'body')) {
+        return;
+      }
+      $target = self.closest($el.parent(), selector);
+    }
+    return $target;
+  },
   isMarked: function() {
     var self = this;
-    if (self.options.name === 'class') {
+    if (self.options.attribute === 'class') {
       return this.$target.hasClass(this.options.value);
     } else {
-      return this.$target.attr(this.options.name) !== this.options.value;
+      return this.$target.attr(this.options.attribute) === this.options.value;
     }
   },
   toggle: function() {
@@ -77,20 +97,20 @@ var Toggle = Patterns.Base.extend({
   remove: function() {
     var self = this;
     self.$el.trigger('patterns.toggle.remove');
-    if (self.options.name === 'class') {
+    if (self.options.attribute === 'class') {
       self.$target.removeClass(self.options.value);
     } else {
-      self.$target.removeAttr(self.options.name);
+      self.$target.removeAttr(self.options.attribute);
     }
     self.$el.trigger('patterns.toggle.removed');
   },
   add: function() {
     var self = this;
     self.$el.trigger('patterns.toggle.add');
-    if (self.options.name === 'class') {
+    if (self.options.attribute === 'class') {
       self.$target.addClass(self.options.value);
     } else {
-      self.$target.attr(self.options.name, self.options.value);
+      self.$target.attr(self.options.attribute, self.options.value);
     }
     self.$el.trigger('patterns.toggle.added');
   }
