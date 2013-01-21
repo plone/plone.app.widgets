@@ -12,19 +12,19 @@
 
   <browser:resource
     name="plone.app.widgets.css"
-    file="resources/build/widgets.css"
+    file="static/widgets.css"
     layer=".interfaces.IWidgetsLayer"
     />
 
   <browser:resource
     name="plone.app.widgets.js"
-    file="resources/build/widgets.js"
+    file="static/widgets.js"
     layer=".interfaces.IWidgetsLayer"
     />
 
   <browser:resource
     name="plone.app.widgets.png"
-    file="resources/build/widgets.png"
+    file="static/widgets.png"
     layer=".interfaces.IWidgetsLayer"
     />
 
