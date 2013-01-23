@@ -15,13 +15,18 @@
     file="static/widgets.css"
     layer=".interfaces.IWidgetsLayer"
     />
-
   <browser:resource
+    zcml:condition="not-have devmode"
     name="plone.app.widgets.js"
     file="static/widgets.js"
     layer=".interfaces.IWidgetsLayer"
     />
-
+  <browser:resource
+    zcml:condition="have devmode"
+    name="plone.app.widgets.js"
+    file="static/widgets.min.js"
+    layer=".interfaces.IWidgetsLayer"
+    />
   <browser:resource
     name="plone.app.widgets.png"
     file="static/widgets.png"
