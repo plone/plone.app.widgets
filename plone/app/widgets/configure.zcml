@@ -1,5 +1,6 @@
 <configure
     xmlns="http://namespaces.zope.org/zope"
+    xmlns:cmf="http://namespaces.zope.org/cmf"
     xmlns:zcml="http://namespaces.zope.org/zcml"
     xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
@@ -37,6 +38,8 @@
     file="static/widgets.png"
     layer=".interfaces.IWidgetsLayer"
     />
+
+  <cmf:registerDirectory name="plone_widgets" />
 
   <browser:page
     name="widgets"
