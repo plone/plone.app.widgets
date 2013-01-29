@@ -5,7 +5,7 @@
 
   <object name="plone_widgets"
     meta_type="Filesystem Directory View"
-    directory="plone.app.widgets.at:skins/plone_widgets" />
+    directory="plone.app.widgets:skins/plone_widgets" />
 
   <skin-path name="*">
     <layer name="plone_widgets" insert-after="custom" />
