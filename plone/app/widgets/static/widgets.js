@@ -557,9 +557,9 @@ define("requireLib", function(){});
         window.logging=api;
 })();
 
- 
 
- 
+
+
 
 // pattern specific logging config
 define('jam/Patterns/src/core/logger',[
@@ -1107,6 +1107,13 @@ define('jam/Patterns/src/registry',[
 
     var registry = {
         patterns: {},
+        init: function() {
+            $(document).ready(function() {
+                log.info('loaded: ' + Object.keys(registry.patterns).sort().join(', '));
+                registry.scan(document.body);
+                log.info('finished initial scan.');
+            });
+        },
 
         scan: function(content) {
             var $content = $(content),
@@ -1130,6 +1137,7 @@ define('jam/Patterns/src/registry',[
             // find all elements that belong to any pattern
             $match = $content.wrap("<div/>").parent().find(allsel);
             $content.unwrap();
+            $match = $match.filter(function() { return $(this).parents('pre').length === 0; });
             $match = $match.filter(":not(.cant-touch-this)");
 
             // walk list backwards and initialize patterns inside-out.
