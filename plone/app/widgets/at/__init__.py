@@ -57,7 +57,8 @@ class ATWidgetsExtender(object):
                                        u"contributed to this item."),
                     multiple=True,
                     ajax_vocabulary="plone.app.vocabularies.Users",
-                    pattern_options="width:30em;placeholder:Add contributors...;",
+                    pattern_options="width:30em;placeholder:Add "
+                                    "contributors...;",
                 )
 
             if field.__name__ in ['creators']:

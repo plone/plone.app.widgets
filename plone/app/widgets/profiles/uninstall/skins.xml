@@ -3,10 +3,10 @@
 
   <object name="plone_widgets"
       meta_type="Filesystem Directory View"
-      directory="plone.app.widgets:skins/plone_widgets" />
+      remove="True" />
 
   <skin-path name="*">
-    <layer name="plone_widgets" insert-after="custom" />
+    <layer name="plone_widgets" remove="True" />
   </skin-path>
 
 </object>

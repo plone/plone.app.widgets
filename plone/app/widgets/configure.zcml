@@ -59,6 +59,17 @@
     directory="profiles/default"
     description="Better widgets for Plone"
     provides="Products.GenericSetup.interfaces.EXTENSION"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     />
+
+  <genericsetup:registerProfile
+    name="uninstall"
+    title="Plone Widgets Uninstall"
+    directory="profiles/uninstall"
+    description="Removes Plone Widgets."
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    />
+
 
 </configure>
