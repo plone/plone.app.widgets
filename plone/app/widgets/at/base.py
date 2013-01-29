@@ -6,22 +6,10 @@ class PatternsWidget(TypesWidget):
     _properties = TypesWidget._properties.copy()
     _properties.update({
         'macro': "patterns_widgets",
-        'input_type': 'input',
+        'element_type': 'input',
         'pattern': '',
-        'pattern_options': {},
-        'pattern_extra_options': {},
+        'pattern_options': ''
     })
-
-    def _process_args(self, **kwargs):
-        new_kwargs = {}
-        for kwarg in kwargs:
-            if kwarg in ['pattern_options', 'pattern_extra_options']:
-                new_kwargs[kwarg] = {}
-                new_kwargs[kwarg].update(self._properties[kwarg])
-                new_kwargs[kwarg].update(kwargs[kwarg])
-            else:
-                new_kwargs[kwarg] = kwargs[kwarg]
-        super(PatternsWidget, self)._process_args(**new_kwargs)
 
     def view(self, context, field, request):
         return field.getAccessor(context)()
@@ -31,32 +19,36 @@ class PatternsWidget(TypesWidget):
         if value is None:
             value = ''
 
-        if hasattr(self, 'formatAccessor'):
-            value = self.formatAccessor(value)
+        if hasattr(self, 'updateOptions'):
+            self.updateOptions(value, context, field, request)
 
-        el = etree.Element(self.input_type)
+        formatted = value
+        if hasattr(self, 'formatAccessor'):
+            formatted = self.formatAccessor(value, context, field, request)
+
+        el = etree.Element(self.element_type)
         el.attrib['name'] = field.getName()
 
-        if self.input_type == 'input':
+        if self.element_type == 'input':
             el.attrib['type'] = 'text'
-            el.attrib['value'] = value
-        elif self.input_type == 'textarea':
-            el.text = value
+            el.attrib['value'] = formatted
+        elif self.element_type == 'textarea':
+            el.text = formatted
+        elif self.element_type == 'select' and field.vocabulary:
+            for token, title in field.Vocabulary(context).items():
+                option = etree.Element('option')
+                option.attrib['value'] = token
+                if token == value:
+                    option.attrib['selected'] = 'selected'
+                option.text = title
+                el.append(option)
+
+        else:
+            raise Exception(
+                "Wrong 'element_type' selected ('%s')." % (self.element_type))
 
         if self.pattern:
-            el.attrib['data-pattern'] = self.pattern
-            for option_name, options_value in self.pattern_options.items():
-                attrib_name = 'data-%s-%s' % (self.pattern, option_name)
-                if options_value.startswith('!'):
-                    options_value = getattr(self, options_value[1:])
-                    if callable(options_value):
-                        options_value = options_value(context, request, field)
-
-                el.attrib[attrib_name] = options_value
-            for pattern_name in self.pattern_extra_options.keys():
-                for option_name, options_value in \
-                        self.pattern_extra_options[pattern_name].items():
-                    attrib_name = 'data-%s-%s' % (pattern_name, option_name)
-                    el.attrib[attrib_name] = options_value
+            el.attrib['class'] = 'pat-' + self.pattern
+            el.attrib['data-pat-' + self.pattern] = self.pattern_options
 
         return etree.tostring(el)

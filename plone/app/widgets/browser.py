@@ -19,7 +19,7 @@ class WidgetsView(BrowserView):
         """
         self.request.response.setHeader("Content-type", "application/json")
 
-        factory_name = self.request.get('factory', None)
+        factory_name = self.request.get('name', None)
         if not factory_name:
             return json.dumps({'error': 'No factory provided.'})
 
@@ -39,13 +39,13 @@ class WidgetsView(BrowserView):
 
         items = []
         for item in vocabulary:
-            items.append(item.token)
+            items.append({'id': item.token, 'text': item.title})
 
         # TODO: add option for limiting number of results
         # TODO: add option for batching
         # TODO: add option for sorting
 
-        return json.dumps(items)
+        return json.dumps({'results': items})
 
     def bodyDataOptions(self):
         portal_state = getMultiAdapter(

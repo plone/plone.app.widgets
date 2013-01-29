@@ -32,6 +32,11 @@
     file="static/widgets.png"
     layer=".interfaces.IWidgetsLayer"
     />
+  <browser:resource
+    name="plone.app.widgets-spinner.gif"
+    file="static/widgets.png"
+    layer=".interfaces.IWidgetsLayer"
+    />
 
   <browser:page
     name="widgets"
