@@ -1,5 +1,6 @@
 from zope.component import adapts
 from zope.interface import implements
+from zope.i18nmessageid import MessageFactory
 from Products.ATContentTypes.interface import IATContentType
 from archetypes.schemaextender.interfaces import ISchemaModifier
 from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
@@ -7,6 +8,8 @@ from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.at.select2 import Select2Widget
 from plone.app.widgets.at.datetime import DateTimeWidget
+
+_plone = MessageFactory('plone')
 
 
 class ATWidgetsExtender(object):
@@ -50,7 +53,8 @@ class ATWidgetsExtender(object):
             if field.__name__ in ['contributors']:
                 field.widget = Select2Widget(
                     label=old.label,
-                    description=old.description,
+                    description=_plone(u"The names of people that have "
+                                       u"contributed to this item."),
                     multiple=True,
                     ajax_vocabulary="plone.app.vocabularies.Users",
                     pattern_options="width:30em;placeholder:Add contributors...;",
@@ -59,7 +63,8 @@ class ATWidgetsExtender(object):
             if field.__name__ in ['creators']:
                 field.widget = Select2Widget(
                     label=old.label,
-                    description=old.description,
+                    description=_plone(u"The names of people that have "
+                                       u"contributed to this item."),
                     multiple=True,
                     ajax_vocabulary="plone.app.vocabularies.Users",
                     pattern_options="width:30em;placeholder:Add creators...;"
