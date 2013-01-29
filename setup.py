@@ -28,8 +28,8 @@ setup(
         'Products.ResourceRegistries>=2.1',
         'Products.CMFPlone>=4.3b1',
         'Products.TinyMCE>1.3b8',
-        'plone.app.vocabularies>=2.1.10',
-        'plone.app.search>=1.1.2',
+        'plone.app.vocabularies>2.1.9',
+        'plone.app.search>1.1.1',
         'plone.app.jquery>=1.8.0',
     ],
     extras_require={
