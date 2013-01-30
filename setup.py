@@ -25,12 +25,14 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        # needed because we use bundles
         'Products.ResourceRegistries>=2.1',
-        'Products.CMFPlone>=4.3b1',
-        'Products.TinyMCE>1.3b8',
-        'plone.app.vocabularies>2.1.9',
-        'plone.app.search>1.1.1',
+        # nedded because users vocabulary was added here
+        'plone.app.vocabularies>=2.1.10',
+        # needed for pickadate javascript
         'plone.app.jquery>=1.8.0',
+        # needed so it works with jquery >= 1.8
+        'plone.app.search>=1.1.2',
     ],
     extras_require={
         'test': [
