@@ -7,3 +7,4 @@
 /parts/
 /buildout-cache/
 /develop-eggs/
+/dist/
