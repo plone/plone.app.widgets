@@ -5,3 +5,5 @@
 /plone.app.widgets.egg-info/
 /bin/
 /parts/
+/buildout-cache/
+/develop-eggs/
