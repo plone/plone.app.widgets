@@ -1,40 +1,22 @@
 ``plone.app.widgets`` is a revamp of plone widgets. It does this by overriding
 the widgets of some of the fields in plone.
 
+Widgets that are overridden in ``Edit`` forms are:
 
-.. image:: https://travis-ci.org/plone/plone.app.widgets.png?branch=master
+- ``subject``
+- ``language``
+- ``effectiveDate``
+- ``expirationDate``
+- ``contributrors``
+- ``creators``
 
+Currently ``plone.app.widgets`` only works with Archetypes, but Dexterity
+support is planned in next release.
 
-Introduction
-============
+All client side code (javascript/css/images) is done and tested as part of
+`Plone Mockup`_ project.
 
-TODO: explain plone.init.js and how to register a widget
+Any feature / bug / compliment please insert in `issue tracker`_.
 
-
-Widgets
-=======
-
-List of widgets this package provides.
-
-CalendarWidget
---------------
-
-`pickadate.js`_
-
-
-AutocompleteWidget
-------------------
-
-`textext.js`_
-
-
-Fields overridden
-=================
-
- - ``effectiveDate`` field with CalendarWidget
- - ``expirationDate`` field with CalendatWidget
- - ``subject`` field with AutocompleteWidget
-
-
-.. _`pickadate.js`: http://amsul.github.com/pickadate.js
-.. _`textext.js`: http://textextjs.com
+.. _`Plone Mockup`: https://plone.github.com/mockup
+.. _`issue tracker`: https://github.com/plone.app.widgets/issues
