@@ -8,3 +8,4 @@ install:
 script:
   - bin/flake8 setup.py
   - bin/flake8 plone
+  - bin/test
