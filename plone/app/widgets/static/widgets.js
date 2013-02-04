@@ -1240,18 +1240,57 @@ define('jam/Patterns/src/registry',[
   undef:true, strict:true, trailing:true, browser:true, evil:true */
 /*global define:false */
 
-define('js/pattern.base',[
+define('js/patterns/base',[
   'jquery',
   'jam/Patterns/src/registry',
   'jam/Patterns/src/core/logger'
 ], function($, registry, logger, undefined) {
   
 
+  function getOptions($el, prefix, options) {
+    options = options || {};
+
+    // get options from parent element first, stop if element tag name is 'body'
+    if ($el.size() !== 0 && !$.nodeName($el[0], 'body')) {
+      options = getOptions($el.parent(), prefix, options);
+    }
+
+    // collect all options from element
+    if($el.length) {
+      $.each($el[0].attributes, function(index, attr) {
+        if (attr.name.substr(0, ('data-'+prefix).length) === 'data-'+prefix) {
+          var name = attr.name.substr(('data-'+prefix).length+1),
+              value = attr.value.replace(/^\s+|\s+$/g, '');  // trim
+          if (value.substring(0, 1) === '{' || value.substring(0, 1) === '[') {
+            $.extend(options, JSON.parse(value));
+            return;
+          } else if (value === 'true') {
+            value = true;
+          } else if (value === 'false') {
+            value = false;
+          }
+          options[name] = value;
+        }
+      });
+    }
+
+    return options;
+  }
+
   // Base Pattern
   var Base = function($el, options) {
     this.log = logger.getLogger(this.name);
     this.$el = $el;
-    this.options = this.parser.parse($el, this.defaults || {}, this.multipleOptions || false);
+    if (this.parser) {
+      this.options = $.extend(true, {},
+          this.parser.parse($el, this.defaults || {}, this.multipleOptions || false),
+          options || {});
+    } else {
+      this.options = $.extend(true, {},
+          this.defaults || {},
+          getOptions($el, this.name),
+          options || {});
+    }
     this.init();
     this.trigger('init');
   };
@@ -1261,11 +1300,12 @@ define('js/pattern.base',[
       this.$el.on(eventName + '.' + this.name + '.patterns', eventCallback);
     },
     trigger: function(eventName) {
-      this.$el.trigger(eventName + '.' + this.name + '.patterns', this);
+      this.$el.trigger(eventName + '.' + this.name + '.patterns', [ this ]);
     }
   };
   Base.extend = function(NewPattern) {
-    var Base = this;
+    var Base = this,
+        jquery_plugin = true;
     var Constructor;
 
     if (NewPattern && NewPattern.hasOwnProperty('constructor')) {
@@ -1282,9 +1322,33 @@ define('js/pattern.base',[
 
     Constructor.__super__ = Base.prototype;
 
+    if (Constructor.prototype.jqueryPlugin) {
+      jquery_plugin = false;
+      $.fn[Constructor.prototype.jqueryPlugin] = function(method, options) {
+        $(this).each(function() {
+          var $el = $(this),
+              pattern = $el.data('pattern-' + Constructor.prototype.name);
+          if (typeof method === "object") {
+            options = method;
+            method = undefined;
+          }
+          if (!pattern || typeof(pattern) === 'string') {
+            pattern = new Constructor($el, options);
+            $el.data('pattern-' + Constructor.prototype.name, pattern);
+          } else if (method && pattern && pattern[method]) {
+            // TODO: now allow method starts with "_"
+            pattern[method].apply(pattern, [options]);
+          }
+
+        });
+        return this;
+      };
+    }
+
     registry.register({
       name: Constructor.prototype.name,
       trigger: '.pat-' + Constructor.prototype.name,
+      jquery_plugin: jquery_plugin,
       init: function($all) {
         return $all.each(function(i) {
           var $el = $(this),
@@ -4135,9 +4199,9 @@ define("jam/select2/select2", function(){});
 /*global define:false */
 
 
-define('js/pattern.select2',[
+define('js/patterns/select2',[
   'jquery',
-  'js/pattern.base',
+  'js/patterns/base',
   'jam/Patterns/src/core/parser',
   'jam/select2/select2'
 ], function($, Base, Parser) {
@@ -5921,9 +5985,9 @@ define("jam/pickadate/source/pickadate", function(){});
 /*global define:false */
 
 
-define('js/pattern.datetime',[
+define('js/patterns/datetime',[
   'jquery',
-  'js/pattern.base',
+  'js/patterns/base',
   'jam/Patterns/src/core/parser',
   'jam/pickadate/source/pickadate'
 ], function($, Base, Parser) {
@@ -5953,6 +6017,11 @@ define('js/pattern.datetime',[
     parser: parser,
     init: function() {
       var self = this;
+
+      // only initialize on "input" elements
+      if (!self.$el.is('input')) {
+        return;
+      }
 
       self.pickadateOptions = $.extend({}, $.fn.pickadate.defaults, {
         formatSubmit: 'yyyy-mm-dd',
@@ -6350,16 +6419,11 @@ define('js/pattern.datetime',[
 
 });
 
-// plone integration for textext.
+// Pattern which generates Table Of Contents.
 //
 // Author: Rok Garbas
 // Contact: rok@garbas.si
 // Version: 1.0
-// Depends:
-//    ++resource++plone.app.jquery.js
-//    ++resource++plone.app.widgets/textext.js
-//
-// Description:
 //
 // License:
 //
@@ -6385,9 +6449,9 @@ define('js/pattern.datetime',[
 /*global define:false */
 
 
-define('js/pattern.autotoc',[
+define('js/patterns/autotoc',[
   'jquery',
-  'js/pattern.base',
+  'js/patterns/base',
   'jam/Patterns/src/core/parser'
 ], function($, Base, Parser) {
   
@@ -6503,13 +6567,13 @@ if (window.jQuery) {
   } );
 }
 
-define('js/widgets',[
+define('js/bundles/widgets',[
   'jquery',
   'jam/Patterns/src/registry',
   'logging',  // should be pullin as dependency of Patterns but is not for some reason
-  'js/pattern.select2',
-  'js/pattern.datetime',
-  'js/pattern.autotoc'
+  'js/patterns/select2',
+  'js/patterns/datetime',
+  'js/patterns/autotoc'
 ], function($, registry) {
   
 
@@ -6531,4 +6595,4 @@ define('js/widgets',[
 
   return Widgets;
 });
-require(['jquery', 'jam/Patterns/src/registry', 'js/widgets'], function(jQuery, registry) { jQuery(document).ready(function() { registry.scan(jQuery('body')); }); });
+require(['jquery', 'jam/Patterns/src/registry', 'js/bundles/widgets'], function(jQuery, registry) { jQuery(document).ready(function() { registry.scan(jQuery('body')); }); });
