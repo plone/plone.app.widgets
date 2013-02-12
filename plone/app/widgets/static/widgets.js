@@ -1262,14 +1262,24 @@ define('js/patterns/base',[
           var name = attr.name.substr(('data-'+prefix).length+1),
               value = attr.value.replace(/^\s+|\s+$/g, '');  // trim
           if (value.substring(0, 1) === '{' || value.substring(0, 1) === '[') {
-            $.extend(options, JSON.parse(value));
-            return;
+            value = JSON.parse(value);
           } else if (value === 'true') {
             value = true;
           } else if (value === 'false') {
             value = false;
           }
-          options[name] = value;
+          var names = name.split('-'),
+              names_options = options;
+          $.each(names, function(i, name) {
+            if (names.length > i + 1) {
+              if (!names_options[name]) {
+                names_options[name] = {};
+              }
+              names_options = names_options[name];
+            } else {
+              names_options[name] = value;
+            }
+          });
         }
       });
     }
@@ -1366,380 +1376,6 @@ define('js/patterns/base',[
   return Base;
 });
 
-/**
- * @license
- * Patterns @VERSION@ parser - argument parser
- *
- * Copyright 2012 Simplon B.V.
- * Copyright 2012 Florian Friesdorf
- */
-define('jam/Patterns/src/core/parser',[
-    'jquery',
-    './logger'
-], function($, logger) {
-    var log = logger.getLogger('parser');
-
-    function ArgumentParser(name) {
-        this.order = [];
-        this.parameters = {};
-        this.attribute = "data-pat-" + name;
-        this.enum_values = {};
-        this.enum_conflicts = [];
-        this.groups = {};
-        this.possible_groups = {};
-    }
-
-    ArgumentParser.prototype = {
-        group_pattern: /([a-z][a-z0-9]*)-([A-Z][a-z0-0\-]*)/i,
-        named_param_pattern: /^\s*([a-z][a-z0-9\-]*)\s*:(.*)/i,
-
-        _camelCase: function(str) {
-            return str.replace(/\-([a-z])/g, function(_, p1){
-                return p1.toUpperCase();
-            });
-        },
-
-        add_argument: function(name, default_value, choices, multiple) {
-            var spec, m;
-
-            if (multiple && !Array.isArray(default_value))
-                default_value=[default_value];
-            spec={name: name,
-                  value: default_value,
-                  multiple: multiple,
-                  dest: name,
-                  group: null};
-
-            if (choices && Array.isArray(choices) && choices.length) {
-                spec.choices=choices;
-                spec.type=this._typeof(choices[0]);
-                for (var i=0; i<choices.length; i++)
-                    if (this.enum_conflicts.indexOf(choices[i])!==-1)
-                        continue;
-                    else if (choices[i] in this.enum_values) {
-                        this.enum_conflicts.push(choices[i]);
-                        delete this.enum_values[choices[i]];
-                    } else
-                        this.enum_values[choices[i]]=name;
-            } else if (typeof spec.value==="string" && spec.value.slice(0, 1)==="$")
-                spec.type=this.parameters[spec.value.slice(1)].type;
-            else
-                // Note that this will get reset by _defaults if default_value is a function.
-                spec.type=this._typeof(multiple ? spec.value[0] : spec.value);
-
-            m=name.match(this.group_pattern);
-            if (m) {
-                var group=m[1], field=m[2];
-                if (group in this.possible_groups) {
-                    var first_spec = this.possible_groups[group],
-                        first_name = first_spec.name.match(this.group_pattern)[2];
-                    first_spec.group=group;
-                    first_spec.dest=first_name;
-                    this.groups[group]=new ArgumentParser();
-                    this.groups[group].add_argument(
-                            first_name,
-                            spec.value, spec.cohices, spec.multiple);
-                    delete this.possible_groups[group];
-                }
-                if (group in this.groups) {
-                    this.groups[group].add_argument(field, default_value, choices, multiple);
-                    spec.group=group;
-                    spec.dest=field;
-                } else {
-                    this.possible_groups[group]=spec;
-                    spec.dest=this._camelCase(spec.name);
-                }
-            }
-            this.order.push(name);
-            this.parameters[name]=spec;
-        },
-
-        _typeof: function(obj) {
-            var type = typeof obj;
-            if (obj===null)
-                return "null";
-            return type;
-        },
-
-        _coerce: function(name, value) {
-            var spec=this.parameters[name];
-
-            if (typeof value !== spec.type)
-                try {
-                    switch (spec.type) {
-                        case "boolean":
-                            if (typeof value === "string") {
-                                value=value.toLowerCase();
-                                var num = parseInt(value, 10);
-                                if (!isNaN(num))
-                                    value=!!num;
-                                else
-                                    value=(value==="true" || value==="y" || value==="yes" || value==="y");
-                            } else if (typeof value === "number")
-                                value=!!value;
-                            else
-                                throw ("Cannot convert value for " + name + " to boolean");
-                            break;
-                        case "number":
-                            if (typeof value === "string") {
-                                value=parseInt(value, 10);
-                                if (isNaN(value))
-                                    throw ("Cannot convert value for " + name + " to number");
-                            } else if (typeof value === "boolean")
-                                value=value + 0;
-                            else
-                                throw ("Cannot convert value for " + name + " to number");
-                            break;
-                        case "string":
-                            value=value.toString();
-                            break;
-                        case "null":  // Missing default values
-                        case "undefined":
-                            break;
-                        default:
-                            throw ("Do not know how to convert value for " + name + " to " + spec.type);
-                    }
-                } catch (e) {
-                    log.warn(e);
-                    return null;
-                }
-
-            if (spec.choices && spec.choices.indexOf(value)===-1) {
-                log.warn("Illegal value for " + name + ": " + value);
-                return null;
-            }
-
-            return value;
-        },
-
-        _set: function(opts, name, value) {
-            if (!(name in this.parameters)) {
-                log.debug("Ignoring value for unknown argument " + name);
-                return;
-            }
-
-            var spec=this.parameters[name];
-            if (spec.multiple) {
-                var parts=value.split(/,+/), i, v;
-                value=[];
-                for (i=0; i<parts.length; i++) {
-                    v=this._coerce(name, parts[i].trim());
-                    if (v!==null)
-                        value.push(v);
-                }
-            } else {
-                value=this._coerce(name, value);
-                if (value===null) 
-                    return;
-            }
-
-            opts[name]=value;
-        },
-
-        _parseExtendedNotation: function(parameter) {
-            var opts = {}, i,
-                parts = parameter.split(";"),
-                matches;
-
-            for (i=0; i<parts.length; i++) {
-                if (!parts[i])
-                    continue;
-
-                matches = parts[i].match(this.named_param_pattern);
-                if (!matches) {
-                    log.warn("Invalid parameter: " + parts[i]);
-                    break;
-                }
-
-                var name = matches[1],
-                    value = matches[2].trim();
-
-                if (name in this.parameters)
-                    this._set(opts, name, value);
-                else if (name in this.groups) {
-                    var subopt = this.groups[name]._parseShorthandNotation(value);
-                    for (var field in subopt)
-                        this._set(opts, name+"-"+field, subopt[field]);
-                } else {
-                    log.warn("Unknown named parameter " + matches[1]);
-                    continue;
-                }
-            }
-
-            return opts;
-        },
-
-        _parseShorthandNotation: function(parameter) {
-            var parts = parameter.split(/\s+/),
-                opts = {},
-                positional = true,
-                i, part, flag, sense, matches;
-
-            i=0;
-            while (parts.length) {
-                part=parts.shift().trim();
-                if (part.slice(0, 3)==="no-") {
-                    sense=false;
-                    flag=part.slice(3);
-                } else {
-                    sense=true;
-                    flag=part;
-                }
-                if (flag in this.parameters && this.parameters[flag].type==="boolean") {
-                    positional=false;
-                    this._set(opts, flag, sense);
-                } else if (flag in this.enum_values) {
-                    positional=false;
-                    this._set(opts, this.enum_values[flag], flag);
-                } else if (positional)
-                    this._set(opts, this.order[i], part);
-                else {
-                    parts.unshift(part);
-                    break;
-                }
-
-                i++;
-                if (i>=this.order.length)
-                    break;
-            }
-            if (parts.length)
-                log.warn("Ignore extra arguments: " + parts.join(" "));
-            return opts;
-        },
-
-        _parse: function(parameter) {
-            var opts, extended, sep;
-
-            if (!parameter)
-                return {};
-
-            if (parameter.match(this.named_param_pattern))
-                return this._parseExtendedNotation(parameter);
-
-            sep=parameter.indexOf(";");
-            if (sep===-1)
-                return this._parseShorthandNotation(parameter);
-
-            opts=this._parseShorthandNotation(parameter.slice(0, sep));
-            extended=this._parseExtendedNotation(parameter.slice(sep+1));
-            for (var name in extended)
-                opts[name]=extended[name];
-            return opts;
-        },
-
-        _defaults: function($el) {
-            var result = {};
-            for (var name in this.parameters)
-                if (typeof this.parameters[name].value==="function")
-                    try {
-                        result[name]=this.parameters[name].value($el, name);
-                        this.parameters[name].type=typeof result[name];
-                    } catch(e) {
-                        log.error("Default function for " + name + " failed.");
-                    }
-                else
-                    result[name]=this.parameters[name].value;
-            return result;
-        },
-
-        _cleanupOptions: function(options) {
-            var keys = Object.keys(options),
-                i, spec, name, group;
-
-            // Resolve references
-            for (i=0; i<keys.length; i++) {
-                name=keys[i];
-                spec=this.parameters[name];
-                if (spec===undefined)
-                    continue;
-
-                if (options[name]===spec.value &&
-                        typeof spec.value==="string" && spec.value.slice(0, 1)==="$")
-                    options[name]=options[spec.value.slice(1)];
-            }
-
-            // Move options into groups and do renames
-            keys=Object.keys(options);
-            for (i=0; i<keys.length; i++) {
-                name=keys[i];
-                spec=this.parameters[name];
-                if (spec===undefined)
-                    continue;
-
-                if (spec.group)  {
-                    if (typeof options[spec.group]!=="object")
-                        options[spec.group]={};
-                    target=options[spec.group];
-                } else
-                    target=options;
-
-                if (spec.dest!==name) {
-                    target[spec.dest]=options[name];
-                    delete options[name];
-                }
-            }
-        },
-
-        parse: function($el, options, multiple) {
-            if (typeof options==="boolean" && multiple===undefined) {
-                multiple=options;
-                options={};
-            }
-
-            var stack = [[this._defaults($el)]];
-
-            var $parents = $el.parents().andSelf(),
-                final_length = 1,
-                i, data, frame;
-            for (i=0; i<$parents.length; i++) {
-                data = $parents.eq(i).attr(this.attribute);
-                if (data) {
-                    var _parse = this._parse.bind(this); // Needed to fix binding in map call
-                    if (data.match(/&&/))
-                        frame=data.split(/\s*&&\s*/).map(_parse);
-                    else
-                        frame=[_parse(data)];
-                    final_length = Math.max(frame.length, final_length);
-                    stack.push(frame);
-                }
-            }
-            if (typeof options==="object") {
-                if (Array.isArray(options)) {
-                    stack.push(options);
-                    final_length=Math.max(options.length, final_length);
-                } else
-                    stack.push([options]);
-            }
-
-            if (!multiple)
-                final_length=1;
-
-            var results=[], frame_length, x, xf;
-            for (i=0; i<final_length; i++)
-                results.push({});
-
-            for (i=0; i<stack.length; i++) {
-                frame=stack[i];
-                frame_length=frame.length-1;
-
-                for (x=0; x<final_length; x++) {
-                    xf=(x>frame_length) ? frame_length : x;
-                    results[x]=$.extend(results[x], frame[xf]);
-                }
-            }
-
-            for (i=0; i<results.length; i++)
-                this._cleanupOptions(results[i]);
-
-            return multiple ? results : results[0];
-        }
-    };
-
-    return ArgumentParser;
-});
-// jshint indent: 4, browser: true, jquery: true, quotmark: double
-// vim: sw=4 expandtab
-;
 /*
 Copyright 2012 Igor Vaynberg
 
@@ -4202,83 +3838,61 @@ define("jam/select2/select2", function(){});
 define('js/patterns/select2',[
   'jquery',
   'js/patterns/base',
-  'jam/Patterns/src/core/parser',
   'jam/select2/select2'
-], function($, Base, Parser) {
+], function($, Base) {
   
-
-  var parser = new Parser("select2"),
-      options = [
-        "width",
-        "minimumInputLength",
-        "maximumInputLength",
-        "minimumResultsForSearch",
-        "maximumSelectionSize",
-        "placeholder",
-        "separator",
-        "allowClear",
-        "multiple",
-        "closeOnSelect",
-        "openOnEnter",
-        "data",
-        "tags",
-        "ajaxUrl",
-
-        "initSelection"
-      ];
-  $.each(options, function(i, option) {
-    parser.add_argument(option);
-  });
 
   var Select2 = Base.extend({
     name: "select2",
-    parser: parser,
+    defaults: {},
     init: function() {
-      var self = this,
-          select2options = {};
-      $.each(options, function(i, option) {
-        if (self.options[option]) {
-          if (option === 'ajaxUrl') {
-            select2options.ajax = {
-              quietMillis: 300,
-              data: function (term, page) {
-                return {
-                  query: term,
-                  page_limit: 10,
-                  page: page
-                };
-              },
-              results: function (data, page) {
-                var more = (page * 10) < data.total; // whether or not there are more results available
-                return { results: data.results, more: more };
-              }
-            };
-            select2options.ajax.url = self.options[option];
-          } else if (option === 'initSelection') {
-            select2options.initSelection = function ($el, callback) {
-              var data = [], value = $el.val(),
-                  initSelection = JSON.parse(self.options.initSelection);
-              $(value.split(",")).each(function () {
-                var text = this;
-                if (initSelection[this]) {
-                  text = initSelection[this];
-                }
-                data.push({id: this, text: text});
-              });
-              callback(data);
-            };
-          } else if (option === 'tags' || option === 'data') {
-            if (self.options[option].substr(0, 1) === '[') {
-              select2options.tags = JSON.parse(self.options[option]);
-            } else {
-              select2options.tags = self.options[option].split(',');
-            }
-          } else {
-            select2options[option] = self.options[option];
+      var self = this;
+
+      if (self.options.initselection) {
+        self.options.initSelection = function ($el, callback) {
+          var data = [], value = $el.val(),
+              initSelection = self.options.initselection;
+          if (typeof(initSelection) === 'string') {
+              initSelection = JSON.parse(self.options.initselection);
           }
+          $(value.split(",")).each(function () {
+            var text = this;
+            if (initSelection[this]) {
+              text = initSelection[this];
+            }
+            data.push({id: this, text: text});
+          });
+          callback(data);
+        };
+      }
+
+      if (self.options.ajax) {
+        self.options.ajax = $.extend({
+          quietMillis: 300,
+          data: function (term, page) {
+            return {
+              query: term,
+              page_limit: 10,
+              page: page
+            };
+          },
+          results: function (data, page) {
+            // whether or not there are more results available
+            var more = (page * 10) < data.total;
+            return { results: data.results, more: more };
+          }
+        }, self.options.ajax);
+      }
+
+      if (self.options.tags && typeof(self.options) === 'string') {
+        if (self.options.tags.substr(0, 1) === '[') {
+          self.options.tags = JSON.parse(self.options.tags);
+        } else {
+          self.options.tags = self.options.tags.split(',');
         }
-      });
-      self.$el.select2(select2options);
+      }
+
+      self.$el.select2(self.options);
     }
   });
 
@@ -5988,33 +5602,33 @@ define("jam/pickadate/source/pickadate", function(){});
 define('js/patterns/datetime',[
   'jquery',
   'js/patterns/base',
-  'jam/Patterns/src/core/parser',
   'jam/pickadate/source/pickadate'
-], function($, Base, Parser) {
+], function($, Base) {
   
-
-  var parser = new Parser("select2");
-
-  parser.add_argument("klassWrapper", "pat-datetime-wrapper");
-  parser.add_argument("klassIcon", "pat-datetime-icon");
-  parser.add_argument("klassYearInput", "pat-datetime-year");
-  parser.add_argument("klassMonthInput", "pat-datetime-month");
-  parser.add_argument("klassDayInput", "pat-datetime-day");
-  parser.add_argument("klassHourInput", "pat-datetime-hour");
-  parser.add_argument("klassMinuteInput", "pat-datetime-minute");
-  parser.add_argument("klassAMPMInput", "pat-datetime-ampm");
-  parser.add_argument("klassDelimiter", "pat-datetime-delimiter");
-  parser.add_argument("format", "d-mmmm-yyyy@HH:MM");
-  parser.add_argument("formatSubmit", "yyyy-m-d H:M");
-  parser.add_argument("showAMPM", true);
-  parser.add_argument("AMPM", ['AM', 'PM']);
-  parser.add_argument("minuteStep", 5);
-  parser.add_argument("pickadateMonthSelector", true);
-  parser.add_argument("pickadateYearSelector", true);
 
   var DateTime = Base.extend({
     name: 'datetime',
-    parser: parser,
+    defaults: {
+      format: "d-mmmm-yyyy@HH:MM",
+      formatsubmit: "yyyy-m-d H:M",
+      ampm: 'AM,PM',
+      minutestep: '5',
+      klass: {
+        wrapper: "pat-datetime-wrapper",
+        icon: "pat-datetime-icon",
+        year: "pat-datetime-year",
+        month: "pat-datetime-month",
+        day: "pat-datetime-day",
+        hour: "pat-datetime-hour",
+        minute: "pat-datetime-minute",
+        ampm: "pat-datetime-ampm",
+        delimiter: "pat-datetime-delimiter"
+      },
+      pickadate: {
+        monthSelector: true,
+        yearSelector: true
+      }
+    },
     init: function() {
       var self = this;
 
@@ -6023,12 +5637,8 @@ define('js/patterns/datetime',[
         return;
       }
 
-      self.pickadateOptions = $.extend({}, $.fn.pickadate.defaults, {
+      self.pickadateOptions = $.extend(true, {}, $.fn.pickadate.defaults, {
         formatSubmit: 'yyyy-mm-dd',
-        monthSelector: self.options.pickadateMonthSelector,
-        yearSelector: self.options.pickadateYearSelector,
-        onOpen: function() {},
-        onClose: function() {},
         onSelect: function(e) {
           var date = this.getDate('yyyy-mm-dd').split('-');
           self.$years.val(parseInt(date[0], 10));
@@ -6043,12 +5653,12 @@ define('js/patterns/datetime',[
             self.$ampm.val()
           );
         }
-      });
+      }, self.options.pickadate);
 
       self.$el.hide();
 
       self.$wrapper = $('<div/>')
-        .addClass(self.options.klassWrapper)
+        .addClass(self.options.klass.wrapper)
         .insertAfter(self.$el);
 
       self.pickadate = $('<input/>')
@@ -6076,21 +5686,21 @@ define('js/patterns/datetime',[
       }
 
       self.$years = $('<select/>')
-        .addClass(self.options.klassYearInput)
+        .addClass(self.options.klass.year)
         .on('change', changePickadateDate);
       self.$months = $('<select/>')
-        .addClass(self.options.klassMonthInput)
+        .addClass(self.options.klass.month)
         .on('change', changePickadateDate);
       self.$days = $('<select/>')
-        .addClass(self.options.klassDayInput)
+        .addClass(self.options.klass.day)
         .on('change', changePickadateDate);
       self.$hours = $('<select/>')
-        .addClass(self.options.klassHourInput)
+        .addClass(self.options.klass.hour)
         .on('change', changePickadateDate);
       self.$minutes = $('<select/>')
-        .addClass(self.options.klassMinuteInput)
+        .addClass(self.options.klass.minute)
         .on('change', changePickadateDate);
-      self.$icon = $('<span class="' + self.options.klassIcon + '"/>')
+      self.$icon = $('<span class="' + self.options.klass.icon + '"/>')
         .on('click', function(e) {
           e.stopPropagation();
           e.preventDefault();
@@ -6124,18 +5734,18 @@ define('js/patterns/datetime',[
               return self.$icon;
             default:
               return $('<span> ' + format + ' </span>')
-                .addClass(self.options.klassDelimiter);
+                .addClass(self.options.klass.delimiter);
           }
         }
       ), function(i, $item) {
         self.$wrapper.append($item);
       });
 
-      self.$ampm = $('<select/>')
-        .addClass(self.options.klassAMPMInput)
-        .append(self._getAMPM())
-        .on('change', changePickadateDate);
-      if (self.options.showAMPM) {
+      if (self.options.ampm) {
+        self.$ampm = $('<select/>')
+          .addClass(self.options.klass.ampm)
+          .append(self._getAMPM())
+          .on('change', changePickadateDate);
         self.$wrapper.append($('<span> </span>'));
         self.$wrapper.append(self.$ampm);
       }
@@ -6157,7 +5767,9 @@ define('js/patterns/datetime',[
         self.$days.val('' + parseInt(date[2], 10));
         self.$hours.val('' + parseInt(time[0], 10));
         self.$minutes.val('' + parseInt(time[1], 10));
-        self.$ampm.val(ampm);
+        if (self.options.ampm) {
+          self.$ampm.val(ampm);
+        }
       }
     },
     _strftime: function(format, action, options) {
@@ -6287,9 +5899,10 @@ define('js/patterns/datetime',[
       return days;
     },
     _getAMPM: function() {
+      var AMPM = this.options.ampm.split(',');
       return [
-        this._createOption(this.options.AMPM[0], this.options.AMPM[0]),
-        this._createOption(this.options.AMPM[1], this.options.AMPM[1])
+        this._createOption(AMPM[0], AMPM[0]),
+        this._createOption(AMPM[1], AMPM[1])
         ];
     },
     _getHours: function(format) {
@@ -6297,7 +5910,7 @@ define('js/patterns/datetime',[
           current = this.getDate('h'),
           hour = 0;
       hours.push(this._createOption('', '--', current === undefined));
-      while (hour < (this.options.showAMPM && 12 || 24)) {
+      while (hour < (this.options.ampm && 12 || 24)) {
         if (format === 'H') {
           hours.push(this._createOption(hour, hour, current === hour));
         } else {
@@ -6319,7 +5932,7 @@ define('js/patterns/datetime',[
           minutes.push(this._createOption(minute, ('0' + minute).slice(-2),
                 current === minute));
         }
-        minute += parseInt(this.options.minuteStep, 10);
+        minute += parseInt(this.options.minutestep, 10);
       }
       return minutes;
     },
@@ -6346,7 +5959,7 @@ define('js/patterns/datetime',[
           parseInt(hour, 10) + (ampm === 'PM' && 12 || 0),
           parseInt(minutes, 10)
           );
-        self.$el.attr('value', self.getDate(self.options.formatSubmit));
+        self.$el.attr('value', self.getDate(self.options.formatsubmit));
       }
     },
     getDate: function(format) {
@@ -6451,27 +6064,23 @@ define('js/patterns/datetime',[
 
 define('js/patterns/autotoc',[
   'jquery',
-  'js/patterns/base',
-  'jam/Patterns/src/core/parser'
+  'js/patterns/base'
 ], function($, Base, Parser) {
   
 
-  var parser = new Parser('autotoc');
-
-  parser.add_argument('section', 'section');
-  parser.add_argument('levels', 'h1,h2,h3');
-  parser.add_argument('IDPrefix', 'autotoc-item-');
-  parser.add_argument('klassTOC', 'autotoc-nav');
-  parser.add_argument('klassSection', 'autotoc-section');
-  parser.add_argument('klassLevelPrefix', 'autotoc-level-');
-  parser.add_argument('klassActive', 'active');
-  parser.add_argument('scrollDuration');
-  parser.add_argument('scrollEasing', 'swing');
-  parser.add_argument('klass');
-
   var AutoTOC = Base.extend({
     name: "autotoc",
-    parser: parser,
+    defaults: {
+      section: 'section',
+      levels: 'h1,h2,h3',
+      IDPrefix: 'autotoc-item-',
+      klassTOC: 'autotoc-nav',
+      klassSection: 'autotoc-section',
+      klassLevelPrefix: 'autotoc-level-',
+      klassActive: 'active',
+      scrollDuration: 'slow',
+      scrollEasing: 'swing'
+    },
     init: function() {
       var self = this;
       self.$toc = $('<nav/>')
@@ -6586,7 +6195,11 @@ define('js/bundles/widgets',[
       var $match = $root.filter('.enableFormTabbing');
       $match = $match.add($root.find('.enableFormTabbing'));
       $match.addClass('pat-autotoc');
-      $match.attr('data-pat-autotoc', 'levels:legend;section:fieldset;klass:autotabs');
+      $match.attr({
+        'data-autotoc-levels': 'legend',
+        'data-autotoc-section': 'fieldset',
+        'data-autotoc-klass': 'autotabs'
+      });
 
     }
   };
