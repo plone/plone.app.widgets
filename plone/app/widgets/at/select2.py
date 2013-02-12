@@ -9,7 +9,7 @@ class Select2Widget(PatternsWidget):
     _properties = PatternsWidget._properties.copy()
     _properties.update({
         'pattern': 'select2',
-        'pattern_options': '',
+        'pattern_options': {},
         'tags': '',
         'multiple': False,
         'ajax_vocabulary': '',
@@ -24,14 +24,15 @@ class Select2Widget(PatternsWidget):
     def updateOptions(self, value, context, field, request):
         state = getMultiAdapter((context, request), name=u'plone_portal_state')
         if self.ajax_vocabulary and self.element_type is not "select":
-            self.pattern_options += 'ajaxUrl:' + \
-                state.portal_url() + self.ajax_url + self.ajax_vocabulary + ';'
+            self.pattern_options['ajax'] = {}
+            self.pattern_options['ajax']['url'] = \
+                state.portal_url() + self.ajax_url + self.ajax_vocabulary
         if self.tags:
             factory = queryUtility(IVocabularyFactory, self.tags)
             tags = [i.token for i in factory(context)]
-            self.pattern_options += 'tags:' + json.dumps(tags) + ';'
+            self.pattern_options['tags'] = json.dumps(tags)
         if self.multiple is True:
-            self.pattern_options += 'multiple:true;'
+            self.pattern_options['multiple'] = 'true'
         if self.ajax_vocabulary:
             factory = queryUtility(IVocabularyFactory, self.ajax_vocabulary)
             vocabulary = factory(context)
@@ -46,7 +47,7 @@ class Select2Widget(PatternsWidget):
             else:
                 term = vocabulary.getTerm(value)
                 data.append(dict(id=term.token, text=term.title))
-            self.pattern_options += 'initSelection:' + json.dumps(data) + ';'
+            self.pattern_options['initselection'] = json.dumps(data)
 
     def process_form(self, instance, field, form, empty_marker=None,
                      emptyReturnsMarker=False, validating=True):

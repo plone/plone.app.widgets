@@ -31,7 +31,7 @@ class ATWidgetsExtender(object):
                 field.widget = Select2Widget(
                     label=old.label,
                     description=old.description,
-                    pattern_options="width:30em;",
+                    pattern_options={'width': '30em'},
                     tags='plone.app.vocabularies.Keywords',
                 )
 
@@ -40,7 +40,7 @@ class ATWidgetsExtender(object):
                 field.widget = Select2Widget(
                     label=old.label,
                     description=old.description,
-                    pattern_options='width:15em;',
+                    pattern_options={'width': '15em'},
                     element_type="select",
                 )
 
@@ -57,8 +57,10 @@ class ATWidgetsExtender(object):
                                        u"contributed to this item."),
                     multiple=True,
                     ajax_vocabulary="plone.app.vocabularies.Users",
-                    pattern_options="width:30em;placeholder:Add "
-                                    "contributors...;",
+                    pattern_options={
+                        'width': '30em',
+                        'placeholder': 'Add contributors...',
+                    }
                 )
 
             if field.__name__ in ['creators']:
@@ -68,7 +70,10 @@ class ATWidgetsExtender(object):
                                        u"contributed to this item."),
                     multiple=True,
                     ajax_vocabulary="plone.app.vocabularies.Users",
-                    pattern_options="width:30em;placeholder:Add creators...;"
+                    pattern_options={
+                        'width': '30em',
+                        'placeholder': 'Add creators...',
+                    }
                 )
 
         #for fieldname in ['contributors', 'creators']:

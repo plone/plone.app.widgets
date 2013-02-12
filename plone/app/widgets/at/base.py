@@ -1,3 +1,4 @@
+import json
 from lxml import etree
 from Products.Archetypes.Widget import TypesWidget
 
@@ -8,8 +9,19 @@ class PatternsWidget(TypesWidget):
         'macro': "patterns_widgets",
         'element_type': 'input',
         'pattern': '',
-        'pattern_options': ''
+        'pattern_options': {},
     })
+
+    def _process_args(self, **kwargs):
+        new_kwargs = {}
+        for kwarg in kwargs:
+            if kwarg in ['pattern_options']:
+                new_kwargs[kwarg] = {}
+                new_kwargs[kwarg].update(self._properties[kwarg])
+                new_kwargs[kwarg].update(kwargs[kwarg])
+            else:
+                new_kwargs[kwarg] = kwargs[kwarg]
+        super(PatternsWidget, self)._process_args(**new_kwargs)
 
     def view(self, context, field, request):
         return field.getAccessor(context)()
@@ -49,6 +61,10 @@ class PatternsWidget(TypesWidget):
 
         if self.pattern:
             el.attrib['class'] = 'pat-' + self.pattern
-            el.attrib['data-pat-' + self.pattern] = self.pattern_options
+            if self.pattern_options:
+                for name, value in self.pattern_options.items():
+                    if type(value) in [dict, list]:
+                        value = json.dumps(value)
+                    el.attrib['data-' + self.pattern + '-' + name] = value
 
         return etree.tostring(el)

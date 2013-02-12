@@ -5,7 +5,9 @@ class DateTimeWidget(PatternsWidget):
     _properties = PatternsWidget._properties.copy()
     _properties.update({
         'pattern': 'datetime',
-        'pattern_options': 'formatSubmit:yyyy-m-d H:M;',
+        'pattern_options': {
+            'formatSubmit': 'yyyy-m-d H:M',
+        },
     })
 
     def formatAccessor(self, value, context, field, request):
