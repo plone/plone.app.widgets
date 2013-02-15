@@ -1268,18 +1268,22 @@ define('js/patterns/base',[
           } else if (value === 'false') {
             value = false;
           }
-          var names = name.split('-'),
-              names_options = options;
-          $.each(names, function(i, name) {
-            if (names.length > i + 1) {
-              if (!names_options[name]) {
-                names_options[name] = {};
+          if (name === '') {
+            options = value;
+          } else {
+            var names = name.split('-'),
+                names_options = options;
+            $.each(names, function(i, name) {
+              if (names.length > i + 1) {
+                if (!names_options[name]) {
+                  names_options[name] = {};
+                }
+                names_options = names_options[name];
+              } else {
+                names_options[name] = value;
               }
-              names_options = names_options[name];
-            } else {
-              names_options[name] = value;
-            }
-          });
+            });
+          }
         }
       });
     }
@@ -3866,10 +3870,25 @@ define('js/patterns/select2',[
         };
       }
 
-      if (self.options.ajax) {
+
+      if (self.options.ajax || self.options.ajaxtags) {
+        if (self.options.ajaxtags) {
+          self.options.multiple = true;
+          self.options.ajax = self.options.ajax || {};
+          self.options.ajax.url = self.options.ajaxtags;
+          self.options.initSelection = function ($el, callback) {
+            var data = [], value = $el.val();
+            $(value.split(",")).each(function () {
+              data.push({id: this, text: this});
+            });
+            callback(data);
+          };
+        }
+        var query_term = '';
         self.options.ajax = $.extend({
           quietMillis: 300,
           data: function (term, page) {
+            query_term = term;
             return {
               query: term,
               page_limit: 10,
@@ -3877,9 +3896,21 @@ define('js/patterns/select2',[
             };
           },
           results: function (data, page) {
-            // whether or not there are more results available
-            var more = (page * 10) < data.total;
-            return { results: data.results, more: more };
+            var results = data.results;
+            if (self.options.ajaxtags) {
+              var data_ids = [];
+              $.each(data.results, function(i, item) {
+                data_ids.push(item.id);
+              });
+              results = [];
+              if (query_term !== ''  && $.inArray(query_term, data_ids) === -1) {
+                results.push({id:query_term, text:query_term});
+              }
+              $.each(data.results, function(i, item) {
+                results.push(item);
+              });
+            }
+            return { results: results };
           }
         }, self.options.ajax);
       }
@@ -3893,6 +3924,7 @@ define('js/patterns/select2',[
       }
 
       self.$el.select2(self.options);
+      self.$el.parent().off('close.modal.patterns');
     }
   });
 

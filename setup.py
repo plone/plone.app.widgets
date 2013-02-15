@@ -41,5 +41,8 @@ setup(
         'archetypes': [
             'archetypes.schemaextender',
         ],
+        'dexterity': [
+            'plone.app.dexterity',
+        ],
     },
 )

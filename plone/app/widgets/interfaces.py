@@ -1,7 +1,8 @@
 from zope.interface import Interface
+from plone.app.z3cform.interfaces import IPloneFormLayer
 
 
-class IWidgetsLayer(Interface):
+class IWidgetsLayer(IPloneFormLayer):
     """Browser layer used to indicate that plone.app.widgets is installed
     """
 
