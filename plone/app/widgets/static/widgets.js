@@ -3907,7 +3907,11 @@ define('js/patterns/select2',[
                 results.push({id:query_term, text:query_term});
               }
               $.each(data.results, function(i, item) {
-                results.push(item);
+                if (self.options.ajaxtags) {
+                  results.push({ id: item.text, text: item.text });
+                } else {
+                  results.push(item);
+                }
               });
             }
             return { results: results };
