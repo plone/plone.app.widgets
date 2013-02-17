@@ -23,18 +23,11 @@ class DateTimeWidget(PatternsWidget, Widget):
 
     implementsOnly(IDateTimeWidget)
 
-    def __init__(self, *args, **kw):
-        super(DateTimeWidget, self).__init__(*args, **kw)
-        self._pattern_options = {}
-        self._pattern_el_type = 'input'
-        self._pattern_name = 'datetime'
+    pattern_name = 'datetime'
 
-    def render_element(self, el):
-
-        el.attrib['type'] = 'text'
-        el.attrib['value'] = self.value
-
-        return el
+    def customize_widget(self, widget, value):
+        widget.el.attrib['type'] = 'text'
+        widget.el.attrib['value'] = value
 
 
 class DateTimeWidgetConverter(BaseDataConverter):

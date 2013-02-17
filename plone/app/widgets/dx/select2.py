@@ -34,75 +34,53 @@ class SelectWidget(PatternsWidget, BaseSelectWidget):
 
     implements(ISelectWidget)
 
-    def __init__(self, *args, **kw):
-        super(SelectWidget, self).__init__(*args, **kw)
-        self._pattern_options = {}
-        self._pattern_el_type = 'select'
-        self._pattern_name = 'select2'
+    pattern_el_type = 'select'
+    pattern_name = 'select2'
 
-        self.width = '20em'
+    width = '20em'
 
-    def render_element(self, el):
+    def customize_widget(self, widget, value):
 
         if self.width:
-            self._pattern_options['width'] = self.width
+            widget.options['width'] = self.width
 
         for item in self.items():
             option = etree.Element('option')
-            option.attrib['id'] = item['id']
             option.attrib['value'] = item['value']
             if item['selected']:
                 option.attrib['selected'] = 'selected'
             option.text = item['content']
-            el.append(option)
-
-        return el
+            widget.el.append(option)
 
 
 class ITagsWidget(IWidget):
 
     width = TextLine()
-    tags = Tuple()
-    ajaxtags = TextLine()
+    ajax_suggest = TextLine()
 
 
 class TagsWidget(PatternsWidget, Widget):
 
     implementsOnly(ITagsWidget)
 
-    def __init__(self, *args, **kw):
-        super(TagsWidget, self).__init__(*args, **kw)
-        self._pattern_options = {}
-        self._pattern_el_type = 'input'
-        self._pattern_name = 'select2'
+    pattern_name = 'select2'
 
-        self.width = '30em'
-        self.tags = None
-        self.ajaxtags = None
+    width = '30em'
+    ajax_suggest = ''
 
-    def render_element(self, el):
+    def customize_widget(self, widget, value):
 
         if self.width:
-            self._pattern_options['width'] = self.width
+            widget.options['width'] = self.width
 
-        if self.ajaxtags:
-            state = getMultiAdapter((self.context, self.request),
-                                    name=u'plone_portal_state')
-            self._pattern_options['ajaxtags'] = state.portal_url() + \
-                '/@@widgets/getVocabulary?name=' + self.ajaxtags
+        if self.ajax_suggest:
+            state = getMultiAdapter(
+                (self.context, self.request), name=u'plone_portal_state')
+            widget.options['ajax_suggest'] = state.portal_url() + \
+                '/@@widgets/getVocabulary?name=' + self.ajax_suggest
 
-        elif self.tags:
-            factory = queryUtility(IVocabularyFactory, self.tags)
-            if factory:
-                self._pattern_options['tags'] = json.dumps([
-                    item.title for item in factory(self.context)])
-            else:
-                self._pattern_options['tags'] = '[]'
-
-        el.attrib['type'] = 'text'
-        el.attrib['value'] = self.value
-
-        return el
+        widget.el.attrib['value'] = self.value
+        widget.el.attrib['type'] = 'text'
 
 
 class TagsWidgetConverter(BaseDataConverter):

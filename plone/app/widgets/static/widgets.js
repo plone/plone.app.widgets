@@ -3871,11 +3871,11 @@ define('js/patterns/select2',[
       }
 
 
-      if (self.options.ajax || self.options.ajaxtags) {
-        if (self.options.ajaxtags) {
+      if (self.options.ajax || self.options.ajax_suggest) {
+        if (self.options.ajax_suggest) {
           self.options.multiple = true;
           self.options.ajax = self.options.ajax || {};
-          self.options.ajax.url = self.options.ajaxtags;
+          self.options.ajax.url = self.options.ajax_suggest;
           self.options.initSelection = function ($el, callback) {
             var data = [], value = $el.val();
             $(value.split(",")).each(function () {
@@ -3897,7 +3897,7 @@ define('js/patterns/select2',[
           },
           results: function (data, page) {
             var results = data.results;
-            if (self.options.ajaxtags) {
+            if (self.options.ajax_suggest) {
               var data_ids = [];
               $.each(data.results, function(i, item) {
                 data_ids.push(item.id);
@@ -3907,7 +3907,7 @@ define('js/patterns/select2',[
                 results.push({id:query_term, text:query_term});
               }
               $.each(data.results, function(i, item) {
-                if (self.options.ajaxtags) {
+                if (self.options.ajax_suggest) {
                   results.push({ id: item.text, text: item.text });
                 } else {
                   results.push(item);

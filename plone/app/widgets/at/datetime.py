@@ -2,15 +2,11 @@ from plone.app.widgets.at.base import PatternsWidget
 
 
 class DateTimeWidget(PatternsWidget):
-    _properties = PatternsWidget._properties.copy()
-    _properties.update({
-        'pattern': 'datetime',
-        'pattern_options': {
-            'formatSubmit': 'yyyy-m-d H:M',
-        },
-    })
 
-    def formatAccessor(self, value, context, field, request):
+    pattern_name = 'datetime'
+    pattern_el_type = 'input'
+
+    def customize_widget(self, widget, value, context, field, request):
         if value:
-            return value.strftime('%Y-%m-%d %H:%M')
-        return value
+            value = value.strftime('%Y-%m-%d %H:%M')
+        widget.el.attrib['value'] = value

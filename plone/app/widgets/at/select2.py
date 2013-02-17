@@ -1,53 +1,57 @@
-import json
-from zope.component import queryUtility
+from lxml import etree
 from zope.component import getMultiAdapter
-from zope.schema.interfaces import IVocabularyFactory
 from plone.app.widgets.at.base import PatternsWidget
 
 
-class Select2Widget(PatternsWidget):
+class SelectWidget(PatternsWidget):
     _properties = PatternsWidget._properties.copy()
     _properties.update({
-        'pattern': 'select2',
-        'pattern_options': {},
-        'tags': '',
-        'multiple': False,
-        'ajax_vocabulary': '',
-        'ajax_url': '/@@widgets/getVocabulary?name=',
+        'width': '20em',
     })
 
-    def formatAccessor(self, value, context, field, request):
-        if type(value) in [list, tuple]:
-            return ','.join(value)
-        return value
+    pattern_el_type = 'select'
+    pattern_name = 'select2'
 
-    def updateOptions(self, value, context, field, request):
-        state = getMultiAdapter((context, request), name=u'plone_portal_state')
-        if self.ajax_vocabulary and self.element_type is not "select":
-            self.pattern_options['ajax'] = {}
-            self.pattern_options['ajax']['url'] = \
-                state.portal_url() + self.ajax_url + self.ajax_vocabulary
-        if self.tags:
-            factory = queryUtility(IVocabularyFactory, self.tags)
-            tags = [i.token for i in factory(context)]
-            self.pattern_options['tags'] = json.dumps(tags)
-        if self.multiple is True:
-            self.pattern_options['multiple'] = 'true'
-        if self.ajax_vocabulary:
-            factory = queryUtility(IVocabularyFactory, self.ajax_vocabulary)
-            vocabulary = factory(context)
-            data = {}
-            if type(value) in [list, tuple]:
-                for item in value:
-                    term = vocabulary.getTerm(item)
-                    if term:
-                        data[term.token] = term.title
-                    else:
-                        data[item] = item
-            else:
-                term = vocabulary.getTerm(value)
-                data.append(dict(id=term.token, text=term.title))
-            self.pattern_options['initselection'] = json.dumps(data)
+    def customize_widget(self, widget, value, context, field, request):
+
+        if self.width:
+            widget.options['width'] = self.width
+
+        for token, title in field.Vocabulary(context).items():
+            option = etree.Element('option')
+            option.attrib['value'] = token
+            if token == value:
+                option.attrib['selected'] = 'selected'
+            option.text = title
+            widget.el.append(option)
+
+
+class TagsWidget(PatternsWidget):
+    _properties = PatternsWidget._properties.copy()
+    _properties.update({
+        'width': '30em',
+        'ajax_suggest': '',
+    })
+
+    pattern_el_type = 'input'
+    pattern_name = 'select2'
+
+    def customize_widget(self, widget, value, context, field, request):
+
+        if self.width:
+            widget.options['width'] = self.width
+
+        if self.ajax_suggest:
+            state = getMultiAdapter(
+                (context, request), name=u'plone_portal_state')
+            widget.options['ajax_suggest'] = state.portal_url() + \
+                '/@@widgets/getVocabulary?name=' + self.ajax_suggest
+
+        if type(value) in [list, tuple]:
+            value = ','.join(value)
+
+        widget.el.attrib['value'] = value
+        widget.el.attrib['type'] = 'text'
 
     def process_form(self, instance, field, form, empty_marker=None,
                      emptyReturnsMarker=False, validating=True):
@@ -58,6 +62,6 @@ class Select2Widget(PatternsWidget):
             return empty_marker
 
         value = value.strip()
-        if self.multiple or self.tags:
+        if self.multiple or self.ajax_suggest:
             value = value.split(',')
         return value, {}

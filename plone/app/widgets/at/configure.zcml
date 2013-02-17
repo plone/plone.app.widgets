@@ -10,7 +10,7 @@
 
   <adapter
      name="plone.app.widgets"
-     factory=".ATWidgetsExtender"
+     factory=".metadata.MetadataExtender"
      for="Products.ATContentTypes.interface.IATContentType"
      provides="archetypes.schemaextender.interfaces.ISchemaModifier"
      />

@@ -13,7 +13,7 @@ from plone.app.widgets.interfaces import IWidgetsLayer
 @implementer(IFieldWidget)
 def SubjectsFieldWidget(field, request):
     widget = FieldWidget(field, TagsWidget(request))
-    widget.ajaxtags = 'plone.app.vocabularies.Keywords'
+    widget.ajax_suggest = 'plone.app.vocabularies.Keywords'
     return widget
 
 
@@ -21,7 +21,7 @@ def SubjectsFieldWidget(field, request):
 @implementer(IFieldWidget)
 def ContributorsFieldWidget(field, request):
     widget = FieldWidget(field, TagsWidget(request))
-    widget.ajaxtags = 'plone.app.vocabularies.Users'
+    widget.ajax_suggest = 'plone.app.vocabularies.Users'
     return widget
 
 
@@ -29,5 +29,5 @@ def ContributorsFieldWidget(field, request):
 @implementer(IFieldWidget)
 def CreatorsFieldWidget(field, request):
     widget = FieldWidget(field, TagsWidget(request))
-    widget.ajaxtags = 'plone.app.vocabularies.Users'
+    widget.ajax_suggest = 'plone.app.vocabularies.Users'
     return widget
