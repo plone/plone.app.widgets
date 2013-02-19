@@ -1,4 +1,3 @@
-import json
 from lxml import etree
 from zope.interface import implements
 from zope.interface import implementer
@@ -6,15 +5,12 @@ from zope.interface import implementsOnly
 from zope.interface import Interface
 from zope.component import adapts
 from zope.component import adapter
-from zope.component import queryUtility
 from zope.component import getMultiAdapter
 from zope.schema import TextLine
-from zope.schema import Tuple
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ITextLine
 from zope.schema.interfaces import ITuple
 from zope.schema.interfaces import ISequence
-from zope.schema.interfaces import IVocabularyFactory
 from z3c.form.widget import Widget
 from z3c.form.widget import FieldWidget
 from z3c.form.converter import BaseDataConverter
@@ -79,7 +75,7 @@ class TagsWidget(PatternsWidget, Widget):
             widget.options['ajax_suggest'] = state.portal_url() + \
                 '/@@widgets/getVocabulary?name=' + self.ajax_suggest
 
-        widget.el.attrib['value'] = self.value
+        widget.el.attrib['value'] = value
         widget.el.attrib['type'] = 'text'
 
 
