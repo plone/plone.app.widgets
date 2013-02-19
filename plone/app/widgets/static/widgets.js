@@ -559,7 +559,11 @@ define("requireLib", function(){});
 
 define('logging', ['logging/src/logging'], function (main) { return main; });
 
-// pattern specific logging config
+/**
+ * Patterns logger - wrapper around logging library
+ *
+ * Copyright 2012-2013 Florian Friesdorf
+ */
 define('jam/Patterns/src/core/logger',[
     'logging'
 ], function(logging) {
@@ -1085,6 +1089,15 @@ define('jam/Patterns/src/compat',[],function() {
     }
 });
 
+/**
+ * Patterns registry - Central registry and scan logic for patterns
+ *
+ * Copyright 2012-2013 Simplon B.V.
+ * Copyright 2012-2013 Florian Friesdorf
+ * Copyright 2013 Marko Durkovic
+ * Copyright 2013 Rok Garbas
+ */
+
 /*
  * changes to previous patterns.register/scan mechanism
  * - if you want initialised class, do it in init
@@ -1113,7 +1126,7 @@ define('jam/Patterns/src/registry',[
             });
         },
 
-        scan: function(content) {
+        scan: function(content, do_not_catch_init_exception) {
             var $content = $(content),
                 all = [], allsel,
                 pattern, $match, plog, name;
@@ -1132,9 +1145,10 @@ define('jam/Patterns/src/registry',[
             }
             allsel = all.join(",");
 
-            // find all elements that belong to any pattern
-            $match = $content.wrap("<div/>").parent().find(allsel);
-            $content.unwrap();
+            // Find all elements that belong to any pattern.
+            $match = $content.find(allsel);
+            if ($content.is(allsel))
+                $match = $match.add($content);
             $match = $match.filter(function() { return $(this).parents('pre').length === 0; });
             $match = $match.filter(":not(.cant-touch-this)");
 
@@ -1159,7 +1173,11 @@ define('jam/Patterns/src/registry',[
                             pattern.init($el);
                             plog.debug("done.");
                         } catch (e) {
-                            plog.error("Caught error:", e);
+                            if (do_not_catch_init_exception) {
+                              throw e;
+                            } else {
+                              plog.error("Caught error:", e);
+                            }
                         }
                     }
                 }
@@ -6154,6 +6172,9 @@ define('js/patterns/autotoc',[
               $('body,html').animate({
                 scrollTop: $level.offset().top
               }, self.options.scrollDuration, self.options.scrollEasing);
+            }
+            if (self.$el.parents('.modal').size() !== 0) {
+              self.$el.trigger('resize.modal.patterns');
             }
           });
       });
