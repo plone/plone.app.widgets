@@ -228,8 +228,8 @@
 
                 <div tal:define="inputname  string:effective_date;
                                  formname   string:edit_form;
-                                 effective python:test(request.get('paths'), None, context.EffectiveDate()) ;
-                                 inputvalue python:test(effective and effective!='None', effective, request.get('effective_date', ''));"
+                                 effective python:test(request.get('paths'), 'None', context.EffectiveDate()) ;
+                                 inputvalue python:(effective and effective!='None') and DateTime(effective).strftime('%Y-%m-%d %H:%M') or request.get('effective_date', '');"
                      tal:attributes="class python:test(error, 'field error', 'field')">
 <!--
                   <div metal:use-macro="context/calendar_macros/macros/calendarDatePickerBox">
@@ -257,7 +257,7 @@
                   <div tal:define="inputname  string:expiration_date;
                                    formname   string:edit_form;
                                    expiration context/ExpirationDate;
-                                   inputvalue python:test(expiration and expiration!='None', expiration, request.get('expiration_date', ''));"
+                                   inputvalue python:(expiration and expiration!='None') and DateTime(expiration).strftime('%Y-%m-%d %H:%M') or request.get('expiration_date', '');"
                        tal:attributes="class python:test(error, 'field error', 'field')">
 <!--
                     <div metal:use-macro="context/calendar_macros/macros/calendarDatePickerBox">
