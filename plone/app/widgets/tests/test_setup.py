@@ -30,13 +30,16 @@ class PloneAppWidgetsClassTest(unittest.TestCase):
         js = getattr(self.portal, 'portal_javascripts')
         js_ids = js.getResourceIds()
         self.assertTrue('++resource++plone.app.widgets.js' in js_ids)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
     def test_widgets_bundle_in_sunburst_theme(self):
-        import pdb; pdb.set_trace()
+        pass
+        #import pdb; pdb.set_trace()
 
     def test_skin_path_in_sunburt_theme(self):
-        import pdb; pdb.set_trace()
+        pass
+        #import pdb; pdb.set_trace()
 
     def test_browser_layer(self):
-        import pdb; pdb.set_trace()
+        pass
+        #import pdb; pdb.set_trace()
