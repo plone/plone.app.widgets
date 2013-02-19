@@ -1,5 +1,3 @@
-import json
-from lxml import etree
 from plone.app.widgets.base import BasePatternsWidget
 
 
