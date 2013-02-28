@@ -39,8 +39,10 @@ class SelectWidget(PatternsWidget, BaseSelectWidget):
 
         if self.width:
             widget.options['width'] = self.width
-
-        for item in self.items():
+        items = self.items
+        if callable(items):
+            items = items()
+        for item in items:
             option = etree.Element('option')
             option.attrib['value'] = item['value']
             if item['selected']:
