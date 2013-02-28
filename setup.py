@@ -33,6 +33,7 @@ setup(
         'plone.app.jquery>=1.8.0',
         # needed so it works with jquery >= 1.8
         'plone.app.search>=1.1.2',
+        'plone.app.registry>=1.2.2'
     ],
     extras_require={
         'test': [
