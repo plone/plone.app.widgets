@@ -2,9 +2,9 @@
 <registry>
 
   <record name="Products.ResourceRegistries.interfaces.settings.IResourceRegistriesSettings.resourceBundlesForThemes">
-    <value>
+    <value purge="false">
 
-      <element key="Sunburst Theme">
+      <element key="Sunburst Theme" purge="false">
         <element>default</element>
         <element>jquery</element>
         <element>tinymce</element>
