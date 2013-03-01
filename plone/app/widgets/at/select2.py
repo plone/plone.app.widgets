@@ -31,6 +31,7 @@ class TagsWidget(PatternsWidget):
     _properties.update({
         'width': '30em',
         'ajax_suggest': '',
+        'multiple': True
     })
 
     pattern_el_type = 'input'
