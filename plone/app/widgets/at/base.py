@@ -8,6 +8,7 @@ class PatternsWidget(TypesWidget):
         'macro': "patterns_widgets",
     })
 
+    pattern_widget_klass = BasePatternsWidget
     pattern_el_type = 'input'
 
     @property
@@ -18,7 +19,8 @@ class PatternsWidget(TypesWidget):
         return field.getAccessor(context)()
 
     def edit(self, context, field, request):
-        widget = BasePatternsWidget(self.pattern_name, self.pattern_el_type)
+        widget = self.pattern_widget_klass(self.pattern_name,
+                                           self.pattern_el_type)
         widget.el.attrib['name'] = field.getName()
 
         value = field.getAccessor(context)()
