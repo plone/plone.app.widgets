@@ -1,5 +1,6 @@
 *.py?
 *.sw?
+*.mo
 
 /.installed.cfg
 /plone.app.widgets.egg-info/

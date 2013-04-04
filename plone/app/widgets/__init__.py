@@ -1,2 +1,2 @@
-from datetime import datetime
+import datetime
 assert datetime

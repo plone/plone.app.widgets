@@ -13,6 +13,8 @@
 
   <adapter factory=".datetime.DateTimeFieldWidget" />
   <adapter factory=".datetime.DateTimeWidgetConverter" />
+  <adapter factory=".datetime.DateFieldWidget" />
+  <adapter factory=".datetime.DateWidgetConverter" />
 
   <adapter factory=".metadata.SubjectsFieldWidget" />
   <adapter factory=".metadata.ContributorsFieldWidget" />

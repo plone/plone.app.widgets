@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 try:
     import unittest2 as unittest
-except:
+except ImportError:
     import unittest
     assert unittest
 

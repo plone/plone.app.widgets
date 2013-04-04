@@ -1,0 +1,28 @@
+# --- PLEASE EDIT THE LINES BELOW CORRECTLY ---
+# SOME DESCRIPTIVE TITLE.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+msgid ""
+msgstr ""
+"Project-Id-Version: plone.app.widgets\n"
+"POT-Creation-Date: 2013-04-04 12:39+0000\n"
+"PO-Revision-Date: 2013-04-04 15:36+0200\n"
+"Last-Translator: Simone Deponti <simone.deponti@abstract.it>\n"
+"Language-Team: Plone italian translation project <plone-italian-translation-discussion@lists.coactivate.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Language-Code: it\n"
+"Language-Name: Italian\n"
+"Preferred-Encodings: utf-8 latin1\n"
+"Domain: plone.app.widgets\n"
+
+#. Original 'mmmm d, yyyy @', see http://amsul.ca/pickadate.js/docs.htm#formatting_rules (@ indicates position of calendar icon)
+#: ../dx/datetime.py:91
+msgid "pickadate_date_format"
+msgstr "d mmmm yyyy @"
+
+#. Original 'mmmm d, yyyy @ HH:MM', see http://amsul.ca/pickadate.js/docs.htm#formatting_rules (@ indicates position of calendar icon)
+#: ../dx/datetime.py:62
+msgid "pickadate_datetime_format"
+msgstr "d mmmm yyyy @ HH:MM"
