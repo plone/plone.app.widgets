@@ -37,7 +37,7 @@ class DxBaseWidgetTest(unittest.TestCase):
     layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
 
     def setUp(self):
-        self.request = TestRequest()
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         setRequest(self.request)
 
 
