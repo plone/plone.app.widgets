@@ -53,6 +53,14 @@
     allowed_interface=".interfaces.IWidgetsView"
     />
 
+  <browser:page
+    name="widgets-demo"
+    for="*"
+    class=".demo.DemoForm"
+    permission="zope2.View"
+    layer=".interfaces.IWidgetsLayer"
+    />
+
   <include zcml:condition="installed archetypes.schemaextender" package=".at" />
   <include zcml:condition="installed plone.app.dexterity" package=".dx" />
 
