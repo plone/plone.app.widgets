@@ -114,7 +114,7 @@ class DateWidgetConverter(BaseWidgetConverter):
     def toFieldValue(self, value):
         if not value:
             return self.field.missing_value
-        return datetime.date.strptime(value, self.format)
+        return datetime.datetime.strptime(value, self.format).date()
 
 
 @adapter(IDateField, IWidgetsLayer)
