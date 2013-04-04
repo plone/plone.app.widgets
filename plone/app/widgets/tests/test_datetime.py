@@ -68,22 +68,22 @@ class DxDateWidgetTest(DxBaseWidgetTest):
         widget = DateWidget(self.request)
         widget.id = 'id'
         widget.name = 'name'
-        self.assertEqual(
+        self.assertRegexpMatches(
             widget.render(),
-            ('<input name="name" type="text" value="" '
-                    'class="pat-datetime" '
-                    'data-datetime-ampm="false" '
-                    'data-datetime-formatSubmit="yyyy-mm-dd" '
-                    'data-datetime-format="mmmm d, yyyy @"/>')
+            (r'<input name="name" type="text" value="" '
+                    r'class="pat-datetime" '
+                    r'data-datetime-ampm="false" '
+                    r'data-datetime-formatSubmit="yyyy-mm-dd" '
+                    r'data-datetime-format="[^"]+"/>')
         )
         widget.value = '2013-04-04'
-        self.assertEqual(
+        self.assertRegexpMatches(
             widget.render(),
-            ('<input name="name" type="text" value="2013-04-04" '
-                    'class="pat-datetime" '
-                    'data-datetime-ampm="false" '
-                    'data-datetime-formatSubmit="yyyy-mm-dd" '
-                    'data-datetime-format="mmmm d, yyyy @"/>')
+            (r'<input name="name" type="text" value="2013-04-04" '
+                    r'class="pat-datetime" '
+                    r'data-datetime-ampm="false" '
+                    r'data-datetime-formatSubmit="yyyy-mm-dd" '
+                    r'data-datetime-format="[^"]+"/>')
         )
 
     def testConverter(self):
@@ -143,22 +143,22 @@ class DxDateTimeWidgetTest(DxBaseWidgetTest):
         widget = DateTimeWidget(self.request)
         widget.id = 'id'
         widget.name = 'name'
-        self.assertEqual(
+        self.assertRegexpMatches(
             widget.render(),
-            ('<input name="name" type="text" value="" '
-                    'class="pat-datetime" '
-                    'data-datetime-ampm="false" '
-                    'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
-                    'data-datetime-format="mmmm d, yyyy @ HH:MM"/>')
+            (r'<input name="name" type="text" value="" '
+                    r'class="pat-datetime" '
+                    r'data-datetime-ampm="false" '
+                    r'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
+                    r'data-datetime-format="[^"]+"/>')
         )
         widget.value = '2013-04-04 08:13'
-        self.assertEqual(
+        self.assertRegexpMatches(
             widget.render(),
-            ('<input name="name" type="text" value="2013-04-04 08:13" '
-                    'class="pat-datetime" '
-                    'data-datetime-ampm="false" '
-                    'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
-                    'data-datetime-format="mmmm d, yyyy @ HH:MM"/>')
+            (r'<input name="name" type="text" value="2013-04-04 08:13" '
+                    r'class="pat-datetime" '
+                    r'data-datetime-ampm="false" '
+                    r'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
+                    r'data-datetime-format="[^"]+"/>')
         )
 
     def testConverter(self):
