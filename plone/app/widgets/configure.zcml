@@ -13,6 +13,7 @@
   <include package="Products.TinyMCE" />
   <include package="plone.app.vocabularies" />
   <include package="plone.app.jquery" />
+  <include package=".demos" />
 
   <browser:resource
       name="plone.app.widgets.css"
@@ -61,14 +62,6 @@
     permission="zope2.View"
     layer=".interfaces.IWidgetsLayer"
     allowed_interface=".interfaces.IWidgetsView"
-    />
-
-  <browser:page
-    name="widgets-demo"
-    for="*"
-    class=".demo.DemoForm"
-    permission="zope2.View"
-    layer=".interfaces.IWidgetsLayer"
     />
 
   <include zcml:condition="installed archetypes.schemaextender" package=".at" />
