@@ -83,7 +83,6 @@ class Demos(grok.View):
 
             if not hasattr(field, "_demo_widget_rst"):
                 desc = field.description
-                desc += u"Package: %s\n" % form.package
                 string_data = restructured_to_html(desc)
                 field.description = string_data.decode("utf-8-")  # z3c.form is strict about unicode
                 field._demo_widget_rst = True
