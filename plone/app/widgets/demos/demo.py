@@ -18,6 +18,8 @@ import z3c.form.field
 
 from plone.autoform.form import AutoExtensibleForm
 
+from Products.CMFPlone.utils import safe_unicode
+
 from .rst import restructured_to_html
 from .source import get_class_source
 from .interfaces import IWidgetDemo
@@ -37,7 +39,16 @@ DEFAULT_MUTABLE_WARNING = u"""
 """
 
 
-IN_CORE_DESCRIPTION = u"Provided in Plone core since version 4.1: see zope.schema and z3c.form packages"
+IN_CORE_DESCRIPTION = u"Plone core. No addons needed."
+
+
+def get_doc(klass):
+    """ Get class documentation.
+
+    Get docstring, convert unicode and do other smart tricks
+    to make it appear on the demo page.
+    """
+    return safe_unicode(getattr(klass, "__doc__", ""))
 
 
 class Demos(BrowserView):
@@ -59,6 +70,7 @@ class Demos(BrowserView):
 
         # Get inline source code viewer Python code
         form.source = get_class_source(form.schema)
+        form.help = restructured_to_html(getattr(form, "help", None))
 
         for widget in form.widgets.values():
 
@@ -95,21 +107,3 @@ class WidgetDemoForm(AutoExtensibleForm, z3c.form.form.Form):
 
     ignoreContext = True
 
-
-# def widget_demo(klass):
-#     """ Class decorator to tell this form to contributes to the widget demo page.
-
-#     :param browser_layer_interface:
-#         zope.interface.Interface marker interface telling which addon provides the widget.
-#         Give zope.interface.Interface to mark that the widget is always available, regarless of enabled addon.
-
-#     """
-#     layer = klass.layer
-
-#     def factory(request):
-#         return klass
-
-#     gsm = getGlobalSiteManager()
-#     gsm.registerAdapter(factory=factory, required=(layer,),
-#                         name=klass.__name__, provided=IWidgetDemo)
-#     return klass
