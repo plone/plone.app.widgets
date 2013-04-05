@@ -7,15 +7,11 @@
 
 """
 
-from zope.interface import Interface, implements
+from zope.interface import Interface
 from zope.component import getAdapters
 from zope.component import getGlobalSiteManager
 
-import zope.schema
-import zope.schema.interfaces
-
 from five import grok
-from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile as FiveViewPageTemplateFile
 
 import z3c.form
 import z3c.form.form
@@ -25,19 +21,26 @@ from Products.CMFCore.interfaces import ISiteRoot
 
 from plone.autoform.form import AutoExtensibleForm
 
+from .rst import restructured_to_html
+from .source import get_class_source
+
+grok.templatedir(".")
+
 #: This warning should be given when the user might try default=[] or default={}
-DEFAULT_MUTABLE_WARNING = """
-    .. warn ::
+DEFAULT_MUTABLE_WARNING = u"""
+    .. warning ::
 
         Don't use default=[] argument, because default mutable arguments will
         break when processing multiple parallel HTTP requests.
 
-    * http://stackoverflow.com/questions/1132941/least-astonishment-in-python-the-mutable-default-argument
+    For more information see
+    `default mutable discussion <http://stackoverflow.com/questions/1132941/least-astonishment-in-python-the-mutable-default-argument>`_
+    on stackoverflow.com.
 
 """
 
 
-IN_CORE_DESCRIPTION = "Provided in Plone core since version 4.1: see zope.schema and z3c.form packages"
+IN_CORE_DESCRIPTION = u"Provided in Plone core since version 4.1: see zope.schema and z3c.form packages"
 
 
 class IWidgetDemo(Interface):
@@ -48,11 +51,13 @@ class IWidgetDemo(Interface):
     """
 
 
-grok.templatedir(".")
-
-
 class Demos(grok.View):
     """ Render all demo forms with their widgets in a nice view.
+
+    Read forms which implements IWidgetDemo marke via @widget_demo
+    class decocator. Build a nice and useful description string
+    for each field in those forms.
+
     """
 
     grok.context(ISiteRoot)
@@ -62,6 +67,27 @@ class Demos(grok.View):
     label = u"Plone fields and widgets demo"
     description = u"Demostrate fields widges available for Dexterity and plone.app.z3cform forms"
 
+    def buildCustomDescriptions(self, form):
+        """ For each field, make the description contain extra information how to use it.
+
+        """
+
+        # Get inline source code viewer Python code
+        form.source = get_class_source(form.schema)
+
+        for widget in form.widgets.values():
+
+            # Points to orignal zope.schema field which only has one
+            # instance in the process. Thus, don't convert this twice.
+            field = widget.field
+
+            if not hasattr(field, "_demo_widget_rst"):
+                desc = field.description
+                desc += u"Package: %s\n" % form.package
+                string_data = restructured_to_html(desc)
+                field.description = string_data.decode("utf-8-")  # z3c.form is strict about unicode
+                field._demo_widget_rst = True
+
     def update(self):
 
         # We query against HTTPRequest and browser layers,
@@ -70,11 +96,12 @@ class Demos(grok.View):
         self.demos = [klass(self.context, self.request)for name, klass in getAdapters((self.request,), provided=IWidgetDemo)]
         for form in self.demos:
             form.update()
+            self.buildCustomDescriptions(form)
 
         form.render()
 
 
-class WidgetDemoForm(AutoExtensibleForm, z3c.form.form.EditForm):
+class WidgetDemoForm(AutoExtensibleForm, z3c.form.form.Form):
     """ Base class for all widget demo forms.
     """
 
@@ -82,7 +109,7 @@ class WidgetDemoForm(AutoExtensibleForm, z3c.form.form.EditForm):
 
 
 def widget_demo(klass):
-    """ Class decorator to tell this class to contribute to the demo form.
+    """ Class decorator to tell this form to contributes to the widget demo page.
 
     :param browser_layer_interface:
         zope.interface.Interface marker interface telling which addon provides the widget.
@@ -98,5 +125,3 @@ def widget_demo(klass):
     gsm.registerAdapter(factory=factory, required=(layer,),
                         name=klass.__name__, provided=IWidgetDemo)
     return klass
-
-

@@ -49,7 +49,6 @@ class ChoiceExamples(WidgetDemoForm):
     schema = IChoiceExamples
 
     label = u"Single and multiple choices"
-    description = IChoiceExamples.__doc__
 
     package = IN_CORE_DESCRIPTION  # Says that shipped with vanilla Plone
     layer = Interface  # Means that eanbled withou taddons (all browserlayers)
