@@ -22,6 +22,8 @@
                      that form is presented in "view" TAL variable.
 
                   -->
+                <h2 tal:content="form/label|nothing" />
+
                 <tal:with-form-as-view define="view nocall:form">
                     <metal:block use-macro="form/@@ploneform-macros/titlelessform" />
                 </tal:with-form-as-view>
