@@ -13,7 +13,6 @@ from z3c.form.browser.radio import RadioFieldWidget
 from plone.supermodel import model
 from plone.autoform import directives as form
 
-from plone.app.widgets.demos.demo import widget_demo
 from plone.app.widgets.demos.demo import WidgetDemoForm
 from plone.app.widgets.demos.demo import IN_CORE_DESCRIPTION
 from plone.app.widgets.demos.demo import DEFAULT_MUTABLE_WARNING
@@ -42,7 +41,7 @@ class IChoiceExamples(model.Schema):
         default="Document")
 
 
-@widget_demo
+#@widget_demo
 class ChoiceExamples(WidgetDemoForm):
     """
     """

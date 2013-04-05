@@ -9,7 +9,6 @@ import zope.schema
 
 from plone.supermodel import model
 
-from plone.app.widgets.demos.demo import widget_demo
 from plone.app.widgets.demos.demo import WidgetDemoForm
 from plone.app.widgets.demos.demo import IN_CORE_DESCRIPTION
 
@@ -26,7 +25,7 @@ class ITextExamples(model.Schema):
         description=u"7-bit text string (bytes)")
 
 
-@widget_demo
+#@widget_demo
 class TextExamples(WidgetDemoForm):
     """
     """
