@@ -19,6 +19,11 @@
             #content pre.prettyprint {
                 background: white;
             }
+
+            .package-info {
+                margin-bottom: 1em;
+            }
+
         </style>
 
         <script type="text/javascript">
