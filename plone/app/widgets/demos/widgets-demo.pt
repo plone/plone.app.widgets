@@ -44,41 +44,40 @@
     <metal:main fill-slot="main">
         <tal:main-macro metal:define-macro="main">
 
-            <h1 class="documentFirstHeading">Plone fields and widgets demo</h1>
-
-            <p>
-                This page contains examples of different fields and widgets
-                to be used with <a href="http://developer.plone.org/forms/z3c.form.html">z3c.form based forms</a>
-                and <a href="http://developer.plone.org/content/dexterity.html">Dexterity based content types</a>.
-                Please note that older, <a href="">Archetypes</a>, based content is not covered by this documentation.
-            </p>
-
-            <p>
-                If you are an addon author you can make your own fields and widgets
-                to appear on this page. Please see <a href="https://github.com/plone/plone.app.widgets/">plone.app.widgets</a> package for examples.
-            </p>
-
-            <div>
-                For more information please see
-                <ul>
-
-                    <li>
-                        <a href="http://developer.plone.org/forms/z3c.form.html">zope.schema on developer.plone.org</a>
-                    </li>
-
-
-                    <li>
-                        <a href="http://developer.plone.org/forms/z3c.form.html">z3c.form on developer.plone.org</a>
-                    </li>
-                </ul>
-            </div>
-
-            <div id="skel-contents">
-
-
-                <div class="pat-autotoc"
+            <div class="pat-autotoc"
                      data-autotoc-scroll-duration="slow"
                      data-autotoc-levels="h2">
+
+                <h1 class="documentFirstHeading">Plone fields and widgets demo</h1>
+
+                <p>
+                    This page contains examples of different fields and widgets
+                    to be used with <a href="http://developer.plone.org/forms/z3c.form.html">z3c.form based forms</a>
+                    and <a href="http://developer.plone.org/content/dexterity.html">Dexterity based content types</a>.
+                    Please note that older, <a href="">Archetypes</a>, based content is not covered by this documentation.
+                </p>
+
+                <p>
+                    If you are an addon author you can make your own fields and widgets
+                    to appear on this page. Please see <a href="https://github.com/plone/plone.app.widgets/">plone.app.widgets</a> package for examples.
+                </p>
+
+                <div>
+                    For more information please see
+                    <ul>
+
+                        <li>
+                            <a href="http://developer.plone.org/forms/z3c.form.html">zope.schema on developer.plone.org</a>
+                        </li>
+
+
+                        <li>
+                            <a href="http://developer.plone.org/forms/z3c.form.html">z3c.form on developer.plone.org</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div id="skel-contents">
 
                     <tal:form repeat="form view/demos">
 

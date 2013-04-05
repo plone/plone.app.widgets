@@ -34,5 +34,16 @@
         provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
         factory=".choices.ChoiceExamples" />
 
+    <!-- Override render tempalte for all widgets on certain plone.app.z3cform form layer -->
 
+
+    <browser:page
+        name="ploneform-render-widget"
+        for=".demo.IDemoWidget"
+        class="plone.app.z3cform.templates.RenderWidget"
+        permission="zope.Public"
+        template="demo-widget.pt"
+        />
+
+    <!-- class="plone.app.z3cform.interfaces.IPloneLayer" layer="plone.app.z3cform.interfaces.IPloneFormLayer" -->
 </configure>
