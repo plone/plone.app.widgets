@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import doctest
 
+from zope.interface import implements
 from zope.configuration import xmlconfig
+from zope.publisher.browser import TestRequest as BaseTestRequest
 
 from plone.testing import z2
 
@@ -12,6 +14,18 @@ from plone.app.testing import PloneSandboxLayer
 from plone.app.testing import applyProfile
 from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
+from plone.app.z3cform.interfaces import IPloneFormLayer
+from plone.app.widgets.interfaces import IWidgetsLayer
+
+
+class TestRequest(BaseTestRequest):
+    implements(IPloneFormLayer, IWidgetsLayer)
+
+
+class DummyContext(object):
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
 
 
 class PloneAppWidgetsLayer(PloneSandboxLayer):

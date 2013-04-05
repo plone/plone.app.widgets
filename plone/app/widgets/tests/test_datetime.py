@@ -6,28 +6,22 @@ except ImportError:
     assert unittest
 
 import datetime
-from zope.interface import implements
 from zope.interface import alsoProvides
 from zope.interface import Interface
 from zope.component import getMultiAdapter
 from zope.schema import Date
 from zope.schema import Datetime
-from zope.publisher.browser import TestRequest as BaseTestRequest
 from zope.globalrequest import setRequest
 from z3c.form.interfaces import IDataConverter
 from z3c.form import form
 from z3c.form import field
-from plone.app.z3cform.interfaces import IPloneFormLayer
+from plone.app.widgets.dx.datetime import IDateWidget
+from plone.app.widgets.dx.datetime import DateWidget
+from plone.app.widgets.dx.datetime import IDateTimeWidget
+from plone.app.widgets.dx.datetime import DateTimeWidget
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
-from ..interfaces import IWidgetsLayer
-from ..dx.datetime import IDateWidget
-from ..dx.datetime import DateWidget
-from ..dx.datetime import IDateTimeWidget
-from ..dx.datetime import DateTimeWidget
-
-
-class TestRequest(BaseTestRequest):
-    implements(IPloneFormLayer, IWidgetsLayer)
+from plone.app.widgets.testing import TestRequest
+from plone.app.widgets.testing import DummyContext
 
 
 class DxBaseWidgetTest(unittest.TestCase):
@@ -50,12 +44,6 @@ class IDateWidgetTest(Interface):
 class DateWidgetTestForm(form.Form):
 
     fields = field.Fields(IDateWidgetTest)
-
-
-class DummyContext(object):
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
 
 
 class DxDateWidgetTest(DxBaseWidgetTest):

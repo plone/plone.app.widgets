@@ -20,4 +20,6 @@
   <adapter factory=".metadata.ContributorsFieldWidget" />
   <adapter factory=".metadata.CreatorsFieldWidget" />
 
+  <adapter factory=".collection.QueryStringFieldWidget" />
+
 </configure>

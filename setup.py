@@ -44,6 +44,7 @@ setup(
         ],
         'dexterity': [
             'plone.app.dexterity',
+            'plone.app.contenttypes'
         ],
     },
 )
