@@ -1,0 +1,35 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      metal:use-macro="here/main_template/macros/master"
+      i18n:domain="plone.app.widgets"
+      lang="en"
+      >
+<body>
+
+    <metal:main fill-slot="main">
+        <tal:main-macro metal:define-macro="main">
+
+          <h1 class="documentFirstHeading">Plone fields and widgets demo</h1>
+
+          <div id="skel-contents">
+            <tal:form repeat="form view/demos">
+
+                <!-- plone.app.z3cform package provides view ploneform-macros
+                     which come with a helpers to render forms. This one
+                     will render the form body only. It also makes an assumption
+                     that form is presented in "view" TAL variable.
+
+                  -->
+                <tal:with-form-as-view define="view nocall:form">
+                    <metal:block use-macro="form/@@ploneform-macros/titlelessform" />
+                </tal:with-form-as-view>
+
+            </tal:form>
+          </div>
+
+        </tal:main-macro>
+    </metal:main>
+</body>
+</html>
