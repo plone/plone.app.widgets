@@ -21,6 +21,13 @@ def restructured_to_html(s):
     """ Convert RST string to HTML string.
     """
 
+    if not s:
+        return s
+
     html_fragment_writer = Writer()
     html_fragment_writer.translator_class = HTMLFragmentTranslator
-    return docutils.core.publish_string(s, writer=html_fragment_writer)
+    #html = docutils.core.publish_string(s, writer=html_fragment_writer)
+
+    parts = docutils.core.publish_parts(source=s, writer_name='html')
+
+    return parts['body_pre_docinfo']+parts['fragment']

@@ -44,43 +44,81 @@
     <metal:main fill-slot="main">
         <tal:main-macro metal:define-macro="main">
 
-          <h1 class="documentFirstHeading">Plone fields and widgets demo</h1>
+            <h1 class="documentFirstHeading">Plone fields and widgets demo</h1>
 
-          <div id="skel-contents">
-            <tal:form repeat="form view/demos">
+            <p>
+                This page contains examples of different fields and widgets
+                to be used with <a href="http://developer.plone.org/forms/z3c.form.html">z3c.form based forms</a>
+                and <a href="http://developer.plone.org/content/dexterity.html">Dexterity based content types</a>.
+                Please note that older, <a href="">Archetypes</a>, based content is not covered by this documentation.
+            </p>
 
-                <div class="form-example">
-                    <h2 tal:content="form/label|nothing" />
+            <p>
+                If you are an addon author you can make your own fields and widgets
+                to appear on this page. Please see <a href="https://github.com/plone/plone.app.widgets/">plone.app.widgets</a> package for examples.
+            </p>
 
-                    <div class="package-info" tal:condition="form/package">
+            <div>
+                For more information please see
+                <ul>
+
+                    <li>
+                        <a href="http://developer.plone.org/forms/z3c.form.html">zope.schema on developer.plone.org</a>
+                    </li>
 
 
-                        <div>
-                            <strong>Provided by:</strong>
-                            <span tal:content="form/package" />
+                    <li>
+                        <a href="http://developer.plone.org/forms/z3c.form.html">z3c.form on developer.plone.org</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div id="skel-contents">
+
+
+                <div class="pat-autotoc"
+                     data-autotoc-scroll-duration="slow"
+                     data-autotoc-levels="h2">
+
+                    <tal:form repeat="form view/demos">
+
+                        <div class="form-example">
+
+                            <h2 tal:content="form/label|nothing" />
+
+                            <div class="package-info">
+
+                                <p tal:condition="form/package">
+                                    <strong>Provided by:</strong>
+                                    <span tal:content="form/package" />
+                                </p>
+
+                                <div class="form-help">
+                                    <tal:help replace="structure form/help|nothing" />
+                                </div>
+
+                                <p>
+                                    <a href="#" class="source-code">Show example source code</a>
+                                </p>
+                            </div>
+
+                            <pre style="display: none" class="prettyprint lang-py" tal:content="form/source" />
+
+                            <!-- plone.app.z3cform package provides view ploneform-macros
+                                 which come with a helpers to render forms. This one
+                                 will render the form body only. It also makes an assumption
+                                 that form is presented in "view" TAL variable.
+
+                              -->
+                            <tal:with-form-as-view define="view nocall:form">
+                                <metal:block use-macro="form/@@ploneform-macros/titlelessform" />
+                            </tal:with-form-as-view>
+
                         </div>
 
-                        <div>
-                            <a href="#" class="source-code">Show example source code</a>
-                        </div>
-                    </div>
-
-                    <pre style="display: none" class="prettyprint lang-py" tal:content="form/source" />
-
-                    <!-- plone.app.z3cform package provides view ploneform-macros
-                         which come with a helpers to render forms. This one
-                         will render the form body only. It also makes an assumption
-                         that form is presented in "view" TAL variable.
-
-                      -->
-                    <tal:with-form-as-view define="view nocall:form">
-                        <metal:block use-macro="form/@@ploneform-macros/titlelessform" />
-                    </tal:with-form-as-view>
-
+                    </tal:form>
                 </div>
-
-            </tal:form>
-          </div>
+            </div>
 
         </tal:main-macro>
     </metal:main>

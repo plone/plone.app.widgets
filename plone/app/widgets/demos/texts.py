@@ -11,6 +11,7 @@ from plone.supermodel import model
 
 from plone.app.widgets.demos.demo import WidgetDemoForm
 from plone.app.widgets.demos.demo import IN_CORE_DESCRIPTION
+from plone.app.widgets.demos.demo import get_doc
 
 
 class ITextExamples(model.Schema):
@@ -18,11 +19,15 @@ class ITextExamples(model.Schema):
 
     textLine = zope.schema.TextLine(
         title=u"zope.schema.TextLine",
-        description=u"Unicode string")
+        description=get_doc(zope.schema.TextLine))
 
-    asciiLine = zope.schema.TextLine(
+    asciiLine = zope.schema.ASCIILine(
         title=u"zope.schema.ASCIILine",
-        description=u"7-bit text string (bytes)")
+        description=get_doc(zope.schema.ASCIILine))
+
+    text = zope.schema.Text(
+        title=u"zope.schema.Text",
+        description=get_doc(zope.schema.Text))
 
 
 #@widget_demo

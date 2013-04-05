@@ -17,15 +17,22 @@
     <!-- Register out of the box widget examples -->
 
     <adapter
+        name="text-demos"
+        for="zope.interface.Interface zope.publisher.interfaces.browser.IBrowserRequest"
+        provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
+        factory=".texts.TextExamples" />
+
+    <adapter
+        name="number-demos"
+        for="zope.interface.Interface zope.publisher.interfaces.browser.IBrowserRequest"
+        provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
+        factory=".numbers.NumberExamples" />
+
+    <adapter
         name="choice-demos"
         for="zope.interface.Interface zope.publisher.interfaces.browser.IBrowserRequest"
         provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
         factory=".choices.ChoiceExamples" />
 
-    <adapter
-        name="text-demos"
-        for="zope.interface.Interface zope.publisher.interfaces.browser.IBrowserRequest"
-        provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
-        factory=".texts.TextExamples" />
 
 </configure>
