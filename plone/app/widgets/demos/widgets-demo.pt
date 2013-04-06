@@ -16,20 +16,49 @@
              type="text/javascript"></script>
 
         <style>
-            #content pre.prettyprint {
+            #content pre {
                 background: white;
+                color: #888;
+                border: 1px solid #444;
+                padding: 5px;
+            }
+
+            .form-example {
+                margin-left: 1em;
             }
 
             .package-info {
                 margin-bottom: 1em;
             }
 
+            .widget-payload {
+                margin-left: 2em;
+            }
+
+            .source-code-viewer {
+                display: block;
+                font-weight: bold;
+                font-size: 120%;
+                border-top: 1px solid #888;
+                border-bottom: 1px solid #888;
+            }
+
+            .source-code-toggle {
+                border: 1px solid #ddd;
+                background: #eee;
+                border-radius: 1em;
+                padding: 0.5em;
+                margin: 1em;
+                display: block;
+            }
+
+
         </style>
 
         <script type="text/javascript">
             (function($) {
                 $(document).ready(function() {
-                    $(".form-example").on("click", ".source-code", function(e) {
+                    $(".form-example").on("click", ".source-code-toggle", function(e) {
                         e.preventDefault();
                         $(e.delegateTarget).find(".prettyprint").slideToggle();
                         return false;
@@ -81,9 +110,9 @@
 
                     <tal:form repeat="form view/demos">
 
-                        <div class="form-example">
+                        <h2 tal:content="form/label|nothing" />
 
-                            <h2 tal:content="form/label|nothing" />
+                        <div class="form-example">
 
                             <div class="package-info">
 
@@ -96,13 +125,13 @@
                                     <tal:help replace="structure form/help|nothing" />
                                 </div>
 
-                                <p>
-                                    <a href="#" class="source-code">Show example source code</a>
-                                </p>
                             </div>
 
-                            <pre style="display: none" class="prettyprint lang-py" tal:content="form/source" />
+                            <div class="source-code-viewer">
+                                <a href="#" class="source-code-toggle">Show example source code</a>
 
+                                <pre style="display: none" class="prettyprint lang-py" tal:content="form/source" />
+                            </div>
                             <!-- plone.app.z3cform package provides view ploneform-macros
                                  which come with a helpers to render forms. This one
                                  will render the form body only. It also makes an assumption

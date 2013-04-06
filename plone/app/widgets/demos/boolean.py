@@ -14,6 +14,10 @@ from plone.app.widgets.demos.demo import IN_CORE_DESCRIPTION
 from plone.app.widgets.demos.demo import get_doc
 
 
+class IBoolDemoWidget(Interface):
+    """ Marker interface to override checkbox widget frame template """
+
+
 class IBooleanExamples(model.Schema):
     """ Single choice and multiple choice examples """
 
@@ -21,12 +25,11 @@ class IBooleanExamples(model.Schema):
         title=u"zope.schema.Bool",
         description=get_doc(zope.schema.Bool))
 
-    boolField = zope.schema.Float(
-        title=u"zope.schema.Bool with z3c.form.",
-        )
+    boolField2 = zope.schema.Bool(
+        title=u"zope.schema.Bool with z3c.form.")
 
 
-class BoolExamples(WidgetDemoForm):
+class BooleanExamples(WidgetDemoForm):
     """
     """
     schema = IBooleanExamples

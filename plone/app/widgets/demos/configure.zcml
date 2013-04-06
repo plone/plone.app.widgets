@@ -29,6 +29,12 @@
         factory=".numbers.NumberExamples" />
 
     <adapter
+        name="boolean-demos"
+        for="zope.interface.Interface zope.publisher.interfaces.browser.IBrowserRequest"
+        provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
+        factory=".boolean.BooleanExamples" />
+
+    <adapter
         name="choice-demos"
         for="zope.interface.Interface zope.publisher.interfaces.browser.IBrowserRequest"
         provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
@@ -45,5 +51,4 @@
         template="demo-widget.pt"
         />
 
-    <!-- class="plone.app.z3cform.interfaces.IPloneLayer" layer="plone.app.z3cform.interfaces.IPloneFormLayer" -->
 </configure>
