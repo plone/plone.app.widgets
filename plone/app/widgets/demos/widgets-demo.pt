@@ -24,7 +24,10 @@
             }
 
             .form-example {
-                margin-left: 1em;
+                margin-left: 0;
+                margin-bottom: 3em;
+                border-left: 3px solid #ddd;
+                padding-left: 1em;
             }
 
             .package-info {
@@ -112,7 +115,7 @@
 
                     <tal:form repeat="form view/demos">
 
-                        <h2 tal:content="form/label|nothing" />
+                        <h1 tal:content="form/label|nothing" />
 
                         <div class="form-example">
 

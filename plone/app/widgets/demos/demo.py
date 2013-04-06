@@ -41,6 +41,10 @@ DEFAULT_MUTABLE_WARNING = u"""
 IN_CORE_DESCRIPTION = u"Plone core. No addons needed."
 
 
+#: 4-5 items vocabulary used in the demo to fill in choice examples
+DEMO_VOCABULARY = "plone.app.vocabularies.Roles"
+
+
 def get_doc(klass):
     """ Get class documentation.
 
