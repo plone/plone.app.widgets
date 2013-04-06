@@ -78,7 +78,7 @@
 
             <div class="pat-autotoc"
                      data-autotoc-scroll-duration="slow"
-                     data-autotoc-levels="h2">
+                     data-autotoc-levels="h1, h2">
 
                 <h1 class="documentFirstHeading">Plone fields and widgets demo</h1>
 
