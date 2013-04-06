@@ -47,7 +47,6 @@ class IChoiceExamples(model.Schema):
         default="Document")
 
 
-#@widget_demo
 class ChoiceExamples(WidgetDemoForm):
     """
     """
