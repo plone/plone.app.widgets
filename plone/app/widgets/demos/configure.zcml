@@ -40,9 +40,13 @@
         provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
         factory=".choices.ChoiceExamples" />
 
+    <adapter
+        name="date-demos"
+        for="zope.interface.Interface zope.publisher.interfaces.browser.IBrowserRequest"
+        provides="plone.app.widgets.demos.interfaces.IWidgetDemo"
+        factory=".date.DateExamples" />
+
     <!-- Override render tempalte for all widgets on certain plone.app.z3cform form layer -->
-
-
     <browser:page
         name="ploneform-render-widget"
         for=".demo.IDemoWidget"

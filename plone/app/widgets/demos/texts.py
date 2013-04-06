@@ -36,6 +36,10 @@ class ITextExamples(model.Schema):
     password = zope.schema.Text(
         title=u"zope.schema.TextLine with PasswordWidget")
 
+    uri = zope.schema.URI(
+        title=u"zope.schema.URI",
+        description=get_doc(zope.schema.URI))
+
 
 class TextExamples(WidgetDemoForm):
     """

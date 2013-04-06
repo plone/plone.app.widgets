@@ -14,23 +14,28 @@ from plone.app.widgets.demos.demo import IN_CORE_DESCRIPTION
 from plone.app.widgets.demos.demo import get_doc
 
 
-class IBooleanExamples(model.Schema):
+class IDateExamples(model.Schema):
     """ Single choice and multiple choice examples """
 
-    boolField = zope.schema.Bool(
-        title=u"zope.schema.Bool",
-        description=get_doc(zope.schema.Bool))
+    date = zope.schema.Date(
+        title=u"zope.schema.Date",
+        description=u"Contains Python datetime.date object")
 
-    boolField2 = zope.schema.Bool(
-        title=u"zope.schema.Bool with z3c.form.")
+    dateTime = zope.schema.Datetime(
+        title=u"zope.schema.Datetime",
+        description=u"Contains Python datetime.datetime object")
+
+    time = zope.schema.Time(
+        title=u"zope.schema.Time",
+        description=u"???")
 
 
-class BooleanExamples(WidgetDemoForm):
+class DateExamples(WidgetDemoForm):
     """
     """
-    schema = IBooleanExamples
+    schema = IDateExamples
 
-    label = u"Boolean examples"
+    label = u"Date and time examples"
 
     package = IN_CORE_DESCRIPTION  # Says that shipped with vanilla Plone
     layer = Interface  # Means that eanbled withou taddons (all browserlayers)
