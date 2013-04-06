@@ -5,7 +5,7 @@ Changelog
 0.3 (unreleased)
 ----------------
 
-
+- Fields and widgets demo gallery added [miohtama]
 
 0.2 (2013-03-04)
 ----------------
