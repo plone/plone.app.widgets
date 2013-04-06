@@ -8,7 +8,8 @@
 """
 
 from zope.component import getAdapters
-from zope.component import getGlobalSiteManager
+from zope.interface import Interface
+from zope.interface import alsoProvides
 
 from Products.Five.browser import BrowserView
 
@@ -25,16 +26,13 @@ from .source import get_class_source
 from .interfaces import IWidgetDemo
 
 
-
 #: This warning should be given when the user might try default=[] or default={}
 DEFAULT_MUTABLE_WARNING = u"""
-    .. warning ::
 
-        Don't use default=[] argument, because default mutable arguments will
-        break when processing multiple parallel HTTP requests.
-
-    For more information see
-    `default mutable discussion <http://stackoverflow.com/questions/1132941/least-astonishment-in-python-the-mutable-default-argument>`_
+    *Default mutable arguments warning*: Don't use default=[] argument, because default mutable arguments will
+    break when processing multiple HTTP requests.
+    For more information please see
+    `discussion <http://stackoverflow.com/questions/1132941/least-astonishment-in-python-the-mutable-default-argument>`_
     on stackoverflow.com.
 
 """
@@ -52,26 +50,8 @@ def get_doc(klass):
     return safe_unicode(getattr(klass, "__doc__", ""))
 
 
-from zope.interface import Interface
-from plone.app.z3cform.interfaces import IPloneFormLayer
-from Products.Five.browser.metaconfigure import ViewMixinForTemplates
-from zope.browserpage.viewpagetemplatefile import ViewPageTemplateFile
-from zope.interface import directlyProvides
-from zope.publisher.browser import IDefaultBrowserLayer
-from z3c.form.interfaces import IFormLayer
-from zope.interface import alsoProvides
-
-from plone.app.z3cform.templates import RenderWidget
-from z3c.form.interfaces import IWidget
-
-class IDemoWidgetsLayer(IPloneFormLayer):
-    pass
-
 class IDemoWidget(Interface):
     pass
-
-class DemoRenderWidget(ViewMixinForTemplates, BrowserView):
-    index = ViewPageTemplateFile('demo-widget.pt')
 
 
 class Demos(BrowserView):
@@ -114,8 +94,6 @@ class Demos(BrowserView):
         Fetch all demo forms registered in the system for the template consumption.
         """
 
-        #alsoProvides(self.request, IDemoWidgetsLayer)
-
         # We query against HTTPRequest and browser layers,
         # as all widgets might not be functional without enabling
         # addon in the control panel first
@@ -123,10 +101,6 @@ class Demos(BrowserView):
         for form in self.demos:
             form.update()
             self.buildCustomDescriptions(form)
-
-            #widget = form.widgets.values()[0]
-            #widget_templ = context.unrestrictedTraverse("@@ploneform-render-widget")
-            #import ipdb ; ipdb.set_trace()
 
     def __call__(self):
         self.update()
@@ -138,4 +112,3 @@ class WidgetDemoForm(AutoExtensibleForm, z3c.form.form.Form):
     """
 
     ignoreContext = True
-
