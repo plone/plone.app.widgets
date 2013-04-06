@@ -8,10 +8,13 @@ from zope.interface import Interface
 import zope.schema
 
 from plone.supermodel import model
+from plone.autoform import directives as form
 
 from plone.app.widgets.demos.demo import WidgetDemoForm
 from plone.app.widgets.demos.demo import IN_CORE_DESCRIPTION
 from plone.app.widgets.demos.demo import get_doc
+
+from z3c.form.browser.password import PasswordFieldWidget
 
 
 class ITextExamples(model.Schema):
@@ -29,8 +32,11 @@ class ITextExamples(model.Schema):
         title=u"zope.schema.Text",
         description=get_doc(zope.schema.Text))
 
+    form.widget(password=PasswordFieldWidget)
+    password = zope.schema.Text(
+        title=u"zope.schema.TextLine with PasswordWidget")
 
-#@widget_demo
+
 class TextExamples(WidgetDemoForm):
     """
     """
