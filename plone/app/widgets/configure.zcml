@@ -15,22 +15,32 @@
   <include package="plone.app.jquery" />
 
   <browser:resource
-    name="plone.app.widgets.css"
-    file="static/widgets.css"
-    layer=".interfaces.IWidgetsLayer"
-    />
+      name="plone.app.widgets.css"
+      file="static/widgets.css"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
+  <configure zcml:condition="installed mockup">
+    <browser:resource
+        zcml:condition="have devmode"
+        name="plone.app.widgets.js"
+        file="static/widgets.js"
+        layer=".interfaces.IWidgetsLayer"
+        />
+    <browser:resource
+        zcml:condition="not-have devmode"
+        name="plone.app.widgets.js"
+        file="static/widgets.js"
+        layer=".interfaces.IWidgetsLayer"
+        />
+  </configure>
   <browser:resource
-    zcml:condition="not-have devmode"
-    name="plone.app.widgets.js"
-    file="static/widgets.js"
-    layer=".interfaces.IWidgetsLayer"
-    />
-  <browser:resource
-    zcml:condition="have devmode"
-    name="plone.app.widgets.js"
-    file="static/widgets.min.js"
-    layer=".interfaces.IWidgetsLayer"
-    />
+      zcml:condition="not-installed mockup"
+      name="plone.app.widgets.js"
+      file="static/widgets.min.js"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
   <browser:resource
     name="plone.app.widgets.png"
     file="static/widgets.png"
