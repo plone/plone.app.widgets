@@ -30,7 +30,7 @@
     <browser:resource
         zcml:condition="not-have devmode"
         name="plone.app.widgets.js"
-        file="static/widgets.js"
+        file="static/widgets.min.js"
         layer=".interfaces.IWidgetsLayer"
         />
   </configure>
