@@ -76,6 +76,18 @@
     <metal:main fill-slot="main">
         <tal:main-macro metal:define-macro="main">
 
+            <dl class="portalMessage info">
+                <dt>Info</dt>
+                <dd>
+                    If you are viewing this page on the <a href="http://developer.plone.org">developer.plone.org</a>
+                    site some widgets on this page are mockups and not functional.
+                    Please be aware that you can access this same page on your on Plone 4.4+ site in path
+                    <em>/@@widgets-demo</em> where you can test it live widgets. <em>developer.plone.org</em>
+                    page is a daily copy from the latest Plone version: widgets may be different in your Plone version.
+                </dd>
+            </dl>
+
+
             <div class="pat-autotoc"
                      data-autotoc-scroll-duration="slow"
                      data-autotoc-levels="h1, h2">
@@ -87,11 +99,6 @@
                     to be used with <a href="http://developer.plone.org/forms/z3c.form.html">z3c.form based forms</a>
                     and <a href="http://developer.plone.org/content/dexterity.html">Dexterity based content types</a>.
                     Please note that older, <a href="">Archetypes</a>, based content is not covered by this documentation.
-                </p>
-
-                <p>
-                    If you are an addon author you can make your own fields and widgets
-                    to appear on this page. Please see <a href="https://github.com/plone/plone.app.widgets/">plone.app.widgets</a> package for examples.
                 </p>
 
                 <div>
@@ -108,6 +115,16 @@
                         </li>
                     </ul>
                 </div>
+
+                <p>
+                    The examples are based on running, self-documenting, Python code. To see the example code for a field
+                    or a widget please use <em>Show example source code</em> button.
+                </p>
+
+                <p>
+                    If you are a widget author you can make your own fields and widgets
+                    to appear on this page. Please see <a href="https://github.com/plone/plone.app.widgets/">plone.app.widgets</a> package how to contribute on this page.
+                </p>
 
                 <div style="clear: both"><!-- --></div>
 
