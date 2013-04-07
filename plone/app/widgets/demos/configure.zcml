@@ -55,4 +55,12 @@
         template="demo-widget.pt"
         />
 
+    <!-- Provide a custom main_template for our consumption -->
+    <browser:page
+        name="widgets-demo-main-template"
+        for="*"
+        permission="zope.Public"
+        template="barebone-main-template.pt"
+        />
+
 </configure>
