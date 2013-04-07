@@ -21,5 +21,6 @@
   <adapter factory=".metadata.CreatorsFieldWidget" />
 
   <adapter factory=".collection.QueryStringFieldWidget" />
+  <adapter factory=".collection.QueryStringDataConverter" />
 
 </configure>
