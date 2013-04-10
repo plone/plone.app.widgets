@@ -69,5 +69,5 @@ see ``plone.app.widgets.demos`` source code.
 
 
 
-.. _`Plone Mockup`: http://plone.github.com/mockup
+.. _`Plone Mockup`: http://plone.github.io/mockup
 .. _`issue tracker`: https://github.com/plone.app.widgets/issues
