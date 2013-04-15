@@ -7,7 +7,7 @@ env:
 install:
   - mkdir -p buildout-cache/eggs
   - mkdir -p buildout-cache/downloads
-  - sed -ie "s#travis-4.3.x.cfg#travis-$PLONE_VERSION.x.cfg#" buildout.cfg
+  - sed -ie "s#travis-4.3.x.cfg#travis-$PLONE_VERSION.x.cfg#" travis.cfg
   - python bootstrap.py -d
   - bin/buildout -c buildout.cfg -q
 script:

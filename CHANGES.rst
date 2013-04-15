@@ -5,6 +5,9 @@ Changelog
 0.3 (unreleased)
 ----------------
 
+- Restructure buildout to build an instance.
+  [saily]
+
 - Add travis icon
   [saily]
 
