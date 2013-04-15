@@ -1,11 +1,20 @@
 *.py?
 *.sw?
 *.mo
+*.egg-info
 
-/.installed.cfg
-/plone.app.widgets.egg-info/
-/bin/
-/parts/
-/buildout-cache/
-/develop-eggs/
-/dist/
+# folders
+bin
+parts
+buildout-cache
+develop-eggs
+dist
+var
+
+# local development
+local.cfg
+
+# eclipse
+.installed.cfg
+.pydevproject
+.project
