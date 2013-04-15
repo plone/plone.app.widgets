@@ -5,6 +5,9 @@ Changelog
 0.3 (unreleased)
 ----------------
 
+- Add german translation
+  [saily]
+
 - Fields and widgets demo gallery added [miohtama]
 
 0.2 (2013-03-04)
