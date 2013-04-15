@@ -32,7 +32,7 @@ Installation
 For now only tested with Plone 4.3.::
 
     [buildout]
-    extends = http://dist.plone.org/release/4.3b2/versions.cfg
+    extends = http://dist.plone.org/release/4.3/versions.cfg
     versions = versions
     parts = instance
 
