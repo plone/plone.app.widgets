@@ -1,6 +1,9 @@
 ``plone.app.widgets`` is a revamp of plone widgets. It does this by overriding
 the widgets of some of the fields in plone.
 
+.. image:: https://travis-ci.org/plone/plone.app.widgets.png?branch=master
+   :target: https://travis-ci.org/plone/plone.app.widgets
+
 .. contents::
 
 Introduction

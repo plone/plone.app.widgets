@@ -5,6 +5,9 @@ Changelog
 0.3 (unreleased)
 ----------------
 
+- Add travis icon
+  [saily]
+
 - Add german translation
   [saily]
 
