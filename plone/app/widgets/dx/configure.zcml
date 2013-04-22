@@ -1,26 +1,29 @@
 <configure
-  xmlns="http://namespaces.zope.org/zope"
-  xmlns:z3c="http://namespaces.zope.org/z3c"
-  xmlns:plone="http://namespaces.plone.org/plone"
-  i18n_domain="plone.app.widgets">
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:z3c="http://namespaces.zope.org/z3c"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="plone.app.widgets">
 
-  <include package="z3c.form" file="meta.zcml"/>
-  <include package="z3c.form" />
+    <include package="z3c.form" file="meta.zcml"/>
+    <include package="z3c.form" />
 
-  <adapter factory=".select2.SelectFieldWidget" />
-  <adapter factory=".select2.TagsFieldWidget" />
-  <adapter factory=".select2.TagsWidgetConverter" />
+    <adapter factory=".select2.SelectFieldWidget" />
+    <adapter factory=".select2.TagsFieldWidget" />
+    <adapter factory=".select2.TagsWidgetConverter" />
 
-  <adapter factory=".datetime.DateTimeFieldWidget" />
-  <adapter factory=".datetime.DateTimeWidgetConverter" />
-  <adapter factory=".datetime.DateFieldWidget" />
-  <adapter factory=".datetime.DateWidgetConverter" />
+    <adapter factory=".datetime.DateTimeFieldWidget" />
+    <adapter factory=".datetime.DateTimeWidgetConverter" />
+    <adapter factory=".datetime.DateFieldWidget" />
+    <adapter factory=".datetime.DateWidgetConverter" />
 
-  <adapter factory=".metadata.SubjectsFieldWidget" />
-  <adapter factory=".metadata.ContributorsFieldWidget" />
-  <adapter factory=".metadata.CreatorsFieldWidget" />
+    <adapter factory=".metadata.SubjectsFieldWidget" />
+    <adapter factory=".metadata.ContributorsFieldWidget" />
+    <adapter factory=".metadata.CreatorsFieldWidget" />
 
-  <adapter factory=".collection.QueryStringFieldWidget" />
-  <adapter factory=".collection.QueryStringDataConverter" />
+    <configure zcml:condition="installed plone.app.contenttypes">
+        <adapter factory=".collection.QueryStringFieldWidget" />
+        <adapter factory=".collection.QueryStringDataConverter" />
+    </configure>
 
 </configure>

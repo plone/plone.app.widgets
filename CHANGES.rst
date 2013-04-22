@@ -5,6 +5,10 @@ Changelog
 0.3 (unreleased)
 ----------------
 
+- Conditional include of collection ``QueryStringWidget`` which expects
+  ``plone.app.contenttypes``.
+  [saily]
+
 - Restructure buildout to build an instance.
   [saily]
 
