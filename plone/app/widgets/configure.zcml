@@ -23,15 +23,8 @@
 
   <configure zcml:condition="installed mockup">
     <browser:resource
-        zcml:condition="have devmode"
         name="plone.app.widgets.js"
         file="static/widgets.js"
-        layer=".interfaces.IWidgetsLayer"
-        />
-    <browser:resource
-        zcml:condition="not-have devmode"
-        name="plone.app.widgets.js"
-        file="static/widgets.min.js"
         layer=".interfaces.IWidgetsLayer"
         />
   </configure>
