@@ -13,7 +13,7 @@ class PatternsWidget(object):
         widget = BasePatternsWidget(self.pattern_name, self.pattern_el_type)
         widget.el.attrib['name'] = self.name
 
-        value = self.value
+        value = self.request.get(self.name, self.value)
         if value is None:
             value = ''
 

@@ -23,7 +23,7 @@ class PatternsWidget(TypesWidget):
                                            self.pattern_el_type)
         widget.el.attrib['name'] = field.getName()
 
-        value = field.getAccessor(context)()
+        value = request.get(field.getName(), field.getAccessor(context)())
         if value is None:
             value = ''
 
