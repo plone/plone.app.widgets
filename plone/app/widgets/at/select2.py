@@ -30,6 +30,7 @@ class TagsWidget(PatternsWidget):
     _properties = PatternsWidget._properties.copy()
     _properties.update({
         'width': '30em',
+        'separator': ';',
         'ajax_suggest': '',
         'multiple': True
     })
@@ -38,6 +39,9 @@ class TagsWidget(PatternsWidget):
     pattern_name = 'select2'
 
     def customize_widget(self, widget, value, context, field, request):
+
+        if self.separator:
+            widget.options['separator'] = self.separator
 
         if self.width:
             widget.options['width'] = self.width
@@ -49,7 +53,7 @@ class TagsWidget(PatternsWidget):
                 '/@@widgets/getVocabulary?name=' + self.ajax_suggest
 
         if type(value) in [list, tuple]:
-            value = ','.join(value)
+            value = self.separator.join(value)
 
         widget.el.attrib['value'] = value
         widget.el.attrib['type'] = 'text'
@@ -64,5 +68,5 @@ class TagsWidget(PatternsWidget):
 
         value = value.strip()
         if self.multiple or self.ajax_suggest:
-            value = value.split(',')
+            value = value.split(self.separator)
         return value, {}

@@ -64,12 +64,16 @@ class TagsWidget(PatternsWidget, Widget):
     pattern_name = 'select2'
 
     width = '30em'
+    separator = ';'
     ajax_suggest = ''
 
     def customize_widget(self, widget, value):
 
         if self.width:
             widget.options['width'] = self.width
+
+        if self.separator:
+            widget.options['separator'] = self.separator
 
         if self.ajax_suggest:
             state = getMultiAdapter(
@@ -90,7 +94,7 @@ class TagsWidgetConverter(BaseDataConverter):
         """Convert from text lines to HTML representation."""
         if value in self.field.missing_value:
             return u''
-        return u','.join(unicode(v) for v in value)
+        return self.field.separator.join(unicode(v) for v in value)
 
     def toFieldValue(self, value):
         """See interfaces.IDataConverter"""
@@ -102,7 +106,8 @@ class TagsWidgetConverter(BaseDataConverter):
         valueType = self.field.value_type._type
         if isinstance(valueType, tuple):
             valueType = valueType[0]
-        return collectionType(valueType(v) for v in value.split(','))
+        return collectionType(valueType(v)
+                              for v in value.split(self.field.separator))
 
 
 @adapter(IChoice, Interface, IWidgetsLayer)
