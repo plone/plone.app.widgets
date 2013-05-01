@@ -55,7 +55,11 @@ class TagsWidget(PatternsWidget):
         if type(value) in [list, tuple]:
             value = self.separator.join(value)
 
-        widget.el.attrib['value'] = value
+        try:
+            widget.el.attrib['value'] = value
+        except:
+            # FIXME: encoding shouldn't be hardcoded
+            widget.el.attrib['value'] = value.decode('utf-8')
         widget.el.attrib['type'] = 'text'
 
     def process_form(self, instance, field, form, empty_marker=None,

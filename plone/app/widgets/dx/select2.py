@@ -81,7 +81,11 @@ class TagsWidget(PatternsWidget, Widget):
             widget.options['ajax_suggest'] = state.portal_url() + \
                 '/@@widgets/getVocabulary?name=' + self.ajax_suggest
 
-        widget.el.attrib['value'] = value
+        try:
+            widget.el.attrib['value'] = value
+        except:
+            # FIXME: encoding shouldn't be hardcoded
+            widget.el.attrib['value'] = value.decode('utf-8')
         widget.el.attrib['type'] = 'text'
 
 
