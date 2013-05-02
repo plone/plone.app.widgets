@@ -5,8 +5,7 @@ except ImportError:
     import unittest
     assert unittest
 
-import datetime
-import cgi # We need this to escape HTML
+import cgi  # We need this to escape HTML
 from zope.interface import alsoProvides
 from zope.component import getMultiAdapter
 from zope.globalrequest import setRequest
@@ -45,15 +44,16 @@ class DxDateWidgetTest(unittest.TestCase):
         self.assertEqual(
             widget.render(),
             ('<input name="name" type="text" value="" '
-                    'class="pat-querystring"/>')
+             'class="pat-querystring"/>')
         )
-        widget.value = ('[{"i":"SearchableText",'
-                        '"o":"plone.app.querystring.operation.string.contains",'
-                        '"v":"Autoren"}]')
+        widget.value = (
+            '[{"i":"SearchableText",'
+            '"o":"plone.app.querystring.operation.string.contains",'
+            '"v":"Autoren"}]')
         self.assertEqual(
             widget.render(),
             ('<input name="name" type="text" value="%s" '
-                    'class="pat-querystring"/>') % cgi.escape(widget.value, True)
+             'class="pat-querystring"/>') % cgi.escape(widget.value, True)
         )
 
     def testConverter(self):
@@ -70,9 +70,9 @@ class DxDateWidgetTest(unittest.TestCase):
         )
         self.assertEqual(
             converter.toWidgetValue([
-                { "i":"SearchableText",
-                  "o":"plone.app.querystring.operation.string.contains",
-                  "v":"Autoren" }
+                {"i": "SearchableText",
+                 "o": "plone.app.querystring.operation.string.contains",
+                 "v": "Autoren"}
             ]),
             ('[{"i":"SearchableText",'
              '"o":"plone.app.querystring.operation.string.contains",'
@@ -85,9 +85,9 @@ class DxDateWidgetTest(unittest.TestCase):
                 '"v":"Autoren"}]'
             ),
             [
-                { "i":"SearchableText",
-                  "o":"plone.app.querystring.operation.string.contains",
-                  "v":"Autoren" }
+                {"i": "SearchableText",
+                 "o": "plone.app.querystring.operation.string.contains",
+                 "v": "Autoren"}
             ]
         )
 
@@ -100,4 +100,3 @@ class DxDateWidgetTest(unittest.TestCase):
         form_ = CollectionWidgetTestForm(context, self.request)
         form_.update()
         self.assertTrue(IQueryStringWidget.providedBy(form_.widgets['query']))
-

@@ -11,7 +11,6 @@ from plone.supermodel import model
 
 from plone.app.widgets.demos.demo import WidgetDemoForm
 from plone.app.widgets.demos.demo import IN_CORE_DESCRIPTION
-from plone.app.widgets.demos.demo import get_doc
 
 
 class IDateExamples(model.Schema):

@@ -34,7 +34,7 @@ Example::
 
 For more information please see
 
-* http://developer.plone.org/forms/z3c.form.html#field-specific-internal-validators
+* http://developer.plone.org/forms/z3c.form.html#validators
 
 """
 

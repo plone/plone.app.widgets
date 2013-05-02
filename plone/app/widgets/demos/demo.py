@@ -26,14 +26,12 @@ from .source import get_class_source
 from .interfaces import IWidgetDemo
 
 
-#: This warning should be given when the user might try default=[] or default={}
+# This warning should be given when the user might try default=[] or default={}
 DEFAULT_MUTABLE_WARNING = u"""
 
-    *Default mutable arguments warning*: Don't use default=[] argument, because default mutable arguments will
-    break when processing multiple HTTP requests.
-    For more information please see
-    `discussion <http://stackoverflow.com/questions/1132941/least-astonishment-in-python-the-mutable-default-argument>`_
-    on stackoverflow.com.
+    *Default mutable arguments warning*: Don't use default=[] argument, because
+    default mutable arguments will break when processing multiple HTTP
+    requests.
 
 """
 
@@ -68,11 +66,12 @@ class Demos(BrowserView):
     """
 
     label = u"Plone fields and widgets demo"
-    description = u"Demostrate fields widges available for Dexterity and plone.app.z3cform forms"
+    description = u"Demostrate fields widges available for Dexterity and " +\
+                  u"plone.app.z3cform forms"
 
     def buildCustomDescriptions(self, form):
-        """ For each field, make the description contain extra information how to use it.
-
+        """ For each field, make the description contain extra information
+            how to use it.
         """
 
         # Get inline source code viewer Python code
@@ -90,18 +89,21 @@ class Demos(BrowserView):
             if not hasattr(field, "_demo_widget_rst"):
                 desc = field.description
                 string_data = restructured_to_html(desc)
-                field.description = string_data.decode("utf-8")  # z3c.form is strict about unicode
+                # z3c.form is strict about unicode
+                field.description = string_data.decode("utf-8")
                 field._demo_widget_rst = True
 
     def update(self):
         """
-        Fetch all demo forms registered in the system for the template consumption.
+        Fetch all demo forms registered in the system for the template
+        consumption.
         """
 
         # We query against HTTPRequest and browser layers,
         # as all widgets might not be functional without enabling
         # addon in the control panel first
-        self.demos = [form for name, form in getAdapters((self.context, self.request,), provided=IWidgetDemo)]
+        self.demos = [form for name, form in getAdapters(
+            (self.context, self.request,), provided=IWidgetDemo)]
         for form in self.demos:
             form.update()
             self.buildCustomDescriptions(form)

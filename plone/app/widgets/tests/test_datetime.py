@@ -59,19 +59,19 @@ class DxDateWidgetTest(DxBaseWidgetTest):
         self.assertRegexpMatches(
             widget.render(),
             (r'<input name="name" type="text" value="" '
-                    r'class="pat-datetime" '
-                    r'data-datetime-ampm="false" '
-                    r'data-datetime-formatSubmit="yyyy-mm-dd" '
-                    r'data-datetime-format="[^"]+"/>')
+             r'class="pat-datetime" '
+             r'data-datetime-ampm="false" '
+             r'data-datetime-formatSubmit="yyyy-mm-dd" '
+             r'data-datetime-format="[^"]+"/>')
         )
         widget.value = '2013-04-04'
         self.assertRegexpMatches(
             widget.render(),
             (r'<input name="name" type="text" value="2013-04-04" '
-                    r'class="pat-datetime" '
-                    r'data-datetime-ampm="false" '
-                    r'data-datetime-formatSubmit="yyyy-mm-dd" '
-                    r'data-datetime-format="[^"]+"/>')
+             r'class="pat-datetime" '
+             r'data-datetime-ampm="false" '
+             r'data-datetime-formatSubmit="yyyy-mm-dd" '
+             r'data-datetime-format="[^"]+"/>')
         )
 
     def testConverter(self):
@@ -134,19 +134,19 @@ class DxDateTimeWidgetTest(DxBaseWidgetTest):
         self.assertRegexpMatches(
             widget.render(),
             (r'<input name="name" type="text" value="" '
-                    r'class="pat-datetime" '
-                    r'data-datetime-ampm="false" '
-                    r'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
-                    r'data-datetime-format="[^"]+"/>')
+             r'class="pat-datetime" '
+             r'data-datetime-ampm="false" '
+             r'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
+             r'data-datetime-format="[^"]+"/>')
         )
         widget.value = '2013-04-04 08:13'
         self.assertRegexpMatches(
             widget.render(),
             (r'<input name="name" type="text" value="2013-04-04 08:13" '
-                    r'class="pat-datetime" '
-                    r'data-datetime-ampm="false" '
-                    r'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
-                    r'data-datetime-format="[^"]+"/>')
+             r'class="pat-datetime" '
+             r'data-datetime-ampm="false" '
+             r'data-datetime-formatSubmit="yyyy-mm-dd HH:MM" '
+             r'data-datetime-format="[^"]+"/>')
         )
 
     def testConverter(self):

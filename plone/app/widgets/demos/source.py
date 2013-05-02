@@ -4,7 +4,6 @@
 
 """
 
-import os
 import sys
 
 
@@ -21,4 +20,3 @@ def get_class_source(klass):
     text = f.read()
     f.close()
     return text
-

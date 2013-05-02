@@ -16,11 +16,15 @@ class DateTimeWidget(PatternsWidget):
         calendar = request.locale.dates.calendars[self.calendar_type]
 
         widget.options['pickadate-months.full'] = calendar.getMonthNames()
-        widget.options['pickadate-months.short'] = calendar.getMonthAbbreviations()
+        widget.options['pickadate-months.short'] = \
+            calendar.getMonthAbbreviations()
         widget.options['pickadate-weekdays.full'] = calendar.getDayNames()
-        widget.options['pickadate-weekdays.short'] = calendar.getDayAbbreviations()
-        widget.options['pickadate-today'] = translate(_(u"Today"), context=request)
-        widget.options['pickadate-clear'] = translate(_(u"Clear"), context=request)
+        widget.options['pickadate-weekdays.short'] = \
+            calendar.getDayAbbreviations()
+        widget.options['pickadate-today'] = \
+            translate(_(u"Today"), context=request)
+        widget.options['pickadate-clear'] = \
+            translate(_(u"Clear"), context=request)
 
         if value:
             value = value.strftime('%Y-%m-%d %H:%M')

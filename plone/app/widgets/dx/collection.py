@@ -1,4 +1,4 @@
-import json # XXX: maybe we should use defusedjson
+import json  # XXX: maybe we should use defusedjson
 from zope.interface import implementer
 from zope.interface import implementsOnly
 from zope.component import adapter
