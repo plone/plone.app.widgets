@@ -37,7 +37,6 @@ setup(
     ],
     extras_require={
         'test': [
-            'plone.app.contenttypes',
             'plone.app.testing',
         ],
         'archetypes': [
