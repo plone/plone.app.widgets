@@ -98,7 +98,7 @@ class TagsWidgetConverter(BaseDataConverter):
         """Convert from text lines to HTML representation."""
         if value in self.field.missing_value:
             return u''
-        return self.field.separator.join(unicode(v) for v in value)
+        return self.widget.separator.join(unicode(v) for v in value)
 
     def toFieldValue(self, value):
         """See interfaces.IDataConverter"""
@@ -111,7 +111,7 @@ class TagsWidgetConverter(BaseDataConverter):
         if isinstance(valueType, tuple):
             valueType = valueType[0]
         return collectionType(valueType(v)
-                              for v in value.split(self.field.separator))
+                              for v in value.split(self.widget.separator))
 
 
 @adapter(IChoice, Interface, IWidgetsLayer)
