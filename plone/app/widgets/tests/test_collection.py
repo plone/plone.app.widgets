@@ -74,9 +74,9 @@ class DxDateWidgetTest(unittest.TestCase):
                  "o": "plone.app.querystring.operation.string.contains",
                  "v": "Autoren"}
             ]),
-            ('[{"i":"SearchableText",'
-             '"o":"plone.app.querystring.operation.string.contains",'
-             '"v":"Autoren"}]')
+            ('[{"i": "SearchableText", '
+             '"o": "plone.app.querystring.operation.string.contains", '
+             '"v": "Autoren"}]')
         )
         self.assertEqual(
             converter.toFieldValue(
