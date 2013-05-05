@@ -13,6 +13,8 @@
   <include package="Products.TinyMCE" />
   <include package="plone.app.vocabularies" />
   <include package="plone.app.jquery" />
+
+  <!-- TODO: demos should be only loaded when in development mode -->
   <include package=".demos" />
 
   <browser:resource
@@ -20,21 +22,6 @@
       file="static/widgets.css"
       layer=".interfaces.IWidgetsLayer"
       />
-
-  <configure zcml:condition="installed mockup">
-    <browser:resource
-        name="plone.app.widgets.js"
-        file="static/widgets.js"
-        layer=".interfaces.IWidgetsLayer"
-        />
-  </configure>
-  <browser:resource
-      zcml:condition="not-installed mockup"
-      name="plone.app.widgets.js"
-      file="static/widgets.min.js"
-      layer=".interfaces.IWidgetsLayer"
-      />
-
   <browser:resource
     name="plone.app.widgets.png"
     file="static/widgets.png"
@@ -45,6 +32,19 @@
     file="static/widgets.png"
     layer=".interfaces.IWidgetsLayer"
     />
+
+  <browser:resource
+      zcml:condition="installed mockup"
+      name="plone.app.widgets.js"
+      file="static/widgets.js"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      zcml:condition="not-installed mockup"
+      name="plone.app.widgets.js"
+      file="static/widgets.min.js"
+      layer=".interfaces.IWidgetsLayer"
+      />
 
   <cmf:registerDirectory name="plone_widgets" />
 
