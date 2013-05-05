@@ -5,8 +5,6 @@ Changelog
 0.3 (unreleased)
 ----------------
 
-- TODO
-
 - Conditional include of collection ``QueryStringWidget`` which expects
   ``plone.app.contenttypes``.
   [saily]
