@@ -96,7 +96,8 @@ class TagsWidgetConverter(BaseDataConverter):
 
     def toWidgetValue(self, value):
         """Convert from text lines to HTML representation."""
-        if value in self.field.missing_value:
+        mv = self.field.missing_value
+        if mv and value in mv:
             return u''
         return self.widget.separator.join(unicode(v) for v in value)
 
