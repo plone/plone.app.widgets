@@ -1,13 +1,14 @@
+from z3c.form.widget import Widget
 from plone.app.widgets.base import BasePatternsWidget
 
 
-class PatternsWidget(object):
+class PatternsWidget(Widget):
 
     pattern_el_type = 'input'
 
     @property
     def pattern_name(self):
-        raise NotImplemented
+        raise NotImplementedError('pattern_name not implemented!')
 
     def render(self):
         widget = BasePatternsWidget(self.pattern_name, self.pattern_el_type)

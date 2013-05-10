@@ -13,7 +13,7 @@ class PatternsWidget(TypesWidget):
 
     @property
     def pattern_name(self):
-        raise NotImplemented
+        raise NotImplementedError('pattern_name not implemented!')
 
     def view(self, context, field, request):
         return field.getAccessor(context)()
