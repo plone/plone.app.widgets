@@ -1,7 +1,6 @@
 Changelog
 =========
 
-
 0.3 (unreleased)
 ----------------
 
