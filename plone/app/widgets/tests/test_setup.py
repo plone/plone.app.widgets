@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 try:
     import unittest2 as unittest
-except ImportError:
-    import unittest
-    assert unittest
+except ImportError:  # pragma: nocover
+    import unittest  # pragma: nocover
+    assert unittest  # pragma: nocover
 
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.testing import TEST_USER_ID, TEST_USER_NAME, setRoles, login

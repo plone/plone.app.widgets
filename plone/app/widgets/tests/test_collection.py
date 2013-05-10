@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 try:
     import unittest2 as unittest
-except ImportError:
-    import unittest
-    assert unittest
+except ImportError:  # pragma: nocover
+    import unittest  # pragma: nocover
+    assert unittest  # pragma: nocover
 
 import cgi  # We need this to escape HTML
 from zope.interface import alsoProvides
