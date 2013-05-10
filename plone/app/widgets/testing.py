@@ -27,6 +27,7 @@ class DummyContext(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
+
 class DummyATField(object):
 
     def getName(self):

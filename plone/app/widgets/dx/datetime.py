@@ -7,7 +7,6 @@ from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.i18n import translate
 from z3c.form.converter import BaseDataConverter
-from z3c.form.widget import Widget
 from z3c.form.widget import FieldWidget
 from z3c.form.interfaces import IWidget
 from z3c.form.interfaces import IFieldWidget
@@ -35,7 +34,7 @@ class BaseWidgetConverter(BaseDataConverter):
         return datetime.datetime.strptime(value, self.format)
 
 
-class BaseWidget(PatternsWidget, Widget):
+class BaseWidget(PatternsWidget):
 
     pattern_name = 'datetime'
 

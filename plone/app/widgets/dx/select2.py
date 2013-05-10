@@ -11,7 +11,6 @@ from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ITextLine
 from zope.schema.interfaces import ITuple
 from zope.schema.interfaces import ISequence
-from z3c.form.widget import Widget
 from z3c.form.widget import FieldWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.browser.select import SelectWidget as BaseSelectWidget
@@ -57,7 +56,7 @@ class ITagsWidget(IWidget):
     ajax_suggest = TextLine()
 
 
-class TagsWidget(PatternsWidget, Widget):
+class TagsWidget(PatternsWidget):
 
     implementsOnly(ITagsWidget)
 

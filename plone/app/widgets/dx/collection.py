@@ -8,7 +8,6 @@ from z3c.form.interfaces import IWidget
 from z3c.form.interfaces import IFieldWidget
 from z3c.form.util import getSpecification
 from z3c.form.converter import BaseDataConverter
-from z3c.form.widget import Widget
 from z3c.form.widget import FieldWidget
 from plone.app.contenttypes.interfaces import ICollection
 from plone.app.widgets.interfaces import IWidgetsLayer
@@ -20,7 +19,7 @@ class IQueryStringWidget(IWidget):
     """
 
 
-class QueryStringWidget(PatternsWidget, Widget):
+class QueryStringWidget(PatternsWidget):
 
     pattern_name = 'querystring'
 
