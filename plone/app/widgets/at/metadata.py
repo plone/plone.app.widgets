@@ -29,10 +29,13 @@ class MetadataExtender(object):
             old = field.widget
 
             if field.__name__ in ['subject']:
+                vocab = 'plone.app.vocabularies.Keywords'
+                if field.vocabulary_factory:
+                    vocab = field.vocabulary_factory
                 field.widget = TagsWidget(
                     label=old.label,
                     description=old.description,
-                    ajax_suggest='plone.app.vocabularies.Keywords',
+                    ajax_suggest=vocab,
                 )
 
             if field.__name__ in ['language']:

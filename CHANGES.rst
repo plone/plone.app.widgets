@@ -4,6 +4,10 @@ Changelog
 0.3 (unreleased)
 ----------------
 
+- For Archetypes subject fields, use the field's vocabulary_factory and fall
+  back to 'plone.app.vocabularies.Keywords' if it's not present.
+  [thet]
+
 - Conditional include of collection ``QueryStringWidget`` which expects
   ``plone.app.contenttypes``.
   [saily]
