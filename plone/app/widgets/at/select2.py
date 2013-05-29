@@ -1,4 +1,4 @@
-from lxml import etree
+from lxml import html
 from zope.component import getMultiAdapter
 from plone.app.widgets.at.base import PatternsWidget
 
@@ -18,7 +18,7 @@ class SelectWidget(PatternsWidget):
             widget.options['width'] = self.width
 
         for token, title in field.Vocabulary(context).items():
-            option = etree.Element('option')
+            option = html.Element('option')
             option.attrib['value'] = token
             if token == value:
                 option.attrib['selected'] = 'selected'

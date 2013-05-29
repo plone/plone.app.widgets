@@ -1,4 +1,4 @@
-from lxml import etree
+from lxml import html
 from zope.interface import implements
 from zope.interface import implementer
 from zope.interface import implementsOnly
@@ -42,7 +42,7 @@ class SelectWidget(PatternsWidget, BaseSelectWidget):
         if callable(items):
             items = items()
         for item in items:
-            option = etree.Element('option')
+            option = html.Element('option')
             option.attrib['value'] = item['value']
             if item['selected']:
                 option.attrib['selected'] = 'selected'

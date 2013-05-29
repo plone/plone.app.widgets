@@ -1,11 +1,11 @@
 import json
-from lxml import etree
+from lxml import html
 
 
 class BasePatternsWidget(object):
 
     def __init__(self, name, element_type='input'):
-        self.el = etree.Element(element_type)
+        self.el = html.Element(element_type)
         self.name = name
         self.options = {}
 
@@ -16,4 +16,4 @@ class BasePatternsWidget(object):
                 if type(value) in [dict, list]:
                     value = json.dumps(value)
                 self.el.attrib['data-%s-%s' % (self.name, name)] = value
-        return etree.tostring(self.el)
+        return html.tostring(self.el)
