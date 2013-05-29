@@ -41,6 +41,9 @@ class SelectWidget(PatternsWidget, BaseSelectWidget):
         items = self.items
         if callable(items):
             items = items()
+        # make sure the element doesn't render as <select/>
+        if not items:
+            widget.el.text = ' '
         for item in items:
             option = etree.Element('option')
             option.attrib['value'] = item['value']

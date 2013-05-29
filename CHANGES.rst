@@ -4,6 +4,9 @@ Changelog
 0.3 (unreleased)
 ----------------
 
+- Fix bug where empty select elements rendered as <select/>
+  [davisagli]
+
 - Use normal widget templates for z3c.form widgets in display mode.
   [davisagli]
 
