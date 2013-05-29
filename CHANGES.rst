@@ -4,6 +4,9 @@ Changelog
 0.3 (unreleased)
 ----------------
 
+- Use normal widget templates for z3c.form widgets in display mode.
+  [davisagli]
+
 - For Archetypes subject fields, use the field's vocabulary_factory and fall
   back to 'plone.app.vocabularies.Keywords' if it's not present.
   [thet]

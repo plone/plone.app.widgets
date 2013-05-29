@@ -11,6 +11,10 @@ class PatternsWidget(Widget):
         raise NotImplementedError('pattern_name not implemented!')
 
     def render(self):
+        # Use standard rendering in display mode
+        if self.mode == 'display':
+            return super(PatternsWidget, self).render()
+
         widget = BasePatternsWidget(self.pattern_name, self.pattern_el_type)
         widget.el.attrib['name'] = self.name
 
