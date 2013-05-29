@@ -4,11 +4,6 @@ Changelog
 0.3 (unreleased)
 ----------------
 
-- Generate markup using lxml's HTML serializer rather than the
-  XML serializer. This fixes an edge case that caused invalid
-  self-closing ``select`` tags if there were no options.
-  [davisagli]
-
 - Use normal widget templates for z3c.form widgets in display mode.
   [davisagli]
 
