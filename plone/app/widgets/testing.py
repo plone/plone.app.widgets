@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import doctest
 
 from zope.interface import implements
@@ -19,7 +20,7 @@ from plone.app.widgets.interfaces import IWidgetsLayer
 
 
 class TestRequest(BaseTestRequest):
-    implements(IPloneFormLayer, IWidgetsLayer)
+    implements(IWidgetsLayer)
 
 
 class DummyContext(object):
@@ -42,22 +43,21 @@ class DummyATField(object):
 class PloneAppWidgetsLayer(PloneSandboxLayer):
 
     def setUpZope(self, app, configurationContext):
+        # Load ZCML
         import plone.app.widgets
-        xmlconfig.file(
-            'configure.zcml',
-            plone.app.widgets,
-            context=configurationContext)
+        self.loadZCML(package=plone.app.widgets)
+        import plone.app.widgets.tests.example
+        self.loadZCML(package=plone.app.widgets.tests.example)
+
+        # Install product and call its initialize() function
+        z2.installProduct(app, 'plone.app.widgets.tests.examples')
+
+    def tearDownZope(self, app):
+        # Uninstall product and call its uninstall() function
+        z2.uninstallProduct(app, 'plone.app.widgets.tests.example')
 
     def setUpPloneSite(self, portal):
-        applyProfile(portal, 'plone.app.widgets:default')
-        portal.acl_users.userFolderAddUser('admin',
-                                           'secret',
-                                           ['Manager'],
-                                           [])
-        login(portal, 'admin')
-        portal.portal_workflow.setDefaultChain("simple_publication_workflow")
-        setRoles(portal, TEST_USER_ID, ['Manager'])
-
+        self.applyProfile(portal, 'plone.app.widgets.tests.example:example')
 
 PLONEAPPWIDGETS_FIXTURE = PloneAppWidgetsLayer()
 

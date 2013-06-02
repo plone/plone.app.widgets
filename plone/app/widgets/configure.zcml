@@ -58,7 +58,7 @@
     />
 
   <include zcml:condition="installed archetypes.schemaextender" package=".at" />
-  <include zcml:condition="installed plone.app.dexterity" package=".dx" />
+  <!--include zcml:condition="installed plone.app.dexterity" package=".dx" /-->
 
   <genericsetup:registerProfile
     name="default"

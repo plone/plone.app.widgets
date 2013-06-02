@@ -38,6 +38,7 @@ setup(
     extras_require={
         'test': [
             'plone.app.testing',
+            'mock',
         ],
         'archetypes': [
             'archetypes.schemaextender',

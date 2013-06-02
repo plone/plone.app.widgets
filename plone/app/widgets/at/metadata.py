@@ -6,9 +6,9 @@ from archetypes.schemaextender.interfaces import ISchemaModifier
 from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 
 from plone.app.widgets.interfaces import IWidgetsLayer
-from plone.app.widgets.at.select2 import SelectWidget
-from plone.app.widgets.at.select2 import TagsWidget
-from plone.app.widgets.at.datetime import DateTimeWidget
+from plone.app.widgets.at.base import SelectWidget
+from plone.app.widgets.at.base import Select2Widget
+from plone.app.widgets.at.base import DatetimeWidget
 
 _plone = MessageFactory('plone')
 
@@ -29,42 +29,38 @@ class MetadataExtender(object):
             old = field.widget
 
             if field.__name__ in ['subject']:
-                vocab = 'plone.app.vocabularies.Keywords'
-                if field.vocabulary_factory:
-                    vocab = field.vocabulary_factory
-                field.widget = TagsWidget(
+                field.widget = Select2Widget(
                     label=old.label,
                     description=old.description,
-                    ajax_suggest=vocab,
+                    ajax_vocabulary='plone.app.vocabularies.Keywords',
                 )
 
             if field.__name__ in ['language']:
-
                 field.widget = SelectWidget(
                     label=old.label,
                     description=old.description,
                 )
 
             if field.__name__ in ['effectiveDate', 'expirationDate']:
-                field.widget = DateTimeWidget(
+                field.widget = DatetimeWidget(
                     label=old.label,
                     description=old.description
                 )
 
             if field.__name__ in ['contributors']:
-                field.widget = TagsWidget(
+                field.widget = Select2Widget(
                     label=old.label,
                     description=_plone(u"The names of people that have "
                                        u"contributed to this item."),
-                    ajax_suggest="plone.app.vocabularies.Users",
+                    ajax_vocabulary="plone.app.vocabularies.Users",
                 )
 
             if field.__name__ in ['creators']:
-                field.widget = TagsWidget(
+                field.widget = Select2Widget(
                     label=old.label,
                     description=_plone(u"The names of people that are "
                                        u"creators to this item."),
-                    ajax_suggest="plone.app.vocabularies.Users",
+                    ajax_vocabulary="plone.app.vocabularies.Users",
                 )
 
         #if 'customViewFields' in schema:

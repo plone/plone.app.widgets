@@ -1,28 +1,249 @@
+# -*- coding: utf-8 -*-
+
+from datetime import date
+from datetime import datetime
+from zope.interface import Interface
+from zope.interface import implementsOnly
+from zope.interface import implementer
+from zope.component import adapts
+from zope.component import adapter
+from zope.component import queryMultiAdapter
+from zope.schema.interfaces import IDate
+from zope.schema.interfaces import IDatetime
+from zope.schema.interfaces import ITextLine
+from zope.schema.interfaces import IChoice
+from zope.schema.interfaces import ISequence
+from z3c.form.converter import BaseDataConverter
 from z3c.form.widget import Widget
-from plone.app.widgets.base import BasePatternsWidget
+from z3c.form.widget import FieldWidget
+from z3c.form.interfaces import IWidget
+from z3c.form.interfaces import IFieldWidget
+from plone.app.z3cform.widget import IDatetimeField
+from plone.app.z3cform.widget import IDateField
+from plone.app.widgets import base
+from plone.app.widgets.interfaces import IWidgetsLayer
 
 
-class PatternsWidget(Widget):
+class IDatetimeWidget(IWidget):
+    """
+    """
 
-    pattern_el_type = 'input'
 
-    @property
-    def pattern_name(self):
-        raise NotImplementedError('pattern_name not implemented!')
+class IDateWidget(IWidget):
+    """
+    """
+
+
+class ISelectWidget(IWidget):
+    """
+    """
+
+
+class ISelect2Widget(IWidget):
+    """
+    """
+
+
+class DatetimeWidgetConverter(BaseDataConverter):
+    """Data converter for datetime stuff."""
+
+    adapts(IDatetime, IDatetimeWidget)
+
+    def toWidgetValue(self, value):
+        if value is self.field.missing_value:
+            return u''
+        return '%s-%s-%s %s:%s' % (value.year,
+                                   value.month,
+                                   value.day,
+                                   value.hour,
+                                   value.minute)
+
+    def toFieldValue(self, value):
+        if not value:
+            return self.field.missing_value
+        tmp = value.split(' ')
+        value = tmp[0].split('-')
+        value += tmp[1].split(':')
+        return datetime(*map(int, value))
+
+
+class DateWidgetConverter(BaseDataConverter):
+    """Data converter for date stuff.
+    """
+
+    adapts(IDate, IDateWidget)
+
+    def toWidgetValue(self, value):
+        if value is self.field.missing_value:
+            return u''
+        return '%s-%s-%s' % (value.year,
+                             value.month,
+                             value.day)
+
+    def toFieldValue(self, value):
+        if not value:
+            return self.field.missing_value
+        return date(*map(int, value.split('-')))
+
+
+class Select2WidgetConverter(BaseDataConverter):
+    """Data converter for ISequence.
+    """
+
+    adapts(ISequence, ISelect2Widget)
+
+    def toWidgetValue(self, value):
+        if self.field.missing_value and value in self.field.missing_value:
+            return u''
+        return self.widget.separator.join(unicode(v) for v in value)
+
+    def toFieldValue(self, value):
+        collectionType = self.field._type
+        if isinstance(collectionType, tuple):
+            collectionType = collectionType[-1]
+        if not len(value):
+            return self.field.missing_value
+        valueType = self.field.value_type._type
+        if isinstance(valueType, tuple):
+            valueType = valueType[0]
+        return collectionType(valueType(v)
+                              for v in value.split(self.widget.separator))
+
+
+class BaseWidget(Widget):
+    """
+    """
+
+    _widget_klass = base.BaseWidget
+
+    pattern_options = {}
+
+    def _widget_args(self):
+        return {
+            'name': self.name,
+            'pattern_options': self.pattern_options,
+        }
 
     def render(self):
-        # Use standard rendering in display mode
         if self.mode == 'display':
-            return super(PatternsWidget, self).render()
+            return super(BaseWidget, self).render()
+        return self._widget_klass(**self._widget_args()).render()
 
-        widget = BasePatternsWidget(self.pattern_name, self.pattern_el_type)
-        widget.el.attrib['name'] = self.name
 
+class InputWidget(BaseWidget):
+
+    _widget_klass = base.InputWidget
+
+    pattern_options = BaseWidget.pattern_options.copy()
+
+    def _widget_args(self):
+        args = super(InputWidget, self)._widget_args()
+        # XXX: we might need to decode the value and encoding shouldn't be
+        # hardcoded (value.decode('utf-8'))
         value = self.request.get(self.name, self.value)
-        if value is None:
-            value = ''
+        args['value'] = value
+        return args
 
-        if hasattr(self, 'customize_widget'):
-            self.customize_widget(widget, value)
 
-        return widget.render()
+class SelectWidget(BaseWidget):
+
+    _widget_klass = base.SelectWidget
+
+    implementsOnly(ISelectWidget)
+
+    pattern_options = BaseWidget.pattern_options.copy()
+
+    def _widget_args(self):
+        args = super(SelectWidget, self)._widget_args()
+
+        options = None
+        if hasattr(self, 'options'):
+            options = self.options
+            if callable(options):
+                options = options()
+
+        # make sure the element doesn't render as <select/>
+        if not options:
+            self.el.text = ' '
+
+        args['options'] = options
+        args['pattern'] = 'select2x'
+
+        return args
+
+
+class DatetimeWidget(InputWidget):
+
+    _widget_klass = base.DatetimeWidget
+
+    implementsOnly(IDatetimeWidget)
+
+    pattern_options = InputWidget.pattern_options.copy()
+
+    def _widget_args(self):
+        args = super(InputWidget, self)._widget_args()
+        args['request'] = self.request
+        return args
+
+
+class DateWidget(DatetimeWidget):
+
+    _widget_klass = base.DatetimeWidget
+
+    implementsOnly(IDateWidget)
+
+    pattern_options = DatetimeWidget.pattern_options.copy()
+
+
+class Select2Widget(InputWidget):
+
+    _widget_klass = base.Select2Widget
+
+    implementsOnly(ISelect2Widget)
+
+    separator = ';'
+    ajax_vocabulary = None
+    pattern_options = InputWidget.pattern_options.copy()
+
+    def _widget_args(self):
+        args = super(Select2Widget, self)._widget_args()
+        if self.ajax_vocabulary:
+            portal_state = queryMultiAdapter((self.context, self.request),
+                                             name=u'plone_portal_state')
+            args['ajax_vocabulary'] = ''
+            if portal_state:
+                args['ajax_vocabulary'] += portal_state.portal_url()
+            args['ajax_vocabulary'] += '/@@widgets/getVocabulary?name=' + \
+                self.ajax_vocabulary
+        return args
+
+
+@adapter(IDatetimeField, IWidgetsLayer)
+@implementer(IFieldWidget)
+def DateTimeFieldWidget(field, request):
+    """IFieldWidget factory for DateTimeWidget."""
+    return FieldWidget(field, DatetimeWidget(request))
+
+
+@adapter(IDateField, IWidgetsLayer)
+@implementer(IFieldWidget)
+def DateFieldWidget(field, request):
+    """IFieldWidget factory for DateWidget."""
+    return FieldWidget(field, DateWidget(request))
+
+
+@adapter(IChoice, Interface, IWidgetsLayer)
+@implementer(IFieldWidget)
+def SelectFieldWidget(field, source, request=None):
+    """IFieldWidget factory for Select2Widget."""
+    # BBB: emulate our pre-2.0 signature (field, request)
+    if request is None:
+        request = source
+    return FieldWidget(field, SelectWidget(request))
+
+
+@adapter(ISequence, ITextLine, IWidgetsLayer)
+@implementer(IFieldWidget)
+def Select2FieldWidget(field, value_type, request):
+    """IFieldWidget factory for TagsWidget."""
+    return FieldWidget(field, Select2Widget(request))
