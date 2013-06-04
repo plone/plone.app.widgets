@@ -1,4 +1,4 @@
-import json  # XXX: maybe we should use defusedjson
+import json
 from zope.interface import implementer
 from zope.interface import implementsOnly
 from zope.component import adapter
@@ -11,23 +11,19 @@ from z3c.form.converter import BaseDataConverter
 from z3c.form.widget import FieldWidget
 from plone.app.contenttypes.interfaces import ICollection
 from plone.app.widgets.interfaces import IWidgetsLayer
-from plone.app.widgets.dx.base import PatternsWidget
+from plone.app.widgets.dx.base import InputWidget
 
 
 class IQueryStringWidget(IWidget):
-    """Marker interface for the p.a.widgets QueryStringWidget
+    """Marker interface for the QueryStringWidget
     """
 
 
-class QueryStringWidget(PatternsWidget):
+class QueryStringWidget(InputWidget):
 
-    pattern_name = 'querystring'
+    pattern = 'querystring'
 
     implementsOnly(IQueryStringWidget)
-
-    def customize_widget(self, widget, value):
-        widget.el.attrib['type'] = 'text'
-        widget.el.attrib['value'] = value
 
 
 class QueryStringDataConverter(BaseDataConverter):
