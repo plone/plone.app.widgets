@@ -27,6 +27,7 @@ class BaseWidgetTests(unittest.TestCase):
             widget._widget_args(),
             {
                 'name': 'example',
+                'pattern': None,
                 'pattern_options': {},
             },
         )
@@ -41,6 +42,7 @@ class BaseWidgetTests(unittest.TestCase):
             widget._widget_args(),
             {
                 'name': 'example',
+                'pattern': None,
                 'pattern_options': {},
                 'value': 'example-value',
             },
@@ -57,6 +59,7 @@ class BaseWidgetTests(unittest.TestCase):
             widget._widget_args(),
             {
                 'name': 'example',
+                'pattern': None,
                 'pattern_options': {},
                 'options': ['option1', 'option2', 'option3'],
                 'pattern': 'select2x',
@@ -79,6 +82,7 @@ class DateWidgetTests(unittest.TestCase):
             self.widget._widget_args(),
             {
                 'name': None,
+                'pattern': None,
                 'pattern_options': {},
                 'request': self.request
             }
@@ -133,6 +137,7 @@ class DatetimeWidgetTests(unittest.TestCase):
             self.widget._widget_args(),
             {
                 'name': None,
+                'pattern': None,
                 'pattern_options': {},
                 'request': self.request
             }
@@ -186,6 +191,7 @@ class Select2WidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'value': None,
+                'pattern': None,
                 'pattern_options': {},
             }
         )
@@ -196,6 +202,7 @@ class Select2WidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'value': None,
+                'pattern': None,
                 'pattern_options': {},
                 'ajax_vocabulary': '/@@widgets/getVocabulary?name=example',
             }

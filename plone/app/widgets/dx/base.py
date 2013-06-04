@@ -25,22 +25,22 @@ from plone.app.widgets.interfaces import IWidgetsLayer
 
 
 class IDatetimeWidget(IWidget):
-    """
+    """Marker interface for the DatetimeWidget
     """
 
 
 class IDateWidget(IWidget):
-    """
+    """Marker interface for the DateWidget
     """
 
 
 class ISelectWidget(IWidget):
-    """
+    """Marker interface for the SelectWidget
     """
 
 
 class ISelect2Widget(IWidget):
-    """
+    """Marker interface for the Select2Widget
     """
 
 
@@ -116,11 +116,13 @@ class BaseWidget(Widget):
 
     _widget_klass = base.BaseWidget
 
+    pattern = None
     pattern_options = {}
 
     def _widget_args(self):
         return {
             'name': self.name,
+            'pattern': self.pattern,
             'pattern_options': self.pattern_options,
         }
 
@@ -151,6 +153,7 @@ class SelectWidget(BaseWidget):
 
     implementsOnly(ISelectWidget)
 
+    pattern = 'select2x'
     pattern_options = BaseWidget.pattern_options.copy()
 
     def _widget_args(self):
@@ -167,7 +170,6 @@ class SelectWidget(BaseWidget):
             self.el.text = ' '
 
         args['options'] = options
-        args['pattern'] = 'select2x'
 
         return args
 
