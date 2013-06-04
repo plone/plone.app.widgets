@@ -153,7 +153,6 @@ class SelectWidget(BaseWidget):
 
     implementsOnly(ISelectWidget)
 
-    pattern = 'select2x'
     pattern_options = BaseWidget.pattern_options.copy()
 
     def _widget_args(self):

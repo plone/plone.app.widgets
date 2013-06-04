@@ -13,6 +13,7 @@ class BaseWidget(TypesWidget):
     _properties = TypesWidget._properties.copy()
     _properties.update({
         'macro': "patterns_widget",
+        'pattern': None,
     })
 
     _widget = base.BaseWidget
@@ -22,11 +23,12 @@ class BaseWidget(TypesWidget):
         for name in self._properties.keys():
             if name in ['blurrable', 'condition', 'description', 'helper_css',
                         'helper_js', 'label', 'macro', 'modes', 'populate',
-                        'postback', 'show_content_type', 'visible']:
+                        'postback', 'show_content_type', 'visible', 'pattern']:
                 continue
             options[name] = getattr(self, name)
         return {
             'name': field.getName(),
+            'pattern': self.pattern,
             'pattern_options': options,
         }
 
@@ -53,6 +55,9 @@ class InputWidget(BaseWidget):
 
 class DateWidget(InputWidget):
     _properties = InputWidget._properties.copy()
+    _properties.update({
+        'pattern': 'pickadate'
+    })
     _widget = base.DateWidget
 
     def _widget_args(self, context, field, request):
@@ -60,9 +65,15 @@ class DateWidget(InputWidget):
         args['request'] = request
         value = request.get(field.getName(), field.getAccessor(context)())
         if value:
-            args['value'] = '%s-%s-%s' % (value.year,
-                                          value.month,
-                                          value.day)
+            if isinstance(value, DateTime):
+                args['value'] = '%s-%s-%s' % (value.year(),
+                                              value.month(),
+                                              value.day())
+            else:
+                args['value'] = '%s-%s-%s' % (value.year,
+                                              value.month,
+                                              value.day)
+
         return args
 
     security = ClassSecurityInfo()
@@ -110,11 +121,18 @@ class DatetimeWidget(DateWidget):
                                                         request)
         value = request.get(field.getName(), field.getAccessor(context)())
         if value:
-            args['value'] = '%s-%s-%s %s:%s' % (value.year,
-                                                value.month,
-                                                value.day,
-                                                value.hour,
-                                                value.minute)
+            if isinstance(value, DateTime):
+                args['value'] = '%s-%s-%s %s:%s' % (value.year(),
+                                                    value.month(),
+                                                    value.day(),
+                                                    value.hour(),
+                                                    value.minute())
+            else:
+                args['value'] = '%s-%s-%s %s:%s' % (value.year,
+                                                    value.month,
+                                                    value.day,
+                                                    value.hour,
+                                                    value.minute)
         return args
 
 
@@ -133,13 +151,13 @@ class SelectWidget(BaseWidget):
     def _widget_args(self, context, field, request):
         args = super(SelectWidget, self)._widget_args(context, field, request)
         args['options'] = field.Vocabulary(context).items()
-        args['pattern'] = 'select2x'
         return args
 
 
 class Select2Widget(InputWidget):
     _properties = InputWidget._properties.copy()
     _properties.update({
+        'pattern': 'select2',
         'separator': ';',
     })
     _widget = base.Select2Widget

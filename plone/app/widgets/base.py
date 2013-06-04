@@ -42,25 +42,27 @@ class BaseWidget(object):
     name = el_attrib('name')
     klass = el_attrib('class')
 
-    def __init__(self, pattern, pattern_options={}, el='input', name=None):
+    def __init__(self, pattern=None, pattern_options={}, el='input',
+                 name=None):
         self.pattern = pattern
         self.el = etree.Element(el)
-        self.klass = self._klass_prefix + pattern
+        if pattern:
+            self.klass = self._klass_prefix + pattern
         self.name = name
         self.pattern_options = pattern_options
 
     def get_pattern_options(self):
-        if 'data-' + self.pattern in self.el.attrib:
-            return json.loads(self.el.attrib['data-' + self.pattern])
+        if self.pattern and 'data-pat-' + self.pattern in self.el.attrib:
+            return json.loads(self.el.attrib['data-pat-' + self.pattern])
 
     def set_pattern_options(self, value):
-        if len(value) == 0:
+        if not self.pattern or len(value) == 0:
             return
-        self.el.attrib['data-' + self.pattern] = json.dumps(value)
+        self.el.attrib['data-pat-' + self.pattern] = json.dumps(value)
 
     def del_pattern_options(self):
-        if 'data-' + self.pattern in self.el.attrib:
-            del self.el.attrib['data-' + self.pattern]
+        if self.pattern and 'data-pat-' + self.pattern in self.el.attrib:
+            del self.el.attrib['data-pat-' + self.pattern]
 
     pattern_options = property(
         get_pattern_options,
@@ -78,8 +80,8 @@ class InputWidget(BaseWidget):
     type = el_attrib('type')
     value = el_attrib('value')
 
-    def __init__(self, pattern, pattern_options={}, name=None, _type='text',
-                 value=None):
+    def __init__(self, pattern=None, pattern_options={}, name=None,
+                 _type='text', value=None):
         super(InputWidget, self).__init__(pattern, pattern_options, 'input',
                                           name)
         self.type = _type
@@ -90,7 +92,7 @@ class SelectWidget(BaseWidget):
     """
     """
 
-    def __init__(self, pattern, pattern_options={}, name=None, options=[],
+    def __init__(self, pattern=None, pattern_options={}, name=None, options=[],
                  selected=None):
         super(SelectWidget, self).__init__(pattern, pattern_options, 'select',
                                            name)
@@ -144,8 +146,8 @@ class DateWidget(InputWidget):
     """
     """
 
-    def __init__(self, pattern_options={}, name=None, _type='date',
-                 value=None, request=None, calendar='gregorian',
+    def __init__(self, pattern='pickadate', pattern_options={}, name=None,
+                 _type='date', value=None, request=None, calendar='gregorian',
                  format_id='pickadate_date_format',
                  format_default='yyyy-mm-dd @'):
         _pattern_options = {'format': format_default}
@@ -166,7 +168,7 @@ class DateWidget(InputWidget):
             })
         _pattern_options.update(pattern_options)
         _pattern_options['formatSubmit'] = 'yyyy-mm-dd'
-        super(DateWidget, self).__init__('pickadate', _pattern_options, name,
+        super(DateWidget, self).__init__(pattern, _pattern_options, name,
                                          _type, value)
 
 
@@ -174,11 +176,11 @@ class DatetimeWidget(DateWidget):
     """
     """
 
-    def __init__(self, pattern_options={}, name=None,
+    def __init__(self, pattern='pickadate', pattern_options={}, name=None,
                  _type='datetime-local', value=None, request=None,
                  calendar='gregorian', format_id='pickadate_datetime_format',
                  format_default='yyyy-mm-dd @ HH:MM'):
-        super(DatetimeWidget, self).__init__(pattern_options, name,
+        super(DatetimeWidget, self).__init__(pattern, pattern_options, name,
                                              _type, value, request, calendar,
                                              format_id, format_default)
         self.pattern_options['formatSubmit'] = 'yyyy-mm-dd HH:MM'
@@ -188,6 +190,7 @@ class Select2Widget(InputWidget):
     """
     """
 
-    def __init__(self, pattern_options={}, name=None, value=None):
-        super(Select2Widget, self).__init__('select2x', pattern_options, name,
-                                            'text', value)
+    def __init__(self, pattern='select2', pattern_options={}, name=None,
+                 _type='text', value=None):
+        super(Select2Widget, self).__init__(pattern, pattern_options, name,
+                                            _type, value)

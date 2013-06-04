@@ -42,7 +42,8 @@ class DateWidgetTests(unittest.TestCase):
                 'populate': True,
                 'postback': True,
                 'show_content_type': False,
-                'visible': {'edit': 'visible', 'view': 'visible'}
+                'visible': {'edit': 'visible', 'view': 'visible'},
+                'pattern': 'pickadate',
             }
         )
 
@@ -132,7 +133,8 @@ class DatetimeWidgetTests(unittest.TestCase):
                 'populate': True,
                 'postback': True,
                 'show_content_type': False,
-                'visible': {'edit': 'visible', 'view': 'visible'}
+                'visible': {'edit': 'visible', 'view': 'visible'},
+                'pattern': 'pickadate',
             }
         )
 
@@ -196,6 +198,7 @@ class Select2WidgetTests(unittest.TestCase):
                 'postback': True,
                 'separator': ';',
                 'show_content_type': False,
-                'visible': {'edit': 'visible', 'view': 'visible'}
+                'visible': {'edit': 'visible', 'view': 'visible'},
+                'pattern': 'select2',
             }
         )

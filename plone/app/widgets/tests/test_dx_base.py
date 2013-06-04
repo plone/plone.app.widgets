@@ -62,7 +62,6 @@ class BaseWidgetTests(unittest.TestCase):
                 'pattern': None,
                 'pattern_options': {},
                 'options': ['option1', 'option2', 'option3'],
-                'pattern': 'select2x',
 
             },
         )
