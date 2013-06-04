@@ -10,8 +10,6 @@ import mock
 from DateTime import DateTime
 from datetime import datetime
 from plone.app.widgets.testing import TestRequest
-from plone.app.widgets.testing import DummyContext
-from plone.app.widgets.testing import DummyATField
 
 
 class DateWidgetTests(unittest.TestCase):

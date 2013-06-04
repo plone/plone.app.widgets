@@ -16,6 +16,7 @@
 
   <!-- TODO: demos should be only loaded when in development mode -->
   <include package=".demos" />
+  <include package=".tests.example" />
 
   <browser:resource
       name="plone.app.widgets.css"

@@ -3,19 +3,13 @@
 import doctest
 
 from zope.interface import implements
-from zope.configuration import xmlconfig
 from zope.publisher.browser import TestRequest as BaseTestRequest
 
 from plone.testing import z2
 
-from plone.app.testing import TEST_USER_ID
-from plone.app.testing import setRoles
-from plone.app.testing import login
 from plone.app.testing import PloneSandboxLayer
-from plone.app.testing import applyProfile
 from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
-from plone.app.z3cform.interfaces import IPloneFormLayer
 from plone.app.widgets.interfaces import IWidgetsLayer
 
 
@@ -58,6 +52,7 @@ class PloneAppWidgetsLayer(PloneSandboxLayer):
 
     def setUpPloneSite(self, portal):
         self.applyProfile(portal, 'plone.app.widgets.tests.example:example')
+
 
 PLONEAPPWIDGETS_FIXTURE = PloneAppWidgetsLayer()
 
