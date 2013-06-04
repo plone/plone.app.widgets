@@ -21,6 +21,13 @@ Schema = atapi.BaseSchema.copy() + atapi.Schema((
             description='',
         ),
     ),
+    atapi.TextField(
+        'select2field',
+        widget=base.Select2Widget(
+            label='Select2 field',
+            description='',
+        ),
+    ),
     atapi.DateTimeField(
         'datefield',
         default_method=DateTime,
@@ -48,4 +55,4 @@ class ExampleType(SimpleType):
     archetype_name = meta_type = "ExampleType"
     portal_type = 'ExampleType'
 
-atapi.registerType(ExampleType, 'plone.app.widgets.tests.examples')
+atapi.registerType(ExampleType, 'plone.app.widgets.tests.example')

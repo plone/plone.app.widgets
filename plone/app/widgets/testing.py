@@ -44,13 +44,14 @@ class PloneAppWidgetsLayer(PloneSandboxLayer):
         self.loadZCML(package=plone.app.widgets.tests.example)
 
         # Install product and call its initialize() function
-        z2.installProduct(app, 'plone.app.widgets.tests.examples')
+        z2.installProduct(app, 'plone.app.widgets.tests.example')
 
     def tearDownZope(self, app):
         # Uninstall product and call its uninstall() function
         z2.uninstallProduct(app, 'plone.app.widgets.tests.example')
 
     def setUpPloneSite(self, portal):
+        self.applyProfile(portal, 'plone.app.widgets:default')
         self.applyProfile(portal, 'plone.app.widgets.tests.example:example')
 
 

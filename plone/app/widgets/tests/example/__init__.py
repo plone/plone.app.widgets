@@ -2,7 +2,7 @@ from Products.Archetypes import atapi
 from Products.CMFCore import utils
 from Products.CMFCore.permissions import AddPortalContent
 
-PROJECTNAME = 'plone.app.widgets.tests.examples'
+PROJECTNAME = 'plone.app.widgets.tests.example'
 
 
 def initialize(context):
