@@ -186,10 +186,6 @@ class SelectWidget(BaseWidget):
             if callable(options):
                 options = options()
 
-        # make sure the element doesn't render as <select/>
-        if not options:
-            self.el.text = ' '
-
         args['options'] = options
 
         return args
@@ -201,6 +197,7 @@ class DatetimeWidget(InputWidget):
 
     implementsOnly(IDatetimeWidget)
 
+    pattern = 'pickadate'
     pattern_options = InputWidget.pattern_options.copy()
 
     def _widget_args(self):
@@ -233,11 +230,13 @@ class Select2Widget(InputWidget):
         if self.ajax_vocabulary:
             portal_state = queryMultiAdapter((self.context, self.request),
                                              name=u'plone_portal_state')
-            args['ajax_vocabulary'] = ''
+            url = ''
             if portal_state:
-                args['ajax_vocabulary'] += portal_state.portal_url()
-            args['ajax_vocabulary'] += '/@@widgets/getVocabulary?name=' + \
-                self.ajax_vocabulary
+                url += portal_state.portal_url()
+            url += '/@@widgets/getVocabulary?name=' + self.ajax_vocabulary
+            if 'pattern_options' not in args:
+                args['pattern_options'] = {}
+            args['pattern_options']['ajaxvocabulary'] = url
         return args
 
 

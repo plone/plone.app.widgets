@@ -104,7 +104,8 @@ class SelectWidget(BaseWidget):
             yield element.attrib['value'], element.text
 
     def set_options(self, value):
-        if value is None:
+        if not value:
+            self.el.text = ' '
             return
         for token, title in value:
             option = etree.SubElement(self.el, 'option')
