@@ -11,6 +11,7 @@ from plone.app.testing import TEST_USER_ID
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.Five import BrowserView
+from Products.CMFCore.utils import getToolByName
 
 
 class BaseWidgetTests(unittest.TestCase):
@@ -22,6 +23,11 @@ class BaseWidgetTests(unittest.TestCase):
     def setUp(self):
         self.portal = self.layer['portal']
         self.request = self.layer['request']
+
+        languages = getToolByName(self.portal, 'portal_languages')
+        languages.manage_setLanguageSettings(
+            'de', ['de'], setUseCombinedLanguageCodes=False)
+        languages.setLanguageBindings()
 
         setRoles(self.portal, TEST_USER_ID, ['Manager'])
 
@@ -52,7 +58,7 @@ class BaseWidgetTests(unittest.TestCase):
         field = self.example.getField('datefield')
         self.assertIsInstance(field.widget, DateWidget)
         self.assertIn(
-            '<input class="pat-pickadate" name="datefield" data-pat-pickadate="{&quot;pickadate-clear&quot;: &quot;Clear&quot;, &quot;pickadate-weekdaysFull&quot;: [&quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;1&quot;], &quot;format&quot;: &quot;yyyy-mm-dd @&quot;, &quot;pickadate-today&quot;: &quot;Today&quot;, &quot;pickadate-monthsShort&quot;: [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;, &quot;10&quot;, &quot;11&quot;, &quot;12&quot;], &quot;formatSubmit&quot;: &quot;yyyy-mm-dd&quot;, &quot;pickadate-weekdaysShort&quot;: [&quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;1&quot;], &quot;pickadate-monthsFull&quot;: [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;, &quot;10&quot;, &quot;11&quot;, &quot;12&quot;]}" type="date" value="',  # noqa
+            '<input class="pat-pickadate" name="datefield" data-pat-pickadate="{&quot;pickadate-clear&quot;: &quot;Clear&quot;, &quot;pickadate-weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;format&quot;: &quot;yyyy-mm-dd @&quot;, &quot;pickadate-today&quot;: &quot;Today&quot;, &quot;pickadate-monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;yyyy-mm-dd&quot;, &quot;pickadate-weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;pickadate-monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;]}" type="date" value="',  # noqa
             self.view.render(field=field, mode='edit'))
 
     def test_datetime(self):
@@ -60,7 +66,7 @@ class BaseWidgetTests(unittest.TestCase):
         field = self.example.getField('datetimefield')
         self.assertIsInstance(field.widget, DatetimeWidget)
         self.assertIn(
-            '<input class="pat-pickadate" name="datetimefield" data-pat-pickadate="{&quot;pickadate-clear&quot;: &quot;Clear&quot;, &quot;pickadate-weekdaysFull&quot;: [&quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;1&quot;], &quot;format&quot;: &quot;yyyy-mm-dd @ HH:MM&quot;, &quot;pickadate-today&quot;: &quot;Today&quot;, &quot;pickadate-monthsShort&quot;: [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;, &quot;10&quot;, &quot;11&quot;, &quot;12&quot;], &quot;formatSubmit&quot;: &quot;yyyy-mm-dd&quot;, &quot;pickadate-weekdaysShort&quot;: [&quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;1&quot;], &quot;pickadate-monthsFull&quot;: [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;, &quot;6&quot;, &quot;7&quot;, &quot;8&quot;, &quot;9&quot;, &quot;10&quot;, &quot;11&quot;, &quot;12&quot;]}" type="datetime-local" value="',  # noqa
+            '<input class="pat-pickadate" name="datetimefield" data-pat-pickadate="{&quot;pickadate-clear&quot;: &quot;Clear&quot;, &quot;pickadate-weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;format&quot;: &quot;yyyy-mm-dd @ HH:MM&quot;, &quot;pickadate-today&quot;: &quot;Today&quot;, &quot;pickadate-monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;yyyy-mm-dd&quot;, &quot;pickadate-weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;pickadate-monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;]}" type="datetime-local" value="',  # noqa
             self.view.render(field=field, mode='edit'))
 
     def test_select(self):
