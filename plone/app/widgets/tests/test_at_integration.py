@@ -68,7 +68,7 @@ class BaseWidgetTests(unittest.TestCase):
         field = self.example.getField('selectfield')
         self.assertIsInstance(field.widget, SelectWidget)
         self.assertIn(
-            '<select name="selectfield"/>',
+            '<select name="selectfield"> </select>',
             self.view.render(field=field, mode='edit'))
 
     def test_select2(self):

@@ -183,11 +183,11 @@ class SelectWidget(BaseWidget):
         args = super(SelectWidget, self)._widget_args()
 
         options = None
-        if self.field.vocabulary:
+        if self.field and self.field.vocabulary:
             options = []
             for term in self.field.vocabulary:
                 options.append((term.token, term.title))
-        elif self.field.vocabularyName:
+        elif self.field and self.field.vocabularyName:
             options = []
             for term in getUtility(IVocabularyFactory,
                                    self.field.vocabularyName)(self.context):
@@ -227,9 +227,10 @@ class Select2Widget(InputWidget):
 
     implementsOnly(ISelect2Widget)
 
+    pattern = 'select2'
+    pattern_options = InputWidget.pattern_options.copy()
     separator = ';'
     ajax_vocabulary = None
-    pattern_options = InputWidget.pattern_options.copy()
 
     def _widget_args(self):
         args = super(Select2Widget, self)._widget_args()

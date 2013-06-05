@@ -13,6 +13,7 @@ from zope.schema import Datetime
 from zope.schema import List
 from zope.schema import TextLine
 from zope.schema import Tuple
+from zope.schema.vocabulary import SimpleVocabulary
 from plone.app.widgets.testing import TestRequest
 
 
@@ -54,14 +55,18 @@ class BaseWidgetTests(unittest.TestCase):
                               example='example-value')
         widget = SelectWidget(request)
         widget.name = 'example'
-        widget.options = ['option1', 'option2', 'option3']
+        widget.field = TextLine(__name__='selectfield')
+        widget.field.vocabulary = SimpleVocabulary.fromValues(
+            ['option1', 'option2', 'option3'])
         self.assertEqual(
             widget._widget_args(),
             {
                 'name': 'example',
                 'pattern': None,
                 'pattern_options': {},
-                'options': ['option1', 'option2', 'option3'],
+                'options': [('option1', None),
+                            ('option2', None),
+                            ('option3', None)],
 
             },
         )
@@ -75,13 +80,14 @@ class DateWidgetTests(unittest.TestCase):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Date(__name__='datefield')
         self.widget = DateWidget(self.request)
+        self.widget.field = self.field
 
     def test_widget(self):
         self.assertEqual(
             self.widget._widget_args(),
             {
                 'name': None,
-                'pattern': None,
+                'pattern': 'pickadate',
                 'pattern_options': {},
                 'request': self.request
             }
@@ -136,7 +142,7 @@ class DatetimeWidgetTests(unittest.TestCase):
             self.widget._widget_args(),
             {
                 'name': None,
-                'pattern': None,
+                'pattern': 'pickadate',
                 'pattern_options': {},
                 'request': self.request
             }
@@ -190,7 +196,7 @@ class Select2WidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'value': None,
-                'pattern': None,
+                'pattern': 'select2',
                 'pattern_options': {},
             }
         )
@@ -201,9 +207,10 @@ class Select2WidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'value': None,
-                'pattern': None,
-                'pattern_options': {},
-                'ajax_vocabulary': '/@@widgets/getVocabulary?name=example',
+                'pattern': 'select2',
+                'pattern_options': {
+                    'ajaxvocabulary': '/@@widgets/getVocabulary?name=example'
+                },
             }
         )
 

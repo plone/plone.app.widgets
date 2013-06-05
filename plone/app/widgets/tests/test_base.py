@@ -131,7 +131,7 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example"/>')
+            '<select class="pat-example"> </select>')
         self.assertEqual(list(widget.options), [])
         self.assertEqual(widget.selected, None)
 
