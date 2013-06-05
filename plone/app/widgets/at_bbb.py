@@ -6,9 +6,7 @@ from archetypes.schemaextender.interfaces import ISchemaModifier
 from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 
 from plone.app.widgets.interfaces import IWidgetsLayer
-from plone.app.widgets.at.base import SelectWidget
-from plone.app.widgets.at.base import Select2Widget
-from plone.app.widgets.at.base import DatetimeWidget
+from plone.app.widgets import at
 
 _plone = MessageFactory('plone')
 
@@ -29,26 +27,26 @@ class MetadataExtender(object):
             old = field.widget
 
             if field.__name__ in ['subject']:
-                field.widget = Select2Widget(
+                field.widget = at.Select2Widget(
                     label=old.label,
                     description=old.description,
                     ajax_vocabulary='plone.app.vocabularies.Keywords',
                 )
 
             if field.__name__ in ['language']:
-                field.widget = SelectWidget(
+                field.widget = at.SelectWidget(
                     label=old.label,
                     description=old.description,
                 )
 
             if field.__name__ in ['effectiveDate', 'expirationDate']:
-                field.widget = DatetimeWidget(
+                field.widget = at.DatetimeWidget(
                     label=old.label,
                     description=old.description
                 )
 
             if field.__name__ in ['contributors']:
-                field.widget = Select2Widget(
+                field.widget = at.Select2Widget(
                     label=old.label,
                     description=_plone(u"The names of people that have "
                                        u"contributed to this item."),
@@ -56,7 +54,7 @@ class MetadataExtender(object):
                 )
 
             if field.__name__ in ['creators']:
-                field.widget = Select2Widget(
+                field.widget = at.Select2Widget(
                     label=old.label,
                     description=_plone(u"The names of people that are "
                                        u"creators to this item."),

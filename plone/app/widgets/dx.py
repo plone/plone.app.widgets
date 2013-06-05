@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 from datetime import date
 from datetime import datetime
 from zope.interface import Interface
@@ -13,6 +14,7 @@ from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import ITextLine
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ISequence
+from zope.schema.interfaces import IList
 from z3c.form.converter import BaseDataConverter
 from z3c.form.widget import Widget
 from z3c.form.widget import FieldWidget
@@ -41,6 +43,11 @@ class ISelectWidget(IWidget):
 
 class ISelect2Widget(IWidget):
     """Marker interface for the Select2Widget
+    """
+
+
+class IQueryStringWidget(IWidget):
+    """Marker interface for the QueryStringWidget
     """
 
 
@@ -108,6 +115,21 @@ class Select2WidgetConverter(BaseDataConverter):
             valueType = valueType[0]
         return collectionType(valueType(v)
                               for v in value.split(self.widget.separator))
+
+
+class QueryStringDataConverter(BaseDataConverter):
+
+    adapts(IList, IQueryStringWidget)
+
+    def toWidgetValue(self, value):
+        if value is self.field.missing_value:
+            return value
+        return json.dumps(value)
+
+    def toFieldValue(self, value):
+        if value is self.field.missing_value:
+            return value
+        return json.loads(value)
 
 
 class BaseWidget(Widget):
@@ -217,6 +239,13 @@ class Select2Widget(InputWidget):
             args['ajax_vocabulary'] += '/@@widgets/getVocabulary?name=' + \
                 self.ajax_vocabulary
         return args
+
+
+class QueryStringWidget(InputWidget):
+
+    pattern = 'querystring'
+
+    implementsOnly(IQueryStringWidget)
 
 
 @adapter(IDatetimeField, IWidgetsLayer)

@@ -14,7 +14,7 @@ from Products.Five import BrowserView
 
 
 class BaseWidgetTests(unittest.TestCase):
-    """Tests for plone.app.widgets.at.base.BaseWidget
+    """Tests for plone.app.widgets.at.BaseWidget
     """
 
     layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
@@ -40,7 +40,7 @@ class BaseWidgetTests(unittest.TestCase):
         self.portal.manage_delObjects([self.example.getId()])
 
     def test_textinput(self):
-        from plone.app.widgets.at.base import InputWidget
+        from plone.app.widgets.at import InputWidget
         field = self.example.getField('inputfield')
         self.assertIsInstance(field.widget, InputWidget)
         self.assertIn(
@@ -48,7 +48,7 @@ class BaseWidgetTests(unittest.TestCase):
             self.view.render(field=field, mode='edit'))
 
     def test_date(self):
-        from plone.app.widgets.at.base import DateWidget
+        from plone.app.widgets.at import DateWidget
         field = self.example.getField('datefield')
         self.assertIsInstance(field.widget, DateWidget)
         self.assertIn(
@@ -56,7 +56,7 @@ class BaseWidgetTests(unittest.TestCase):
             self.view.render(field=field, mode='edit'))
 
     def test_datetime(self):
-        from plone.app.widgets.at.base import DatetimeWidget
+        from plone.app.widgets.at import DatetimeWidget
         field = self.example.getField('datetimefield')
         self.assertIsInstance(field.widget, DatetimeWidget)
         self.assertIn(
@@ -64,7 +64,7 @@ class BaseWidgetTests(unittest.TestCase):
             self.view.render(field=field, mode='edit'))
 
     def test_select(self):
-        from plone.app.widgets.at.base import SelectWidget
+        from plone.app.widgets.at import SelectWidget
         field = self.example.getField('selectfield')
         self.assertIsInstance(field.widget, SelectWidget)
         self.assertIn(
@@ -72,7 +72,7 @@ class BaseWidgetTests(unittest.TestCase):
             self.view.render(field=field, mode='edit'))
 
     def test_select2(self):
-        from plone.app.widgets.at.base import Select2Widget
+        from plone.app.widgets.at import Select2Widget
         field = self.example.getField('select2field')
         self.assertIsInstance(field.widget, Select2Widget)
         self.assertIn(

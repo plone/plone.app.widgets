@@ -19,7 +19,7 @@ from plone.app.widgets.testing import TestRequest
 class BaseWidgetTests(unittest.TestCase):
 
     def test_base(self):
-        from plone.app.widgets.dx.base import BaseWidget
+        from plone.app.widgets.dx import BaseWidget
         request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         widget = BaseWidget(request)
         widget.name = 'example'
@@ -33,7 +33,7 @@ class BaseWidgetTests(unittest.TestCase):
         )
 
     def test_input(self):
-        from plone.app.widgets.dx.base import InputWidget
+        from plone.app.widgets.dx import InputWidget
         request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'},
                               example='example-value')
         widget = InputWidget(request)
@@ -49,7 +49,7 @@ class BaseWidgetTests(unittest.TestCase):
         )
 
     def test_select(self):
-        from plone.app.widgets.dx.base import SelectWidget
+        from plone.app.widgets.dx import SelectWidget
         request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'},
                               example='example-value')
         widget = SelectWidget(request)
@@ -70,7 +70,7 @@ class BaseWidgetTests(unittest.TestCase):
 class DateWidgetTests(unittest.TestCase):
 
     def setUp(self):
-        from plone.app.widgets.dx.base import DateWidget
+        from plone.app.widgets.dx import DateWidget
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Date(__name__='datefield')
@@ -88,7 +88,7 @@ class DateWidgetTests(unittest.TestCase):
         )
 
     def test_data_converter(self):
-        from plone.app.widgets.dx.base import DateWidgetConverter
+        from plone.app.widgets.dx import DateWidgetConverter
         converter = DateWidgetConverter(self.field, self.widget)
 
         self.assertEqual(
@@ -125,7 +125,7 @@ class DateWidgetTests(unittest.TestCase):
 class DatetimeWidgetTests(unittest.TestCase):
 
     def setUp(self):
-        from plone.app.widgets.dx.base import DatetimeWidget
+        from plone.app.widgets.dx import DatetimeWidget
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Datetime(__name__='datetimefield')
@@ -143,7 +143,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         )
 
     def test_data_converter(self):
-        from plone.app.widgets.dx.base import DatetimeWidgetConverter
+        from plone.app.widgets.dx import DatetimeWidgetConverter
         converter = DatetimeWidgetConverter(self.field, self.widget)
 
         self.assertEqual(
@@ -183,7 +183,7 @@ class Select2WidgetTests(unittest.TestCase):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
 
     def test_widget(self):
-        from plone.app.widgets.dx.base import Select2Widget
+        from plone.app.widgets.dx import Select2Widget
         widget = Select2Widget(self.request)
         self.assertEqual(
             widget._widget_args(),
@@ -208,8 +208,8 @@ class Select2WidgetTests(unittest.TestCase):
         )
 
     def test_data_converter(self):
-        from plone.app.widgets.dx.base import Select2Widget
-        from plone.app.widgets.dx.base import Select2WidgetConverter
+        from plone.app.widgets.dx import Select2Widget
+        from plone.app.widgets.dx import Select2WidgetConverter
 
         field1 = List(__name__='listfield', value_type=TextLine())
         widget1 = Select2Widget(self.request)

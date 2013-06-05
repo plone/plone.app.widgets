@@ -15,13 +15,13 @@ from plone.app.widgets.testing import TestRequest
 class DateWidgetTests(unittest.TestCase):
 
     def createWidget(self, lang='en', **kw):
-        from plone.app.widgets.at.base import DateWidget
+        from plone.app.widgets.at import DateWidget
         widget = DateWidget(**kw)
         widget.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': lang})
         return widget
 
     def test_subclass(self):
-        from plone.app.widgets.at.base import DateWidget
+        from plone.app.widgets.at import DateWidget
         from plone.app.widgets.base import DateWidget as BaseDateWidget
         from Products.Archetypes.Widget import TypesWidget
         self.assertTrue(DateWidget, TypesWidget)
@@ -112,7 +112,7 @@ class DateWidgetTests(unittest.TestCase):
 class DatetimeWidgetTests(unittest.TestCase):
 
     def createWidget(self, lang='en', **kw):
-        from plone.app.widgets.at.base import DatetimeWidget
+        from plone.app.widgets.at import DatetimeWidget
         widget = DatetimeWidget(**kw)
         widget.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': lang})
         return widget
@@ -176,7 +176,7 @@ class DatetimeWidgetTests(unittest.TestCase):
 class Select2WidgetTests(unittest.TestCase):
 
     def createWidget(self, lang='en', **kw):
-        from plone.app.widgets.at.base import Select2Widget
+        from plone.app.widgets.at import Select2Widget
         widget = Select2Widget(**kw)
         widget.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': lang})
         return widget
