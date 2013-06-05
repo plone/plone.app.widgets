@@ -8,6 +8,7 @@ from zope.interface import implementsOnly
 from zope.interface import implementer
 from zope.component import adapts
 from zope.component import adapter
+from zope.component import getUtility
 from zope.component import queryMultiAdapter
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
@@ -15,6 +16,7 @@ from zope.schema.interfaces import ITextLine
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ISequence
 from zope.schema.interfaces import IList
+from zope.schema.interfaces import IVocabularyFactory
 from z3c.form.converter import BaseDataConverter
 from z3c.form.widget import Widget
 from z3c.form.widget import FieldWidget
@@ -181,11 +183,15 @@ class SelectWidget(BaseWidget):
         args = super(SelectWidget, self)._widget_args()
 
         options = None
-        if hasattr(self, 'options'):
-            options = self.options
-            if callable(options):
-                options = options()
-
+        if self.field.vocabulary:
+            options = []
+            for term in self.field.vocabulary:
+                options.append((term.token, term.title))
+        elif self.field.vocabularyName:
+            options = []
+            for term in getUtility(IVocabularyFactory,
+                                   self.field.vocabularyName)(self.context):
+                options.append((term.token, term.title))
         args['options'] = options
 
         return args
