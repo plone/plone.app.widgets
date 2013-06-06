@@ -5,9 +5,7 @@ from zope.interface import implementer
 from zope.component import adapter
 from plone.app.dexterity.behaviors.metadata import ICategorization
 from plone.app.dexterity.behaviors.metadata import IOwnership
-from plone.app.contenttypes.interfaces import ICollection
 from plone.app.widgets.dx import Select2Widget
-from plone.app.widgets.dx import QueryStringWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
 
 
@@ -33,9 +31,3 @@ def CreatorsFieldWidget(field, request):
     widget = FieldWidget(field, Select2Widget(request))
     widget.ajax_vocabulary = 'plone.app.vocabularies.Users'
     return widget
-
-
-@adapter(getSpecification(ICollection['query']), IWidgetsLayer)
-@implementer(IFieldWidget)
-def QueryStringFieldWidget(field, request):
-    return FieldWidget(field, QueryStringWidget(request))
