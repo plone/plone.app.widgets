@@ -9,6 +9,7 @@
     <javascript bundle="deprecated" id="cookie_functions.js" />
     <javascript bundle="deprecated" id="dropdown.js" />
     <javascript bundle="deprecated" id="formsubmithelpers.js" />
+    <javascript bundle="deprecated" id="first_input_focus.js" />
     <javascript bundle="deprecated" id="form_tabbing.js" />
     <javascript bundle="deprecated" id="formUnload.js" />
     <javascript bundle="deprecated" id="fullscreen.js" />
