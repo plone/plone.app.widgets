@@ -28,7 +28,7 @@ setup(
         # needed because we use bundles
         'Products.ResourceRegistries>=2.1',
         # nedded because users vocabulary was added here
-        'plone.app.vocabularies>=2.1.10',
+        'plone.app.vocabularies>=2.1.11',
         # needed for pickadate javascript
         'plone.app.jquery>=1.8.0',
         # needed so it works with jquery >= 1.8
