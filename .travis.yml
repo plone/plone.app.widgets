@@ -15,6 +15,3 @@ script:
   - bin/flake8 setup.py
   - bin/flake8 plone
   - bin/test
-notifications:
-  irc:
-    - "irc.freenode.org#sprint"

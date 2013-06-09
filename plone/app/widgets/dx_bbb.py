@@ -5,29 +5,29 @@ from zope.interface import implementer
 from zope.component import adapter
 from plone.app.dexterity.behaviors.metadata import ICategorization
 from plone.app.dexterity.behaviors.metadata import IOwnership
-from plone.app.widgets.dx.select2 import TagsWidget
+from plone.app.widgets.dx import Select2Widget
 from plone.app.widgets.interfaces import IWidgetsLayer
 
 
 @adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def SubjectsFieldWidget(field, request):
-    widget = FieldWidget(field, TagsWidget(request))
-    widget.ajax_suggest = 'plone.app.vocabularies.Keywords'
+    widget = FieldWidget(field, Select2Widget(request))
+    widget.ajax_vocabulary = 'plone.app.vocabularies.Keywords'
     return widget
 
 
 @adapter(getSpecification(IOwnership['contributors']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def ContributorsFieldWidget(field, request):
-    widget = FieldWidget(field, TagsWidget(request))
-    widget.ajax_suggest = 'plone.app.vocabularies.Users'
+    widget = FieldWidget(field, Select2Widget(request))
+    widget.ajax_vocabulary = 'plone.app.vocabularies.Users'
     return widget
 
 
 @adapter(getSpecification(IOwnership['creators']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def CreatorsFieldWidget(field, request):
-    widget = FieldWidget(field, TagsWidget(request))
-    widget.ajax_suggest = 'plone.app.vocabularies.Users'
+    widget = FieldWidget(field, Select2Widget(request))
+    widget.ajax_vocabulary = 'plone.app.vocabularies.Users'
     return widget

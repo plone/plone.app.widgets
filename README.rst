@@ -26,6 +26,7 @@ All client side code (javascript/css/images) is done and tested as part of
 
 Any feature / bug / compliment please insert in `issue tracker`_.
 
+
 Installation
 ============
 

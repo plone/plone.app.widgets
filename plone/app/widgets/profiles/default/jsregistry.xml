@@ -2,9 +2,21 @@
 <object name="portal_javascripts">
 
     <!-- deprecated -->
-    <javascript bundle="deprecated" id="calendar_formfield.js" />
-    <javascript bundle="deprecated" id="form_tabbing.js" />
     <javascript bundle="deprecated" id="accessibility.js" />
+    <javascript bundle="deprecated" id="calendar_formfield.js" />
+    <javascript bundle="deprecated" id="collapsibleformfields.js" />
+    <javascript bundle="deprecated" id="collapsiblesections.js" />
+    <javascript bundle="deprecated" id="cookie_functions.js" />
+    <javascript bundle="deprecated" id="dropdown.js" />
+    <javascript bundle="deprecated" id="form_tabbing.js" />
+    <javascript bundle="deprecated" id="formUnload.js" />
+    <javascript bundle="deprecated" id="fullscreen.js" />
+    <javascript bundle="deprecated" id="jquery-integration.js" />
+    <javascript bundle="deprecated" id="js-standards.js" />
+    <javascript bundle="deprecated" id="nodeutilities.js" />
+    <javascript bundle="deprecated" id="register_function.js" />
+    <javascript bundle="deprecated" id="styleswitcher.js" />
+    
     <javascript bundle="tinymce" id="jquery.tinymce.js" />
     <javascript bundle="tinymce" id="tiny_mce_gzip.js" />
 

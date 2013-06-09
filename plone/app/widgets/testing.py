@@ -1,25 +1,20 @@
 # -*- coding: utf-8 -*-
+
 import doctest
 
 from zope.interface import implements
-from zope.configuration import xmlconfig
 from zope.publisher.browser import TestRequest as BaseTestRequest
 
 from plone.testing import z2
 
-from plone.app.testing import TEST_USER_ID
-from plone.app.testing import setRoles
-from plone.app.testing import login
 from plone.app.testing import PloneSandboxLayer
-from plone.app.testing import applyProfile
 from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
-from plone.app.z3cform.interfaces import IPloneFormLayer
 from plone.app.widgets.interfaces import IWidgetsLayer
 
 
 class TestRequest(BaseTestRequest):
-    implements(IPloneFormLayer, IWidgetsLayer)
+    implements(IWidgetsLayer)
 
 
 class DummyContext(object):
@@ -42,21 +37,22 @@ class DummyATField(object):
 class PloneAppWidgetsLayer(PloneSandboxLayer):
 
     def setUpZope(self, app, configurationContext):
+        # Load ZCML
         import plone.app.widgets
-        xmlconfig.file(
-            'configure.zcml',
-            plone.app.widgets,
-            context=configurationContext)
+        self.loadZCML(package=plone.app.widgets)
+        import plone.app.widgets.tests.example
+        self.loadZCML(package=plone.app.widgets.tests.example)
+
+        # Install product and call its initialize() function
+        z2.installProduct(app, 'plone.app.widgets.tests.example')
+
+    def tearDownZope(self, app):
+        # Uninstall product and call its uninstall() function
+        z2.uninstallProduct(app, 'plone.app.widgets.tests.example')
 
     def setUpPloneSite(self, portal):
-        applyProfile(portal, 'plone.app.widgets:default')
-        portal.acl_users.userFolderAddUser('admin',
-                                           'secret',
-                                           ['Manager'],
-                                           [])
-        login(portal, 'admin')
-        portal.portal_workflow.setDefaultChain("simple_publication_workflow")
-        setRoles(portal, TEST_USER_ID, ['Manager'])
+        self.applyProfile(portal, 'plone.app.widgets:default')
+        self.applyProfile(portal, 'plone.app.widgets.tests.example:example')
 
 
 PLONEAPPWIDGETS_FIXTURE = PloneAppWidgetsLayer()

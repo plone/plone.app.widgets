@@ -1,0 +1,5 @@
+<tal:block
+  tal:define="field options/field;
+              errors python:{};
+              mode options/mode;"><tal:block
+  metal:use-macro="python:here.widget(field.getName(), mode=mode)"/></tal:block>
