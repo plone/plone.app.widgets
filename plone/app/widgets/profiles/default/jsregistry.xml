@@ -18,9 +18,7 @@
     <javascript bundle="deprecated" id="register_function.js" />
     <javascript bundle="deprecated" id="select_all.js" />
     <javascript bundle="deprecated" id="styleswitcher.js" />
-    
-    <javascript bundle="tinymce" id="jquery.tinymce.js" />
-    <javascript bundle="tinymce" id="tiny_mce_gzip.js" />
+    <javascript bundle="deprecated" id="livesearch.js" />
 
     <javascript
         cacheable="False" compression="none" cookable="False"

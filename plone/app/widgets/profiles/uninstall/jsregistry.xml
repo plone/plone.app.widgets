@@ -1,12 +1,23 @@
 <?xml version="1.0"?>
 <object name="portal_javascripts">
 
-    <!-- deprecated -->
-    <javascript bundle="default" id="calendar_formfield.js" />
-    <javascript bundle="default" id="form_tabbing.js" />
     <javascript bundle="default" id="accessibility.js" />
-    <javascript bundle="default" id="jquery.tinymce.js" />
-    <javascript bundle="default" id="tiny_mce_gzip.js" />
+    <javascript bundle="default" id="calendar_formfield.js" />
+    <javascript bundle="default" id="collapsibleformfields.js" />
+    <javascript bundle="default" id="collapsiblesections.js" />
+    <javascript bundle="default" id="cookie_functions.js" />
+    <javascript bundle="default" id="dropdown.js" />
+    <javascript bundle="default" id="formsubmithelpers.js" />
+    <javascript bundle="default" id="form_tabbing.js" />
+    <javascript bundle="default" id="formUnload.js" />
+    <javascript bundle="default" id="fullscreen.js" />
+    <javascript bundle="default" id="jquery-integration.js" />
+    <javascript bundle="default" id="js-standards.js" />
+    <javascript bundle="default" id="nodeutilities.js" />
+    <javascript bundle="default" id="register_function.js" />
+    <javascript bundle="default" id="select_all.js" />
+    <javascript bundle="default" id="styleswitcher.js" />
+    <javascript bundle="default" id="livesearch.js" />
 
     <javascript remove="True"
         cacheable="False" compression="none" cookable="False"
