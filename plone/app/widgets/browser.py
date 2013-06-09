@@ -2,35 +2,30 @@ from AccessControl import getSecurityManager
 from AccessControl import Unauthorized
 import json
 import inspect
-from zope.interface import implements
 from zope.component import queryUtility
-from zope.component import getMultiAdapter
 from zope.schema.interfaces import IVocabularyFactory
 from Products.Five import BrowserView
-from plone.app.widgets.interfaces import IWidgetsView
 from plone.app.vocabularies.interfaces import ISlicableVocabulary
 
 
 _permissions = {
     'plone.app.vocabularies.Users': 'Modify portal content',
-    'plone.app.vocabularies.Catalog': 'View'
+    'plone.app.vocabularies.Catalog': 'View',
+    'plone.app.vocabularies.Keywords': 'Modify portal content'
 }
 
 def _parseJSON(s):
     if isinstance(s, basestring):
         s = s.strip()
-        if s.startswith('{') and s.endswith('}'): # detect if json
+        if (s.startswith('{') and s.endswith('}')) or \
+                (s.startswith('[') and s.endswith(']')): # detect if json
             return json.loads(s)
     return s
 
 
-class WidgetsView(BrowserView):
-    """A view that gives access to various widget related functions.
-    """
+class VocabularyView(BrowserView):
 
-    implements(IWidgetsView)
-
-    def getVocabulary(self):
+    def __call__(self):
         """
         Accepts GET parameters of:
         name: Name of the vocabulary
@@ -98,7 +93,10 @@ class WidgetsView(BrowserView):
             for vocab_item in vocabulary:
                 for attr in attributes:
                     vocab_value = vocab_item.value
-                    item[attr] = getattr(vocab_value, attr, None)
+                    val = getattr(vocab_value, attr, None)
+                    if callable(val):
+                        val = val()
+                    item[attr] = val
                 items.append(item)
         else:
             for item in vocabulary:
@@ -112,12 +110,3 @@ class WidgetsView(BrowserView):
             'total': total
         })
 
-    def bodyDataOptions(self):
-        portal_state = getMultiAdapter(
-            (self.context, self.request), name=u'plone_portal_state')
-        return {
-            'data-portal-navigation-url': portal_state.navigation_root_url(),
-            'data-portal-url': portal_state.portal_url(),
-            'data-context-url': self.context.absolute_url(),
-            'data-pattern': 'plone-tabs',
-        }

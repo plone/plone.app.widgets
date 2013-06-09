@@ -51,12 +51,11 @@
   <cmf:registerDirectory name="plone_widgets" />
 
   <browser:page
-    name="widgets"
-    for="*"
-    class=".browser.WidgetsView"
+    name="getVocabulary"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    class=".browser.VocabularyView"
     permission="zope2.View"
     layer=".interfaces.IWidgetsLayer"
-    allowed_interface=".interfaces.IWidgetsView"
     />
 
   <!-- archetypes -->
