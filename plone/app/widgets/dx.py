@@ -24,6 +24,8 @@ from z3c.form.interfaces import IWidget
 from z3c.form.interfaces import IFieldWidget
 from plone.app.z3cform.widget import IDatetimeField
 from plone.app.z3cform.widget import IDateField
+from plone.registry.interfaces import IRegistry
+from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.app.widgets import base
 from plone.app.widgets.interfaces import IWidgetsLayer
 
@@ -252,6 +254,18 @@ class QueryStringWidget(InputWidget):
     pattern = 'querystring'
 
     implementsOnly(IQueryStringWidget)
+
+    def _widget_args(self):
+        args = super(QueryStringWidget, self)._widget_args()
+
+        registry = getUtility(IRegistry)
+        config = IQuerystringRegistryReader(registry)()
+
+        if 'pattern_options' not in args:
+            args['pattern_options'] = {}
+        args['pattern_options'].update(config)
+
+        return args
 
 
 @adapter(IDatetimeField, IWidgetsLayer)
