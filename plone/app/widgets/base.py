@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+from copy import deepcopy
 from lxml import etree
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
@@ -33,6 +34,24 @@ def el_attrib(name):
     return property(_get, _set, _del)
 
 
+def dict_merge(a, b):
+    '''recursively merges dict's. not just simple a['key'] = b['key'], if
+    both a and bhave a key who's value is a dict then dict_merge is called
+    on both values and the result stored in the returned dictionary.
+
+    http://www.xormedia.com/recursively-merge-dictionaries-in-python
+    '''
+    if not isinstance(b, dict):
+        return b
+    result = deepcopy(a)
+    for k, v in b.iteritems():
+        if k in result and isinstance(result[k], dict):
+                result[k] = dict_merge(result[k], v)
+        else:
+            result[k] = deepcopy(v)
+    return result
+
+
 class BaseWidget(object):
     """
     """
@@ -51,25 +70,13 @@ class BaseWidget(object):
         self.name = name
         self.pattern_options = pattern_options
 
-    def get_pattern_options(self):
-        if self.pattern and 'data-pat-' + self.pattern in self.el.attrib:
-            return json.loads(self.el.attrib['data-pat-' + self.pattern])
-
-    def set_pattern_options(self, value):
-        if not self.pattern or len(value) == 0:
-            return
-        self.el.attrib['data-pat-' + self.pattern] = json.dumps(value)
-
-    def del_pattern_options(self):
-        if self.pattern and 'data-pat-' + self.pattern in self.el.attrib:
-            del self.el.attrib['data-pat-' + self.pattern]
-
-    pattern_options = property(
-        get_pattern_options,
-        set_pattern_options,
-        del_pattern_options)
+    def update(self):
+        if self.pattern_options:
+            self.el.attrib['data-pat-' + self.pattern] = \
+                json.dumps(self.pattern_options)
 
     def render(self):
+        self.update()
         return etree.tostring(self.el)
 
 
@@ -150,25 +157,29 @@ class DateWidget(InputWidget):
     def __init__(self, pattern='pickadate', pattern_options={}, name=None,
                  _type='date', value=None, request=None, calendar='gregorian',
                  format_id='pickadate_date_format',
-                 format_default='yyyy-mm-dd @'):
+                 format_default='dd/mm/yyyy'):
         _pattern_options = {'format': format_default}
         if request is not None:
             calendar = request.locale.dates.calendars[calendar]
-            _pattern_options.update({
-                'pickadate-monthsFull': calendar.getMonthNames(),
-                'pickadate-monthsShort': calendar.getMonthAbbreviations(),
-                'pickadate-weekdaysFull': calendar.getDayNames(),
-                'pickadate-weekdaysShort': calendar.getDayAbbreviations(),
-                'pickadate-today': translate(_(u"Today"), context=request),
-                'pickadate-clear': translate(_(u"Clear"), context=request),
-                'format': translate(
-                    format_id,
-                    domain='plone.app.widgets',
-                    context=request,
-                    default=format_default),
+            _pattern_options = dict_merge(_pattern_options, {
+                'date': {
+                    'monthsFull': calendar.getMonthNames(),
+                    'monthsShort': calendar.getMonthAbbreviations(),
+                    'weekdaysFull': calendar.getDayNames(),
+                    'weekdaysShort': calendar.getDayAbbreviations(),
+                    'today': translate(_(u"Today"), context=request),
+                    'clear': translate(_(u"Clear"), context=request),
+                    'format': translate(
+                        format_id,
+                        domain='plone.app.widgets',
+                        context=request,
+                        default=format_default),
+                },
             })
-        _pattern_options.update(pattern_options)
-        _pattern_options['formatSubmit'] = 'yyyy-mm-dd'
+        _pattern_options = dict_merge(_pattern_options, pattern_options)
+        _pattern_options.setdefault('date', {})
+        _pattern_options['date']['formatSubmit'] = 'dd-mm-yyyy'
+        _pattern_options['time'] = 'false'
         super(DateWidget, self).__init__(pattern, _pattern_options, name,
                                          _type, value)
 
@@ -180,11 +191,14 @@ class DatetimeWidget(DateWidget):
     def __init__(self, pattern='pickadate', pattern_options={}, name=None,
                  _type='datetime-local', value=None, request=None,
                  calendar='gregorian', format_id='pickadate_datetime_format',
-                 format_default='yyyy-mm-dd @ HH:MM'):
+                 format_default='HH:i'):
+        timeOptions = pattern_options.get('time', {})
         super(DatetimeWidget, self).__init__(pattern, pattern_options, name,
                                              _type, value, request, calendar,
                                              format_id, format_default)
-        self.pattern_options['formatSubmit'] = 'yyyy-mm-dd HH:MM'
+        self.pattern_options['time'] = timeOptions
+        if isinstance(self.pattern_options['time'], dict):
+            self.pattern_options['time']['formatSubmit'] = 'HH:i'
 
 
 class Select2Widget(InputWidget):

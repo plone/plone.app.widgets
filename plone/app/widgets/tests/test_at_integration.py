@@ -57,17 +57,25 @@ class BaseWidgetTests(unittest.TestCase):
         from plone.app.widgets.at import DateWidget
         field = self.example.getField('datefield')
         self.assertIsInstance(field.widget, DateWidget)
+        html = self.view.render(field=field, mode='edit')
         self.assertIn(
-            '<input class="pat-pickadate" name="datefield" data-pat-pickadate="{&quot;pickadate-clear&quot;: &quot;Clear&quot;, &quot;pickadate-weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;format&quot;: &quot;yyyy-mm-dd @&quot;, &quot;pickadate-today&quot;: &quot;Today&quot;, &quot;pickadate-monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;yyyy-mm-dd&quot;, &quot;pickadate-weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;pickadate-monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;]}" type="date" value="',  # noqa
-            self.view.render(field=field, mode='edit'))
+            '<input class="pat-pickadate" name="datefield" type="date" value="',  # noqa
+            html)
+        self.assertIn(
+            'data-pat-pickadate="{&quot;date&quot;: {&quot;format&quot;: &quot;dd/mm/yyyy&quot;, &quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: &quot;false&quot;, &quot;format&quot;: &quot;dd/mm/yyyy&quot;}"/>',  # noqa
+            html)
 
     def test_datetime(self):
         from plone.app.widgets.at import DatetimeWidget
         field = self.example.getField('datetimefield')
         self.assertIsInstance(field.widget, DatetimeWidget)
+        html = self.view.render(field=field, mode='edit')
         self.assertIn(
-            '<input class="pat-pickadate" name="datetimefield" data-pat-pickadate="{&quot;pickadate-clear&quot;: &quot;Clear&quot;, &quot;pickadate-weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;format&quot;: &quot;yyyy-mm-dd @ HH:MM&quot;, &quot;pickadate-today&quot;: &quot;Today&quot;, &quot;pickadate-monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;yyyy-mm-dd&quot;, &quot;pickadate-weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;pickadate-monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;]}" type="datetime-local" value="',  # noqa
-            self.view.render(field=field, mode='edit'))
+            '<input class="pat-pickadate" name="datetimefield" type="datetime-local" value="',  # noqa
+            html)
+        self.assertIn(
+            'data-pat-pickadate="{&quot;date&quot;: {&quot;format&quot;: &quot;HH:i&quot;, &quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: {&quot;formatSubmit&quot;: &quot;HH:i&quot;}, &quot;format&quot;: &quot;HH:i&quot;}"/>',  # noqa
+            html)
 
     def test_select(self):
         from plone.app.widgets.at import SelectWidget
@@ -82,5 +90,5 @@ class BaseWidgetTests(unittest.TestCase):
         field = self.example.getField('select2field')
         self.assertIsInstance(field.widget, Select2Widget)
         self.assertIn(
-            '<input class="pat-select2" name="select2field" data-pat-select2="{&quot;separator&quot;: &quot;;&quot;}" type="text" value=""/>',  # noqa
+            '<input class="pat-select2" name="select2field" type="text" value="" data-pat-select2="{&quot;separator&quot;: &quot;;&quot;}"/>',  # noqa
             self.view.render(field=field, mode='edit'))
