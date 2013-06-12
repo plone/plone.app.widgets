@@ -60,7 +60,11 @@ class MetadataExtender(object):
                                        u"creators to this item."),
                     ajax_vocabulary="plone.app.vocabularies.Users",
                 )
-
+            if field.__name__ == 'relatedItems':
+                field.widget = at.RelatedItems(
+                    label=old.label,
+                    description=old.description
+                )
         #if 'customViewFields' in schema:
         #    field = schema['customViewFields']
         #    widget = field.widget

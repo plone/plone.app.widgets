@@ -209,7 +209,7 @@ class Select2WidgetTests(unittest.TestCase):
                 'value': None,
                 'pattern': 'select2',
                 'pattern_options': {
-                    'ajaxvocabulary': '/@@widgets/getVocabulary?name=example'
+                    'ajaxvocabulary': '/getVocabulary?name=example'
                 },
             }
         )

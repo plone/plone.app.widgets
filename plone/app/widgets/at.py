@@ -171,7 +171,7 @@ class Select2Widget(InputWidget):
             url = ''
             if portal_state:
                 url += portal_state.portal_url()
-            url += '/@@widgets/getVocabulary?name=' + self.ajax_vocabulary
+            url += '/@@getVocabulary?name=' + self.ajax_vocabulary
             if 'pattern_options' not in args:
                 args['pattern_options'] = {}
             args['pattern_options']['ajaxvocabulary'] = url
@@ -191,3 +191,19 @@ registerWidget(
     description=('Select2 widget'),
     used_for=('Products.Archetypes.Field.LinesField',)
 )
+
+
+class RelatedItems(Select2Widget):
+    _properties = InputWidget._properties.copy()
+    _properties.update({
+        'pattern': 'relateditems',
+        'ajax_vocabulary': 'plone.app.vocabularies.Catalog'
+    })
+
+
+registerWidget(
+    RelatedItems,
+    title='Related items widget',
+    description=('Related items widget'),
+    used_for='Products.Archetypes.Field.ReferenceField')
+

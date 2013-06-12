@@ -242,7 +242,7 @@ class Select2Widget(InputWidget):
             url = ''
             if portal_state:
                 url += portal_state.portal_url()
-            url += '/@@widgets/getVocabulary?name=' + self.ajax_vocabulary
+            url += '/@@getVocabulary?name=' + self.ajax_vocabulary
             if 'pattern_options' not in args:
                 args['pattern_options'] = {}
             args['pattern_options']['ajaxvocabulary'] = url
