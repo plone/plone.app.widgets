@@ -156,9 +156,10 @@ class DateWidget(InputWidget):
 
     def __init__(self, pattern='pickadate', pattern_options={}, name=None,
                  _type='date', value=None, request=None, calendar='gregorian',
-                 format_id='pickadate_date_format',
-                 format_default='dd/mm/yyyy'):
-        _pattern_options = {'format': format_default}
+                 format_date_id='pickadate_date_format',
+                 format_date_default='dd/mm/yyyy'):
+        _pattern_options = {'date': {'format': format_date_default},
+                            'time': 'false'}
         if request is not None:
             calendar = request.locale.dates.calendars[calendar]
             _pattern_options = dict_merge(_pattern_options, {
@@ -170,16 +171,14 @@ class DateWidget(InputWidget):
                     'today': translate(_(u"Today"), context=request),
                     'clear': translate(_(u"Clear"), context=request),
                     'format': translate(
-                        format_id,
+                        format_date_id,
                         domain='plone.app.widgets',
                         context=request,
-                        default=format_default),
+                        default=format_date_default),
                 },
             })
         _pattern_options = dict_merge(_pattern_options, pattern_options)
-        _pattern_options.setdefault('date', {})
         _pattern_options['date']['formatSubmit'] = 'dd-mm-yyyy'
-        _pattern_options['time'] = 'false'
         super(DateWidget, self).__init__(pattern, _pattern_options, name,
                                          _type, value)
 
@@ -190,12 +189,15 @@ class DatetimeWidget(DateWidget):
 
     def __init__(self, pattern='pickadate', pattern_options={}, name=None,
                  _type='datetime-local', value=None, request=None,
-                 calendar='gregorian', format_id='pickadate_datetime_format',
-                 format_default='HH:i'):
+                 calendar='gregorian', format_date_id='pickadate_date_format',
+                 format_date_default='dd/mm/yyyy',
+                 format_time_id='pickadate_time_format',
+                 format_time_default='HH:i'):
         timeOptions = pattern_options.get('time', {})
         super(DatetimeWidget, self).__init__(pattern, pattern_options, name,
                                              _type, value, request, calendar,
-                                             format_id, format_default)
+                                             format_date_id,
+                                             format_date_default)
         self.pattern_options['time'] = timeOptions
         if isinstance(self.pattern_options['time'], dict):
             self.pattern_options['time']['formatSubmit'] = 'HH:i'
