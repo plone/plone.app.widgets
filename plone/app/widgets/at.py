@@ -199,7 +199,8 @@ class RelatedItems(Select2Widget):
     _properties = Select2Widget._properties.copy()
     _properties.update({
         'pattern': 'relateditems',
-        'ajax_vocabulary': 'plone.app.vocabularies.Catalog'
+        'ajax_vocabulary': 'plone.app.vocabularies.Catalog',
+        'width': '50em'
     })
 
     def _widget_args(self, context, field, request):
