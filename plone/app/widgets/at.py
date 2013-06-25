@@ -23,7 +23,8 @@ class BaseWidget(TypesWidget):
         for name in self._properties.keys():
             if name in ['blurrable', 'condition', 'description', 'helper_css',
                         'helper_js', 'label', 'macro', 'modes', 'populate',
-                        'postback', 'show_content_type', 'visible', 'pattern']:
+                        'postback', 'show_content_type', 'visible', 'pattern',
+                        'ajax_vocabulary']:
                 continue
             options[name] = getattr(self, name)
         return {
