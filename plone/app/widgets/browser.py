@@ -6,6 +6,7 @@ from zope.component import queryUtility
 from zope.schema.interfaces import IVocabularyFactory
 from Products.Five import BrowserView
 from plone.app.vocabularies.interfaces import ISlicableVocabulary
+from Products.ZCTextIndex.ParseTree import ParseError
 
 
 _permissions = {
@@ -21,6 +22,10 @@ def _parseJSON(s):
                 (s.startswith('[') and s.endswith(']')): # detect if json
             return json.loads(s)
     return s
+
+
+_unsafe_metadata = ['Creator', 'listCreators']
+_safe_callable_metadata = ['getURL', 'getPath']
 
 
 class VocabularyView(BrowserView):
@@ -72,18 +77,18 @@ class VocabularyView(BrowserView):
             attributes = attributes.split(',')
         batch = _parseJSON(self.request.get('batch', ''))
         factory_spec = inspect.getargspec(factory.__call__)
-        if query and len(factory_spec.args) >= 3 and \
-                factory_spec.args[2] == 'query':
-            if len(factory_spec.args) >= 4 and \
-                    factory_spec.args[3] == 'batch':
-                vocabulary = factory(self.context, query, batch)
+        try:
+            if query and len(factory_spec.args) >= 3 and \
+                    factory_spec.args[2] == 'query':
+                if len(factory_spec.args) >= 4 and \
+                        factory_spec.args[3] == 'batch':
+                    vocabulary = factory(self.context, query, batch)
+                else:
+                    vocabulary = factory(self.context, query)
             else:
-                vocabulary = factory(self.context, query)
-        else:
-            try:
                 vocabulary = factory(self.context)
-            except TypeError:
-                return self.error()
+        except (TypeError, ParseError):
+            return self.error()
 
         try:
             total = len(vocabulary)
@@ -99,15 +104,29 @@ class VocabularyView(BrowserView):
             vocabulary = vocabulary[start:end]
 
         items = []
+
         if attributes:
-            item = {}
+            base_path = '/'.join(self.context.getPhysicalPath())
             for vocab_item in vocabulary:
+                item = {}
                 for attr in attributes:
+                    key = attr
+                    if ':' in attr:
+                        key, attr = attr.split(':', 1)
+                    if attr in _unsafe_metadata:
+                        continue
+                    if key == 'path':
+                        attr = 'getPath'
                     vocab_value = vocab_item.value
                     val = getattr(vocab_value, attr, None)
                     if callable(val):
-                        val = val()
-                    item[attr] = val
+                        if attr in _safe_callable_metadata:
+                            val = val()
+                        else:
+                            continue
+                    if key == 'path':
+                        val = val[len(base_path):]
+                    item[key] = val
                 items.append(item)
         else:
             for item in vocabulary:
