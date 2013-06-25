@@ -59,7 +59,7 @@
     />
 
   <!-- archetypes -->
-  <configure zcml:condition="installed plone.app.dexterity">
+  <configure zcml:condition="installed Products.ATContentTypes">
 
     <include package="archetypes.schemaextender" />
 
