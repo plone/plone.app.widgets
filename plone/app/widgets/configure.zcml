@@ -48,6 +48,12 @@
       layer=".interfaces.IWidgetsLayer"
       />
 
+  <browser:resourceDirectory
+      name="plone.app.widgets"
+      directory="static"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
   <cmf:registerDirectory name="plone_widgets" />
 
   <browser:page
