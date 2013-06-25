@@ -7,6 +7,7 @@ from Products.Archetypes.Widget import TypesWidget
 from Products.Archetypes.Registry import registerWidget
 from zope.component import queryMultiAdapter
 from plone.app.widgets import base
+from Products.CMFCore.utils import getToolByName
 
 
 class BaseWidget(TypesWidget):
@@ -195,11 +196,24 @@ registerWidget(
 
 
 class RelatedItems(Select2Widget):
-    _properties = InputWidget._properties.copy()
+    _properties = Select2Widget._properties.copy()
     _properties.update({
         'pattern': 'relateditems',
         'ajax_vocabulary': 'plone.app.vocabularies.Catalog'
     })
+
+    def _widget_args(self, context, field, request):
+        args = super(RelatedItems, self)._widget_args(context, field, request)
+        options = args['pattern_options']
+        pprops = getToolByName(context, 'portal_properties', None)
+        folder_types = ['Folder']
+        if pprops:
+            site_props = pprops.site_properties
+            folder_types = site_props.getProperty(
+                'typesLinkToFolderContentsInFC',
+                ['Folder'])
+        options['folderTypes'] = folder_types
+        return args
 
 
 registerWidget(
