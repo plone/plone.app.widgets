@@ -38,7 +38,7 @@ class VocabularyView(BrowserView):
                 }
         attributes: comma seperated, or json object list
         batch: {
-            page: 0-based page of results,
+            page: 1-based page of results,
             size: size of paged results
         }
         """
@@ -83,7 +83,7 @@ class VocabularyView(BrowserView):
             batch = None # batching not providing correct options
         if batch and ISlicableVocabulary.providedBy(vocabulary):
             # must be slicable for batching support
-            start = batch['page'] * batch['size']
+            start = (batch['page'] - 1) * batch['size']
             end = start + batch['size']
             vocabulary = vocabulary[start:end]
 
