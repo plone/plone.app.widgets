@@ -25,6 +25,14 @@ def _parseJSON(s):
 
 class VocabularyView(BrowserView):
 
+    def error(self):
+        return json.dumps({
+            'results': [],
+            'total': 0,
+            'error': True
+        })
+
+
     def __call__(self):
         """
         Accepts GET parameters of:
@@ -72,7 +80,10 @@ class VocabularyView(BrowserView):
             else:
                 vocabulary = factory(self.context, query)
         else:
-            vocabulary = factory(self.context)
+            try:
+                vocabulary = factory(self.context)
+            except TypeError:
+                return self.error()
 
         try:
             total = len(vocabulary)
