@@ -72,35 +72,6 @@
 /* ==========================================================================
    $BASE-PICKER
    ========================================================================== */
-/**
- * Note: the root picker element should __NOT__ be styled
- * more than what’s here. Style the `.picker__holder` instead.
- */
-.picker {
-  font-size: 16px;
-  text-align: left;
-  line-height: 1.2;
-  color: #000000;
-  position: absolute;
-  z-index: 10000;
-}
-/**
- * When the picker is opened, the input element is “activated”.
- */
-.picker__input.picker__input--active {
-  border-color: #049cdb;
-}
-/**
- * The holder is the only “scrollable” top-level container element.
- */
-.picker__holder {
-  width: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-/* ==========================================================================
-   $BASE-DATE-PICKER
-   ========================================================================== */
 /* ==========================================================================
    $VARIABLES
    ========================================================================== */
@@ -137,6 +108,35 @@
 /**
  * Vendor prefixes
  */
+/**
+ * Note: the root picker element should __NOT__ be styled
+ * more than what’s here. Style the `.picker__holder` instead.
+ */
+.picker {
+  font-size: 16px;
+  text-align: left;
+  line-height: 1.2;
+  color: #000000;
+  position: absolute;
+  z-index: 10000;
+}
+/**
+ * When the picker is opened, the input element is “activated”.
+ */
+.picker__input.picker__input--active {
+  border-color: #049cdb;
+}
+/**
+ * The holder is the only “scrollable” top-level container element.
+ */
+.picker__holder {
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* ==========================================================================
+   $BASE-DATE-PICKER
+   ========================================================================== */
 /**
  * The picker box.
  */
@@ -1843,6 +1843,24 @@ button.close {
   border: 0;
   -webkit-appearance: none;
 }
+div.linkModal .pat-relateditems-container {
+  padding-top: 0;
+}
+div.linkModal hr {
+  margin: 5px 0;
+}
+div.linkModal div.linkTypes {
+  line-height: 15px;
+}
+div.linkModal div.linkTypes input {
+  margin: 5px 5px 9px 9px;
+}
+div.linkModal div.linkTypes label {
+  float: left;
+}
+div.linkModal input[name="external"] {
+  width: 95%;
+}
 /*  Font Awesome 3.0
     the iconic font designed for use with Twitter Bootstrap
     -------------------------------------------------------
@@ -2959,4 +2977,19 @@ dl.actionMenu.activated dd {
 #content .field textarea:focus {
   border-color: #5897FB;
   outline: 0;
+}
+.modal-body .linkModal hr {
+  border-color: #eee;
+  border-style: solid;
+}
+.modal-body .linkModal .linkTypes label:hover {
+  cursor: pointer;
+}
+.modal-body .linkModal .control-group {
+  margin-top: 10px;
+}
+.modal-body .linkModal select,
+.modal-body .linkModal input {
+  font-size: 120%;
+  min-width: 300px;
 }
