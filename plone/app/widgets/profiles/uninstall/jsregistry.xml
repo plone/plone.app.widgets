@@ -18,6 +18,10 @@
     <javascript bundle="default" id="select_all.js" />
     <javascript bundle="default" id="styleswitcher.js" />
     <javascript bundle="default" id="livesearch.js" />
+    <javascript bundle="default" id="jquery.tinymce.js" />
+    <javascript bundle="default" id="tiny_mce_gzip.js" />
+
+    <javascript remove="True" id="++resource++plone.app.widgets/tinymce/tinymce.min.js" />
 
     <javascript remove="True"
         cacheable="False" compression="none" cookable="False"
