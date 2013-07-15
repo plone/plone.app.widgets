@@ -23,12 +23,6 @@
   <include package=".demos" />
 
   <browser:resource
-      zcml:condition="not-installed mockup"
-      name="plone.app.widgets.css"
-      file="static/widgets.min.css"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
     name="plone.app.widgets.png"
     file="static/widgets.png"
     layer=".interfaces.IWidgetsLayer"
@@ -39,24 +33,31 @@
     layer=".interfaces.IWidgetsLayer"
     />
 
-  <browser:resource
-      zcml:condition="installed mockup"
-      name="plone.app.widgets.js"
-      file="static/widgets.js"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      zcml:condition="not-installed mockup"
-      name="plone.app.widgets.js"
-      file="static/widgets.min.js"
-      layer=".interfaces.IWidgetsLayer"
-      />
+  <configure zcml:condition="installed mockup">
+    <browser:resource
+        name="plone.app.widgets.js"
+        file="static/widgets.js"
+        layer=".interfaces.IWidgetsLayer"
+        />
+    <browser:resource
+        name="plone.app.widgets.css"
+        file="static/widgets.css"
+        layer=".interfaces.IWidgetsLayer"
+        />
+  </configure>
 
-  <browser:resourceDirectory
-      name="plone.app.widgets"
-      directory="static"
-      layer=".interfaces.IWidgetsLayer"
-      />
+  <configure zcml:condition="not-installed mockup">
+    <browser:resource
+        name="plone.app.widgets.js"
+        file="static/widgets.min.js"
+        layer=".interfaces.IWidgetsLayer"
+        />
+    <browser:resource
+        name="plone.app.widgets.css"
+        file="static/widgets.min.css"
+        layer=".interfaces.IWidgetsLayer"
+        />
+  </configure>
 
   <cmf:registerDirectory name="plone_widgets" />
 
