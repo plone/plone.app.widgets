@@ -25,7 +25,7 @@
   <browser:resource
       zcml:condition="not-installed mockup"
       name="plone.app.widgets.css"
-      file="static/widgets.css"
+      file="static/widgets.min.css"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
