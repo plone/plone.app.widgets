@@ -23,6 +23,7 @@
   <include package=".demos" />
 
   <browser:resource
+      zcml:condition="not-installed mockup"
       name="plone.app.widgets.css"
       file="static/widgets.css"
       layer=".interfaces.IWidgetsLayer"
