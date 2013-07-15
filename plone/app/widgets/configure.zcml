@@ -33,6 +33,27 @@
     layer=".interfaces.IWidgetsLayer"
     />
 
+  <browser:resource
+      name="plone.app.widgets.eot"
+      file="static/widgets-fontawesome.eot"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets.otf"
+      file="static/widgets-fontawesome.otf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets.ttf"
+      file="static/widgets-fontawesome.ttf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets.woff"
+      file="static/widgets-fontawesome.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
   <configure zcml:condition="installed mockup">
     <browser:resource
         name="plone.app.widgets.js"
