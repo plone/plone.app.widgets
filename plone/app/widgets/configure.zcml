@@ -16,6 +16,9 @@
   <include package="plone.app.vocabularies" />
   <include package="plone.app.jquery" />
 
+  <include package="mockup"
+      zcml:condition="installed mockup" />
+
   <!-- TODO: demos should be only loaded when in development mode -->
   <include package=".demos" />
 
