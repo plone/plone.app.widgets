@@ -20,6 +20,12 @@
     <javascript bundle="default" id="livesearch.js" />
     <javascript bundle="default" id="jquery.tinymce.js" />
     <javascript bundle="default" id="tiny_mce_gzip.js" />
+    <!--- dexterity? probably need conditional GS profile for this...
+    <javascript bundle="default" id="++resource++plone.formwidget.autocomplete/formwidget-autocomplete.js" />
+    <javascript bundle="default" id="++resource++plone.formwidget.querystring.querywidget.js" />
+    <javascript bundle="default" id="++resource++plone.formwidget.autocomplete/jquery.autocomplete.min.js" />
+    <javascript bundle="default" id="++resource++plone.formwidget.contenttree/contenttree.js" />
+    -->
 
     <javascript remove="True"
         cacheable="False" compression="none" cookable="False"
