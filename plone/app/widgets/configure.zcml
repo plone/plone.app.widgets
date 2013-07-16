@@ -114,14 +114,13 @@
     <adapter factory=".dx.DateWidgetConverter" />
     <adapter factory=".dx.Select2WidgetConverter" />
     <adapter factory=".dx.QueryStringDataConverter" />
-
-    <adapter factory=".dx.DateTimeFieldWidget" />
-    <adapter factory=".dx.DateFieldWidget" />
-    <adapter factory=".dx.SelectFieldWidget" />
-    <adapter factory=".dx.Select2FieldWidget" />
+    <adapter factory=".dx.RelatedItemsDataConverter" />
 
     <!-- override metadata widgets -->
     <adapter factory=".dx_bbb.SubjectsFieldWidget" />
+    <adapter factory=".dx_bbb.LanguageFieldWidget" />
+    <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
+    <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
     <adapter factory=".dx_bbb.ContributorsFieldWidget" />
     <adapter factory=".dx_bbb.CreatorsFieldWidget" />
 

@@ -3,31 +3,22 @@
 import json
 from datetime import date
 from datetime import datetime
-from zope.interface import Interface
 from zope.interface import implementsOnly
-from zope.interface import implementer
 from zope.component import adapts
-from zope.component import adapter
 from zope.component import getUtility
 from zope.component import queryMultiAdapter
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
-from zope.schema.interfaces import ITextLine
 from zope.schema.interfaces import ICollection
-from zope.schema.interfaces import ISequence
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import IVocabularyFactory
 from z3c.form.converter import BaseDataConverter
 from z3c.form.widget import Widget
-from z3c.form.widget import FieldWidget
 from z3c.form.interfaces import IWidget
-from z3c.form.interfaces import IFieldWidget
-from plone.app.z3cform.widget import IDatetimeField
-from plone.app.z3cform.widget import IDateField
+from Products.CMFCore.utils import getToolByName
 from plone.registry.interfaces import IRegistry
 from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.app.widgets import base
-from plone.app.widgets.interfaces import IWidgetsLayer
 
 
 class IDatetimeWidget(IWidget):
@@ -52,6 +43,11 @@ class ISelect2Widget(IWidget):
 
 class IQueryStringWidget(IWidget):
     """Marker interface for the QueryStringWidget
+    """
+
+
+class IRelatedItemsWidget(IWidget):
+    """Marker interface for the RelatedItemsWidget
     """
 
 
@@ -98,10 +94,10 @@ class DateWidgetConverter(BaseDataConverter):
 
 
 class Select2WidgetConverter(BaseDataConverter):
-    """Data converter for ISequence.
+    """Data converter for ICollection.
     """
 
-    adapts(ISequence, ISelect2Widget)
+    adapts(ICollection, ISelect2Widget)
 
     def toWidgetValue(self, value):
         if self.field.missing_value and value in self.field.missing_value:
@@ -121,7 +117,32 @@ class Select2WidgetConverter(BaseDataConverter):
                               for v in value.split(self.widget.separator))
 
 
+class RelatedItemsDataConverter(BaseDataConverter):
+    """Data converter for ICollection.
+    """
+
+    adapts(ICollection, IRelatedItemsWidget)
+
+    def toWidgetValue(self, value):
+        if self.field.missing_value and value in self.field.missing_value:
+            return u''
+        return self.widget.separator.join(unicode(v.UID()) for v in value)
+
+    def toFieldValue(self, value):
+        collectionType = self.field._type
+        if isinstance(collectionType, tuple):
+            collectionType = collectionType[-1]
+        if not len(value):
+            return self.field.missing_value
+        catalog = getToolByName(self.widget.context, 'portal_catalog')
+        return collectionType(
+            item.getObject()
+            for item in catalog(UID=value.split(self.widget.separator)))
+
+
 class QueryStringDataConverter(BaseDataConverter):
+    """data converter for ilist.
+    """
 
     adapts(IList, IQueryStringWidget)
 
@@ -179,6 +200,7 @@ class SelectWidget(BaseWidget):
 
     implementsOnly(ISelectWidget)
 
+    pattern = 'select2'
     pattern_options = BaseWidget.pattern_options.copy()
 
     def _widget_args(self):
@@ -268,32 +290,11 @@ class QueryStringWidget(InputWidget):
         return args
 
 
-@adapter(IDatetimeField, IWidgetsLayer)
-@implementer(IFieldWidget)
-def DateTimeFieldWidget(field, request):
-    """IFieldWidget factory for DateTimeWidget."""
-    return FieldWidget(field, DatetimeWidget(request))
+class RelatedItemsWidget(Select2Widget):
 
+    _widget_klass = base.Select2Widget
 
-@adapter(IDateField, IWidgetsLayer)
-@implementer(IFieldWidget)
-def DateFieldWidget(field, request):
-    """IFieldWidget factory for DateWidget."""
-    return FieldWidget(field, DateWidget(request))
+    implementsOnly(IRelatedItemsWidget)
 
-
-@adapter(ICollection, Interface, IWidgetsLayer)
-@implementer(IFieldWidget)
-def SelectFieldWidget(field, source, request=None):
-    """IFieldWidget factory for Select2Widget."""
-    # BBB: emulate our pre-2.0 signature (field, request)
-    if request is None:
-        request = source
-    return FieldWidget(field, SelectWidget(request))
-
-
-@adapter(ISequence, ITextLine, IWidgetsLayer)
-@implementer(IFieldWidget)
-def Select2FieldWidget(field, value_type, request):
-    """IFieldWidget factory for TagsWidget."""
-    return FieldWidget(field, Select2Widget(request))
+    pattern = 'relateditems'
+    pattern_options = Select2Widget.pattern_options.copy()
