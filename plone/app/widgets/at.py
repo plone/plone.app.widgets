@@ -148,6 +148,10 @@ registerWidget(
 
 class SelectWidget(BaseWidget):
     _properties = InputWidget._properties.copy()
+    _properties.update({
+        'pattern': 'select2',
+        'separator': ';',
+    })
     _widget = base.SelectWidget
 
     def _widget_args(self, context, field, request):
@@ -201,7 +205,6 @@ class RelatedItems(Select2Widget):
     _properties.update({
         'pattern': 'relateditems',
         'ajax_vocabulary': 'plone.app.vocabularies.Catalog',
-        'width': '50em'
     })
 
     def _widget_args(self, context, field, request):
@@ -223,4 +226,3 @@ registerWidget(
     title='Related items widget',
     description=('Related items widget'),
     used_for='Products.Archetypes.Field.ReferenceField')
-
