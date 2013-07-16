@@ -161,6 +161,7 @@ class Select2Widget(InputWidget):
     _properties.update({
         'pattern': 'select2',
         'separator': ';',
+        'orderable': False
     })
     _widget = base.Select2Widget
 
