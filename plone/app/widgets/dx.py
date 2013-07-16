@@ -258,6 +258,9 @@ class Select2Widget(InputWidget):
 
     def _widget_args(self):
         args = super(Select2Widget, self)._widget_args()
+        if 'pattern_options' not in args:
+            args['pattern_options'] = {}
+        args['pattern_options']['separator'] = self.separator
         if self.ajax_vocabulary:
             portal_state = queryMultiAdapter((self.context, self.request),
                                              name=u'plone_portal_state')
@@ -265,8 +268,6 @@ class Select2Widget(InputWidget):
             if portal_state:
                 url += portal_state.portal_url()
             url += '/@@getVocabulary?name=' + self.ajax_vocabulary
-            if 'pattern_options' not in args:
-                args['pattern_options'] = {}
             args['pattern_options']['ajaxvocabulary'] = url
         return args
 

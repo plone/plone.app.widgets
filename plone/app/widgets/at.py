@@ -186,6 +186,8 @@ class Select2Widget(InputWidget):
             if 'pattern_options' not in args:
                 args['pattern_options'] = {}
             args['pattern_options']['ajaxvocabulary'] = url
+        args['value'] = self.separator.join(
+            request.get(field.getName(), field.getAccessor(context)()))
         return args
 
     def process_form(self, instance, field, form, empty_marker=None):
