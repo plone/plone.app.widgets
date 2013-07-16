@@ -13,7 +13,7 @@ from zope.component import queryMultiAdapter
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import ITextLine
-from zope.schema.interfaces import IChoice
+from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import ISequence
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import IVocabularyFactory
@@ -282,7 +282,7 @@ def DateFieldWidget(field, request):
     return FieldWidget(field, DateWidget(request))
 
 
-@adapter(IChoice, Interface, IWidgetsLayer)
+@adapter(ICollection, Interface, IWidgetsLayer)
 @implementer(IFieldWidget)
 def SelectFieldWidget(field, source, request=None):
     """IFieldWidget factory for Select2Widget."""
