@@ -60,11 +60,19 @@ class MetadataExtender(object):
                                        u"creators to this item."),
                     ajax_vocabulary="plone.app.vocabularies.Users",
                 )
+
             if field.__name__ == 'relatedItems':
-                field.widget = at.RelatedItems(
+                field.widget = at.RelatedItemsWidget(
                     label=old.label,
                     description=old.description
                 )
+
+            if field.__name__ == 'query':
+                field.widget = at.QueryStringWidget(
+                    label=old.label,
+                    description=old.description
+                )
+
         #if 'customViewFields' in schema:
         #    field = schema['customViewFields']
         #    widget = field.widget
@@ -74,13 +82,4 @@ class MetadataExtender(object):
         #        js_options={
         #            'allow_sortable': True
         #        }
-        #    )
-
-        #if 'relatedItems' in schema:
-        #    field = schema['relatedItems']
-        #    widget = field.widget
-        #    field.widget = ChosenAjaxWidget(
-        #        label=widget.label,
-        #        description=widget.description,
-        #        ajax_rel_url='widget-catalog-query'
         #    )

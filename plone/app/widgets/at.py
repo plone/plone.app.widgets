@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import json
 from DateTime import DateTime
 from datetime import datetime
+from zope.component import getUtility
+from zope.component import queryMultiAdapter
 from AccessControl import ClassSecurityInfo
 from Products.Archetypes.Widget import TypesWidget
 from Products.Archetypes.Registry import registerWidget
-from zope.component import queryMultiAdapter
-from plone.app.widgets import base
 from Products.CMFCore.utils import getToolByName
+from plone.registry.interfaces import IRegistry
+from plone.app.widgets import base
+from plone.app.querystring.interfaces import IQuerystringRegistryReader
 
 
 class BaseWidget(TypesWidget):
@@ -200,7 +204,7 @@ registerWidget(
 )
 
 
-class RelatedItems(Select2Widget):
+class RelatedItemsWidget(Select2Widget):
     _properties = Select2Widget._properties.copy()
     _properties.update({
         'pattern': 'relateditems',
@@ -208,7 +212,7 @@ class RelatedItems(Select2Widget):
     })
 
     def _widget_args(self, context, field, request):
-        args = super(RelatedItems, self)._widget_args(context, field, request)
+        args = super(RelatedItemsWidget, self)._widget_args(context, field, request)
         options = args['pattern_options']
         pprops = getToolByName(context, 'portal_properties', None)
         folder_types = ['Folder']
@@ -222,7 +226,37 @@ class RelatedItems(Select2Widget):
 
 
 registerWidget(
-    RelatedItems,
+    RelatedItemsWidget,
     title='Related items widget',
     description=('Related items widget'),
     used_for='Products.Archetypes.Field.ReferenceField')
+
+
+class QueryStringWidget(InputWidget):
+    _properties = InputWidget._properties.copy()
+    _properties.update({
+        'pattern': 'querystring',
+    })
+
+    def _widget_args(self, context, field, request):
+        args = super(QueryStringWidget, self)._widget_args(
+            context, field, request)
+
+        registry = getUtility(IRegistry)
+        config = IQuerystringRegistryReader(registry)()
+
+        if 'pattern_options' not in args:
+            args['pattern_options'] = {}
+        args['pattern_options'].update(config)
+
+        args['value'] = request.get(field.getName(),
+                                    json.dumps(field.getRaw(context)))
+
+        return args
+
+
+registerWidget(
+    QueryStringWidget,
+    title='Querystring widget',
+    description=('Querystring widget'),
+    used_for='archetypes.querywidget.field.QueryField')
