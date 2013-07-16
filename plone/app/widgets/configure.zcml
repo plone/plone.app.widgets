@@ -20,7 +20,7 @@
       zcml:condition="installed mockup" />
 
   <!-- TODO: demos should be only loaded when in development mode -->
-  <include package=".demos" />
+  <!--include package=".demos" /-->
 
   <browser:resource
     name="plone.app.widgets-select2.png"
