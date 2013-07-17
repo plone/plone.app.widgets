@@ -236,7 +236,7 @@
                     calendar pop-up
                   </div>
 -->
-                  <input class="pat-datetime" name="effective_date" value="" tal:attributes="value inputvalue" />
+                  <input class="pat-pickadate" name="effective_date" value="" tal:attributes="value inputvalue" />
 
                 </div>
               </div>
@@ -264,7 +264,7 @@
                       calendar pop-up
                     </div>
 -->
-                  <input class="pat-datetime" name="expiration_date" value="" tal:attributes="value inputvalue" />
+                  <input class="pat-pickadate" name="expiration_date" value="" tal:attributes="value inputvalue" />
                   </div>
                 </div>
               </div>

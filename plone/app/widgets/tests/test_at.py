@@ -186,6 +186,7 @@ class Select2WidgetTests(unittest.TestCase):
         self.assertEqual(
             widget._properties,
             {
+                'ajax_vocabulary': None,
                 'blurrable': False,
                 'condition': '',
                 'description': '',

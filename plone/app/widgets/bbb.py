@@ -24,9 +24,9 @@ class SearchBoxViewlet(common.SearchBoxViewlet):
             (self.context, self.request), name=u'plone_portal_state')
 
         return json.dumps({
-            "ajaxvocabulary": "%s/@@getVocabulary?name="
-                              "plone.app.vocabularies.Catalog" % (
-                              portal_state.portal_url()),
+            "ajaxvocabulary": "%s/@@getVocabulary?name=%s" % (
+                portal_state.portal_url(),
+                'plone.app.vocabularies.Catalog'),
             "baseCriteria": [{
                 "i": "portal_type",
                 "o": "plone.app.querystring.operation.selection.is",
