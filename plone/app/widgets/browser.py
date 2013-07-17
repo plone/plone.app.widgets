@@ -20,6 +20,7 @@ else:
     from plone.dexterity.interfaces import IDexterityFTI
     HAS_DEXTERITY = True
 from plone.app.widgets.interfaces import IATCTFileFactory, IDXFileFactory
+from plone.uuid.interfaces import IUUID
 
 
 _permissions = {
@@ -83,8 +84,6 @@ class FileUploadView(BrowserView):
                 content_type = obj.image.contentType
 
             result = {
-                "url": obj.absolute_url(),
-                "name": obj.getId(),
                 "type": content_type,
                 "size": size
             }
@@ -95,12 +94,16 @@ class FileUploadView(BrowserView):
                 size = obj.getObjSize()
 
             result = {
-                "url": obj.absolute_url(),
-                "name": obj.getId(),
                 "type": obj.getContentType(),
                 "size": size
             }
 
+        result.update({
+            'url': obj.absolute_url(),
+            'name': obj.getId(),
+            'uid': IUUID(obj),
+            'filename': filename
+        })
         return json.dumps(result)
 
 
