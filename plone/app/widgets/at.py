@@ -12,6 +12,7 @@ from Products.CMFCore.utils import getToolByName
 from plone.registry.interfaces import IRegistry
 from plone.app.widgets import base
 from plone.app.querystring.interfaces import IQuerystringRegistryReader
+from plone.uuid.interfaces import IUUID
 
 
 class BaseWidget(TypesWidget):
@@ -174,6 +175,10 @@ class Select2Widget(InputWidget):
     })
     _widget = base.Select2Widget
 
+    def getWidgetValue(self, context, field, request):
+        return self.separator.join(
+            request.get(field.getName(), field.getAccessor(context)()))
+
     def _widget_args(self, context, field, request):
         args = super(Select2Widget, self)._widget_args(context, field, request)
 
@@ -190,8 +195,7 @@ class Select2Widget(InputWidget):
             if 'pattern_options' not in args:
                 args['pattern_options'] = {}
             args['pattern_options']['ajaxvocabulary'] = url
-        args['value'] = self.separator.join(
-            request.get(field.getName(), field.getAccessor(context)()))
+        args['value'] = self.getWidgetValue(context, field, request)
         return args
 
     def process_form(self, instance, field, form, empty_marker=None):
@@ -215,7 +219,13 @@ class RelatedItemsWidget(Select2Widget):
     _properties.update({
         'pattern': 'relateditems',
         'ajax_vocabulary': 'plone.app.vocabularies.Catalog',
+        'separator': ','
     })
+
+    def getWidgetValue(self, context, field, request):
+        values = request.get(field.getName(), field.getAccessor(context)())
+        values = [IUUID(o) for o in values if o]
+        return self.separator.join(values)
 
     def _widget_args(self, context, field, request):
         args = super(RelatedItemsWidget, self)._widget_args(
