@@ -4,15 +4,21 @@
 *.egg-info
 
 # folders
-bin
-parts
-buildout-cache
-develop-eggs
-dist
-var
+bin/
+parts/
+buildout-cache/
+develop-eggs/
+dist/
+var/
+include/
+lib/
+nixenv
+plone.app.contenttypes
+plone.app.vocabularies
 
 # local development
 local.cfg
+buildout.cfg
 
 # eclipse
 .installed.cfg
