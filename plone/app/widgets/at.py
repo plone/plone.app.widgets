@@ -169,20 +169,24 @@ class Select2Widget(InputWidget):
     _properties.update({
         'pattern': 'select2',
         'separator': ';',
-        'orderable': False
+        'orderable': False,
+        'ajax_vocabulary': None
     })
     _widget = base.Select2Widget
 
     def _widget_args(self, context, field, request):
         args = super(Select2Widget, self)._widget_args(context, field, request)
-        if hasattr(self, 'ajax_vocabulary'):
 
+        vocabulary_name = getattr(field, 'vocabulary_factory', None)
+        if self.ajax_vocabulary:
+            vocabulary_name = self.ajax_vocabulary
+        if vocabulary_name:
             portal_state = queryMultiAdapter((context, request),
                                              name=u'plone_portal_state')
             url = ''
             if portal_state:
                 url += portal_state.portal_url()
-            url += '/@@getVocabulary?name=' + self.ajax_vocabulary
+            url += '/@@getVocabulary?name=' + vocabulary_name
             if 'pattern_options' not in args:
                 args['pattern_options'] = {}
             args['pattern_options']['ajaxvocabulary'] = url
