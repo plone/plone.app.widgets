@@ -29,4 +29,3 @@ class IATCTFileFactory(IFileFactory):
 class IDXFileFactory(IFileFactory):
     """ adapter factory for DX types
     """
-

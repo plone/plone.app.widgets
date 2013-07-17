@@ -13,6 +13,7 @@ from Products.CMFCore.utils import getToolByName
 from Products.CMFCore.interfaces._content import IFolderish
 from Products.CMFPlone import utils as ploneutils
 
+
 try:
     from plone.namedfile.file import NamedBlobImage
     from plone.namedfile.file import NamedBlobFile
@@ -61,11 +62,11 @@ class ATCTFileFactory(object):
 
         # this should fix #8
         newid = chooser.chooseName(normalizer.normalize(name),
-            self.context.aq_parent)
+                                   self.context.aq_parent)
         try:
             transaction.begin()
             obj = ploneutils._createObjectByType(type_,
-                self.context, newid)
+                                                 self.context, newid)
             mutator = obj.getPrimaryField().getMutator(obj)
             mutator(data, content_type=content_type)
             obj.setTitle(name)
@@ -133,4 +134,3 @@ class DXFileFactory(object):
             upload_lock.release()
 
         return obj
-
