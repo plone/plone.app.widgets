@@ -36,7 +36,7 @@
                tal:condition="python:search_input_id=='nolivesearchGadget'"
                i18n:attributes="value label_search;" />
 
-        <div class="pat-livesearch-container pull-right"><div class="pat-livesearch-results" id="LSShadow"></div></div>
+        <div class="pat-livesearch-container pull-right"><div class="pat-livesearch-results"></div></div>
         </div>
     </form>
 

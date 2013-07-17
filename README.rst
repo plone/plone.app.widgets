@@ -1,5 +1,7 @@
-``plone.app.widgets`` is a revamp of plone widgets. It does this by overriding
-the widgets of some of the fields in plone.
+The goal of ``plone.app.widgets`` is to provide an implementation for a new
+set of javascript widgets being developed in the `Plone Mockup`_ project. It
+overrides existing widgets used in dexterity and archetypes to provide tested
+and modularized widgets based on the concept of *patterns*.
 
 .. image:: https://travis-ci.org/plone/plone.app.widgets.png?branch=master
    :target: https://travis-ci.org/plone/plone.app.widgets
@@ -8,6 +10,33 @@ the widgets of some of the fields in plone.
 
 Introduction
 ============
+
+The widgets that are provided currently are:
+
+- Adjust Text Size -- *Easily change text size on a page.*
+- Cookie Directive -- *A pattern that checks cookies enabled and asks
+  permission for the user to allow cookies or not.*
+- Expose -- *Exposes the focused element by darkening everything else on the
+  page. Useful to focus the user attention on a particular area.*
+- Form Unload Alert -- *A pattern to warn user when changes are unsaved and
+  they try to navigate away from page.*
+- Live Search -- *Dynamically query the server and display results.*
+- Modal -- *Creates a modal dialog (also called overlay).*
+- Pick A Date -- *Allows the user to select a date (with or without time)
+  through a calendar.*
+- Picture -- *A responsive image widget.*
+- Prevent Double Submit -- *A pattern to prevent submitting a form twice.*
+- Query String for Collections -- *A widget for creating query's for
+  collections*
+- Related Items -- *An advanced widget for selecting related items.*
+- Select2 -- *Autocompletes, multiple or single selections from any kind of
+  data source (with search!).*
+- Table Sorter -- *A pattern you can apply to a table so it can have its items
+  rearranged when clicking the header.*
+- TinyMCE (v4!!!) -- *Rich text editor.*
+- Table of Contents -- *Automatically generate a table of contents.*
+- Tooltip -- *A pattern to show a tooltip on hover.*
+- DropZone -- *Drag 'n drop file upload*
 
 Widgets that are overridden in ``Edit`` forms are:
 
@@ -18,13 +47,10 @@ Widgets that are overridden in ``Edit`` forms are:
 - ``contributrors``
 - ``creators``
 
-Currently ``plone.app.widgets`` only works with Archetypes, but Dexterity
-support is planned in next release.
-
 All client side code (javascript/css/images) is done and tested as part of
 `Plone Mockup`_ project.
 
-Any feature / bug / compliment please insert in `issue tracker`_.
+Any feature / bug / compliment please insert in the `issue tracker`_.
 
 
 Installation
