@@ -124,5 +124,3 @@ class BrowserTest(unittest.TestCase):
         })
         data = json.loads(view.getVocabulary())
         self.assertEquals(len(data['results']), amount)
-
-
