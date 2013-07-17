@@ -100,8 +100,10 @@ class VocabularyView(BrowserView):
             batch = None  # batching not providing correct options
         if batch and ISlicableVocabulary.providedBy(vocabulary):
             # must be slicable for batching support
-            start = (batch['page'] - 1) * batch['size']
-            end = start + batch['size']
+            page = int(batch['page'])
+            page = page <= 0 and 1 or page
+            start = (page - 1) * int(batch['size'])
+            end = start + int(batch['size'])
             vocabulary = vocabulary[start:end]
 
         items = []
