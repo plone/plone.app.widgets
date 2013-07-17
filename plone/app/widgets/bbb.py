@@ -36,26 +36,3 @@ class SearchBoxViewlet(common.SearchBoxViewlet):
                     and item not in BAD_TYPES]
             }]
         })
-
-      #// Livesearch
-
-      #$match = $root.find('.LSBox');
-      #var url = $match.parents('form').attr('action').replace('@@search',
-      #    '@@getVocabulary?name=plone.app.vocabularies.Catalog');
-      #var attrs = {
-      #  'ajaxvocabulary': url
-      #};
-      #$match.attr({
-      #  'class': 'pat-livesearch',
-      #  'data-pat-livesearch': JSON.stringify(attrs)
-      #});
-      #$match.find('.searchSection').remove();
-      #$match.find('.LSResult').attr({
-      #  'class': 'pat-livesearch-container pull-right',
-      #  'id': ''
-      #});
-      #$match.find('.LSShadow').attr('class', 'pat-livesearch-results');
-      #$match.find('#searchGadget').addClass('pat-livesearch-input')
-      #  .attr('autocomplete', 'off');
-      #$match.find('.searchButton').hide();
-

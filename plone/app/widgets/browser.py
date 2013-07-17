@@ -7,10 +7,8 @@ from zope.schema.interfaces import IVocabularyFactory
 from Products.Five import BrowserView
 from Products.CMFCore.utils import getToolByName
 from plone.app.vocabularies.interfaces import ISlicableVocabulary
-from plone.app.vocabularies.types import BAD_TYPES
 from Products.ZCTextIndex.ParseTree import ParseError
 import mimetypes
-from Products.CMFCore.utils import getToolByName
 
 import pkg_resources
 
