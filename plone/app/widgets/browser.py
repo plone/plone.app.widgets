@@ -5,7 +5,9 @@ import inspect
 from zope.component import queryUtility
 from zope.schema.interfaces import IVocabularyFactory
 from Products.Five import BrowserView
+from Products.CMFCore.utils import getToolByName
 from plone.app.vocabularies.interfaces import ISlicableVocabulary
+from plone.app.vocabularies.types import BAD_TYPES
 from Products.ZCTextIndex.ParseTree import ParseError
 import mimetypes
 from Products.CMFCore.utils import getToolByName
@@ -151,10 +153,8 @@ class VocabularyView(BrowserView):
 
         # check if factory excepts query argument
         query = _parseJSON(self.request.get('query', ''))
-        attributes = _parseJSON(self.request.get('attributes', ''))
-        if isinstance(attributes, basestring) and attributes:
-            attributes = attributes.split(',')
         batch = _parseJSON(self.request.get('batch', ''))
+
         factory_spec = inspect.getargspec(factory.__call__)
         try:
             if query and len(factory_spec.args) >= 3 and \
@@ -185,6 +185,10 @@ class VocabularyView(BrowserView):
             vocabulary = vocabulary[start:end]
 
         items = []
+
+        attributes = _parseJSON(self.request.get('attributes', ''))
+        if isinstance(attributes, basestring) and attributes:
+            attributes = attributes.split(',')
 
         if attributes:
             base_path = '/'.join(self.context.getPhysicalPath())
