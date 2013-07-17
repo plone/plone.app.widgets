@@ -266,8 +266,9 @@ class QueryStringWidget(InputWidget):
             args['pattern_options'] = {}
         args['pattern_options'].update(config)
 
+        criterias = [dict(c) for c in field.getRaw(context)]
         args['value'] = request.get(field.getName(),
-                                    json.dumps(field.getRaw(context)))
+                                    json.dumps(criterias))
 
         return args
 
