@@ -90,6 +90,17 @@
     layer=".interfaces.IWidgetsLayer"
     />
 
+  <browser:page
+    name="fileUpload"
+    for="Products.CMFCore.interfaces._content.IFolderish"
+    class=".browser.FileUploadView"
+    permission="cmf.AddPortalContent"
+    layer=".interfaces.IWidgetsLayer"
+    />
+
+  <adapter factory=".factories.ATCTFileFactory" />
+  <adapter factory=".factories.DXFileFactory" />
+
   <!-- archetypes -->
   <configure zcml:condition="installed Products.ATContentTypes">
 
