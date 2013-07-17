@@ -62,7 +62,7 @@ class BaseWidgetTests(unittest.TestCase):
             '<input class="pat-pickadate" name="datefield" type="date" value="',  # noqa
             html)
         self.assertIn(
-            'data-pat-pickadate="{&quot;date&quot;: {&quot;format&quot;: &quot;dd/mm/yyyy&quot;, &quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: &quot;false&quot;, &quot;format&quot;: &quot;dd/mm/yyyy&quot;}"/>',  # noqa
+            'data-pat-pickadate="{&quot;date&quot;: {&quot;format&quot;: &quot;d mmmm, yyyy @&quot;, &quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: &quot;false&quot;}"/>',  # noqa
             html)
 
     def test_datetime(self):
@@ -74,7 +74,7 @@ class BaseWidgetTests(unittest.TestCase):
             '<input class="pat-pickadate" name="datetimefield" type="datetime-local" value="',  # noqa
             html)
         self.assertIn(
-            'data-pat-pickadate="{&quot;date&quot;: {&quot;format&quot;: &quot;HH:i&quot;, &quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: {&quot;formatSubmit&quot;: &quot;HH:i&quot;}, &quot;format&quot;: &quot;HH:i&quot;}"/>',  # noqa
+            'data-pat-pickadate="{&quot;date&quot;: {&quot;format&quot;: &quot;d mmmm, yyyy @&quot;, &quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: {&quot;formatSubmit&quot;: &quot;HH:i&quot;}}"/>',  # noqa
             html)
 
     def test_select(self):
@@ -82,7 +82,7 @@ class BaseWidgetTests(unittest.TestCase):
         field = self.example.getField('selectfield')
         self.assertIsInstance(field.widget, SelectWidget)
         self.assertIn(
-            '<select name="selectfield"> </select>',
+            '<select class="pat-select2" name="selectfield" data-pat-select2="{&quot;separator&quot;: &quot;;&quot;}"> </select>',  # noqa
             self.view.render(field=field, mode='edit'))
 
     def test_select2(self):
@@ -90,5 +90,5 @@ class BaseWidgetTests(unittest.TestCase):
         field = self.example.getField('select2field')
         self.assertIsInstance(field.widget, Select2Widget)
         self.assertIn(
-            '<input class="pat-select2" name="select2field" type="text" value="" data-pat-select2="{&quot;separator&quot;: &quot;;&quot;}"/>',  # noqa
+            '<input class="pat-select2" name="select2field" type="text" value="" data-pat-select2="{&quot;orderable&quot;: false, &quot;separator&quot;: &quot;;&quot;}"/>',  # noqa
             self.view.render(field=field, mode='edit'))

@@ -28,11 +28,12 @@ _permissions = {
     'plone.app.vocabularies.Keywords': 'Modify portal content'
 }
 
+
 def _parseJSON(s):
     if isinstance(s, basestring):
         s = s.strip()
         if (s.startswith('{') and s.endswith('}')) or \
-                (s.startswith('[') and s.endswith(']')): # detect if json
+                (s.startswith('[') and s.endswith(']')):  # detect if json
             return json.loads(s)
     return s
 
@@ -112,7 +113,6 @@ class VocabularyView(BrowserView):
             'error': True
         })
 
-
     def __call__(self):
         """
         Accepts GET parameters of:
@@ -139,7 +139,8 @@ class VocabularyView(BrowserView):
             return json.dumps({'error': 'Vocabulary lookup not allowed'})
         sm = getSecurityManager()
         if not sm.checkPermission(_permissions[factory_name], self.context):
-            raise Unauthorized('You do not have permission to use this vocabulary')
+            raise Unauthorized('You do not have permission to use this '
+                               'vocabulary')
         factory = queryUtility(IVocabularyFactory, factory_name)
         if not factory:
             return json.dumps({
@@ -168,14 +169,16 @@ class VocabularyView(BrowserView):
         try:
             total = len(vocabulary)
         except AttributeError:
-            total = 0 # do not error if object does not support __len__
-                      # we'll check again later if we can figure some size out
+            total = 0  # do not error if object does not support __len__
+                       # we'll check again later if we can figure some size out
         if 'size' not in batch or 'page' not in batch:
-            batch = None # batching not providing correct options
+            batch = None  # batching not providing correct options
         if batch and ISlicableVocabulary.providedBy(vocabulary):
             # must be slicable for batching support
-            start = (batch['page'] - 1) * batch['size']
-            end = start + batch['size']
+            page = int(batch['page'])
+            page = page <= 0 and 1 or page
+            start = (page - 1) * int(batch['size'])
+            end = start + int(batch['size'])
             vocabulary = vocabulary[start:end]
 
         items = []
@@ -214,4 +217,3 @@ class VocabularyView(BrowserView):
             'results': items,
             'total': total
         })
-

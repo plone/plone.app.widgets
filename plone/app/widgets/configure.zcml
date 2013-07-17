@@ -134,6 +134,7 @@
     <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
     <adapter factory=".dx_bbb.ContributorsFieldWidget" />
     <adapter factory=".dx_bbb.CreatorsFieldWidget" />
+    <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
 
     <!-- override contenttypes specific widgets -->
     <configure zcml:condition="installed plone.app.contenttypes">

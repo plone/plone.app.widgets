@@ -214,7 +214,8 @@ class RelatedItemsWidget(Select2Widget):
     })
 
     def _widget_args(self, context, field, request):
-        args = super(RelatedItemsWidget, self)._widget_args(context, field, request)
+        args = super(RelatedItemsWidget, self)._widget_args(
+            context, field, request)
         options = args['pattern_options']
         pprops = getToolByName(context, 'portal_properties', None)
         folder_types = ['Folder']

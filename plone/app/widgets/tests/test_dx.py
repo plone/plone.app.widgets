@@ -62,7 +62,7 @@ class BaseWidgetTests(unittest.TestCase):
             widget._widget_args(),
             {
                 'name': 'example',
-                'pattern': None,
+                'pattern': 'select2',
                 'pattern_options': {},
                 'options': [('option1', None),
                             ('option2', None),
@@ -197,7 +197,7 @@ class Select2WidgetTests(unittest.TestCase):
                 'name': None,
                 'value': None,
                 'pattern': 'select2',
-                'pattern_options': {},
+                'pattern_options': {'separator': ';'},
             }
         )
 
@@ -209,7 +209,8 @@ class Select2WidgetTests(unittest.TestCase):
                 'value': None,
                 'pattern': 'select2',
                 'pattern_options': {
-                    'ajaxvocabulary': '/getVocabulary?name=example'
+                    'ajaxvocabulary': '/@@getVocabulary?name=example',
+                    'separator': ';'
                 },
             }
         )
