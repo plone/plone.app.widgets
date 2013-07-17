@@ -194,6 +194,7 @@ class Select2WidgetTests(unittest.TestCase):
                 'label': '',
                 'macro': 'patterns_widget',
                 'modes': ('view', 'edit'),
+                'orderable': False,
                 'populate': True,
                 'postback': True,
                 'separator': ';',

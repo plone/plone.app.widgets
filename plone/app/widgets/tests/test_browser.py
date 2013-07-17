@@ -9,7 +9,7 @@ from AccessControl import Unauthorized
 from zope.globalrequest import setRequest
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
-from plone.app.widgets.browser import WidgetsView
+from plone.app.widgets.browser import VocabularyView
 import json
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
@@ -31,7 +31,7 @@ class BrowserTest(unittest.TestCase):
     def testVocabularyNoResults(self):
         """Tests that the widgets displays correctly
         """
-        view = WidgetsView(self.portal, self.request)
+        view = VocabularyView(self.portal, self.request)
         query = {
             'criteria': [
                 {
@@ -45,13 +45,13 @@ class BrowserTest(unittest.TestCase):
             'name': 'plone.app.vocabularies.Catalog',
             'query': json.dumps(query)
         })
-        data = json.loads(view.getVocabulary())
+        data = json.loads(view())
         self.assertEquals(len(data['results']), 0)
 
     def testVocabularyCatalogResults(self):
         self.portal.invokeFactory('Document', id="page", title="page")
         self.portal.page.reindexObject()
-        view = WidgetsView(self.portal, self.request)
+        view = VocabularyView(self.portal, self.request)
         query = {
             'criteria': [
                 {
@@ -66,7 +66,7 @@ class BrowserTest(unittest.TestCase):
             'query': json.dumps(query),
             'attributes': ['UID', 'id', 'title', 'path']
         })
-        data = json.loads(view.getVocabulary())
+        data = json.loads(view())
         self.assertEquals(len(data['results']), 1)
         self.portal.manage_delObjects(['page'])
 
@@ -76,7 +76,7 @@ class BrowserTest(unittest.TestCase):
             self.portal.invokeFactory('Document', id="page" + str(i),
                                       title="Page" + str(i))
             self.portal['page' + str(i)].reindexObject()
-        view = WidgetsView(self.portal, self.request)
+        view = VocabularyView(self.portal, self.request)
         query = {
             'criteria': [
                 {
@@ -91,22 +91,22 @@ class BrowserTest(unittest.TestCase):
             'query': json.dumps(query),
             'attributes': ['UID', 'id', 'title', 'path'],
             'batch': {
-                'page': 0,
-                'size': 10
+                'page': '0',
+                'size': '10'
             }
         })
-        data = json.loads(view.getVocabulary())
+        data = json.loads(view())
         self.assertEquals(len(data['results']), 10)
         self.assertEquals(data['total'], amount)
 
     def testVocabularyUnauthorized(self):
         setRoles(self.portal, TEST_USER_ID, [])
-        view = WidgetsView(self.portal, self.request)
+        view = VocabularyView(self.portal, self.request)
         self.request.form.update({
             'name': 'plone.app.vocabularies.Users',
             'query': TEST_USER_NAME
         })
-        self.assertRaises(Unauthorized, view.getVocabulary)
+        self.assertRaises(Unauthorized, view)
 
     def testVocabularyUsers(self):
         acl_users = self.portal.acl_users
@@ -117,10 +117,10 @@ class BrowserTest(unittest.TestCase):
             acl_users.userFolderAddUser(id, 'secret', ['Member'], [])
             member = membership.getMemberById(id)
             member.setMemberProperties(mapping={"fullname": id})
-        view = WidgetsView(self.portal, self.request)
+        view = VocabularyView(self.portal, self.request)
         self.request.form.update({
             'name': 'plone.app.vocabularies.Users',
             'query': 'user'
         })
-        data = json.loads(view.getVocabulary())
-        self.assertEquals(len(data['results']), amount)
+        data = json.loads(view())
+        self.assertEqual(len(data['results']), amount)
