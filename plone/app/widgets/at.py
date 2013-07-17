@@ -269,8 +269,18 @@ class QueryStringWidget(InputWidget):
         criterias = [dict(c) for c in field.getRaw(context)]
         args['value'] = request.get(field.getName(),
                                     json.dumps(criterias))
-
         return args
+
+    security = ClassSecurityInfo()
+    security.declarePublic('process_form')
+
+    def process_form(self, instance, field, form, empty_marker=None,
+                     emptyReturnsMarker=False, validating=True):
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
+        value = json.loads(value)
+        return value, {}
 
 
 registerWidget(
