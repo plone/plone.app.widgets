@@ -135,9 +135,10 @@ class RelatedItemsDataConverter(BaseDataConverter):
         if not len(value):
             return self.field.missing_value
         catalog = getToolByName(self.widget.context, 'portal_catalog')
-        return collectionType(
-            item.getObject()
-            for item in catalog(UID=value.split(self.widget.separator)))
+        value = value.split(self.widget.separator)
+        value = [v.split('/')[0] for v in value]
+        results = catalog(UID=value)
+        return collectionType(item.getObject() for item in results)
 
 
 class QueryStringDataConverter(BaseDataConverter):
