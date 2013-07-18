@@ -100,4 +100,4 @@ see ``plone.app.widgets.demos`` source code.
 
 
 .. _`Plone Mockup`: http://plone.github.io/mockup
-.. _`issue tracker`: https://github.com/plone/plone.app.widgets/issues
+.. _`issue tracker`: https://github.com/plone/mockup/issues?labels=widgets
