@@ -244,6 +244,14 @@ class RelatedItemsWidget(Select2Widget):
         options['folderTypes'] = folder_types
         return args
 
+    def process_form(self, instance, field, form, empty_marker=None):
+        # select2 will add unique identifier information to results
+        # so we're stripping it out here.
+        value, other = super(RelatedItemsWidget, self).process_form(
+            instance, field, form, empty_marker)
+        value = [v.split('/')[0] for v in value]
+        return value, other
+
 
 registerWidget(
     RelatedItemsWidget,
