@@ -93,6 +93,9 @@ class DateWidget(InputWidget):
         if value is empty_marker or value == '':
             return empty_marker
 
+        if not isinstance(value, basestring):
+            return value, {}
+
         if ' ' in value:
             tmp = value.split(' ')
             value = tmp[0].split('-')
