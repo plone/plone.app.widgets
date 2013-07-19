@@ -8,9 +8,7 @@
     script2.setAttribute('src', '/++resource++mockup/js/config.js');
     script2.onload = function() {
       requirejs.config({ baseUrl: '++resource++mockup/' });
-      require(['mockup-bundles-widgets'], function(Widgets) {
-        Widgets.scan('body');
-      });
+      require(['mockup-bundles-widgets']);
     };
 
     var script1 = document.createElement('script');

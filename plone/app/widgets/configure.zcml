@@ -23,34 +23,86 @@
   <!--include package=".demos" /-->
 
   <browser:resource
-    name="plone.app.widgets-select2.png"
-    file="static/widgets-select2.png"
-    layer=".interfaces.IWidgetsLayer"
-    />
+      name="plone.app.widgets-fontawesome-webfont.eot"
+      file="static/widgets-fontawesome-webfont.eot"
+      layer=".interfaces.IWidgetsLayer"
+      />
   <browser:resource
-    name="plone.app.widgets-select2-spinner.gif"
-    file="static/widgets-select2-spinner.gif"
-    layer=".interfaces.IWidgetsLayer"
-    />
+      name="plone.app.widgets-fontawesome-webfont.woff"
+      file="static/widgets-fontawesome-webfont.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-fontawesome-webfont.ttf"
+      file="static/widgets-fontawesome-webfont.ttf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-fontawesome-webfont.svg"
+      file="static/widgets-fontawesome-webfont.svg"
+      layer=".interfaces.IWidgetsLayer"
+      />
 
   <browser:resource
-      name="plone.app.widgets.eot"
-      file="static/widgets-fontawesome.eot"
+      name="plone.app.widgets-select2.png"
+      file="static/widgets-select2.png"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets.otf"
-      file="static/widgets-fontawesome.otf"
+      name="plone.app.widgets-select2-spinner.gif"
+      file="static/widgets-select2-spinner.gif"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
+  <browser:resource
+      name="plone.app.widgets-icomoon.eot"
+      file="static/widgets-icomoon.eot"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets.ttf"
-      file="static/widgets-fontawesome.ttf"
+      name="plone.app.widgets-icomoon.svg"
+      file="static/widgets-icomoon.svg"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets.woff"
-      file="static/widgets-fontawesome.woff"
+      name="plone.app.widgets-icomoon.woff"
+      file="static/widgets-icomoon.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-icomoon.ttf"
+      file="static/widgets-icomoon.ttf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-icomoon-small.eot"
+      file="static/widgets-icomoon-small.eot"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-icomoon-small.svg"
+      file="static/widgets-icomoon-small.svg"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-icomoon-small.woff"
+      file="static/widgets-icomoon-small.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-icomoon-small.ttf"
+      file="static/widgets-icomoon-small.ttf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
+  <browser:resource
+      name="plone.app.widgets-spritemap.png"
+      file="static/widgets-spritemap.png"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-spritemap@2x.png"
+      file="static/widgets-spritemap@2x.png"
       layer=".interfaces.IWidgetsLayer"
       />
 
