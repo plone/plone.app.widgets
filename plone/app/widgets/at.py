@@ -226,8 +226,13 @@ class RelatedItemsWidget(Select2Widget):
     })
 
     def getWidgetValue(self, context, field, request):
-        values = request.get(field.getName(), field.getAccessor(context)())
-        values = [IUUID(o) for o in values if o]
+        reqvalues = request.get(field.getName(), None)
+        if not reqvalues:
+            values = request.get(field.getName(), field.getAccessor(context)())
+            values = [IUUID(o) for o in values if o]
+        else:
+            values = [v.split('/')[0]
+                      for v in reqvalues.strip().split(self.separator)]
         return self.separator.join(values)
 
     def _widget_args(self, context, field, request):
