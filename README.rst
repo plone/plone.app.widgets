@@ -56,10 +56,10 @@ Any feature / bug / compliment please insert in the `issue tracker`_.
 Installation
 ============
 
-For now only tested with Plone 4.3.::
+For now only tested with Plone 4.3::
 
     [buildout]
-    extends = http://dist.plone.org/release/4.3/versions.cfg
+    extends = http://dist.plone.org/release/4.3.1/versions.cfg
     versions = versions
     parts = instance
 
@@ -70,14 +70,13 @@ For now only tested with Plone 4.3.::
     eggs =
         Pillow
         Plone
-        plone.app.widgets[archetypes]
+        plone.app.widgets[archetypes,dexterity]
     zcml =
         plone.app.widgets
 
     [versions]
     plone.app.jquery = 1.8.3
-    plone.app.search = 1.1.2
-    plone.app.vocabularies = 2.1.10
+    plone.app.vocabularies = 2.1.11
 
 
 ..
