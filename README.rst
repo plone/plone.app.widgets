@@ -46,6 +46,8 @@ Widgets that are overridden in ``Edit`` forms are:
 - ``expirationDate``
 - ``contributrors``
 - ``creators``
+- ``relatedItems``
+- ``query``
 
 All client side code (javascript/css/images) is done and tested as part of
 `Plone Mockup`_ project.
