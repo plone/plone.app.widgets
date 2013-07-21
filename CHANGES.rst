@@ -1,8 +1,11 @@
 Changelog
 =========
 
-0.3 (unreleased)
+1.3 (2013-07-21)
 ----------------
+
+- Additional set of widgets added and improved at Oshkosh and Bastille Sprint.
+  [bunch of ppl]
 
 - Fix bug where empty select elements rendered as <select/>
   [davisagli]
@@ -28,6 +31,7 @@ Changelog
   [saily]
 
 - Fields and widgets demo gallery added [miohtama]
+
 
 0.2 (2013-03-04)
 ----------------
