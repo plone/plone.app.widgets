@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.3.1 (unreleased)
+------------------
+
+- handle unicode data in widgets beter
+  [vangheem]
+
+
 1.3 (2013-07-21)
 ----------------
 

@@ -25,7 +25,7 @@ def el_attrib(name):
             value = ' '.join(value)
         if type(value) in (dict, set):
             value = json.dumps(value)
-        self.el.attrib[name] = value
+        self.el.attrib[name] = unicode(value, 'utf8')
 
     def _del(self):
         if name in self.el.attrib:
