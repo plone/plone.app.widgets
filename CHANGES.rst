@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.3.1 (unreleased)
+1.3.1 (2013-07-22)
 ------------------
 
 - handle plone.app.relationfield not being installed
