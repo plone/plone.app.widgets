@@ -6,7 +6,11 @@ from zope.component import adapter
 from plone.app.dexterity.behaviors.metadata import ICategorization
 from plone.app.dexterity.behaviors.metadata import IOwnership
 from plone.app.dexterity.behaviors.metadata import IPublication
-from plone.app.relationfield.behavior import IRelatedItems
+try:
+    from plone.app.relationfield.behavior import IRelatedItems
+    HAS_RF = True
+except ImportError:
+    HAS_RF = False
 from plone.app.widgets.dx import DatetimeWidget
 from plone.app.widgets.dx import SelectWidget
 from plone.app.widgets.dx import Select2Widget
@@ -59,9 +63,10 @@ def CreatorsFieldWidget(field, request):
     return widget
 
 
-@adapter(getSpecification(IRelatedItems['relatedItems']), IWidgetsLayer)
-@implementer(IFieldWidget)
-def RelatedItemsFieldWidget(field, request):
-    widget = FieldWidget(field, RelatedItemsWidget(request))
-    widget.ajax_vocabulary = 'plone.app.vocabularies.Catalog'
-    return widget
+if HAS_RF:
+    @adapter(getSpecification(IRelatedItems['relatedItems']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def RelatedItemsFieldWidget(field, request):
+        widget = FieldWidget(field, RelatedItemsWidget(request))
+        widget.ajax_vocabulary = 'plone.app.vocabularies.Catalog'
+        return widget

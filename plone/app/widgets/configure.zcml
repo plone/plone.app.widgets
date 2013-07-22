@@ -186,7 +186,10 @@
     <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
     <adapter factory=".dx_bbb.ContributorsFieldWidget" />
     <adapter factory=".dx_bbb.CreatorsFieldWidget" />
-    <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
+
+    <configure zcml:condition="installed plone.app.relationfield">
+      <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
+    </configure>
 
     <!-- override contenttypes specific widgets -->
     <configure zcml:condition="installed plone.app.contenttypes">

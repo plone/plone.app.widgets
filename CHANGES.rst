@@ -4,6 +4,9 @@ Changelog
 1.3.1 (unreleased)
 ------------------
 
+- handle plone.app.relationfield not being installed
+  [vangheem]
+
 - handle unicode data in widgets beter
   [vangheem]
 
