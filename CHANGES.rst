@@ -1,11 +1,15 @@
 Changelog
 =========
 
-1.3.1 (2013-07-22)
+1.3.2 (unreleased)
 ------------------
 
 - add formlib uber selection override for portlets
   [vangheem]
+
+
+1.3.1 (2013-07-22)
+------------------
 
 - handle plone.app.relationfield not being installed
   [vangheem]
