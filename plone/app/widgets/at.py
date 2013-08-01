@@ -221,7 +221,6 @@ class RelatedItemsWidget(Select2Widget):
     _properties = Select2Widget._properties.copy()
     _properties.update({
         'pattern': 'relateditems',
-        'ajax_vocabulary': 'plone.app.vocabularies.Catalog',
         'separator': ','
     })
 
@@ -238,7 +237,21 @@ class RelatedItemsWidget(Select2Widget):
     def _widget_args(self, context, field, request):
         args = super(RelatedItemsWidget, self)._widget_args(
             context, field, request)
-        options = args['pattern_options']
+
+        vocabulary_name = getattr(field, 'vocabulary_factory',
+                                  self.ajax_vocabulary)
+        if not vocabulary_name:
+            vocabulary_name = 'plone.app.vocabularies.Catalog'
+        portal_state = queryMultiAdapter((context, request),
+                                         name=u'plone_portal_state')
+        url = ''
+        if portal_state:
+            url += portal_state.portal_url()
+        url += '/@@getVocabulary?name=' + vocabulary_name
+        if 'pattern_options' not in args:
+            args['pattern_options'] = {}
+        args['pattern_options']['ajaxvocabulary'] = url
+
         pprops = getToolByName(context, 'portal_properties', None)
         folder_types = ['Folder']
         if pprops:
@@ -246,7 +259,7 @@ class RelatedItemsWidget(Select2Widget):
             folder_types = site_props.getProperty(
                 'typesLinkToFolderContentsInFC',
                 ['Folder'])
-        options['folderTypes'] = folder_types
+        args['pattern_options']['folderTypes'] = folder_types
         return args
 
     def process_form(self, instance, field, form, empty_marker=None):
