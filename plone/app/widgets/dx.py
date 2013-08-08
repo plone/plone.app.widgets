@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import json
 from datetime import date
 from datetime import datetime
@@ -11,42 +10,42 @@ from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IList
-from zope.schema.interfaces import IVocabularyFactory
+from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.widget import Widget
-from z3c.form.interfaces import IWidget
+from z3c.form import interfaces as z3cform_interfaces
 from Products.CMFCore.utils import getToolByName
 from plone.registry.interfaces import IRegistry
 from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.app.widgets import base
 
 
-class IDatetimeWidget(IWidget):
+class IDatetimeWidget(z3cform_interfaces.ITextWidget):
     """Marker interface for the DatetimeWidget
     """
 
 
-class IDateWidget(IWidget):
+class IDateWidget(z3cform_interfaces.ITextWidget):
     """Marker interface for the DateWidget
     """
 
 
-class ISelectWidget(IWidget):
+class ISelectWidget(z3cform_interfaces.ISelectWidget):
     """Marker interface for the SelectWidget
     """
 
 
-class ISelect2Widget(IWidget):
+class ISelect2Widget(z3cform_interfaces.ITextWidget):
     """Marker interface for the Select2Widget
     """
 
 
-class IQueryStringWidget(IWidget):
+class IQueryStringWidget(z3cform_interfaces.ITextWidget):
     """Marker interface for the QueryStringWidget
     """
 
 
-class IRelatedItemsWidget(IWidget):
+class IRelatedItemsWidget(z3cform_interfaces.ITextWidget):
     """Marker interface for the RelatedItemsWidget
     """
 
@@ -175,7 +174,7 @@ class BaseWidget(Widget):
         }
 
     def render(self):
-        if self.mode == 'display':
+        if self.mode != 'input':
             return super(BaseWidget, self).render()
         return self._widget_klass(**self._widget_args()).render()
 
@@ -195,7 +194,7 @@ class InputWidget(BaseWidget):
         return args
 
 
-class SelectWidget(BaseWidget):
+class SelectWidget(BaseWidget, z3cform_SelectWidget):
 
     _widget_klass = base.SelectWidget
 
@@ -207,16 +206,9 @@ class SelectWidget(BaseWidget):
     def _widget_args(self):
         args = super(SelectWidget, self)._widget_args()
 
-        options = None
-        if self.field and self.field.vocabulary:
-            options = []
-            for term in self.field.vocabulary:
-                options.append((term.token, term.title))
-        elif self.field and self.field.vocabularyName:
-            options = []
-            for term in getUtility(IVocabularyFactory,
-                                   self.field.vocabularyName)(self.context):
-                options.append((term.token, term.title))
+        options = []
+        for item in self.items():
+            options.append((item['value'], item['content']))
         args['options'] = options
 
         return args
