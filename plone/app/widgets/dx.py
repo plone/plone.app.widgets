@@ -99,7 +99,7 @@ class Select2WidgetConverter(BaseDataConverter):
     adapts(ICollection, ISelect2Widget)
 
     def toWidgetValue(self, value):
-        if self.field.missing_value and value in self.field.missing_value:
+        if not value:
             return u''
         return self.widget.separator.join(unicode(v) for v in value)
 
