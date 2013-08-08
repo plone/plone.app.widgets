@@ -58,6 +58,7 @@ class BaseWidgetTests(unittest.TestCase):
         widget.field = TextLine(__name__='selectfield')
         widget.field.vocabulary = SimpleVocabulary.fromValues(
             ['option1', 'option2', 'option3'])
+        widget.update()
         self.assertEqual(
             widget._widget_args(),
             {
