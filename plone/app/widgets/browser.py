@@ -8,6 +8,7 @@ from Products.Five import BrowserView
 from Products.CMFCore.utils import getToolByName
 from plone.app.vocabularies.interfaces import ISlicableVocabulary
 from Products.ZCTextIndex.ParseTree import ParseError
+from types import FunctionType
 import mimetypes
 
 import pkg_resources
@@ -149,11 +150,14 @@ class VocabularyView(BrowserView):
             return json.dumps({
                 'error': 'No factory with name "%s" exists.' % factory_name})
 
-        # check if factory excepts query argument
+        # check if factory accepts query argument
         query = _parseJSON(self.request.get('query', ''))
         batch = _parseJSON(self.request.get('batch', ''))
 
-        factory_spec = inspect.getargspec(factory.__call__)
+        if type(factory) is FunctionType:
+            factory_spec = inspect.getargspec(factory)
+        else:
+            factory_spec = inspect.getargspec(factory.__call__)
         try:
             if query and len(factory_spec.args) >= 3 and \
                     factory_spec.args[2] == 'query':
