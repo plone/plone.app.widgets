@@ -1,8 +1,12 @@
 Changelog
 =========
 
-1.3.2 (unreleased)
+
+1.3.2 (2013-08-12)
 ------------------
+
+- Allow overriding with a custom vocabulary for Archetypes.
+  [pbauer]
 
 - Reuse z3c.form SelectWidget's logic for determing what items
   are available rather than recreating it incompletely.
