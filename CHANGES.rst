@@ -4,6 +4,13 @@ Changelog
 1.3.2 (unreleased)
 ------------------
 
+- Reuse z3c.form SelectWidget's logic for determing what items
+  are available rather than recreating it incompletely.
+  [davisagli]
+
+- Use normal widget templates for z3c.form widgets in hidden mode.
+  [davisagli]
+
 - add formlib uber selection override for portlets
   [vangheem]
 
