@@ -54,6 +54,7 @@ class BaseWidgetTests(unittest.TestCase):
         request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'},
                               example='example-value')
         widget = SelectWidget(request)
+        widget.id = 'example'
         widget.name = 'example'
         widget.field = TextLine(__name__='selectfield')
         widget.field.vocabulary = SimpleVocabulary.fromValues(
@@ -65,10 +66,10 @@ class BaseWidgetTests(unittest.TestCase):
                 'name': 'example',
                 'pattern': 'select2',
                 'pattern_options': {},
-                'options': [('option1', None),
-                            ('option2', None),
-                            ('option3', None)],
-
+                'options': [('--NOVALUE--', u'No value'),
+                            ('option1', 'option1'),
+                            ('option2', 'option2'),
+                            ('option3', 'option3')],
             },
         )
 
