@@ -223,6 +223,7 @@ class RelatedItemsWidget(Select2Widget):
         'pattern': 'relateditems',
         'separator': ','
     })
+    vocabulary_view = "@@getVocabulary"
 
     def getWidgetValue(self, context, field, request):
         reqvalues = request.get(field.getName(), None)
@@ -245,9 +246,10 @@ class RelatedItemsWidget(Select2Widget):
         portal_state = queryMultiAdapter((context, request),
                                          name=u'plone_portal_state')
         url = ''
+        vocabulary_view = self.vocabulary_view
         if portal_state:
             url += portal_state.portal_url()
-        url += '/@@getVocabulary?name=' + vocabulary_name
+        url += '/' + vocabulary_view + '?name=' + vocabulary_name
         if 'pattern_options' not in args:
             args['pattern_options'] = {}
         args['pattern_options']['ajaxvocabulary'] = url
