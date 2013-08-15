@@ -169,6 +169,7 @@ class VocabularyView(BrowserView):
             else:
                 vocabulary = factory(self.context)
         except (TypeError, ParseError):
+            raise
             return self.error()
 
         try:
