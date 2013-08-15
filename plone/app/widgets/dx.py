@@ -236,6 +236,7 @@ class DateWidget(DatetimeWidget):
     implementsOnly(IDateWidget)
 
     pattern_options = DatetimeWidget.pattern_options.copy()
+    pattern_options['time'] = False
 
 
 class Select2Widget(InputWidget):
