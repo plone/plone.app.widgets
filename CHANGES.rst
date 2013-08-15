@@ -2,6 +2,13 @@ Changelog
 =========
 
 
+1.3.3 (unreleased)
+------------------
+
+- Don't include time in DateWidget.
+  [davisagli]
+
+
 1.3.2 (2013-08-12)
 ------------------
 
