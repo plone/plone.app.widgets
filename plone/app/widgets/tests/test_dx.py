@@ -90,7 +90,7 @@ class DateWidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'pattern': 'pickadate',
-                'pattern_options': {},
+                'pattern_options': {'time': False},
                 'request': self.request
             }
         )
