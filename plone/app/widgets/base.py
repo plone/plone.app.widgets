@@ -196,14 +196,13 @@ class DatetimeWidget(DateWidget):
                                              format_date)
         timeOptions = pattern_options.get('time', {})
         if isinstance(timeOptions, dict):
-            if request is None:
-                timeOptions['format'] = format_time or 'HH:i'
+            timeOptions['format'] = format_time or 'HH:i'
             if request is not None:
                 if format_time is None:
                     format_time = translate(
                         _('pickadate_time_format', default='HH:i'), context=request)
                 timeOptions['format'] = format_time
-                timeOptions['formatSubmit'] = 'HH:i'
+            timeOptions['formatSubmit'] = 'HH:i'
         self.pattern_options['time'] = timeOptions
 
 

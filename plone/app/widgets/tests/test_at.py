@@ -59,6 +59,7 @@ class DateWidgetTests(unittest.TestCase):
         widget = self.createWidget()
         ins = mock.Mock()
         field = mock.Mock()
+        field.getName.return_value = 'field'
         form = {}
         self.assertFalse(widget.process_form(ins, field, form))
 
@@ -68,13 +69,11 @@ class DateWidgetTests(unittest.TestCase):
         field = mock.Mock()
         field.getName.return_value = 'field'
         form = {
-            'field': 'something',
+            'field_date': 'something',
         }
         self.assertEqual(
-            widget.process_form(ins, field, form),
-            ('', {})
+            widget.process_form(ins, field, form), None
         )
-        self.assertFalse(form['field'])
 
     def test_process_form_with_valid_date_without_time(self):
         widget = self.createWidget()
@@ -82,14 +81,10 @@ class DateWidgetTests(unittest.TestCase):
         field = mock.Mock()
         field.getName.return_value = 'field'
         form = {
-            'field': '2011-11-22',
+            'field_date': '2011-11-22',
         }
         self.assertEqual(
             widget.process_form(ins, field, form)[0].asdatetime(),
-            datetime(2011, 11, 22, 0, 0)
-        )
-        self.assertEqual(
-            form['field'].asdatetime(),
             datetime(2011, 11, 22, 0, 0)
         )
 
@@ -99,14 +94,13 @@ class DateWidgetTests(unittest.TestCase):
         field = mock.Mock()
         field.getName.return_value = 'field'
         form = {
-            'field': '99-11-22',
+            'field_date': '99-11-22',
         }
         R = DateTime(datetime(99, 11, 22))
         self.assertEqual(
             widget.process_form(ins, field, form),
             (R, {})
         )
-        self.assertEqual(form['field'], R)
 
 
 class DatetimeWidgetTests(unittest.TestCase):
@@ -144,15 +138,12 @@ class DatetimeWidgetTests(unittest.TestCase):
         field = mock.Mock()
         field.getName.return_value = 'field'
         form = {
-            'field': '2011-11-22 13:30',
+            'field_date': '2011-11-22',
+            'field_time': '13:30',
         }
         self.assertEqual(
             widget.process_form(ins, field, form)[0].asdatetime(),
             (datetime(2011, 11, 22, 13, 30))
-        )
-        self.assertEqual(
-            form['field'].asdatetime(),
-            datetime(2011, 11, 22, 13, 30)
         )
 
     def test_process_form_with_oldyear(self):
@@ -161,15 +152,12 @@ class DatetimeWidgetTests(unittest.TestCase):
         field = mock.Mock()
         field.getName.return_value = 'field'
         form = {
-            'field': '99-11-22 12:30',
+            'field_date': '99-11-22',
+            'field_time': '12:30',
         }
         self.assertEqual(
             widget.process_form(ins, field, form)[0].asdatetime(),
             (datetime(99, 11, 22, 12, 30))
-        )
-        self.assertEqual(
-            form['field'].asdatetime(),
-            datetime(99, 11, 22, 12, 30)
         )
 
 
