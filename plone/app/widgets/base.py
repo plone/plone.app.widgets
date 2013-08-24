@@ -6,7 +6,8 @@ from lxml import etree
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 
-_ = MessageFactory('plone')
+_ = MessageFactory('plone.app.widgets')
+P_ = MessageFactory('plone')
 
 
 def el_attrib(name):
@@ -158,11 +159,13 @@ class DateWidget(InputWidget):
 
     def __init__(self, pattern='pickadate', pattern_options={}, name=None,
                  _type='date', value=None, request=None, calendar='gregorian',
-                 format_date_id='pickadate_date_format',
-                 format_date_default='dd/mm/yyyy'):
-        _pattern_options = {'date': {'format': format_date_default},
+                 format_date=None):
+        _pattern_options = {'date': {'format': format_date or 'mmmm d, yyyy'},
                             'time': 'false'}
         if request is not None:
+            if format_date is None:
+                format_date = translate(
+                    _('pickadate_date_format', default='mmmm d, yyyy'), context=request)
             calendar = request.locale.dates.calendars[calendar]
             _pattern_options = dict_merge(_pattern_options, {
                 'date': {
@@ -170,17 +173,13 @@ class DateWidget(InputWidget):
                     'monthsShort': calendar.getMonthAbbreviations(),
                     'weekdaysFull': calendar.getDayNames(),
                     'weekdaysShort': calendar.getDayAbbreviations(),
-                    'today': translate(_(u"Today"), context=request),
-                    'clear': translate(_(u"Clear"), context=request),
-                    'format': translate(
-                        format_date_id,
-                        domain='plone.app.widgets',
-                        context=request,
-                        default=format_date_default),
+                    'today': translate(P_(u"Today"), context=request),
+                    'clear': translate(P_(u"Clear"), context=request),
+                    'format': format_date,
                 },
             })
         _pattern_options = dict_merge(_pattern_options, pattern_options)
-        _pattern_options['date']['formatSubmit'] = 'dd-mm-yyyy'
+        _pattern_options['date']['formatSubmit'] = 'yyyy-mm-dd'
         super(DateWidget, self).__init__(pattern, _pattern_options, name,
                                          _type, value)
 
@@ -191,18 +190,21 @@ class DatetimeWidget(DateWidget):
 
     def __init__(self, pattern='pickadate', pattern_options={}, name=None,
                  _type='datetime-local', value=None, request=None,
-                 calendar='gregorian', format_date_id='pickadate_date_format',
-                 format_date_default='dd/mm/yyyy',
-                 format_time_id='pickadate_time_format',
-                 format_time_default='HH:i'):
-        timeOptions = pattern_options.get('time', {})
+                 calendar='gregorian', format_date=None, format_time=None):
         super(DatetimeWidget, self).__init__(pattern, pattern_options, name,
                                              _type, value, request, calendar,
-                                             format_date_id,
-                                             format_date_default)
+                                             format_date)
+        timeOptions = pattern_options.get('time', {})
+        if isinstance(timeOptions, dict):
+            if request is None:
+                timeOptions['format'] = format_time or 'HH:i'
+            if request is not None:
+                if format_time is None:
+                    format_time = translate(
+                        _('pickadate_time_format', default='HH:i'), context=request)
+                timeOptions['format'] = format_time
+                timeOptions['formatSubmit'] = 'HH:i'
         self.pattern_options['time'] = timeOptions
-        if isinstance(self.pattern_options['time'], dict):
-            self.pattern_options['time']['formatSubmit'] = 'HH:i'
 
 
 class Select2Widget(InputWidget):

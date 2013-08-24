@@ -18,12 +18,11 @@ msgstr ""
 "Domain: plone.app.widgets\n"
 
 #: ../dx/datetime.py:91
-#. Original 'mmmm d, yyyy @', see http://amsul.ca/pickadate.js/docs.htm#formatting_rules (@ indicates position of calendar icon)
+#. Original 'yyyy-mm-dd', see http://amsul.ca/pickadate.js/date.htm#formatting_rules
 msgid "pickadate_date_format"
 msgstr ""
 
 #: ../dx/datetime.py:62
-#. Original 'mmmm d, yyyy @ HH:MM', see http://amsul.ca/pickadate.js/docs.htm#formatting_rules (@ indicates position of calendar icon)
-msgid "pickadate_datetime_format"
+#. Original 'HH:i', see http://amsul.ca/pickadate.js/time.htm#formatting_rules
+msgid "pickadate_time_format"
 msgstr ""
-
