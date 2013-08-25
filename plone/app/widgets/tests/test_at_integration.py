@@ -68,7 +68,7 @@ class BaseWidgetTests(unittest.TestCase):
         self.assertEqual(options, {
             'date': {
                 'clear': u'Clear',
-                'format': u'd mmmm, yyyy',
+                'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
                 'monthsFull': [
                     u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai', u'Juni',
@@ -101,7 +101,7 @@ class BaseWidgetTests(unittest.TestCase):
         self.assertEqual(options, {
             'date': {
                 'clear': u'Clear',
-                'format': u'd mmmm, yyyy',
+                'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
                 'monthsFull': [
                     u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai', u'Juni',
@@ -116,7 +116,7 @@ class BaseWidgetTests(unittest.TestCase):
                 'weekdaysShort': [u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa', u'So']
                 },
             'time': {
-                'format': u'HH:i',
+                'format': 'HH:i',
                 'formatSubmit': 'HH:i',
                 },
             })
