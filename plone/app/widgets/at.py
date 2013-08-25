@@ -73,7 +73,8 @@ class DateWidget(InputWidget):
         value = request.get(field.getName(), field.getAccessor(context)())
         if value:
             if isinstance(value, DateTime):
-                value = '%d-%02d-%02d' % (value.year(), value.month(), value.day())
+                value = '%d-%02d-%02d' % (
+                    value.year(), value.month(), value.day())
             else:
                 value = '%d-%02d-%02d' % (value.year, value.month, value.day)
         else:

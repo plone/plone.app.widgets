@@ -71,16 +71,18 @@ class BaseWidgetTests(unittest.TestCase):
                 'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
                 'monthsFull': [
-                    u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai', u'Juni',
-                    u'Juli', u'August', u'September', u'Oktober', u'November', u'Dezember'],
+                    u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
+                    u'Juni', u'Juli', u'August', u'September', u'Oktober',
+                    u'November', u'Dezember'],
                 'monthsShort': [
-                    u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul', u'Aug',
-                    u'Sep', u'Okt', u'Nov', u'Dez'],
+                    u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
+                    u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
                 'today': u'Today',
                 'weekdaysFull': [
                     u'Montag', u'Dienstag', u'Mittwoch', u'Donnerstag',
                     u'Freitag', u'Samstag', u'Sonntag'],
-                'weekdaysShort': [u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa', u'So']
+                'weekdaysShort': [
+                    u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa', u'So']
                 },
             'time': 'false',
             })
@@ -104,16 +106,18 @@ class BaseWidgetTests(unittest.TestCase):
                 'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
                 'monthsFull': [
-                    u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai', u'Juni',
-                    u'Juli', u'August', u'September', u'Oktober', u'November', u'Dezember'],
+                    u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
+                    u'Juni', u'Juli', u'August', u'September', u'Oktober',
+                    u'November', u'Dezember'],
                 'monthsShort': [
-                    u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul', u'Aug',
-                    u'Sep', u'Okt', u'Nov', u'Dez'],
+                    u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
+                    u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
                 'today': u'Today',
                 'weekdaysFull': [
-                    u'Montag', u'Dienstag', u'Mittwoch', u'Donnerstag', u'Freitag', u'Samstag',
-                    u'Sonntag'],
-                'weekdaysShort': [u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa', u'So']
+                    u'Montag', u'Dienstag', u'Mittwoch', u'Donnerstag',
+                    u'Freitag', u'Samstag', u'Sonntag'],
+                'weekdaysShort': [
+                    u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa', u'So'],
                 },
             'time': {
                 'format': 'HH:i',

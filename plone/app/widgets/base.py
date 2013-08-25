@@ -165,7 +165,8 @@ class DateWidget(InputWidget):
         if request is not None:
             if format_date is None:
                 format_date = translate(
-                    _('pickadate_date_format', default='mmmm d, yyyy'), context=request)
+                    _('pickadate_date_format', default='mmmm d, yyyy'),
+                    context=request)
             calendar = request.locale.dates.calendars[calendar]
             _pattern_options = dict_merge(_pattern_options, {
                 'date': {
@@ -200,7 +201,8 @@ class DatetimeWidget(DateWidget):
             if request is not None:
                 if format_time is None:
                     format_time = translate(
-                        _('pickadate_time_format', default='HH:i'), context=request)
+                        _('pickadate_time_format', default='HH:i'),
+                        context=request)
                 timeOptions['format'] = format_time
             timeOptions['formatSubmit'] = 'HH:i'
         self.pattern_options['time'] = timeOptions
