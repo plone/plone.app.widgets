@@ -210,6 +210,8 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         for item in self.items():
             options.append((item['value'], item['content']))
         args['options'] = options
+        if self.multiple:
+            args['multiple'] = 'multiple'
 
         return args
 

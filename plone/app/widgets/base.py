@@ -101,12 +101,15 @@ class SelectWidget(BaseWidget):
     """
     """
 
+    multiple = el_attrib('multiple')
+
     def __init__(self, pattern=None, pattern_options={}, name=None, options=[],
-                 selected=None):
+                 selected=None, multiple=None):
         super(SelectWidget, self).__init__(pattern, pattern_options, 'select',
                                            name)
         self.options = options
         self.selected = selected
+        self.multiple = multiple
 
     def get_options(self):
         for element in self.el.iter("option"):
