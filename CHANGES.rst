@@ -5,7 +5,7 @@ Changelog
 1.3.3 (unreleased)
 ------------------
 
-- Make SelectWidget support multiple-select.
+- SelectWidget fixes: support multiple-select; indicate the selected value.
   [davisagli]
 
 - Don't include time in DateWidget.
