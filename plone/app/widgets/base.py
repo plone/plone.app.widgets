@@ -131,19 +131,21 @@ class SelectWidget(BaseWidget):
     options = property(get_options, set_options, del_options)
 
     def get_selected(self):
+        selected = []
         for element in self.el.iter("option"):
             if 'selected' in element.attrib and \
-               element.attrib['selected'] == 'selected':
-                return element.attrib['value']
+                    element.attrib['selected'] == 'selected':
+                selected.append(element.attrib['value'])
+        return selected
 
     def set_selected(self, value):
         if value is None:
             return
         for element in self.el.iter("option"):
-            if element.attrib['value'] == value:
+            if element.attrib['value'] in value:
                 element.attrib['selected'] = 'selected'
             elif 'selected' in element.attrib and \
-                 element.attrib['selected'] == 'selected':
+                    element.attrib['selected'] == 'selected':
                 del element.attrib['selected']
 
     def del_selected(self):

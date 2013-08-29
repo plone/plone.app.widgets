@@ -133,7 +133,7 @@ class SelectWidgetTests(unittest.TestCase):
             widget.render(),
             '<select class="pat-example"> </select>')
         self.assertEqual(list(widget.options), [])
-        self.assertEqual(widget.selected, None)
+        self.assertEqual(widget.selected, [])
 
     def test_set_options_and_selected(self):
         from plone.app.widgets.base import SelectWidget
@@ -154,7 +154,7 @@ class SelectWidgetTests(unittest.TestCase):
             '</select>')
 
         self.assertEqual(list(widget.options), options)
-        self.assertEqual(widget.selected, 'token2')
+        self.assertEqual(widget.selected, ['token2'])
 
         widget.selected = 'token1'
         self.assertEqual(
@@ -166,7 +166,7 @@ class SelectWidgetTests(unittest.TestCase):
             '</select>')
 
         self.assertEqual(list(widget.options), options)
-        self.assertEqual(widget.selected, 'token1')
+        self.assertEqual(widget.selected, ['token1'])
 
         del widget.selected
         self.assertEqual(
