@@ -187,7 +187,7 @@ class VocabularyView(BrowserView):
         except TypeError:
             total = 0  # do not error if object does not support __len__
                        # we'll check again later if we can figure some size out
-        if 'size' not in batch or 'page' not in batch:
+        if batch and ('size' not in batch or 'page' not in batch):
             batch = None  # batching not providing correct options
             logger.error("A vocabulary request contained bad batch information."
                       "The batch information is ignored.")
