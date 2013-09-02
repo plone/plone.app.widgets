@@ -11,6 +11,12 @@ Changelog
 - Don't include time in DateWidget.
   [davisagli]
 
+- Allow to define a different vocabulary view for select widget
+  [do3c]]
+
+- Don't do double batching in select widget code
+  [do3cc]
+
 
 1.3.2 (2013-08-12)
 ------------------
