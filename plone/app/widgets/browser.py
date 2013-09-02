@@ -189,7 +189,7 @@ class VocabularyView(BrowserView):
                        # we'll check again later if we can figure some size out
         if 'size' not in batch or 'page' not in batch:
             batch = None  # batching not providing correct options
-            log.error("A vocabulary request contained bad batch information."
+            logger.error("A vocabulary request contained bad batch information."
                       "The batch information is ignored.")
         if batch and not supports_batch and ISlicableVocabulary.providedBy(vocabulary):
             # must be slicable for batching support
