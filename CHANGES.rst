@@ -5,6 +5,9 @@ Changelog
 1.3.3 (unreleased)
 ------------------
 
+- fix formlib uberselectionwidget override
+  [vangheem]
+
 - SelectWidget fixes: support multiple-select; indicate the selected value.
   [davisagli]
 
