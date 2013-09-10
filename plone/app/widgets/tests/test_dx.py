@@ -91,7 +91,7 @@ class DateWidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'pattern': 'pickadate',
-                'pattern_options': {'time': False},
+                'pattern_options': {'date': {'value': None}, 'time': False},
                 'request': self.request
             }
         )
@@ -146,7 +146,8 @@ class DatetimeWidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'pattern': 'pickadate',
-                'pattern_options': {},
+                'pattern_options': {
+                    'date': {'value': u''}, 'time': {'value': '00:00'}},
                 'request': self.request
             }
         )
