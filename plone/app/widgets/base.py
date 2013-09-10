@@ -2,6 +2,7 @@
 
 import json
 from copy import deepcopy
+from datetime import date
 from lxml import etree
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
@@ -168,8 +169,12 @@ class DateWidget(InputWidget):
                     _('pickadate_date_format', default='mmmm d, yyyy'),
                     context=request)
             calendar = request.locale.dates.calendars[calendar]
+            year = date.today().year
             _pattern_options = dict_merge(_pattern_options, {
                 'date': {
+                    'selectYears': 200,
+                    'min': [year - 100, 1, 1],
+                    'max': [year + 20, 1, 1],
                     'monthsFull': calendar.getMonthNames(),
                     'monthsShort': calendar.getMonthAbbreviations(),
                     'weekdaysFull': calendar.getDayNames(),

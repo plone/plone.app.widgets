@@ -6,6 +6,7 @@ except ImportError:  # pragma: nocover
     import unittest  # pragma: nocover
     assert unittest  # pragma: nocover
 
+from datetime import date
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
@@ -65,11 +66,14 @@ class BaseWidgetTests(unittest.TestCase):
 
         options = self._widget_pattern_options(field)
         del options['date']['value']
+        year = date.today().year
         self.assertEqual(options, {
             'date': {
                 'clear': u'Clear',
                 'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
+                'max': [year - 100, 1, 1],
+                'min': [year + 20, 1, 1],
                 'monthsFull': [
                     u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
                     u'Juni', u'Juli', u'August', u'September', u'Oktober',
@@ -77,6 +81,7 @@ class BaseWidgetTests(unittest.TestCase):
                 'monthsShort': [
                     u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
                     u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
+                'selectYears': 200,
                 'today': u'Today',
                 'weekdaysFull': [
                     u'Montag', u'Dienstag', u'Mittwoch', u'Donnerstag',
@@ -100,11 +105,14 @@ class BaseWidgetTests(unittest.TestCase):
         options = self._widget_pattern_options(field)
         del options['date']['value']
         del options['time']['value']
+        year = date.today().year
         self.assertEqual(options, {
             'date': {
                 'clear': u'Clear',
                 'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
+                'max': [year - 100, 1, 1],
+                'min': [year + 20, 1, 1],
                 'monthsFull': [
                     u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
                     u'Juni', u'Juli', u'August', u'September', u'Oktober',
@@ -112,6 +120,7 @@ class BaseWidgetTests(unittest.TestCase):
                 'monthsShort': [
                     u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
                     u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
+                'selectYears': 200,
                 'today': u'Today',
                 'weekdaysFull': [
                     u'Montag', u'Dienstag', u'Mittwoch', u'Donnerstag',
