@@ -145,7 +145,8 @@ class DatetimeWidgetTests(unittest.TestCase):
             {
                 'name': None,
                 'pattern': 'pickadate',
-                'pattern_options': {'date': {'value': u''}, 'time': {'value': '00:00'}},
+                'pattern_options': {
+                    'date': {'value': u''}, 'time': {'value': '00:00'}},
                 'request': self.request
             }
         )

@@ -233,6 +233,24 @@ class DateWidget(InputWidget):
     def extract(self, default=NO_VALUE):
         return self.request.form.get(self.name + '_date', default)
 
+    def render(self):
+        if self.mode != 'display':
+            return super(DateWidget, self).render()
+
+        if not self.value:
+            return ''
+        try:
+            date_value = DateWidgetConverter(
+                self.field, self).toFieldValue(self.value)
+        except ValueError:
+            return ''
+        formatter = self.request.locale.dates.getFormatter("date", "short")
+        if date_value.year > 1900:
+            return formatter.format(date_value)
+        # due to fantastic datetime.strftime we need this hack
+        # for now ctime is default
+        return date_value.ctime()
+
 
 class DatetimeWidget(DateWidget):
     _widget_klass = base.DatetimeWidget
@@ -247,7 +265,8 @@ class DatetimeWidget(DateWidget):
         value = self.value or u''
         value = value.split(' ')
         args['pattern_options']['date'] = {'value': value[0]}
-        args['pattern_options']['time'] = {'value': value[1] if len(value) > 1 else '00:00'}
+        args['pattern_options']['time'] = {
+            'value': value[1] if len(value) > 1 else '00:00'}
         return args
 
     def extract(self, default=NO_VALUE):
@@ -257,6 +276,24 @@ class DatetimeWidget(DateWidget):
             return default
 
         return ' '.join([date_value, time_value])
+
+    def render(self):
+        if self.mode != 'display':
+            return super(DateWidget, self).render()
+
+        if not self.value:
+            return ''
+        try:
+            date_value = DatetimeWidgetConverter(
+                self.field, self).toFieldValue(self.value)
+        except ValueError:
+            return ''
+        formatter = self.request.locale.dates.getFormatter("dateTime", "short")
+        if date_value.year > 1900:
+            return formatter.format(date_value)
+        # due to fantastic datetime.strftime we need this hack
+        # for now ctime is default
+        return date_value.ctime()
 
 
 class Select2Widget(InputWidget):
