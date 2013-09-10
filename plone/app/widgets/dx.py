@@ -12,6 +12,7 @@ from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IList
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
+from z3c.form.interfaces import NO_VALUE
 from z3c.form.widget import Widget
 from z3c.form import interfaces as z3cform_interfaces
 from Products.CMFCore.utils import getToolByName
@@ -214,29 +215,48 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         return args
 
 
-class DatetimeWidget(InputWidget):
+class DateWidget(InputWidget):
+    _widget_klass = base.DateWidget
 
-    _widget_klass = base.DatetimeWidget
-
-    implementsOnly(IDatetimeWidget)
+    implementsOnly(IDateWidget)
 
     pattern = 'pickadate'
     pattern_options = InputWidget.pattern_options.copy()
+    pattern_options['time'] = False
 
     def _widget_args(self):
         args = super(InputWidget, self)._widget_args()
         args['request'] = self.request
+        args['pattern_options']['date'] = {'value': self.value}
         return args
 
+    def extract(self, default=NO_VALUE):
+        return self.request.form.get(self.name + '_date', default)
 
-class DateWidget(DatetimeWidget):
 
+class DatetimeWidget(DateWidget):
     _widget_klass = base.DatetimeWidget
 
-    implementsOnly(IDateWidget)
+    implementsOnly(IDatetimeWidget)
 
-    pattern_options = DatetimeWidget.pattern_options.copy()
-    pattern_options['time'] = False
+    pattern_options = DateWidget.pattern_options.copy()
+
+    def _widget_args(self):
+        args = super(InputWidget, self)._widget_args()
+        args['request'] = self.request
+        value = self.value or u''
+        value = value.split(' ')
+        args['pattern_options']['date'] = {'value': value[0]}
+        args['pattern_options']['time'] = {'value': value[1] if len(value) > 1 else '00:00'}
+        return args
+
+    def extract(self, default=NO_VALUE):
+        date_value = self.request.form.get(self.name + '_date', default)
+        time_value = self.request.form.get(self.name + '_time', '00:00')
+        if date_value is default:
+            return default
+
+        return ' '.join([date_value, time_value])
 
 
 class Select2Widget(InputWidget):
