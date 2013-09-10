@@ -170,6 +170,12 @@ class DateWidget(InputWidget):
                     context=request)
             calendar = request.locale.dates.calendars[calendar]
             year = date.today().year
+            weekdaysFull = [
+                calendar.days.get(t, (None, None))[0]
+                for t in (7, 1, 2, 3, 4, 5, 6)]
+            weekdaysShort = [
+                calendar.days.get(t, (None, None))[1]
+                for t in (7, 1, 2, 3, 4, 5, 6)]
             _pattern_options = dict_merge(_pattern_options, {
                 'date': {
                     'selectYears': 200,
@@ -177,8 +183,8 @@ class DateWidget(InputWidget):
                     'max': [year + 20, 1, 1],
                     'monthsFull': calendar.getMonthNames(),
                     'monthsShort': calendar.getMonthAbbreviations(),
-                    'weekdaysFull': calendar.getDayNames(),
-                    'weekdaysShort': calendar.getDayAbbreviations(),
+                    'weekdaysFull': weekdaysFull,
+                    'weekdaysShort': weekdaysShort,
                     'today': translate(P_(u"Today"), context=request),
                     'clear': translate(P_(u"Clear"), context=request),
                     'format': format_date,

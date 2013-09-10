@@ -72,8 +72,8 @@ class BaseWidgetTests(unittest.TestCase):
                 'clear': u'Clear',
                 'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
-                'max': [year - 100, 1, 1],
-                'min': [year + 20, 1, 1],
+                'max': [year + 20, 1, 1],
+                'min': [year - 100, 1, 1],
                 'monthsFull': [
                     u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
                     u'Juni', u'Juli', u'August', u'September', u'Oktober',
@@ -84,10 +84,10 @@ class BaseWidgetTests(unittest.TestCase):
                 'selectYears': 200,
                 'today': u'Today',
                 'weekdaysFull': [
-                    u'Montag', u'Dienstag', u'Mittwoch', u'Donnerstag',
-                    u'Freitag', u'Samstag', u'Sonntag'],
+                    u'Sonntag', u'Montag', u'Dienstag', u'Mittwoch',
+                    u'Donnerstag', u'Freitag', u'Samstag'],
                 'weekdaysShort': [
-                    u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa', u'So']
+                    u'So', u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa']
                 },
             'time': 'false',
             })
@@ -111,8 +111,8 @@ class BaseWidgetTests(unittest.TestCase):
                 'clear': u'Clear',
                 'format': 'mmmm d, yyyy',
                 'formatSubmit': 'yyyy-mm-dd',
-                'max': [year - 100, 1, 1],
-                'min': [year + 20, 1, 1],
+                'max': [year + 20, 1, 1],
+                'min': [year - 100, 1, 1],
                 'monthsFull': [
                     u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
                     u'Juni', u'Juli', u'August', u'September', u'Oktober',
@@ -123,10 +123,10 @@ class BaseWidgetTests(unittest.TestCase):
                 'selectYears': 200,
                 'today': u'Today',
                 'weekdaysFull': [
-                    u'Montag', u'Dienstag', u'Mittwoch', u'Donnerstag',
-                    u'Freitag', u'Samstag', u'Sonntag'],
+                    u'Sonntag', u'Montag', u'Dienstag', u'Mittwoch',
+                    u'Donnerstag', u'Freitag', u'Samstag'],
                 'weekdaysShort': [
-                    u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa', u'So'],
+                    u'So', u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa'],
                 },
             'time': {
                 'format': 'HH:i',
