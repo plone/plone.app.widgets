@@ -6,6 +6,7 @@ except ImportError:  # pragma: nocover
     import unittest  # pragma: nocover
     assert unittest  # pragma: nocover
 
+from datetime import date
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
@@ -18,6 +19,7 @@ class BaseWidgetTests(unittest.TestCase):
     """Tests for plone.app.widgets.at.BaseWidget
     """
 
+    maxDiff = None
     layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
 
     def setUp(self):
@@ -53,28 +55,88 @@ class BaseWidgetTests(unittest.TestCase):
             '<input name="inputfield" type="text" value=""/>',
             self.view.render(field=field, mode='edit'))
 
+    def _widget_pattern_options(self, field):
+        args = field.widget._widget_args(self.example, field, self.request)
+        return field.widget._widget(**args).pattern_options
+
     def test_date(self):
         from plone.app.widgets.at import DateWidget
         field = self.example.getField('datefield')
         self.assertIsInstance(field.widget, DateWidget)
+
+        options = self._widget_pattern_options(field)
+        del options['date']['value']
+        year = date.today().year
+        self.assertEqual(options, {
+            'date': {
+                'clear': u'Clear',
+                'format': 'mmmm d, yyyy',
+                'formatSubmit': 'yyyy-mm-dd',
+                'max': [year + 20, 1, 1],
+                'min': [year - 100, 1, 1],
+                'monthsFull': [
+                    u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
+                    u'Juni', u'Juli', u'August', u'September', u'Oktober',
+                    u'November', u'Dezember'],
+                'monthsShort': [
+                    u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
+                    u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
+                'selectYears': 200,
+                'today': u'Today',
+                'weekdaysFull': [
+                    u'Sonntag', u'Montag', u'Dienstag', u'Mittwoch',
+                    u'Donnerstag', u'Freitag', u'Samstag'],
+                'weekdaysShort': [
+                    u'So', u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa']
+                },
+            'time': 'false',
+            })
+
         html = self.view.render(field=field, mode='edit')
         self.assertIn(
-            '<input class="pat-pickadate" name="datefield" type="date" value="',  # noqa
-            html)
-        self.assertIn(
-            '&quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: &quot;false&quot;}"/>',  # noqa
+            '<input class="pat-pickadate" name="datefield" type="date" ',  # noqa
             html)
 
     def test_datetime(self):
         from plone.app.widgets.at import DatetimeWidget
         field = self.example.getField('datetimefield')
         self.assertIsInstance(field.widget, DatetimeWidget)
+
+        options = self._widget_pattern_options(field)
+        del options['date']['value']
+        del options['time']['value']
+        year = date.today().year
+        self.assertEqual(options, {
+            'date': {
+                'clear': u'Clear',
+                'format': 'mmmm d, yyyy',
+                'formatSubmit': 'yyyy-mm-dd',
+                'max': [year + 20, 1, 1],
+                'min': [year - 100, 1, 1],
+                'monthsFull': [
+                    u'Januar', u'Februar', u'M\xe4rz', u'April', u'Mai',
+                    u'Juni', u'Juli', u'August', u'September', u'Oktober',
+                    u'November', u'Dezember'],
+                'monthsShort': [
+                    u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
+                    u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
+                'selectYears': 200,
+                'today': u'Today',
+                'weekdaysFull': [
+                    u'Sonntag', u'Montag', u'Dienstag', u'Mittwoch',
+                    u'Donnerstag', u'Freitag', u'Samstag'],
+                'weekdaysShort': [
+                    u'So', u'Mo', u'Di', u'Mi', u'Do', u'Fr', u'Sa'],
+                },
+            'time': {
+                'format': 'HH:i',
+                'formatSubmit': 'HH:i',
+                },
+            })
+
         html = self.view.render(field=field, mode='edit')
         self.assertIn(
-            '<input class="pat-pickadate" name="datetimefield" type="datetime-local" value="',  # noqa
-            html)
-        self.assertIn(
-            '&quot;clear&quot;: &quot;Clear&quot;, &quot;monthsFull&quot;: [&quot;Januar&quot;, &quot;Februar&quot;, &quot;M\\u00e4rz&quot;, &quot;April&quot;, &quot;Mai&quot;, &quot;Juni&quot;, &quot;Juli&quot;, &quot;August&quot;, &quot;September&quot;, &quot;Oktober&quot;, &quot;November&quot;, &quot;Dezember&quot;], &quot;weekdaysShort&quot;: [&quot;Mo&quot;, &quot;Di&quot;, &quot;Mi&quot;, &quot;Do&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;So&quot;], &quot;weekdaysFull&quot;: [&quot;Montag&quot;, &quot;Dienstag&quot;, &quot;Mittwoch&quot;, &quot;Donnerstag&quot;, &quot;Freitag&quot;, &quot;Samstag&quot;, &quot;Sonntag&quot;], &quot;monthsShort&quot;: [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mrz&quot;, &quot;Apr&quot;, &quot;Mai&quot;, &quot;Jun&quot;, &quot;Jul&quot;, &quot;Aug&quot;, &quot;Sep&quot;, &quot;Okt&quot;, &quot;Nov&quot;, &quot;Dez&quot;], &quot;formatSubmit&quot;: &quot;dd-mm-yyyy&quot;, &quot;today&quot;: &quot;Today&quot;}, &quot;time&quot;: {&quot;formatSubmit&quot;: &quot;HH:i&quot;}}"/>',  # noqa
+            '<input class="pat-pickadate" name="datetimefield" type="datetime-local" ',  # noqa
             html)
 
     def test_select(self):

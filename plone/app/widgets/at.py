@@ -68,18 +68,18 @@ class DateWidget(InputWidget):
     _widget = base.DateWidget
 
     def _widget_args(self, context, field, request):
-        args = super(DateWidget, self)._widget_args(context, field, request)
+        args = super(InputWidget, self)._widget_args(context, field, request)
         args['request'] = request
         value = request.get(field.getName(), field.getAccessor(context)())
         if value:
             if isinstance(value, DateTime):
-                args['value'] = '%s-%s-%s' % (value.year(),
-                                              value.month(),
-                                              value.day())
+                value = '%d-%02d-%02d' % (
+                    value.year(), value.month(), value.day())
             else:
-                args['value'] = '%s-%s-%s' % (value.year,
-                                              value.month,
-                                              value.day)
+                value = '%d-%02d-%02d' % (value.year, value.month, value.day)
+        else:
+            value = ''
+        args['pattern_options']['date'] = {'value': value}
 
         return args
 
@@ -89,28 +89,20 @@ class DateWidget(InputWidget):
     def process_form(self, instance, field, form, empty_marker=None):
         """Basic impl for form processing in a widget"""
 
-        value = form.get(field.getName(), empty_marker)
-        if value is empty_marker or value == '':
+        date_value = form.get(field.getName() + '_date', empty_marker)
+        time_value = form.get(field.getName() + '_time', '00:00')
+        if date_value is empty_marker or date_value == '':
             return empty_marker
 
-        if not isinstance(value, basestring):
-            return value, {}
-
-        if ' ' in value:
-            tmp = value.split(' ')
-            value = tmp[0].split('-')
-            value += tmp[1].split(':')
-        else:
-            value = value.split('-')
+        parts = date_value.split('-') + time_value.split(':')
 
         # TODO: timezone is not handled
 
         try:
-            value = DateTime(datetime(*map(int, value)))
+            value = DateTime(datetime(*map(int, parts)))
         except:
-            value = ''
+            return empty_marker
 
-        form[field.getName()] = value  # stick it back in request.form
         return value, {}
 
 
@@ -132,17 +124,13 @@ class DatetimeWidget(DateWidget):
         value = request.get(field.getName(), field.getAccessor(context)())
         if value:
             if isinstance(value, DateTime):
-                args['value'] = '%s-%s-%s %s:%s' % (value.year(),
-                                                    value.month(),
-                                                    value.day(),
-                                                    value.hour(),
-                                                    value.minute())
+                value = '%02d:%02d' % (value.hour(), value.minute())
             else:
-                args['value'] = '%s-%s-%s %s:%s' % (value.year,
-                                                    value.month,
-                                                    value.day,
-                                                    value.hour,
-                                                    value.minute)
+                value = '%02d:%02d' % (value.hour, value.minute)
+        else:
+            value = ''
+        args['pattern_options']['time'] = {'value': value}
+
         return args
 
 
