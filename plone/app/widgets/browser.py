@@ -1,14 +1,15 @@
 from AccessControl import getSecurityManager
 from AccessControl import Unauthorized
-import json
-import inspect
-from zope.component import queryUtility
-from zope.schema.interfaces import IVocabularyFactory
-from Products.Five import BrowserView
-from Products.CMFCore.utils import getToolByName
+from logging import getLogger
 from plone.app.vocabularies.interfaces import ISlicableVocabulary
+from Products.CMFCore.utils import getToolByName
+from Products.Five import BrowserView
 from Products.ZCTextIndex.ParseTree import ParseError
 from types import FunctionType
+from zope.component import queryUtility
+from zope.schema.interfaces import IVocabularyFactory
+import inspect
+import json
 import mimetypes
 
 import pkg_resources
@@ -22,6 +23,8 @@ else:
     HAS_DEXTERITY = True
 from plone.app.widgets.interfaces import IATCTFileFactory, IDXFileFactory
 from plone.uuid.interfaces import IUUID
+
+logger = getLogger(__name__)
 
 
 _permissions = {
@@ -159,30 +162,39 @@ class VocabularyView(BrowserView):
         else:
             factory_spec = inspect.getargspec(factory.__call__)
         try:
+            supports_query = False
+            supports_batch = False
             if query and len(factory_spec.args) >= 3 and \
                     factory_spec.args[2] == 'query':
+                supports_query = True
                 if len(factory_spec.args) >= 4 and \
                         factory_spec.args[3] == 'batch':
+                    supports_batch = True
+            if (not supports_query and query):
+                raise KeyError("The vocabulary factory %s does not support query arguments", factory)
+            if batch and supports_batch:
                     vocabulary = factory(self.context, query, batch)
-                else:
+            elif query:
                     vocabulary = factory(self.context, query)
             else:
                 vocabulary = factory(self.context)
         except (TypeError, ParseError):
+            raise
             return self.error()
 
         try:
             total = len(vocabulary)
-        except AttributeError:
+        except TypeError:
             total = 0  # do not error if object does not support __len__
                        # we'll check again later if we can figure some size out
-        if 'size' not in batch or 'page' not in batch:
+        if batch and ('size' not in batch or 'page' not in batch):
             batch = None  # batching not providing correct options
-        if batch and ISlicableVocabulary.providedBy(vocabulary):
+            logger.error("A vocabulary request contained bad batch information."
+                      "The batch information is ignored.")
+        if batch and not supports_batch and ISlicableVocabulary.providedBy(vocabulary):
             # must be slicable for batching support
             page = int(batch['page'])
-            page = page <= 0 and 1 or page
-            start = (page - 1) * int(batch['size'])
+            start = (max(page, 0)) * int(batch['size'])
             end = start + int(batch['size'])
             vocabulary = vocabulary[start:end]
 
