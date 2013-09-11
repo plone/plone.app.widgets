@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.3.3 (unreleased)
+1.3.3 (2013-09-11)
 ------------------
 
 - fix formlib uberselectionwidget override
