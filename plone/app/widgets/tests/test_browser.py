@@ -86,12 +86,13 @@ class BrowserTest(unittest.TestCase):
                 }
             ]
         }
+        # batch pages are 1-based
         self.request.form.update({
             'name': 'plone.app.vocabularies.Catalog',
             'query': json.dumps(query),
             'attributes': ['UID', 'id', 'title', 'path'],
             'batch': {
-                'page': '0',
+                'page': '1',
                 'size': '10'
             }
         })

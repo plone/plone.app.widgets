@@ -194,7 +194,8 @@ class VocabularyView(BrowserView):
         if batch and not supports_batch and ISlicableVocabulary.providedBy(vocabulary):
             # must be slicable for batching support
             page = int(batch['page'])
-            start = (max(page, 0)) * int(batch['size'])
+            # page is being passed in is 1-based
+            start = (max(page-1, 0)) * int(batch['size'])
             end = start + int(batch['size'])
             vocabulary = vocabulary[start:end]
 
