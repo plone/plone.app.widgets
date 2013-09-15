@@ -5,17 +5,21 @@ from datetime import datetime
 from zope.interface import implementsOnly
 from zope.component import adapts
 from zope.component import getUtility
-from zope.component import queryMultiAdapter
+from zope.component import providedBy
+from zope.component import queryUtility
+from zope.component.hooks import getSite
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IList
+from zope.schema.interfaces import IVocabularyFactory
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.interfaces import NO_VALUE
 from z3c.form.widget import Widget
 from z3c.form import interfaces as z3cform_interfaces
 from Products.CMFCore.utils import getToolByName
+from Products.CMFCore.interfaces import ISiteRoot
 from plone.registry.interfaces import IRegistry
 from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.app.widgets import base
@@ -113,7 +117,7 @@ class Select2WidgetConverter(BaseDataConverter):
         valueType = self.field.value_type._type
         if isinstance(valueType, tuple):
             valueType = valueType[0]
-        return collectionType(valueType(v)
+        return collectionType(valueType and valueType(v) or v
                               for v in value.split(self.widget.separator))
 
 
@@ -311,6 +315,13 @@ class Select2Widget(InputWidget):
     ajax_vocabulary = None
 
     def _widget_args(self):
+        def get_portal():
+            closest_site = getSite()
+            if closest_site is not None:
+                for potential_portal in closest_site.aq_chain:
+                    if ISiteRoot in providedBy(potential_portal):
+                        return potential_portal
+
         args = super(Select2Widget, self)._widget_args()
         if 'pattern_options' not in args:
             args['pattern_options'] = {}
@@ -320,13 +331,20 @@ class Select2Widget(InputWidget):
         if self.ajax_vocabulary:
             vocabulary_name = self.ajax_vocabulary
         if vocabulary_name:
-            portal_state = queryMultiAdapter((self.context, self.request),
-                                             name=u'plone_portal_state')
+            portal = get_portal()
             url = ''
-            if portal_state:
-                url += portal_state.portal_url()
+            if portal:
+                url += portal.absolute_url()
             url += '/@@getVocabulary?name=' + vocabulary_name
             args['pattern_options']['ajaxvocabulary'] = url
+            vocabulary = queryUtility(IVocabularyFactory, vocabulary_name)
+            if vocabulary:
+                initvaluemap = {}
+                vocabulary = vocabulary(self.context)
+                for value in self.value.split(self.separator):
+                    term = vocabulary.getTerm(value)
+                    initvaluemap[term.token] = term.title
+                args['pattern_options']['initvaluemap'] = initvaluemap
         return args
 
 
