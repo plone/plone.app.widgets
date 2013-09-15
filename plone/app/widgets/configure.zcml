@@ -198,6 +198,7 @@
 
   </configure>
 
+  <adapter factory=".bbb.SiteRSSItemsFieldWidget" />
   <browser:viewlet
     name="plone.searchbox"
     manager="plone.app.layout.viewlets.interfaces.IPortalHeader"
