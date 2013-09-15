@@ -171,7 +171,8 @@ class VocabularyView(BrowserView):
                         factory_spec.args[3] == 'batch':
                     supports_batch = True
             if (not supports_query and query):
-                raise KeyError("The vocabulary factory %s does not support query arguments",
+                raise KeyError("The vocabulary factory %s does not support "
+                               "query arguments",
                                factory)
             if batch and supports_batch:
                     vocabulary = factory(self.context, query, batch)
