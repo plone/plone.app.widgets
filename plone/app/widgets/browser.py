@@ -171,7 +171,8 @@ class VocabularyView(BrowserView):
                         factory_spec.args[3] == 'batch':
                     supports_batch = True
             if (not supports_query and query):
-                raise KeyError("The vocabulary factory %s does not support query arguments", factory)
+                raise KeyError("The vocabulary factory %s does not support query arguments",
+                               factory)
             if batch and supports_batch:
                     vocabulary = factory(self.context, query, batch)
             elif query:
@@ -186,12 +187,14 @@ class VocabularyView(BrowserView):
             total = len(vocabulary)
         except TypeError:
             total = 0  # do not error if object does not support __len__
-                       # we'll check again later if we can figure some size out
+                       # we'll check again later if we can figure some size
+                       # out
         if batch and ('size' not in batch or 'page' not in batch):
             batch = None  # batching not providing correct options
-            logger.error("A vocabulary request contained bad batch information."
-                      "The batch information is ignored.")
-        if batch and not supports_batch and ISlicableVocabulary.providedBy(vocabulary):
+            logger.error("A vocabulary request contained bad batch "
+                         "information. The batch information is ignored.")
+        if batch and not supports_batch and \
+                ISlicableVocabulary.providedBy(vocabulary):
             # must be slicable for batching support
             page = int(batch['page'])
             # page is being passed in is 1-based
