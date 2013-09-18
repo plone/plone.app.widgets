@@ -46,10 +46,10 @@ class SearchBoxViewlet(common.SearchBoxViewlet):
         })
 
 
-@adapter(getSpecification(ISiteSyndicationSettings['site_rss_items']),
-         IWidgetsLayer)
-@implementer(IFieldWidget)
-def SiteRSSItemsFieldWidget(field, request):
-    widget = FieldWidget(field, Select2Widget(request))
-    widget.ajax_vocabulary = 'plone.app.vocabularies.SyndicatableFeedItems'
-    return widget
+#@adapter(getSpecification(ISiteSyndicationSettings['site_rss_items']),
+#         IWidgetsLayer)
+#@implementer(IFieldWidget)
+#def SiteRSSItemsFieldWidget(field, request):
+#    widget = FieldWidget(field, Select2Widget(request))
+#    widget.ajax_vocabulary = 'plone.app.vocabularies.SyndicatableFeedItems'
+#    return widget
