@@ -82,7 +82,7 @@ class BaseWidgetTests(unittest.TestCase):
                     u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
                     u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
                 'selectYears': 200,
-                'today': u'Heute',
+                'today': u'Today',
                 'weekdaysFull': [
                     u'Sonntag', u'Montag', u'Dienstag', u'Mittwoch',
                     u'Donnerstag', u'Freitag', u'Samstag'],
@@ -121,7 +121,7 @@ class BaseWidgetTests(unittest.TestCase):
                     u'Jan', u'Feb', u'Mrz', u'Apr', u'Mai', u'Jun', u'Jul',
                     u'Aug', u'Sep', u'Okt', u'Nov', u'Dez'],
                 'selectYears': 200,
-                'today': u'Heute',
+                'today': u'Today',
                 'weekdaysFull': [
                     u'Sonntag', u'Montag', u'Dienstag', u'Mittwoch',
                     u'Donnerstag', u'Freitag', u'Samstag'],
