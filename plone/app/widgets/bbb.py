@@ -1,17 +1,17 @@
 import json
-from z3c.form.widget import FieldWidget
-from z3c.form.interfaces import IFieldWidget
-from z3c.form.util import getSpecification
-from zope.interface import implementer
-from zope.component import adapter
+#from z3c.form.widget import FieldWidget
+#from z3c.form.interfaces import IFieldWidget
+#from z3c.form.util import getSpecification
+#from zope.interface import implementer
+#from zope.component import adapter
 from zope.component import getMultiAdapter
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.interfaces.syndication import ISiteSyndicationSettings
+#from Products.CMFPlone.interfaces.syndication import ISiteSyndicationSettings
 from plone.app.vocabularies.types import BAD_TYPES
 from plone.app.layout.viewlets import common
-from plone.app.widgets.dx import Select2Widget
-from plone.app.widgets.interfaces import IWidgetsLayer
+#from plone.app.widgets.dx import Select2Widget
+#from plone.app.widgets.interfaces import IWidgetsLayer
 
 
 class SearchBoxViewlet(common.SearchBoxViewlet):

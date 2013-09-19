@@ -29,6 +29,7 @@ class ExampleVocabulary(object):
         tmp.test = 1
         return tmp
 
+
 class TestRequest(BaseTestRequest):
     implements(IWidgetsLayer)
 

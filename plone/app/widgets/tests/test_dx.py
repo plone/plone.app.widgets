@@ -240,6 +240,7 @@ class Select2WidgetTests(unittest.TestCase):
                 },
             }
         )
+
     def test_data_converter(self):
         from plone.app.widgets.dx import Select2Widget
         from plone.app.widgets.dx import Select2WidgetConverter
