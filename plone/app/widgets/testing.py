@@ -3,6 +3,9 @@
 import doctest
 
 from zope.interface import implements
+from zope.schema.interfaces import IVocabularyFactory
+from zope.schema.vocabulary import SimpleTerm
+from zope.schema.vocabulary import SimpleVocabulary
 from zope.publisher.browser import TestRequest as BaseTestRequest
 
 from plone.testing import z2
@@ -12,6 +15,19 @@ from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
 from plone.app.widgets.interfaces import IWidgetsLayer
 
+
+class ExampleVocabulary(object):
+
+    implements(IVocabularyFactory)
+
+    def __call__(self, context):
+        tmp = SimpleVocabulary([
+            SimpleTerm('one', 'one', u'One'),
+            SimpleTerm('two', 'two', u'Two'),
+            SimpleTerm('three', 'three', u'Three'),
+        ])
+        tmp.test = 1
+        return tmp
 
 class TestRequest(BaseTestRequest):
     implements(IWidgetsLayer)

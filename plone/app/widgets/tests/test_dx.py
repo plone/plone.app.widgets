@@ -14,6 +14,9 @@ from zope.schema import List
 from zope.schema import TextLine
 from zope.schema import Tuple
 from zope.schema.vocabulary import SimpleVocabulary
+from zope.component import provideUtility
+from plone.testing.zca import UNIT_TESTING
+from plone.app.widgets.testing import ExampleVocabulary
 from plone.app.widgets.testing import TestRequest
 
 
@@ -189,8 +192,11 @@ class DatetimeWidgetTests(unittest.TestCase):
 
 class Select2WidgetTests(unittest.TestCase):
 
+    layer = UNIT_TESTING
+
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        provideUtility(ExampleVocabulary(), name=u'example')
 
     def test_widget(self):
         from plone.app.widgets.dx import Select2Widget
@@ -214,11 +220,26 @@ class Select2WidgetTests(unittest.TestCase):
                 'pattern': 'select2',
                 'pattern_options': {
                     'ajaxvocabulary': '/@@getVocabulary?name=example',
+                    'initvaluemap': {},
                     'separator': ';'
                 },
             }
         )
 
+        widget.value = 'three;two'
+        self.assertEqual(
+            widget._widget_args(),
+            {
+                'name': None,
+                'value': 'three;two',
+                'pattern': 'select2',
+                'pattern_options': {
+                    'ajaxvocabulary': '/@@getVocabulary?name=example',
+                    'initvaluemap': {'three': u'Three', 'two': u'Two'},
+                    'separator': ';'
+                },
+            }
+        )
     def test_data_converter(self):
         from plone.app.widgets.dx import Select2Widget
         from plone.app.widgets.dx import Select2WidgetConverter
