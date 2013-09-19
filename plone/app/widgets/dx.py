@@ -21,6 +21,7 @@ from z3c.form import interfaces as z3cform_interfaces
 from Products.CMFCore.utils import getToolByName
 from Products.CMFCore.interfaces import ISiteRoot
 from plone.registry.interfaces import IRegistry
+from plone.app.layout.navigation.root import getNavigationRootObject
 from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.app.widgets import base
 
@@ -315,6 +316,7 @@ class Select2Widget(InputWidget):
     ajax_vocabulary = None
 
     def _widget_args(self):
+
         def get_portal():
             closest_site = getSite()
             if closest_site is not None:
@@ -331,10 +333,12 @@ class Select2Widget(InputWidget):
         if self.ajax_vocabulary:
             vocabulary_name = self.ajax_vocabulary
         if vocabulary_name:
-            portal = get_portal()
             url = ''
+            portal = get_portal()
             if portal:
-                url += portal.absolute_url()
+                root = getNavigationRootObject(self.context, portal)
+                if root:
+                    url += root.absolute_url()
             url += '/@@getVocabulary?name=' + vocabulary_name
             args['pattern_options']['ajaxvocabulary'] = url
             vocabulary = queryUtility(IVocabularyFactory, vocabulary_name)
