@@ -169,6 +169,15 @@ class SelectWidget(BaseWidget):
     selected = property(get_selected, set_selected, del_selected)
 
 
+class TextareaWidget(BaseWidget):
+    """
+    """
+
+    def __init__(self, pattern=None, pattern_options={}, name=None):
+        super(TextareaWidget, self).__init__(pattern, pattern_options,
+                                             'textarea', name)
+
+
 class DateWidget(InputWidget):
     """
     """
@@ -242,3 +251,11 @@ class Select2Widget(InputWidget):
                  _type='text', value=None):
         super(Select2Widget, self).__init__(pattern, pattern_options, name,
                                             _type, value)
+
+
+class TinyMCEWidget(TextareaWidget):
+    """
+    """
+
+    def __init__(self, pattern_options={}, name=None):
+        super(TextareaWidget, self).__init__('tinymce', pattern_options, name)
