@@ -64,7 +64,7 @@ class DatetimeWidgetConverter(BaseDataConverter):
     def toWidgetValue(self, value):
         if value is self.field.missing_value:
             return u''
-        return '%04y-%02d-%02d %s:%s' % (
+        return '%d-%02d-%02d %s:%s' % (
             value.year, value.month, value.day, value.hour, value.minute)
 
     def toFieldValue(self, value):
@@ -85,7 +85,7 @@ class DateWidgetConverter(BaseDataConverter):
     def toWidgetValue(self, value):
         if value is self.field.missing_value:
             return u''
-        return '%04d-%02d-%02d' % (value.year, value.month, value.day)
+        return '%d-%02d-%02d' % (value.year, value.month, value.day)
 
     def toFieldValue(self, value):
         if not value:
