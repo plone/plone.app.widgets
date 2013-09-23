@@ -185,7 +185,7 @@ class Select2Widget(InputWidget):
             url += '/@@getVocabulary?name=' + vocabulary_name
             if 'pattern_options' not in args:
                 args['pattern_options'] = {}
-            args['pattern_options']['ajaxvocabulary'] = url
+            args['pattern_options']['ajaxVocabulary'] = url
         args['value'] = self.getWidgetValue(context, field, request)
         return args
 
@@ -240,7 +240,7 @@ class RelatedItemsWidget(Select2Widget):
         url += '/' + vocabulary_view + '?name=' + vocabulary_name
         if 'pattern_options' not in args:
             args['pattern_options'] = {}
-        args['pattern_options']['ajaxvocabulary'] = url
+        args['pattern_options']['ajaxVocabulary'] = url
 
         pprops = getToolByName(context, 'portal_properties', None)
         folder_types = ['Folder']

@@ -336,7 +336,7 @@ class Select2Widget(InputWidget):
             if portal:
                 url += portal.absolute_url()
             url += '/@@getVocabulary?name=' + vocabulary_name
-            args['pattern_options']['ajaxvocabulary'] = url
+            args['pattern_options']['ajaxVocabulary'] = url
             vocabulary = queryUtility(IVocabularyFactory, vocabulary_name)
             if vocabulary:
                 initvaluemap = {}

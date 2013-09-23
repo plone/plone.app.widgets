@@ -65,7 +65,7 @@ class UberRelatedItemWidget(UberSelectionWidget, Select2Widget):
     def template(self, *args, **kwargs):
         url = getSite().absolute_url()
         url += '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
-        self.pattern_options['ajaxvocabulary'] = url
+        self.pattern_options['ajaxVocabulary'] = url
         if self._data and self._data is not self._data_marker:
             catalog = getToolByName(self.site, 'portal_catalog')
             items = catalog(path={
