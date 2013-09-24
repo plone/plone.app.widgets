@@ -41,7 +41,7 @@ class ISelectWidget(z3cform_interfaces.ISelectWidget):
     """
 
 
-class ISelect2Widget(z3cform_interfaces.ITextWidget):
+class IAjaxSelectWidget(z3cform_interfaces.ITextWidget):
     """Marker interface for the Select2Widget
     """
 
@@ -102,7 +102,7 @@ class Select2WidgetConverter(BaseDataConverter):
     """Data converter for ICollection.
     """
 
-    adapts(ICollection, ISelect2Widget)
+    adapts(ICollection, IAjaxSelectWidget)
 
     def toWidgetValue(self, value):
         if not value:
@@ -167,12 +167,12 @@ class BaseWidget(Widget):
     """
     """
 
-    _widget_klass = base.BaseWidget
+    _klass = base.BaseWidget
 
     pattern = None
     pattern_options = {}
 
-    def _widget_args(self):
+    def _klass_args(self):
         return {
             'name': self.name,
             'pattern': self.pattern,
@@ -224,7 +224,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
 
 
 class DateWidget(InputWidget):
-    _widget_klass = base.DateWidget
+    _widget_klass = base.InputWidget
 
     implementsOnly(IDateWidget)
 
@@ -261,7 +261,7 @@ class DateWidget(InputWidget):
 
 
 class DatetimeWidget(DateWidget):
-    _widget_klass = base.DatetimeWidget
+    _widget_klass = base.InputWidget
 
     implementsOnly(IDatetimeWidget)
 
@@ -304,11 +304,11 @@ class DatetimeWidget(DateWidget):
         return date_value.ctime()
 
 
-class Select2Widget(InputWidget):
+class AjaxSelectWidget(InputWidget):
 
-    _widget_klass = base.Select2Widget
+    _widget_klass = base.InputWidget
 
-    implementsOnly(ISelect2Widget)
+    implementsOnly(IAjaxSelectWidget)
 
     pattern = 'select2'
     pattern_options = InputWidget.pattern_options.copy()
@@ -324,7 +324,7 @@ class Select2Widget(InputWidget):
                     if ISiteRoot in providedBy(potential_portal):
                         return potential_portal
 
-        args = super(Select2Widget, self)._widget_args()
+        args = super(AjaxSelectWidget, self)._widget_args()
         if 'pattern_options' not in args:
             args['pattern_options'] = {}
         args['pattern_options']['separator'] = self.separator
@@ -372,11 +372,13 @@ class QueryStringWidget(InputWidget):
         return args
 
 
-class RelatedItemsWidget(Select2Widget):
-
-    _widget_klass = base.Select2Widget
+class RelatedItemsWidget(AjaxSelectWidget):
+    """
+    """
 
     implementsOnly(IRelatedItemsWidget)
 
+    _widget_klass = base.InputWidget
+
     pattern = 'relateditems'
-    pattern_options = Select2Widget.pattern_options.copy()
+    pattern_options = AjaxSelectWidget.pattern_options.copy()

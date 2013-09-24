@@ -61,6 +61,12 @@ class MetadataExtender(object):
                     ajax_vocabulary="plone.app.vocabularies.Users",
                 )
 
+            if field.__name__ in ['text']:
+                field.widget = at.TinyMCEWidget(
+                    label=old.label,
+                    description=old.description,
+                )
+
             if field.__name__ == 'relatedItems':
                 field.widget = at.RelatedItemsWidget(
                     label=old.label,
