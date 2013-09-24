@@ -21,6 +21,7 @@ from z3c.form import interfaces as z3cform_interfaces
 from Products.CMFCore.utils import getToolByName
 from Products.CMFCore.interfaces import ISiteRoot
 from plone.registry.interfaces import IRegistry
+from plone.app.layout.navigation.root import getNavigationRootObject
 from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.app.widgets import base
 
@@ -63,11 +64,8 @@ class DatetimeWidgetConverter(BaseDataConverter):
     def toWidgetValue(self, value):
         if value is self.field.missing_value:
             return u''
-        return '%s-%s-%s %s:%s' % (value.year,
-                                   value.month,
-                                   value.day,
-                                   value.hour,
-                                   value.minute)
+        return '%d-%02d-%02d %s:%s' % (
+            value.year, value.month, value.day, value.hour, value.minute)
 
     def toFieldValue(self, value):
         if not value:
@@ -87,9 +85,7 @@ class DateWidgetConverter(BaseDataConverter):
     def toWidgetValue(self, value):
         if value is self.field.missing_value:
             return u''
-        return '%s-%s-%s' % (value.year,
-                             value.month,
-                             value.day)
+        return '%d-%02d-%02d' % (value.year, value.month, value.day)
 
     def toFieldValue(self, value):
         if not value:
@@ -315,6 +311,7 @@ class Select2Widget(InputWidget):
     ajax_vocabulary = None
 
     def _widget_args(self):
+
         def get_portal():
             closest_site = getSite()
             if closest_site is not None:
@@ -331,20 +328,28 @@ class Select2Widget(InputWidget):
         if self.ajax_vocabulary:
             vocabulary_name = self.ajax_vocabulary
         if vocabulary_name:
-            portal = get_portal()
             url = ''
+            portal = get_portal()
             if portal:
-                url += portal.absolute_url()
+                root = getNavigationRootObject(self.context, portal)
+                if root:
+                    url += root.absolute_url()
             url += '/@@getVocabulary?name=' + vocabulary_name
             args['pattern_options']['ajaxVocabulary'] = url
             vocabulary = queryUtility(IVocabularyFactory, vocabulary_name)
             if vocabulary:
                 initvaluemap = {}
-                vocabulary = vocabulary(self.context)
-                for value in self.value.split(self.separator):
-                    term = vocabulary.getTerm(value)
-                    initvaluemap[term.token] = term.title
-                args['pattern_options']['initvaluemap'] = initvaluemap
+                try:
+                    vocabulary = vocabulary(self.context)
+                except TypeError:
+                    pass
+                else:
+                    if self.value:
+                        for value in self.value.split(self.separator):
+                            term = vocabulary.getTerm(value)
+                            initvaluemap[term.token] = term.title
+                if initvaluemap:
+                    args['pattern_options']['initvaluemap'] = initvaluemap
         return args
 
 
