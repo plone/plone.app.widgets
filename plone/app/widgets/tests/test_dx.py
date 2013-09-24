@@ -220,7 +220,6 @@ class Select2WidgetTests(unittest.TestCase):
                 'pattern': 'select2',
                 'pattern_options': {
                     'ajaxvocabulary': '/@@getVocabulary?name=example',
-                    'initvaluemap': {},
                     'separator': ';'
                 },
             }

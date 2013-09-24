@@ -339,12 +339,17 @@ class Select2Widget(InputWidget):
             vocabulary = queryUtility(IVocabularyFactory, vocabulary_name)
             if vocabulary:
                 initvaluemap = {}
-                vocabulary = vocabulary(self.context)
-                if self.value:
-                    for value in self.value.split(self.separator):
-                        term = vocabulary.getTerm(value)
-                        initvaluemap[term.token] = term.title
-                args['pattern_options']['initvaluemap'] = initvaluemap
+                try:
+                    vocabulary = vocabulary(self.context)
+                except TypeError:
+                    pass
+                else:
+                    if self.value:
+                        for value in self.value.split(self.separator):
+                            term = vocabulary.getTerm(value)
+                            initvaluemap[term.token] = term.title
+                if initvaluemap:
+                    args['pattern_options']['initvaluemap'] = initvaluemap
         return args
 
 
