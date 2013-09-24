@@ -4,15 +4,15 @@ except ImportError:
     from zope.component.hooks import getSite
 from plone.app.form.widgets.uberselectionwidget import UberSelectionWidget
 from Products.CMFCore.utils import getToolByName
-from plone.app.widgets.base import Select2Widget
+from plone.app.widgets.base import SelectWidget
 
 
-class UberRelatedItemWidget(UberSelectionWidget, Select2Widget):
+class UberRelatedItemWidget(UberSelectionWidget, SelectWidget):
 
     separator = ';'
 
     def __init__(self, field, request):
-        Select2Widget.__init__(self, 'relateditems')
+        SelectWidget.__init__(self, 'relateditems')
         UberSelectionWidget.__init__(self, field, request)
 
         self.site = getSite()

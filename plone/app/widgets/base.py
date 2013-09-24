@@ -75,8 +75,7 @@ class BaseWidget(object):
     name = el_attrib('name')
     klass = el_attrib('class')
 
-    def __init__(self, pattern=None, pattern_options={}, el='input',
-                 name=None):
+    def __init__(self, pattern, el, name, pattern_options={}):
         self.pattern = pattern
         self.el = etree.Element(el)
         if pattern:
@@ -86,7 +85,7 @@ class BaseWidget(object):
 
     def update(self):
         if self.pattern_options:
-            self.el.attrib['data-pat-' + self.pattern] = \
+            self.el.attrib['data-' + self._klass_prefix + self.pattern] = \
                 json.dumps(self.pattern_options)
 
     def render(self):
@@ -101,161 +100,172 @@ class InputWidget(BaseWidget):
     type = el_attrib('type')
     value = el_attrib('value')
 
-    def __init__(self, pattern=None, pattern_options={}, name=None,
-                 _type='text', value=None):
-        super(InputWidget, self).__init__(pattern, pattern_options, 'input',
-                                          name)
-        self.type = _type
-        self.value = value
+    def __init__(self, pattern, name, pattern_options={},
+                 type='text', value=None):
+        super(InputWidget, self).__init__(pattern, 'input', name,
+                                          pattern_options)
+        self.type = type
+        if value is not None:
+            self.value = value
 
 
 class SelectWidget(BaseWidget):
     """
     """
 
-    multiple = el_attrib('multiple')
-
-    def __init__(self, pattern=None, pattern_options={}, name=None, options=[],
-                 selected=None, multiple=None):
-        super(SelectWidget, self).__init__(pattern, pattern_options, 'select',
-                                           name)
-        self.options = options
-        self.selected = selected
+    def __init__(self, pattern, name, pattern_options={}, items=[],
+                 value=None, multiple=False):
+        super(SelectWidget, self).__init__(pattern, 'select', name,
+                                           pattern_options)
+        self.el.text = ''
+        self.items = items
         self.multiple = multiple
+        if value is not None:
+            self.value = value
 
-    def get_options(self):
+    def get_multiple(self):
+        if self._multiple == 'multiple':
+            return True
+        return False
+
+    def set_multiple(self, value):
+        if value:
+            self._multiple = 'multiple'
+        else:
+            del self._multiple
+
+    def del_multiple(self):
+        del self._multiple
+
+    _multiple = el_attrib('multiple')
+    multiple = property(get_multiple, set_multiple, del_multiple)
+
+    def get_items(self):
         for element in self.el.iter("option"):
             yield element.attrib['value'], element.text
 
-    def set_options(self, value):
-        if not value:
-            self.el.text = ' '
-            return
+    def set_items(self, value):
         for token, title in value:
             option = etree.SubElement(self.el, 'option')
             option.attrib['value'] = token
             option.text = title
 
-    def del_options(self):
+    def del_items(self):
         for element in self.el.iter("option"):
             self.el.remove(element)
 
-    options = property(get_options, set_options, del_options)
+    items = property(get_items, set_items, del_items)
 
-    def get_selected(self):
-        selected = []
-        for element in self.el.iter("option"):
-            if 'selected' in element.attrib and \
-                    element.attrib['selected'] == 'selected':
-                selected.append(element.attrib['value'])
-        return selected
+    def get_value(self):
+        if self.multiple:
+            value = []
+            for element in self.el.iter("option"):
+                if 'selected' in element.attrib and \
+                        element.attrib['selected'] == 'selected':
+                    value.append(element.attrib['value'])
+        else:
+            value = None
+            for element in self.el.iter("option"):
+                if 'selected' in element.attrib and \
+                        element.attrib['selected'] == 'selected':
+                    value = element.attrib['value']
+                    break
+        return value
 
-    def set_selected(self, value):
-        if value is None:
-            return
+    def set_value(self, value):
+        if self.multiple and type(value) not in (list, tuple):
+            raise TypeError
+        elif not self.multiple and not isinstance(value, basestring):
+            raise TypeError
         for element in self.el.iter("option"):
-            if element.attrib['value'] in value:
+            if self.multiple and element.attrib['value'] in value:
+                element.attrib['selected'] = 'selected'
+            elif not self.multiple and element.attrib['value'] == value:
                 element.attrib['selected'] = 'selected'
             elif 'selected' in element.attrib and \
                     element.attrib['selected'] == 'selected':
                 del element.attrib['selected']
 
-    def del_selected(self):
+    def del_value(self):
         for element in self.el.iter("option"):
             if 'selected' in element.attrib and \
                element.attrib['selected'] == 'selected':
                 del element.attrib['selected']
 
-    selected = property(get_selected, set_selected, del_selected)
+    value = property(get_value, set_value, del_value)
 
 
 class TextareaWidget(BaseWidget):
     """
     """
 
-    def __init__(self, pattern=None, pattern_options={}, name=None):
-        super(TextareaWidget, self).__init__(pattern, pattern_options,
-                                             'textarea', name)
+    def __init__(self, pattern, name, pattern_options={}, value=None):
+        super(TextareaWidget, self).__init__(pattern, 'textarea', name,
+                                             pattern_options)
+        self.el.text = ''
+        if value is not None:
+            self.value = value
+
+    def get_value(self):
+        return self.el.text
+
+    def set_value(self, value):
+        self.el.text = value
+
+    def del_value(self):
+        self.el.text = ''
+
+    value = property(get_value, set_value, del_value)
 
 
-class DateWidget(InputWidget):
-    """
-    """
-
-    def __init__(self, pattern='pickadate', pattern_options={}, name=None,
-                 _type='date', value=None, request=None, calendar='gregorian',
-                 format_date=None):
-        _pattern_options = {'date': {'format': format_date or 'mmmm d, yyyy'},
-                            'time': 'false'}
-        if request is not None:
-            if format_date is None:
-                format_date = translate(
-                    _('pickadate_date_format', default='mmmm d, yyyy'),
-                    context=request)
-            calendar = request.locale.dates.calendars[calendar]
-            year = date.today().year
-            weekdaysFull = [
-                calendar.days.get(t, (None, None))[0]
-                for t in (7, 1, 2, 3, 4, 5, 6)]
-            weekdaysShort = [
-                calendar.days.get(t, (None, None))[1]
-                for t in (7, 1, 2, 3, 4, 5, 6)]
-            _pattern_options = dict_merge(_pattern_options, {
-                'date': {
-                    'selectYears': 200,
-                    'min': [year - 100, 1, 1],
-                    'max': [year + 20, 1, 1],
-                    'monthsFull': calendar.getMonthNames(),
-                    'monthsShort': calendar.getMonthAbbreviations(),
-                    'weekdaysFull': weekdaysFull,
-                    'weekdaysShort': weekdaysShort,
-                    'today': translate(P_(u"Today"), context=request),
-                    'clear': translate(P_(u"Clear"), context=request),
-                    'format': format_date,
-                },
-            })
-        _pattern_options = dict_merge(_pattern_options, pattern_options)
-        _pattern_options['date']['formatSubmit'] = 'yyyy-mm-dd'
-        super(DateWidget, self).__init__(pattern, _pattern_options, name,
-                                         _type, value)
-
-
-class DatetimeWidget(DateWidget):
-    """
-    """
-
-    def __init__(self, pattern='pickadate', pattern_options={}, name=None,
-                 _type='datetime-local', value=None, request=None,
-                 calendar='gregorian', format_date=None, format_time=None):
-        super(DatetimeWidget, self).__init__(pattern, pattern_options, name,
-                                             _type, value, request, calendar,
-                                             format_date)
-        timeOptions = pattern_options.get('time', {})
-        if isinstance(timeOptions, dict):
-            timeOptions['format'] = format_time or 'HH:i'
-            if request is not None:
-                if format_time is None:
-                    format_time = translate(
-                        _('pickadate_time_format', default='HH:i'),
-                        context=request)
-                timeOptions['format'] = format_time
-            timeOptions['formatSubmit'] = 'HH:i'
-        self.pattern_options['time'] = timeOptions
-
-
-class Select2Widget(InputWidget):
-    """
-    """
-
-    def __init__(self, pattern='select2', pattern_options={}, name=None,
-                 _type='text', value=None):
-        super(Select2Widget, self).__init__(pattern, pattern_options, name,
-                                            _type, value)
-
-
-class TinyMCEWidget(TextareaWidget):
-    """
-    """
-
-    def __init__(self, pattern_options={}, name=None):
-        super(TextareaWidget, self).__init__('tinymce', pattern_options, name)
+#class PickadatePatternWidget(InputWidget):
+#    """
+#    """
+#
+#    def __init__(self, name, pattern_options={}, type='date', value=None):
+#        super(PickadatePatternWidget, self).__init__(
+#            'pickadate', name, pattern_options, type, value)
+#
+# Date
+#        _pattern_options = {'date': {'format': format_date or 'mmmm d, yyyy'},
+#                            'time': 'false'}
+#        if request is not None:
+#            if format_date is None:
+#                format_date = translate(
+#                    _('pickadate_date_format', default='mmmm d, yyyy'),
+#                    context=request)
+#            calendar = request.locale.dates.calendars[calendar]
+#            year = date.today().year
+#            weekdaysFull = [
+#                calendar.days.get(t, (None, None))[0]
+#                for t in (7, 1, 2, 3, 4, 5, 6)]
+#            weekdaysShort = [
+#                calendar.days.get(t, (None, None))[1]
+#                for t in (7, 1, 2, 3, 4, 5, 6)]
+#            _pattern_options = dict_merge(_pattern_options, {
+#                'date': {
+#                    'selectYears': 200,
+#                    'min': [year - 100, 1, 1],
+#                    'max': [year + 20, 1, 1],
+#                    'monthsFull': calendar.getMonthNames(),
+#                    'monthsShort': calendar.getMonthAbbreviations(),
+#                    'weekdaysFull': weekdaysFull,
+#                    'weekdaysShort': weekdaysShort,
+#                    'today': translate(P_(u"Today"), context=request),
+#                    'clear': translate(P_(u"Clear"), context=request),
+#                    'format': format_date,
+#                },
+#            })
+#
+# Datetime
+#        timeOptions = pattern_options.get('time', {})
+#        if isinstance(timeOptions, dict):
+#            timeOptions['format'] = format_time or 'HH:i'
+#            if request is not None:
+#                if format_time is None:
+#                    format_time = translate(
+#                        _('pickadate_time_format', default='HH:i'),
+#                        context=request)
+#                timeOptions['format'] = format_time
+#            timeOptions['formatSubmit'] = 'HH:i'
+#        self.pattern_options['time'] = timeOptions

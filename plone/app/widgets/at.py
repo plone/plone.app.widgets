@@ -12,27 +12,49 @@ from plone.uuid.interfaces import IUUID
 
 
 class BaseWidget(TypesWidget):
+    """ Example usage
+
+            TextField(
+                id='text',
+                required=True,
+                searchable=True,
+                widget=BaseWidget(
+                    label='Insert text',
+                    pattern='example',
+                    pattern_option1='value1',
+                    pattern_option2='value2'
+                )
+            )
+
+        above widget would produce
+
+            <input
+                class="pat-example'
+                data-pat-example="{'option1': 'value1',
+                                   'options2': value2' }"
+                value=""
+                />
+
+    """
+
     _properties = TypesWidget._properties.copy()
     _properties.update({
-        'macro': "patterns_widget",
-        'pattern': None,
+        'macro': 'patterns_widget',
+        'klass': base.InputWidget,
+        'pattern': '',
     })
 
-    _widget = base.BaseWidget
-
     def _widget_args(self, context, field, request):
-        options = {}
+        pattern_options = {}
         for name in self._properties.keys():
-            if name in ['blurrable', 'condition', 'description', 'helper_css',
-                        'helper_js', 'label', 'macro', 'modes', 'populate',
-                        'postback', 'show_content_type', 'visible', 'pattern',
-                        'ajax_vocabulary']:
-                continue
-            options[name] = getattr(self, name)
+            if name.startswith('pattern_'):
+                pattern_options[name[len('pattern_'):]] = getattr(self, name)
         return {
             'name': field.getName(),
             'pattern': self.pattern,
-            'pattern_options': options,
+            'pattern_options': pattern_options,
+            'value': request.get(field.getName(),
+                                 field.getAccessor(context)()),
         }
 
     def view(self, context, field, request):
@@ -43,18 +65,60 @@ class BaseWidget(TypesWidget):
         return self._widget(**args).render()
 
 
-class InputWidget(BaseWidget):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class SelectWidget(BaseWidget):
     _properties = BaseWidget._properties.copy()
-    _widget = base.InputWidget
+    _properties.update({
+        'pattern': 'select2',
+        'separator': ';',
+    })
+    _widget = base.SelectWidget
 
     def _widget_args(self, context, field, request):
-        args = super(InputWidget, self)._widget_args(context, field, request)
-        # XXX: we might need to decode the value and encoding shouldn't be
-        # hardcoded (value.decode('utf-8'))
-        args['value'] = request.get(field.getName(),
-                                    field.getAccessor(context)())
+        args = super(SelectWidget, self)._widget_args(context, field, request)
+        args['items'] = field.Vocabulary(context).items()
         return args
 
+
+class TinyMCEWidget(BaseWidget):
+    _properties = BaseWidget._properties.copy()
+    _properties.update({
+        'pattern': 'tinymce',
+    })
+    _widget = base.TinyMCEWidget
+
+    def _widget_args(self, context, field, request):
+        args = super(TinyMCEWidget, self)._widget_args(context, field, request)
+        return args
+
+
+registerWidget(
+    TinyMCEWidget,
+    title='TinyMCE widget',
+    description=('TinyMCE widget'),
+    used_for=('Products.Archetypes.Field.TextField',)
+)
 
 class DateWidget(InputWidget):
     _properties = InputWidget._properties.copy()
@@ -131,25 +195,11 @@ class DatetimeWidget(DateWidget):
 
 
 registerWidget(
-    DateWidget,
+    DatetimeWidget,
     title='Datetime widget',
     description=('Datetime widget'),
     used_for=('Products.Archetypes.Field.DateTimeField',)
 )
-
-
-class SelectWidget(BaseWidget):
-    _properties = InputWidget._properties.copy()
-    _properties.update({
-        'pattern': 'select2',
-        'separator': ';',
-    })
-    _widget = base.SelectWidget
-
-    def _widget_args(self, context, field, request):
-        args = super(SelectWidget, self)._widget_args(context, field, request)
-        args['options'] = field.Vocabulary(context).items()
-        return args
 
 
 class Select2Widget(InputWidget):
