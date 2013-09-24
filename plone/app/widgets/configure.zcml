@@ -15,6 +15,7 @@
   <include package="Products.TinyMCE" />
   <include package="plone.app.vocabularies" />
   <include package="plone.app.jquery" />
+  <include package=".browser" />
 
   <include package="mockup"
       zcml:condition="installed mockup" />
@@ -133,22 +134,6 @@
   </configure>
 
   <cmf:registerDirectory name="plone_widgets" />
-
-  <browser:page
-    name="getVocabulary"
-    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
-    class=".browser.VocabularyView"
-    permission="zope2.View"
-    layer=".interfaces.IWidgetsLayer"
-    />
-
-  <browser:page
-    name="fileUpload"
-    for="Products.CMFCore.interfaces._content.IFolderish"
-    class=".browser.FileUploadView"
-    permission="cmf.AddPortalContent"
-    layer=".interfaces.IWidgetsLayer"
-    />
 
   <adapter factory=".factories.ATCTFileFactory" />
   <adapter factory=".factories.DXFileFactory" />

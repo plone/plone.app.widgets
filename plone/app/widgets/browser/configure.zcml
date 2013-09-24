@@ -1,0 +1,25 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    i18n_domain="plone.app.widgets">
+
+  <browser:page
+    name="getVocabulary"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    class=".vocabulary.VocabularyView"
+    permission="zope2.View"
+    layer="..interfaces.IWidgetsLayer"
+    />
+
+  <browser:page
+    name="fileUpload"
+    for="Products.CMFCore.interfaces._content.IFolderish"
+    class=".file.FileUploadView"
+    permission="cmf.AddPortalContent"
+    layer="..interfaces.IWidgetsLayer"
+    />
+
+</configure>
+
