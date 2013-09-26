@@ -3,15 +3,11 @@
 import json
 from DateTime import DateTime
 from datetime import datetime
-from zope.component import getUtility
-from zope.component import queryMultiAdapter
 from AccessControl import ClassSecurityInfo
 from Products.Archetypes.Widget import TypesWidget
 from Products.Archetypes.Registry import registerWidget
 from Products.CMFCore.utils import getToolByName
-from plone.registry.interfaces import IRegistry
 from plone.app.widgets import base
-from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.uuid.interfaces import IUUID
 
 
@@ -177,11 +173,7 @@ class Select2Widget(InputWidget):
         if self.ajax_vocabulary:
             vocabulary_name = self.ajax_vocabulary
         if vocabulary_name:
-            portal_state = queryMultiAdapter((context, request),
-                                             name=u'plone_portal_state')
-            url = ''
-            if portal_state:
-                url += portal_state.portal_url()
+            url = base.base_url(context, request)
             url += '/@@getVocabulary?name=' + vocabulary_name
             if 'pattern_options' not in args:
                 args['pattern_options'] = {}
@@ -231,12 +223,8 @@ class RelatedItemsWidget(Select2Widget):
                                   self.ajax_vocabulary)
         if not vocabulary_name:
             vocabulary_name = 'plone.app.vocabularies.Catalog'
-        portal_state = queryMultiAdapter((context, request),
-                                         name=u'plone_portal_state')
-        url = ''
+        url = base.base_url(context, request)
         vocabulary_view = self.vocabulary_view
-        if portal_state:
-            url += portal_state.portal_url()
         url += '/' + vocabulary_view + '?name=' + vocabulary_name
         if 'pattern_options' not in args:
             args['pattern_options'] = {}
@@ -278,12 +266,11 @@ class QueryStringWidget(InputWidget):
         args = super(QueryStringWidget, self)._widget_args(
             context, field, request)
 
-        registry = getUtility(IRegistry)
-        config = IQuerystringRegistryReader(registry)()
-
         if 'pattern_options' not in args:
             args['pattern_options'] = {}
-        args['pattern_options'].update(config)
+
+        args['pattern_options']['indexOptionsUrl'] = '%s/@@qsOptions' % (
+            base.base_url(context, request))
 
         criterias = [dict(c) for c in field.getRaw(context)]
         args['value'] = request.get(field.getName(),

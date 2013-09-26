@@ -6,9 +6,19 @@ from datetime import date
 from lxml import etree
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
+from zope.component import queryMultiAdapter
 
 _ = MessageFactory('plone.app.widgets')
 P_ = MessageFactory('plone')
+
+
+def base_url(context, request):
+    portal_state = queryMultiAdapter((context, request),
+                                     name=u'plone_portal_state')
+    url = ''
+    if portal_state:
+        url = portal_state.portal_url()
+    return url
 
 
 def el_attrib(name):

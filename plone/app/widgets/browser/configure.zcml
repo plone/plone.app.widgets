@@ -21,4 +21,12 @@
     layer="..interfaces.IWidgetsLayer"
     />
 
+  <browser:page
+    name="qsOptions"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    class=".query.QueryStringIndexOptions"
+    permission="zope2.View"
+    layer="..interfaces.IWidgetsLayer"
+    />
+
 </configure>

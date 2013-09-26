@@ -4,7 +4,6 @@ from datetime import date
 from datetime import datetime
 from zope.interface import implementsOnly
 from zope.component import adapts
-from zope.component import getUtility
 from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
@@ -20,9 +19,7 @@ from z3c.form.widget import Widget
 from z3c.form import interfaces as z3cform_interfaces
 from Products.CMFCore.utils import getToolByName
 from Products.CMFCore.interfaces import ISiteRoot
-from plone.registry.interfaces import IRegistry
 from plone.app.layout.navigation.root import getNavigationRootObject
-from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.app.widgets import base
 
 
@@ -362,12 +359,10 @@ class QueryStringWidget(InputWidget):
     def _widget_args(self):
         args = super(QueryStringWidget, self)._widget_args()
 
-        registry = getUtility(IRegistry)
-        config = IQuerystringRegistryReader(registry)()
-
         if 'pattern_options' not in args:
             args['pattern_options'] = {}
-        args['pattern_options'].update(config)
+        args['pattern_options']['indexOptionsUrl'] = '%s/@@qsOptions' % (
+            getSite().absolute_url())
 
         return args
 
