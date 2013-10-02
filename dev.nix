@@ -7,15 +7,12 @@ in
 with pkgs;
 
 buildEnv {
-  name = "deco-env";
+  name = "plone-app-widgets-env";
   paths = [
     python27
-    python27Packages.distribute
     python27Packages.recursivePthLoader
     python27Packages.virtualenv
-    python27Packages.zc_buildout
-    plone43Packages.pillow
-    plone43Packages.lxml
-    plone43Packages.python_dateutil
+    python27Packages."zc.buildout-1.7.1"
+    python27Packages."Plone-4.3.2"
   ] ++ lib.attrValues python27.modules;
 }
