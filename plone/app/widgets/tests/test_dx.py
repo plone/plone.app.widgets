@@ -20,60 +20,87 @@ from plone.app.widgets.testing import ExampleVocabulary
 from plone.app.widgets.testing import TestRequest
 
 
-class BaseWidgetTests(unittest.TestCase):
+class InputWidgetTests(unittest.TestCase):
 
-    def test_base(self):
-        from plone.app.widgets.dx import BaseWidget
-        request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        widget = BaseWidget(request)
-        widget.name = 'example'
-        self.assertEqual(
-            widget._widget_args(),
-            {
-                'name': 'example',
-                'pattern': None,
-                'pattern_options': {},
-            },
-        )
-
-    def test_input(self):
+    def test_pattern_must_be_set(self):
         from plone.app.widgets.dx import InputWidget
-        request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'},
-                              example='example-value')
+        from plone.app.widgets.dx import NotImplemented
+
+        request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         widget = InputWidget(request)
-        widget.name = 'example'
+
+        self.assertRaises(
+            NotImplemented,
+            widget._base_args)
+
+        widget.pattern = 'example1'
         self.assertEqual(
-            widget._widget_args(),
+            widget._base_args(),
             {
-                'name': 'example',
-                'pattern': None,
+                'name': None,
+                'pattern': 'example1',
                 'pattern_options': {},
-                'value': 'example-value',
+                'value': None,
             },
         )
 
-    def test_select(self):
-        from plone.app.widgets.dx import SelectWidget
-        request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'},
-                              example='example-value')
-        widget = SelectWidget(request)
-        widget.id = 'example'
-        widget.name = 'example'
-        widget.field = TextLine(__name__='selectfield')
-        widget.field.vocabulary = SimpleVocabulary.fromValues(
-            ['option1', 'option2', 'option3'])
-        widget.terms = widget.field.vocabulary
+    def test_value_from_field(self):
+        from plone.app.widgets.dx import InputWidget
+
+        request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        widget = InputWidget(request)
+        widget.name = 'example2'
+        widget.pattern = 'example1'
+        widget.value = 'value2'
         self.assertEqual(
-            widget._widget_args(),
+            widget._base_args(),
             {
-                'name': 'example',
-                'pattern': 'select2',
+                'name': 'example2',
+                'pattern': 'example1',
                 'pattern_options': {},
-                'options': [('--NOVALUE--', u'No value'),
-                            ('option1', 'option1'),
-                            ('option2', 'option2'),
-                            ('option3', 'option3')],
-                'selected': (),
+                'value': 'value2',
+            },
+        )
+
+    def test_value_from_request(self):
+        from plone.app.widgets.dx import InputWidget
+
+        request = TestRequest(
+            environ={'HTTP_ACCEPT_LANGUAGE': 'en',
+                     'example2': 'value1'
+                     })
+        widget = InputWidget(request)
+        widget.name = 'example2'
+        widget.pattern = 'example1'
+        widget.value = 'value2'
+        self.assertEqual(
+            widget._base_args(),
+            {
+                'name': 'example2',
+                'pattern': 'example1',
+                'pattern_options': {},
+                'value': 'value1',
+            },
+        )
+
+    def test_pattern_options(self):
+        from plone.app.widgets.dx import InputWidget
+
+        request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        widget = InputWidget(request)
+        widget.pattern = 'example1'
+        widget.pattern_options = {'option1': 'value1',
+                                  'option2': 'value2',
+                                  }
+        self.assertEqual(
+            widget._base_args(),
+            {
+                'name': None,
+                'pattern': 'example1',
+                'pattern_options': {'option1': 'value1',
+                                    'option2': 'value2',
+                                    },
+                'value': 'value1',
             },
         )
 

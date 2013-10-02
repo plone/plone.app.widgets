@@ -98,7 +98,7 @@ class DateWidgetConverter(BaseDataConverter):
         return date(*map(int, value.split('-')))
 
 
-class Select2WidgetConverter(BaseDataConverter):
+class AjaxSelectWidgetConverter(BaseDataConverter):
     """Data converter for ICollection.
     """
 
@@ -129,7 +129,7 @@ class RelatedItemsDataConverter(BaseDataConverter):
     adapts(ICollection, IRelatedItemsWidget)
 
     def toWidgetValue(self, value):
-        if self.field.missing_value and value in self.field.missing_value:
+        if not value:
             return u''
         return self.widget.separator.join(unicode(v.UID()) for v in value)
 
@@ -154,73 +154,42 @@ class QueryStringDataConverter(BaseDataConverter):
 
     def toWidgetValue(self, value):
         if value is self.field.missing_value:
-            return value
+            return u''
         return json.dumps(value)
 
     def toFieldValue(self, value):
         if value is self.field.missing_value:
-            return value
+            return self.field.missing_value
         return json.loads(value)
 
 
-class BaseWidget(Widget):
+class NotImplemented(Exception):
+    pass
+
+
+class InputWidget(Widget):
     """
     """
 
-    _klass = base.BaseWidget
+    _base = base.InputWidget
 
-    pattern = None
     pattern_options = {}
+    pattern = None
 
-    def _klass_args(self):
+    def _base_args(self):
+        if self.pattern is None:
+            raise NotImplemented
         return {
             'name': self.name,
             'pattern': self.pattern,
             'pattern_options': self.pattern_options,
+            'value': self.request.get(self.name, self.value),
         }
 
     def render(self):
         if self.mode != 'input':
-            return super(BaseWidget, self).render()
-        return self._widget_klass(**self._widget_args()).render()
-
-
-class InputWidget(BaseWidget):
-
-    _widget_klass = base.InputWidget
-
-    pattern_options = BaseWidget.pattern_options.copy()
-
-    def _widget_args(self):
-        args = super(InputWidget, self)._widget_args()
-        # XXX: we might need to decode the value and encoding shouldn't be
-        # hardcoded (value.decode('utf-8'))
-        value = self.request.get(self.name, self.value)
-        args['value'] = value
-        return args
-
-
-class SelectWidget(BaseWidget, z3cform_SelectWidget):
-
-    _widget_klass = base.SelectWidget
-
-    implementsOnly(ISelectWidget)
-
-    pattern = 'select2'
-    pattern_options = BaseWidget.pattern_options.copy()
-
-    def _widget_args(self):
-        args = super(SelectWidget, self)._widget_args()
-
-        options = []
-        for item in self.items():
-            options.append((item['value'], item['content']))
-        args['options'] = options
-        args['selected'] = self.value
-        if self.multiple:
-            args['multiple'] = 'multiple'
-
-        return args
+            return super(InputWidget, self).render()
+        return self._base(**self._base_args()).render()
 
 
 class DateWidget(InputWidget):
@@ -304,18 +273,42 @@ class DatetimeWidget(DateWidget):
         return date_value.ctime()
 
 
+class SelectWidget(InputWidget, z3cform_SelectWidget):
+
+    _widget_klass = base.SelectWidget
+
+    implementsOnly(ISelectWidget)
+
+    pattern = 'select2'
+    pattern_options = InputWidget.pattern_options.copy()
+
+    def _widget_args(self):
+        args = super(SelectWidget, self)._widget_args()
+
+        options = []
+        for item in self.items():
+            options.append((item['value'], item['content']))
+        args['options'] = options
+        args['selected'] = self.value
+        if self.multiple:
+            args['multiple'] = 'multiple'
+
+        return args
+
+
 class AjaxSelectWidget(InputWidget):
 
-    _widget_klass = base.InputWidget
+    _base = base.InputWidget
 
     implementsOnly(IAjaxSelectWidget)
 
     pattern = 'select2'
     pattern_options = InputWidget.pattern_options.copy()
-    separator = ';'
-    ajax_vocabulary = None
 
-    def _widget_args(self):
+    separator = ';'
+    vocabulary = None
+
+    def _base_args(self):
 
         def get_portal():
             closest_site = getSite()
@@ -324,42 +317,49 @@ class AjaxSelectWidget(InputWidget):
                     if ISiteRoot in providedBy(potential_portal):
                         return potential_portal
 
-        args = super(AjaxSelectWidget, self)._widget_args()
-        if 'pattern_options' not in args:
-            args['pattern_options'] = {}
-        args['pattern_options']['separator'] = self.separator
-
-        vocabulary_name = getattr(self.field, 'vocabulary_factory', None)
-        if self.ajax_vocabulary:
-            vocabulary_name = self.ajax_vocabulary
-        if vocabulary_name:
-            url = ''
+        def get_portal_url():
             portal = get_portal()
             if portal:
                 root = getNavigationRootObject(self.context, portal)
                 if root:
-                    url += root.absolute_url()
-            url += '/@@getVocabulary?name=' + vocabulary_name
-            args['pattern_options']['ajaxvocabulary'] = url
-            vocabulary = queryUtility(IVocabularyFactory, vocabulary_name)
-            if vocabulary:
-                initvaluemap = {}
-                vocabulary = vocabulary(self.context)
-                if self.value:
+                    return root.absolute_url()
+            return ''
+
+        args = super(AjaxSelectWidget, self)._widget_args()
+        args['pattern_options']['separator'] = self.separator
+
+        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
+        if not self.vocabulary:
+            self.vocabulary = vocabulary_factory
+
+        # get url which will be used to lookup vocabulary
+        if self.vocabulary:
+            vocabulary_url = '%s/@@getVocabulary?name=%s' % (
+                get_portal_url(), self.vocabulary)
+            args['pattern_options']['vocabularyUrl'] = vocabulary_url
+
+            # initial values
+            if self.value:
+                vocabulary = queryUtility(IVocabularyFactory, self.vocabulary)
+                if vocabulary:
+                    initialValues = {}
+                    vocabulary = vocabulary(self.context)
                     for value in self.value.split(self.separator):
                         term = vocabulary.getTerm(value)
-                        initvaluemap[term.token] = term.title
-                args['pattern_options']['initvaluemap'] = initvaluemap
+                        initialValues[term.token] = term.title
+                args['pattern_options']['initialValues'] = initialValues
+
         return args
 
 
 class QueryStringWidget(InputWidget):
 
     pattern = 'querystring'
+    pattern_options = InputWidget.pattern_options.copy()
 
     implementsOnly(IQueryStringWidget)
 
-    def _widget_args(self):
+    def _base_args(self):
         args = super(QueryStringWidget, self)._widget_args()
 
         registry = getUtility(IRegistry)
@@ -373,12 +373,8 @@ class QueryStringWidget(InputWidget):
 
 
 class RelatedItemsWidget(AjaxSelectWidget):
-    """
-    """
-
-    implementsOnly(IRelatedItemsWidget)
-
-    _widget_klass = base.InputWidget
 
     pattern = 'relateditems'
     pattern_options = AjaxSelectWidget.pattern_options.copy()
+
+    implementsOnly(IRelatedItemsWidget)
