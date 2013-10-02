@@ -30,7 +30,7 @@ def _parseJSON(s):
     return s
 
 
-_unsafe_metadata = ['Creator', 'listCreators']
+_unsafe_metadata = ['Creator', 'listCreators', 'author_name', 'commentors']
 _safe_callable_metadata = ['getURL', 'getPath']
 
 
