@@ -219,7 +219,7 @@ class Select2WidgetTests(unittest.TestCase):
                 'value': None,
                 'pattern': 'select2',
                 'pattern_options': {
-                    'ajaxvocabulary': '/@@getVocabulary?name=example',
+                    'ajaxVocabulary': '/@@getVocabulary?name=example',
                     'separator': ';'
                 },
             }
@@ -233,7 +233,7 @@ class Select2WidgetTests(unittest.TestCase):
                 'value': 'three;two',
                 'pattern': 'select2',
                 'pattern_options': {
-                    'ajaxvocabulary': '/@@getVocabulary?name=example',
+                    'ajaxVocabulary': '/@@getVocabulary?name=example',
                     'initvaluemap': {'three': u'Three', 'two': u'Two'},
                     'separator': ';'
                 },

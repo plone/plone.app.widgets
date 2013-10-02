@@ -9,7 +9,7 @@ from AccessControl import Unauthorized
 from zope.globalrequest import setRequest
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
-from plone.app.widgets.browser import VocabularyView
+from plone.app.widgets.browser.vocabulary import VocabularyView
 import json
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
