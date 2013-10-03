@@ -38,6 +38,7 @@ setup(
     ],
     extras_require={
         'test': [
+            'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing',
             'mock',
         ],
