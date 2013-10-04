@@ -68,6 +68,8 @@ class DatetimeWidgetConverter(BaseDataConverter):
         if not value:
             return self.field.missing_value
         tmp = value.split(' ')
+        if not tmp[0]:
+            return None
         value = tmp[0].split('-')
         value += tmp[1].split(':')
         return datetime(*map(int, value))
