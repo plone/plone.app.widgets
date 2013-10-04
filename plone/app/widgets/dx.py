@@ -343,8 +343,11 @@ class Select2Widget(InputWidget):
                 else:
                     if self.value:
                         for value in self.value.split(self.separator):
-                            term = vocabulary.getTerm(value)
-                            initvaluemap[term.token] = term.title
+                            try:
+                                term = vocabulary.getTerm(value)
+                                initvaluemap[term.token] = term.title
+                            except LookupError:
+                                initvaluemap[value] = value
                 if initvaluemap:
                     args['pattern_options']['initvaluemap'] = initvaluemap
         return args
