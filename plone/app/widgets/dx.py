@@ -341,6 +341,11 @@ class AjaxSelectWidget(InputWidget):
                     for value in self.value.split(self.separator):
                         term = vocabulary.getTerm(value)
                         initialValues[term.token] = term.title
+                        try:
+                            term = vocabulary.getTerm(value)
+                            initialValues[term.token] = term.title
+                        except LookupError:
+                            initialValues[value] = value
                 args['pattern_options']['initialValues'] = initialValues
 
         return args
