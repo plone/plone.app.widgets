@@ -1,27 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import json
 from copy import deepcopy
-from datetime import date
 from lxml import etree
-from zope.i18n import translate
-from zope.i18nmessageid import MessageFactory
-from zope.component import queryMultiAdapter
 
-_ = MessageFactory('plone.app.widgets')
-P_ = MessageFactory('plone')
-
-
-def base_url(context, request):
-    portal_state = queryMultiAdapter((context, request),
-                                     name=u'plone_portal_state')
-    url = ''
-    if portal_state:
-        url = portal_state.portal_url()
-    return url
+import json
 
 
 def el_attrib(name):
+    """Helper property methods to get/set/delete element property.
+
+    :param name: [required] Name of the element property.
+    :type name: string
+
+    :returns: Property with getter/setter/deletter.
+    :rtype: property
+    """
 
     def _get(self):
         if name in self.el.attrib:
@@ -48,17 +41,29 @@ def el_attrib(name):
     return property(_get, _set, _del)
 
 
-def dict_merge(a, b):
-    '''recursively merges dict's. not just simple a['key'] = b['key'], if
+def dict_merge(dict_a, dict_b):
+    """Helper method which merges two dictionaries.
+
+    Recursively merges dict's. not just simple a['key'] = b['key'], if
     both a and bhave a key who's value is a dict then dict_merge is called
     on both values and the result stored in the returned dictionary.
 
     http://www.xormedia.com/recursively-merge-dictionaries-in-python
-    '''
-    if not isinstance(b, dict):
-        return b
-    result = deepcopy(a)
-    for k, v in b.iteritems():
+
+    :param dict_a: [required] First dictiornary.
+    :type dict_a: dict
+
+    :param dict_b: [required] Second dictiornary.
+    :type dict_b: dict
+
+    :returns: Merged dictionary.
+    :rtype: dict
+    """
+
+    if not isinstance(dict_b, dict):
+        return dict_b
+    result = deepcopy(dict_a)
+    for k, v in dict_b.iteritems():
         if k in result and isinstance(result[k], dict):
                 result[k] = dict_merge(result[k], v)
         else:
@@ -67,102 +72,162 @@ def dict_merge(a, b):
 
 
 class BaseWidget(object):
-    """
-    """
+    """Basic patterns widget."""
 
     _klass_prefix = 'pat-'
-
-    name = el_attrib('name')
     klass = el_attrib('class')
 
-    def __init__(self, pattern, el, name, pattern_options={}):
+    def __init__(self, el, pattern, pattern_options={}):
+        """
+        :param el: [required] element type (eg. input, div, textarea, a, ...).
+        :type el: string
+
+        :param pattern: [required] Pattern name.
+        :type pattern: string
+
+        :param pattern_options: Patterns options.
+        :type pattern_options: dict
+        """
+
         self.pattern = pattern
         self.el = etree.Element(el)
         if pattern:
             self.klass = self._klass_prefix + pattern
-        self.name = name
         self.pattern_options = pattern_options
 
     def update(self):
+        """Updating pattern_options in element `data-*` attribute."""
         if self.pattern_options:
             self.el.attrib['data-' + self._klass_prefix + self.pattern] = \
                 json.dumps(self.pattern_options)
 
     def render(self):
+        """Renders the widget
+
+        :returns: Widget's HTML.
+        :rtype: string
+        """
+
         self.update()
         return etree.tostring(self.el)
 
 
 class InputWidget(BaseWidget):
-    """
-    """
+    """Widget with `input` element."""
 
     type = el_attrib('type')
     value = el_attrib('value')
+    name = el_attrib('name')
 
-    def __init__(self, pattern, name, pattern_options={},
-                 type='text', value=None):
-        super(InputWidget, self).__init__(pattern, 'input', name,
-                                          pattern_options)
+    def __init__(self, pattern, pattern_options={}, type='text', name=None,
+                 value=None):
+        """
+        :param pattern: [required] Pattern name.
+        :type pattern: string
+
+        :param pattern_options: Patterns options.
+        :type pattern_options: dict
+
+        :param type: `type` attribute of element.
+        :type type: string
+
+        :param name: `name` attribute of element.
+        :type name: string
+
+        :param value: `value` attribute of element.
+        :type value: string
+        """
+        super(InputWidget, self).__init__('input', pattern, pattern_options)
         self.type = type
+        if name is not None:
+            self.name = name
         if value is not None:
             self.value = value
 
 
 class SelectWidget(BaseWidget):
-    """
-    """
+    """Widget with `select` element."""
 
-    def __init__(self, pattern, name, pattern_options={}, items=[],
+    name = el_attrib('name')
+    _multiple = el_attrib('multiple')
+
+    def __init__(self, pattern, pattern_options={}, items=[], name=None,
                  value=None, multiple=False):
-        super(SelectWidget, self).__init__(pattern, 'select', name,
-                                           pattern_options)
+        """
+        :param pattern: [required] Pattern name.
+        :type pattern: string
+
+        :param pattern_options: Patterns options.
+        :type pattern_options: dict
+
+        :param items: List of value and title pairs which represents possible
+                      options to choose from.
+        :type items: list
+
+        :param name: `name` attribute of element.
+        :type name: string
+
+        :param value: `value` attribute of element.
+        :type value: string
+
+        :param multiple: `multiple` attribute of element.
+        :type multiple: bool
+        """
+        super(SelectWidget, self).__init__('select', pattern, pattern_options)
         self.el.text = ''
         self.items = items
         self.multiple = multiple
+        if name is not None:
+            self.name = name
         if value is not None:
             self.value = value
 
-    def get_multiple(self):
-        if self._multiple == 'multiple':
-            return True
-        return False
+    def _get_items(self):
+        """Get list of possible options.
 
-    def set_multiple(self, value):
-        if value:
-            self._multiple = 'multiple'
-        else:
-            del self._multiple
+        :returns: List of value and title pairs.
+        :rtype: list
+        """
 
-    def del_multiple(self):
-        del self._multiple
-
-    _multiple = el_attrib('multiple')
-    multiple = property(get_multiple, set_multiple, del_multiple)
-
-    def get_items(self):
         for element in self.el.iter("option"):
             yield element.attrib['value'], element.text
 
-    def set_items(self, value):
+    def _set_items(self, value):
+        """Set options for element.
+
+        :param value: List of value and title pairs which represents possible
+                      options to choose from.
+        :type value: list
+        """
         for token, title in value:
             option = etree.SubElement(self.el, 'option')
             option.attrib['value'] = token
             option.text = title
 
-    def del_items(self):
+    def _del_items(self):
+        """Removing options from inside of elements."""
         for element in self.el.iter("option"):
             self.el.remove(element)
 
-    items = property(get_items, set_items, del_items)
+    items = property(_get_items, _set_items, _del_items)
 
-    def get_value(self):
+    def _get_value(self):
+        """Return selected option(s).
+
+        :returns: In case of `multiple` element options being `True` return
+                  list of selected options and in case `multiple` is `False`
+                  return value of selected options. If no options is selected
+                  return `None`.
+        :rtype: list or string or None
+        """
         if self.multiple:
             value = []
             for element in self.el.iter("option"):
                 if 'selected' in element.attrib and \
                         element.attrib['selected'] == 'selected':
                     value.append(element.attrib['value'])
+            if len(value) == 0:
+                value = None
         else:
             value = None
             for element in self.el.iter("option"):
@@ -172,7 +237,16 @@ class SelectWidget(BaseWidget):
                     break
         return value
 
-    def set_value(self, value):
+    def _set_value(self, value):
+        """Select option(s).
+
+        :param value: In case of `multiple` being `True` we are expecting list
+                      of option's values and in case of `multiple` being
+                      `False` we are expecting option's value which should be
+                      selected.
+        :type value: list or string
+        """
+
         if self.multiple and type(value) not in (list, tuple):
             raise TypeError
         elif not self.multiple and not isinstance(value, basestring):
@@ -186,86 +260,89 @@ class SelectWidget(BaseWidget):
                     element.attrib['selected'] == 'selected':
                 del element.attrib['selected']
 
-    def del_value(self):
+    def _del_value(self):
+        """Unselect all selected options.
+        """
         for element in self.el.iter("option"):
             if 'selected' in element.attrib and \
                element.attrib['selected'] == 'selected':
                 del element.attrib['selected']
 
-    value = property(get_value, set_value, del_value)
+    value = property(_get_value, _set_value, _del_value)
+
+    def _get_multiple(self):
+        """Does element allows multiple items to be selected.
+
+        :returns: `True` if allows multiple elements to be selected, otherwise
+                  `False`.
+        :rtype: bool
+        """
+        if self._multiple == 'multiple':
+            return True
+        return False
+
+    def _set_multiple(self, value):
+        """Make element accept multiple values.
+
+        :param value: `True` if you want to set element as `multiple`,
+                      otherwise `False`
+        :type value: bool
+        """
+        if value:
+            self._multiple = 'multiple'
+        else:
+            self._del_multiple()
+
+    def _del_multiple(self):
+        """Remove `multiple` attribute from element."""
+        del self._multiple
+
+    multiple = property(_get_multiple, _set_multiple, _del_multiple)
 
 
 class TextareaWidget(BaseWidget):
-    """
-    """
+    """Widget with `textarea` element."""
 
-    def __init__(self, pattern, name, pattern_options={}, value=None):
-        super(TextareaWidget, self).__init__(pattern, 'textarea', name,
+    name = el_attrib('name')
+
+    def __init__(self, pattern, pattern_options={}, name=None, value=None):
+        """
+        :param pattern: [required] Pattern name.
+        :type pattern: string
+
+        :param pattern_options: Patterns options.
+        :type pattern_options: dict
+
+        :param name: `name` attribute of element.
+        :type name: string
+
+        :param value: `value` of element.
+        :type value: string
+        """
+        super(TextareaWidget, self).__init__('textarea', pattern,
                                              pattern_options)
         self.el.text = ''
+        if name is not None:
+            self.name = name
         if value is not None:
             self.value = value
 
-    def get_value(self):
+    def _get_value(self):
+        """
+        :returns: Value of element.
+        :rtype: string
+        """
         return self.el.text
 
-    def set_value(self, value):
+    def _set_value(self, value):
+        """
+        :param value: Set value of element.
+        :type value: string
+        """
         self.el.text = value
 
-    def del_value(self):
+    def _del_value(self):
+        """Set empty string as value of element."""
         self.el.text = ''
 
-    value = property(get_value, set_value, del_value)
-
-
-#class PickadatePatternWidget(InputWidget):
-#    """
-#    """
-#
-#    def __init__(self, name, pattern_options={}, type='date', value=None):
-#        super(PickadatePatternWidget, self).__init__(
-#            'pickadate', name, pattern_options, type, value)
-#
-# Date
-#        _pattern_options = {'date': {'format': format_date or 'mmmm d, yyyy'},
-#                            'time': 'false'}
-#        if request is not None:
-#            if format_date is None:
-#                format_date = translate(
-#                    _('pickadate_date_format', default='mmmm d, yyyy'),
-#                    context=request)
-#            calendar = request.locale.dates.calendars[calendar]
-#            year = date.today().year
-#            weekdaysFull = [
-#                calendar.days.get(t, (None, None))[0]
-#                for t in (7, 1, 2, 3, 4, 5, 6)]
-#            weekdaysShort = [
-#                calendar.days.get(t, (None, None))[1]
-#                for t in (7, 1, 2, 3, 4, 5, 6)]
-#            _pattern_options = dict_merge(_pattern_options, {
-#                'date': {
-#                    'selectYears': 200,
-#                    'min': [year - 100, 1, 1],
-#                    'max': [year + 20, 1, 1],
-#                    'monthsFull': calendar.getMonthNames(),
-#                    'monthsShort': calendar.getMonthAbbreviations(),
-#                    'weekdaysFull': weekdaysFull,
-#                    'weekdaysShort': weekdaysShort,
-#                    'today': translate(P_(u"Today"), context=request),
-#                    'clear': translate(P_(u"Clear"), context=request),
-#                    'format': format_date,
-#                },
-#            })
-#
-# Datetime
-#        timeOptions = pattern_options.get('time', {})
-#        if isinstance(timeOptions, dict):
-#            timeOptions['format'] = format_time or 'HH:i'
-#            if request is not None:
-#                if format_time is None:
-#                    format_time = translate(
-#                        _('pickadate_time_format', default='HH:i'),
-#                        context=request)
-#                timeOptions['format'] = format_time
-#            timeOptions['formatSubmit'] = 'HH:i'
-#        self.pattern_options['time'] = timeOptions
+    value = property(_get_value, _set_value, _del_value)

@@ -8,38 +8,34 @@ except ImportError:  # pragma: nocover
 
 
 class BaseWidgetTests(unittest.TestCase):
-    """Tests for plone.app.widgets.base.BaseWidget
-    """
+    """Tests for plone.app.widgets.base.BaseWidget."""
 
     def test_defaults(self):
         from plone.app.widgets.base import BaseWidget
 
-        widget = BaseWidget('example1', el='input', name='example2')
+        widget = BaseWidget('input', 'example1')
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" name="example2"/>')
+            '<input class="pat-example1"/>')
 
         self.assertEqual(widget.klass, 'pat-example1')
-        self.assertEqual(widget.name, 'example2')
 
     def test_different_element_tag(self):
         from plone.app.widgets.base import BaseWidget
 
-        widget = BaseWidget('example1', el='select', name="example2")
+        widget = BaseWidget('select', 'example1')
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2"/>')
+            '<select class="pat-example1"/>')
 
         self.assertEqual(widget.klass, 'pat-example1')
-        self.assertEqual(widget.name, 'example2')
 
     def test_setting_patterns_options(self):
         from plone.app.widgets.base import BaseWidget
 
         widget = BaseWidget(
+            'input',
             'example1',
-            el='input',
-            name='expample2',
             pattern_options={
                 'option1': 'value1',
                 'option2': 'value2',
@@ -47,14 +43,13 @@ class BaseWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" name="expample2" data-pat-example1="{'
+            '<input class="pat-example1" data-pat-example1="{'
             '&quot;option2&quot;: &quot;value2&quot;, '
             '&quot;option1&quot;: &quot;value1&quot;}"/>')
 
 
 class InputWidgetTests(unittest.TestCase):
-    """Tests for plone.app.widgets.base.InputWidget
-    """
+    """Tests for plone.app.widgets.base.InputWidget."""
 
     def test_defaults(self):
         from plone.app.widgets.base import InputWidget
@@ -63,7 +58,7 @@ class InputWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" name="example2" type="text"/>')
+            '<input class="pat-example1" type="text" name="example2"/>')
 
         self.assertEqual(widget.type, 'text')
         self.assertEqual(widget.value, None)
@@ -80,8 +75,8 @@ class InputWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" name="example2" '
-            'type="email" value="example3"/>')
+            '<input class="pat-example1" type="email" '
+            'name="example2" value="example3"/>')
 
         self.assertEqual(widget.type, 'email')
         self.assertEqual(widget.value, 'example3')
@@ -90,8 +85,8 @@ class InputWidgetTests(unittest.TestCase):
         widget.value = 'example4'
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" name="example2" '
-            'type="text" value="example4"/>')
+            '<input class="pat-example1" type="text" '
+            'name="example2" value="example4"/>')
 
         self.assertEqual(widget.type, 'text')
         self.assertEqual(widget.value, 'example4')
@@ -105,16 +100,9 @@ class InputWidgetTests(unittest.TestCase):
         self.assertEqual(widget.type, None)
         self.assertEqual(widget.value, None)
 
-    def test_can_not_change_element_tag(self):
-        from plone.app.widgets.base import InputWidget
-        self.assertRaises(
-            TypeError,
-            InputWidget, 'example1', el='select', name='example2')
-
 
 class SelectWidgetTests(unittest.TestCase):
-    """Tests for plone.app.widgets.SelectWidget
-    """
+    """Tests for plone.app.widgets.base.SelectWidget."""
 
     def test_defaults(self):
         from plone.app.widgets.base import SelectWidget
@@ -167,7 +155,7 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertRaises(
             TypeError,
-            widget.set_value, ['token1'])
+            widget._set_value, ['token1'])
 
         del widget.value
         self.assertEqual(
@@ -201,7 +189,7 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2" multiple="multiple">'
+            '<select class="pat-example1" multiple="multiple" name="example2">'
             '<option value="token1">value1</option>'
             '<option value="token2" selected="selected">value2</option>'
             '<option value="token3">value3</option>'
@@ -213,7 +201,7 @@ class SelectWidgetTests(unittest.TestCase):
         widget.value = ['token1', 'token2']
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2" multiple="multiple">'
+            '<select class="pat-example1" multiple="multiple" name="example2">'
             '<option value="token1" selected="selected">value1</option>'
             '<option value="token2" selected="selected">value2</option>'
             '<option value="token3">value3</option>'
@@ -224,12 +212,12 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertRaises(
             TypeError,
-            widget.set_value, 'token1')
+            widget._set_value, 'token1')
 
         del widget.value
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2" multiple="multiple">'
+            '<select class="pat-example1" multiple="multiple" name="example2">'
             '<option value="token1">value1</option>'
             '<option value="token2">value2</option>'
             '<option value="token3">value3</option>'
@@ -238,19 +226,12 @@ class SelectWidgetTests(unittest.TestCase):
         del widget.items
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2" '
-            'multiple="multiple"></select>')
-
-    def test_can_not_change_element_tag(self):
-        from plone.app.widgets.base import SelectWidget
-        self.assertRaises(
-            TypeError,
-            SelectWidget, 'example1', el='input', name='example2')
+            '<select class="pat-example1" multiple="multiple" '
+            'name="example2"></select>')
 
 
 class TextareaWidgetTests(unittest.TestCase):
-    """Tests for plone.app.widgets.base.TextareaWidget
-    """
+    """Tests for plone.app.widgets.base.TextareaWidget."""
 
     def test_defaults(self):
         from plone.app.widgets.base import TextareaWidget
