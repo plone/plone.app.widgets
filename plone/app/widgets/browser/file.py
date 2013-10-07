@@ -74,7 +74,7 @@ class FileUploadView(BrowserView):
         result.update({
             'url': obj.absolute_url(),
             'name': obj.getId(),
-            'uid': IUUID(obj),
+            'UID': IUUID(obj),
             'filename': filename
         })
         return json.dumps(result)
