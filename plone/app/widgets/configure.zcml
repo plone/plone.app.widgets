@@ -12,7 +12,6 @@
   <i18n:registerTranslations directory="locales" />
 
   <include package="Products.CMFPlone" />
-  <include package="Products.TinyMCE" />
   <include package="plone.app.vocabularies" />
   <include package="plone.app.jquery" />
   <include package=".browser" />
@@ -135,13 +134,12 @@
 
   <cmf:registerDirectory name="plone_widgets" />
 
-  <adapter factory=".factories.ATCTFileFactory" />
-  <adapter factory=".factories.DXFileFactory" />
-
   <!-- archetypes -->
   <configure zcml:condition="installed Products.ATContentTypes">
 
     <include package="archetypes.schemaextender" />
+
+    <adapter factory=".factories.ATCTFileFactory" />
 
     <adapter
         name="plone.app.widgets"
@@ -158,9 +156,11 @@
     <include package="z3c.form" file="meta.zcml"/>
     <include package="z3c.form" />
 
+    <adapter factory=".factories.DXFileFactory" />
+
     <adapter factory=".dx.DatetimeWidgetConverter" />
     <adapter factory=".dx.DateWidgetConverter" />
-    <adapter factory=".dx.Select2WidgetConverter" />
+    <adapter factory=".dx.AjaxSelectWidgetConverter" />
     <adapter factory=".dx.QueryStringDataConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
 

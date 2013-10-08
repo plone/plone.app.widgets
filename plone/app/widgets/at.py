@@ -106,7 +106,7 @@ class TinyMCEWidget(BaseWidget):
     _properties.update({
         'pattern': 'tinymce',
     })
-    _widget = base.TinyMCEWidget
+    _widget = base.TextareaWidget
 
     def _widget_args(self, context, field, request):
         args = super(TinyMCEWidget, self)._widget_args(context, field, request)
@@ -120,15 +120,15 @@ registerWidget(
     used_for=('Products.Archetypes.Field.TextField',)
 )
 
-class DateWidget(InputWidget):
-    _properties = InputWidget._properties.copy()
+class DateWidget(BaseWidget):
+    _properties = BaseWidget._properties.copy()
     _properties.update({
         'pattern': 'pickadate'
     })
-    _widget = base.DateWidget
+    _widget = base.InputWidget
 
     def _widget_args(self, context, field, request):
-        args = super(InputWidget, self)._widget_args(context, field, request)
+        args = super(BaseWidget, self)._widget_args(context, field, request)
         args['request'] = request
         value = request.get(field.getName(), field.getAccessor(context)())
         if value:
@@ -176,7 +176,6 @@ registerWidget(
 
 class DatetimeWidget(DateWidget):
     _properties = DateWidget._properties.copy()
-    _widget = base.DatetimeWidget
 
     def _widget_args(self, context, field, request):
         args = super(DatetimeWidget, self)._widget_args(context, field,
@@ -202,22 +201,22 @@ registerWidget(
 )
 
 
-class Select2Widget(InputWidget):
-    _properties = InputWidget._properties.copy()
+class AjaxSelectWidget(BaseWidget):
+    _properties = BaseWidget._properties.copy()
     _properties.update({
         'pattern': 'select2',
         'separator': ';',
         'orderable': False,
         'ajax_vocabulary': None
     })
-    _widget = base.Select2Widget
+    _widget = base.InputWidget
 
     def getWidgetValue(self, context, field, request):
         return self.separator.join(
             request.get(field.getName(), field.getAccessor(context)()))
 
     def _widget_args(self, context, field, request):
-        args = super(Select2Widget, self)._widget_args(context, field, request)
+        args = super(AjaxSelectWidget, self)._widget_args(context, field, request)
 
         vocabulary_name = getattr(field, 'vocabulary_factory', None)
         if self.ajax_vocabulary:
@@ -240,15 +239,15 @@ class Select2Widget(InputWidget):
 
 
 registerWidget(
-    Select2Widget,
-    title='Select2 widget',
-    description=('Select2 widget'),
+    AjaxSelectWidget,
+    title='Ajax select widget',
+    description=('Ajax select widget'),
     used_for=('Products.Archetypes.Field.LinesField',)
 )
 
 
-class RelatedItemsWidget(Select2Widget):
-    _properties = Select2Widget._properties.copy()
+class RelatedItemsWidget(AjaxSelectWidget):
+    _properties = AjaxSelectWidget._properties.copy()
     _properties.update({
         'pattern': 'relateditems',
         'separator': ','
@@ -306,8 +305,8 @@ registerWidget(
     used_for='Products.Archetypes.Field.ReferenceField')
 
 
-class QueryStringWidget(InputWidget):
-    _properties = InputWidget._properties.copy()
+class QueryStringWidget(BaseWidget):
+    _properties = BaseWidget._properties.copy()
     _properties.update({
         'pattern': 'querystring',
     })

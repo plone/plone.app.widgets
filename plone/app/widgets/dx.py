@@ -1,56 +1,62 @@
 # -*- coding: utf-8 -*-
-import json
+
+from Products.CMFCore.interfaces import ISiteRoot
+from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
-from zope.interface import implementsOnly
-from zope.component import adapts
-from zope.component import providedBy
-from zope.component import queryUtility
-from zope.component.hooks import getSite
-from zope.schema.interfaces import IDate
-from zope.schema.interfaces import IDatetime
-from zope.schema.interfaces import ICollection
-from zope.schema.interfaces import IList
-from zope.schema.interfaces import IVocabularyFactory
+from plone.app.layout.navigation.root import getNavigationRootObject
+from plone.app.widgets import base
+from plone.app.widgets import utils
+from z3c.form import interfaces as z3cform_interfaces
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.interfaces import NO_VALUE
 from z3c.form.widget import Widget
-from z3c.form import interfaces as z3cform_interfaces
-from Products.CMFCore.utils import getToolByName
-from Products.CMFCore.interfaces import ISiteRoot
-from plone.app.layout.navigation.root import getNavigationRootObject
-from plone.app.widgets import base
+from zope.component import adapts
+from zope.component import providedBy
+from zope.component import queryUtility
+from zope.component.hooks import getSite
+from zope.i18n import translate
+from zope.i18nmessageid import MessageFactory
+from zope.interface import implementsOnly
+from zope.schema.interfaces import ICollection
+from zope.schema.interfaces import IDate
+from zope.schema.interfaces import IDatetime
+from zope.schema.interfaces import IList
+from zope.schema.interfaces import IVocabularyFactory
+
+import json
+
+_ = MessageFactory('plone.app.widgets')
+_plone = MessageFactory('plone')
+
+
+class NotImplemented(Exception):
+    pass
 
 
 class IDatetimeWidget(z3cform_interfaces.ITextWidget):
-    """Marker interface for the DatetimeWidget
-    """
+    """Marker interface for the DatetimeWidget."""
 
 
 class IDateWidget(z3cform_interfaces.ITextWidget):
-    """Marker interface for the DateWidget
-    """
+    """Marker interface for the DateWidget."""
 
 
 class ISelectWidget(z3cform_interfaces.ISelectWidget):
-    """Marker interface for the SelectWidget
-    """
+    """Marker interface for the SelectWidget."""
 
 
 class IAjaxSelectWidget(z3cform_interfaces.ITextWidget):
-    """Marker interface for the Select2Widget
-    """
+    """Marker interface for the Select2Widget."""
 
 
 class IQueryStringWidget(z3cform_interfaces.ITextWidget):
-    """Marker interface for the QueryStringWidget
-    """
+    """Marker interface for the QueryStringWidget."""
 
 
 class IRelatedItemsWidget(z3cform_interfaces.ITextWidget):
-    """Marker interface for the RelatedItemsWidget
-    """
+    """Marker interface for the RelatedItemsWidget."""
 
 
 class DatetimeWidgetConverter(BaseDataConverter):
@@ -59,17 +65,33 @@ class DatetimeWidgetConverter(BaseDataConverter):
     adapts(IDatetime, IDatetimeWidget)
 
     def toWidgetValue(self, value):
+        """Coverts from field value to widget.
+
+        :param value: Field value.
+        :type value: datetime
+
+        :returns: Datetime in format `Y-m-d H:M`
+        :rtype: string
+        """
         if value is self.field.missing_value:
             return u''
-        return '%d-%02d-%02d %s:%s' % (
-            value.year, value.month, value.day, value.hour, value.minute)
+        return ('{value.year:}-{value.month:02}-{value.day:02} '
+                '{value.hour:02}:{value.minute:02}').format(value=value)
 
     def toFieldValue(self, value):
+        """Converts from widget value to field.
+
+        :param value: Value inserted by datetime widget.
+        :param value: string
+
+        :returns: `datetime.datetime` object.
+        :rtype: datetime
+        """
         if not value:
             return self.field.missing_value
         tmp = value.split(' ')
         if not tmp[0]:
-            return None
+            return self.field.missing_value
         value = tmp[0].split('-')
         value += tmp[1].split(':')
         return datetime(*map(int, value))
@@ -157,96 +179,114 @@ class QueryStringDataConverter(BaseDataConverter):
         return json.loads(value)
 
 
-class NotImplemented(Exception):
-    pass
+class BaseWidget(Widget):
+    """Base pattern widget for z3c.form."""
 
-
-class InputWidget(Widget):
-    """
-    """
-
-    _base = base.InputWidget
-
-    pattern_options = {}
     pattern = None
+    pattern_options = {}
 
     def _base_args(self):
+        """
+        """
         if self.pattern is None:
-            raise NotImplemented
+            raise NotImplemented("'pattern' options not provided.")
         return {
-            'name': self.name,
             'pattern': self.pattern,
             'pattern_options': self.pattern_options,
-            'value': self.request.get(self.name, self.value),
         }
 
     def render(self):
+        """
+        :returns:
+        :rtype: string
+        """
         if self.mode != 'input':
-            return super(InputWidget, self).render()
+            return super(BaseWidget, self).render()
         return self._base(**self._base_args()).render()
 
 
-class DateWidget(InputWidget):
-    _widget_klass = base.InputWidget
+class DatetimeWidget(BaseWidget):
+    """Datetime pattern widget for z3c.form."""
 
-    implementsOnly(IDateWidget)
-
-    pattern = 'pickadate'
-    pattern_options = InputWidget.pattern_options.copy()
-    pattern_options['time'] = False
-
-    def _widget_args(self):
-        args = super(InputWidget, self)._widget_args()
-        args['request'] = self.request
-        args['pattern_options']['date'] = {'value': self.value}
-        return args
-
-    def extract(self, default=NO_VALUE):
-        return self.request.form.get(self.name + '_date', default)
-
-    def render(self):
-        if self.mode != 'display':
-            return super(DateWidget, self).render()
-
-        if not self.value:
-            return ''
-        try:
-            date_value = DateWidgetConverter(
-                self.field, self).toFieldValue(self.value)
-        except ValueError:
-            return ''
-        formatter = self.request.locale.dates.getFormatter("date", "short")
-        if date_value.year > 1900:
-            return formatter.format(date_value)
-        # due to fantastic datetime.strftime we need this hack
-        # for now ctime is default
-        return date_value.ctime()
-
-
-class DatetimeWidget(DateWidget):
-    _widget_klass = base.InputWidget
+    _base = base.InputWidget
 
     implementsOnly(IDatetimeWidget)
 
-    pattern_options = DateWidget.pattern_options.copy()
+    pattern = 'pickadate'
+    pattern_options = BaseWidget.pattern_options.copy()
 
-    def _widget_args(self):
-        args = super(InputWidget, self)._widget_args()
-        args['request'] = self.request
-        value = self.value or u''
-        value = value.split(' ')
-        args['pattern_options']['date'] = {'value': value[0]}
-        args['pattern_options']['time'] = {
-            'value': value[1] if len(value) > 1 else '00:00'}
+    def _base_args(self):
+        args = super(DatetimeWidget, self)._base_args()
+        args['name'] = self.name
+
+        value = (self.request.get(self.name, self.value) or u'').strip()
+        if len(value.split(' ')) == 1:
+            value += ' 00:00'
+        args['value'] = value
+
+        today = date.today()
+        args.setdefault('pattern_options', {})
+        _pattern_options_calendar = utils.get_calendar_options(self.request)
+        _pattern_options_defaults = {
+            'selectYears': 200,
+            'min': [today.year - 100, 1, 1],
+            'max': [today.year + 20, 1, 1],
+            'format_date': translate(
+                _('pickadate_date_format', default='mmmm d, yyyy'),
+                context=self.request),
+            'format_time': translate(
+                _('pickadate_time_format', default='h:i a'),
+                context=self.request),
+            'placeholderDate': translate(_plone('Enter date...'),
+                                         context=self.request),
+            'placeholderTime': translate(_plone('Enter time...'),
+                                         context=self.request),
+            'today': translate(_plone(u"Today"), context=self.request),
+            'clear': translate(_plone(u"Clear"), context=self.request),
+        }
+
+        args['pattern_options'] = base.dict_merge(
+            args['pattern_options'],
+            _pattern_options_defaults)
+
+        args['pattern_options'] = base.dict_merge(
+            args['pattern_options'],
+            _pattern_options_calendar)
+
         return args
 
-    def extract(self, default=NO_VALUE):
-        date_value = self.request.form.get(self.name + '_date', default)
-        time_value = self.request.form.get(self.name + '_time', '00:00')
-        if date_value is default:
-            return default
+    def render(self):
+        if self.mode != 'display':
+            return super(DatetimeWidget, self).render()
 
-        return ' '.join([date_value, time_value])
+        if not self.value:
+            return ''
+
+        field_value = DatetimeWidgetConverter(
+            self.field, self).toFieldValue(self.value)
+        if field_value is self.fields.missing_value:
+            return u''
+
+        formatter = self.request.locale.dates.getFormatter("dateTime", "short")
+        if field_value.year > 1900:
+            return formatter.format(field_value)
+
+        # due to fantastic datetime.strftime we need this hack
+        # for now ctime is default
+        return field_value.ctime()
+
+
+class DateWidget(DatetimeWidget):
+
+    implementsOnly(IDateWidget)
+
+    pattern_options = DatetimeWidget.pattern_options.copy()
+
+    def _widget_args(self):
+        args = super(DateWidget, self)._base_args()
+        args['pattern_options']['time'] = False
+        del args['pattern_options']['format_time']
+        return args
 
     def render(self):
         if self.mode != 'display':
@@ -254,30 +294,32 @@ class DatetimeWidget(DateWidget):
 
         if not self.value:
             return ''
-        try:
-            date_value = DatetimeWidgetConverter(
-                self.field, self).toFieldValue(self.value)
-        except ValueError:
-            return ''
-        formatter = self.request.locale.dates.getFormatter("dateTime", "short")
-        if date_value.year > 1900:
-            return formatter.format(date_value)
+
+        field_value = DateWidgetConverter(
+            self.field, self).toFieldValue(self.value)
+        if field_value is self.fields.missing_value:
+            return u''
+
+        formatter = self.request.locale.dates.getFormatter("date", "short")
+        if field_value.year > 1900:
+            return formatter.format(field_value)
+
         # due to fantastic datetime.strftime we need this hack
         # for now ctime is default
-        return date_value.ctime()
+        return field_value.ctime()
 
 
-class SelectWidget(InputWidget, z3cform_SelectWidget):
+class SelectWidget(BaseWidget, z3cform_SelectWidget):
 
-    _widget_klass = base.SelectWidget
+    _base_klass = base.SelectWidget
 
     implementsOnly(ISelectWidget)
 
     pattern = 'select2'
-    pattern_options = InputWidget.pattern_options.copy()
+    pattern_options = BaseWidget.pattern_options.copy()
 
-    def _widget_args(self):
-        args = super(SelectWidget, self)._widget_args()
+    def _base_args(self):
+        args = super(SelectWidget, self)._base_args()
 
         options = []
         for item in self.items():
@@ -290,14 +332,14 @@ class SelectWidget(InputWidget, z3cform_SelectWidget):
         return args
 
 
-class AjaxSelectWidget(InputWidget):
+class AjaxSelectWidget(BaseWidget):
 
     _base = base.InputWidget
 
     implementsOnly(IAjaxSelectWidget)
 
     pattern = 'select2'
-    pattern_options = InputWidget.pattern_options.copy()
+    pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
     vocabulary = None
@@ -351,10 +393,10 @@ class AjaxSelectWidget(InputWidget):
         return args
 
 
-class QueryStringWidget(InputWidget):
+class QueryStringWidget(BaseWidget):
 
     pattern = 'querystring'
-    pattern_options = InputWidget.pattern_options.copy()
+    pattern_options = BaseWidget.pattern_options.copy()
 
     implementsOnly(IQueryStringWidget)
 

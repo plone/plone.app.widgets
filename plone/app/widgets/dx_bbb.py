@@ -13,7 +13,7 @@ except ImportError:
     HAS_RF = False
 from plone.app.widgets.dx import DatetimeWidget
 from plone.app.widgets.dx import SelectWidget
-from plone.app.widgets.dx import Select2Widget
+from plone.app.widgets.dx import AjaxSelectWidget
 from plone.app.widgets.dx import RelatedItemsWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
 
@@ -21,7 +21,7 @@ from plone.app.widgets.interfaces import IWidgetsLayer
 @adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def SubjectsFieldWidget(field, request):
-    widget = FieldWidget(field, Select2Widget(request))
+    widget = FieldWidget(field, AjaxSelectWidget(request))
     widget.ajax_vocabulary = 'plone.app.vocabularies.Keywords'
     return widget
 
@@ -50,7 +50,7 @@ def ExpirationDateFieldWidget(field, request):
 @adapter(getSpecification(IOwnership['contributors']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def ContributorsFieldWidget(field, request):
-    widget = FieldWidget(field, Select2Widget(request))
+    widget = FieldWidget(field, AjaxSelectWidget(request))
     widget.ajax_vocabulary = 'plone.app.vocabularies.Users'
     return widget
 
@@ -58,7 +58,7 @@ def ContributorsFieldWidget(field, request):
 @adapter(getSpecification(IOwnership['creators']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def CreatorsFieldWidget(field, request):
-    widget = FieldWidget(field, Select2Widget(request))
+    widget = FieldWidget(field, AjaxSelectWidget(request))
     widget.ajax_vocabulary = 'plone.app.vocabularies.Users'
     return widget
 

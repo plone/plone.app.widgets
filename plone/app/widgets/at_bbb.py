@@ -27,7 +27,7 @@ class MetadataExtender(object):
             old = field.widget
 
             if field.__name__ in ['subject']:
-                field.widget = at.Select2Widget(
+                field.widget = at.AjaxSelectWidget(
                     label=old.label,
                     description=old.description,
                     ajax_vocabulary='plone.app.vocabularies.Keywords',
@@ -46,7 +46,7 @@ class MetadataExtender(object):
                 )
 
             if field.__name__ in ['contributors']:
-                field.widget = at.Select2Widget(
+                field.widget = at.AjaxSelectWidget(
                     label=old.label,
                     description=_plone(u"The names of people that have "
                                        u"contributed to this item."),
@@ -54,7 +54,7 @@ class MetadataExtender(object):
                 )
 
             if field.__name__ in ['creators']:
-                field.widget = at.Select2Widget(
+                field.widget = at.AjaxSelectWidget(
                     label=old.label,
                     description=_plone(u"The names of people that are "
                                        u"creators to this item."),
