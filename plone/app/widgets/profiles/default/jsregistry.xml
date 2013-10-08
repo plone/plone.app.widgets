@@ -2,32 +2,15 @@
 <object name="portal_javascripts">
 
     <!-- deprecated -->
-    <javascript bundle="deprecated" id="accessibility.js" />
+    <javascript bundle="deprecated" id="jquery.js" />
+    <javascript bundle="deprecated" id="++resource++plone.app.jquery.js"  />
     <javascript bundle="deprecated" id="calendar_formfield.js" />
     <javascript bundle="deprecated" id="collapsibleformfields.js" />
     <javascript bundle="deprecated" id="collapsiblesections.js" />
-    <javascript bundle="deprecated" id="cookie_functions.js" />
-    <javascript bundle="deprecated" id="dropdown.js" />
-    <javascript bundle="deprecated" id="formsubmithelpers.js" />
-    <javascript bundle="deprecated" id="first_input_focus.js" />
-    <javascript bundle="deprecated" id="form_tabbing.js" />
-    <javascript bundle="deprecated" id="formUnload.js" />
-    <javascript bundle="deprecated" id="fullscreen.js" />
-    <javascript bundle="deprecated" id="jquery-integration.js" />
-    <javascript bundle="deprecated" id="js-standards.js" />
-    <javascript bundle="deprecated" id="nodeutilities.js" />
-    <javascript bundle="deprecated" id="register_function.js" />
-    <javascript bundle="deprecated" id="select_all.js" />
-    <javascript bundle="deprecated" id="styleswitcher.js" />
-    <javascript bundle="deprecated" id="livesearch.js" />
-    <javascript bundle="deprecated" id="jquery.tinymce.js" />
-    <javascript bundle="deprecated" id="tiny_mce_gzip.js" />
-    <javascript bundle="deprecated" id="popupforms.js" />
     <javascript bundle="deprecated" id="++resource++plone.formwidget.autocomplete/formwidget-autocomplete.js" />
     <javascript bundle="deprecated" id="++resource++plone.formwidget.autocomplete/jquery.autocomplete.min.js" />
     <javascript bundle="deprecated" id="++resource++plone.formwidget.contenttree/contenttree.js" />
     <javascript bundle="deprecated" id="++resource++plone.formwidget.querystring.querywidget.js" />
-
 
     <javascript
         cacheable="False" compression="none" cookable="False"
