@@ -361,7 +361,7 @@ class AjaxSelectWidget(BaseWidget):
                     return root.absolute_url()
             return ''
 
-        args = super(AjaxSelectWidget, self)._widget_args()
+        args = super(AjaxSelectWidget, self)._base_args()
         args['pattern_options']['separator'] = self.separator
 
         vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
