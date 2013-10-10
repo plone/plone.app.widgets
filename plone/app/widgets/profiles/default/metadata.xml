@@ -1,3 +1,7 @@
 <metadata>
     <version>1</version>
+    <dependencies>
+        <dependency>profile-plone.app.jquery:initial-upgrade</dependency>
+        <dependency>profile-plone.app.jquery:default</dependency>
+    </dependencies>
 </metadata>
