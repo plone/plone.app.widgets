@@ -113,7 +113,7 @@ class SelectWidgetTests(unittest.TestCase):
             widget.render(),
             '<select class="pat-example1" name="example2"></select>')
         self.assertEqual(list(widget.items), [])
-        self.assertEqual(widget.value, None)
+        self.assertEqual(widget.value, [])
 
     def test_set_items_and_value(self):
         from plone.app.widgets.base import SelectWidget
@@ -139,7 +139,7 @@ class SelectWidgetTests(unittest.TestCase):
             '</select>')
 
         self.assertEqual(list(widget.items), items)
-        self.assertEqual(widget.value, 'token2')
+        self.assertEqual(widget.value, ['token2'])
 
         widget.value = 'token1'
         self.assertEqual(
@@ -151,11 +151,7 @@ class SelectWidgetTests(unittest.TestCase):
             '</select>')
 
         self.assertEqual(list(widget.items), items)
-        self.assertEqual(widget.value, 'token1')
-
-        self.assertRaises(
-            TypeError,
-            widget._set_value, ['token1'])
+        self.assertEqual(widget.value, ['token1'])
 
         del widget.value
         self.assertEqual(
@@ -209,10 +205,6 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertEqual(list(widget.items), items)
         self.assertEqual(widget.value, ['token1', 'token2'])
-
-        self.assertRaises(
-            TypeError,
-            widget._set_value, 'token1')
 
         del widget.value
         self.assertEqual(
