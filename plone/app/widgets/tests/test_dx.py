@@ -33,30 +33,35 @@ class DatetimeWidgetTests(unittest.TestCase):
             self.widget._base_args(),
             {
                 'pattern': 'pickadate',
-                'value': u' 00:00',
+                'value': u'',
                 'name': None,
                 'pattern_options': {
-                    'placeholderTime': u'Enter time...',
-                    'min': [1913, 1, 1],
-                    'monthsFull': [u'January', u'February', u'March',
-                                   u'April', u'May', u'June', u'July',
-                                   u'August', u'September', u'October',
-                                   u'November', u'December'],
-                    'max': [2033, 1, 1],
-                    'clear': u'Clear',
-                    'format_time': 'h:i a',
-                    'weekdaysShort': [u'Sun', u'Mon', u'Tue', u'Wed', u'Thu',
-                                      u'Fri', u'Sat'],
-                    'weekdaysFull': [u'Sunday', u'Monday', u'Tuesday',
-                                     u'Wednesday', u'Thursday', u'Friday',
-                                     u'Saturday'],
-                    'monthsShort': [u'Jan', u'Feb', u'Mar', u'Apr', u'May',
-                                    u'Jun', u'Jul', u'Aug', u'Sep', u'Oct',
-                                    u'Nov', u'Dec'],
-                    'selectYears': 200,
-                    'format_date': 'mmmm d, yyyy',
-                    'placeholderDate': u'Enter date...',
-                    'today': u'Today'
+                    'date': {
+                        'min': [1913, 1, 1],
+                        'max': [2033, 1, 1],
+                        'clear': u'Clear',
+                        'format': 'mmmm d, yyyy',
+                        'monthsFull': [u'January', u'February', u'March',
+                                       u'April', u'May', u'June', u'July',
+                                       u'August', u'September', u'October',
+                                       u'November', u'December'],
+                        'weekdaysShort': [u'Sun', u'Mon', u'Tue', u'Wed',
+                                          u'Thu', u'Fri', u'Sat'],
+                        'weekdaysFull': [u'Sunday', u'Monday', u'Tuesday',
+                                         u'Wednesday', u'Thursday', u'Friday',
+                                         u'Saturday'],
+                        'today': u'Today',
+                        'selectYears': 200,
+                        'placeholder': u'Enter date...',
+                        'monthsShort': [u'Jan', u'Feb', u'Mar', u'Apr', u'May',
+                                        u'Jun', u'Jul', u'Aug', u'Sep', u'Oct',
+                                        u'Nov', u'Dec']
+                    },
+                    'time': {
+                        'placeholder': u'Enter time...',
+                        'today': u'Today',
+                        'format': 'h:i a'
+                    }
                 }
             }
         )
