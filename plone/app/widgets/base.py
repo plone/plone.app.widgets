@@ -214,47 +214,27 @@ class SelectWidget(BaseWidget):
     def _get_value(self):
         """Return selected option(s).
 
-        :returns: In case of `multiple` element options being `True` return
-                  list of selected options and in case `multiple` is `False`
-                  return value of selected options. If no options is selected
-                  return `None`.
-        :rtype: list or string or None
+        :returns: Returns list of selected option(s) values.
+        :rtype: list
         """
-        if self.multiple:
-            value = []
-            for element in self.el.iter("option"):
-                if 'selected' in element.attrib and \
-                        element.attrib['selected'] == 'selected':
-                    value.append(element.attrib['value'])
-            if len(value) == 0:
-                value = None
-        else:
-            value = None
-            for element in self.el.iter("option"):
-                if 'selected' in element.attrib and \
-                        element.attrib['selected'] == 'selected':
-                    value = element.attrib['value']
-                    break
+        value = []
+        for element in self.el.iter("option"):
+            if 'selected' in element.attrib and \
+                    element.attrib['selected'] == 'selected':
+                value.append(element.attrib['value'])
         return value
 
     def _set_value(self, value):
         """Select option(s).
 
-        :param value: In case of `multiple` being `True` we are expecting list
-                      of option's values and in case of `multiple` being
-                      `False` we are expecting option's value which should be
-                      selected.
+        :param value: We are expecting option's value which should be selected.
         :type value: list or string
         """
+        if isinstance(value, basestring):
+            value = [value]
 
-        if self.multiple and type(value) not in (list, tuple):
-            raise TypeError
-        elif not self.multiple and not isinstance(value, basestring):
-            raise TypeError
         for element in self.el.iter("option"):
-            if self.multiple and element.attrib['value'] in value:
-                element.attrib['selected'] = 'selected'
-            elif not self.multiple and element.attrib['value'] == value:
+            if element.attrib['value'] in value:
                 element.attrib['selected'] = 'selected'
             elif 'selected' in element.attrib and \
                     element.attrib['selected'] == 'selected':
