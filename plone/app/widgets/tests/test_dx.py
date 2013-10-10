@@ -9,6 +9,7 @@ from zope.component import provideUtility
 from zope.schema import Date
 from zope.schema import Datetime
 from zope.schema import List
+from zope.schema import Choice
 from zope.schema import TextLine
 from zope.schema import Tuple
 
@@ -17,6 +18,85 @@ try:
 except ImportError:  # pragma: nocover
     import unittest  # pragma: nocover
     assert unittest  # pragma: nocover
+
+
+class DateWidgetTests(unittest.TestCase):
+
+    def setUp(self):
+        from plone.app.widgets.dx import DateWidget
+
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        self.field = Date(__name__='datefield')
+        self.widget = DateWidget(self.request)
+        self.widget.field = self.field
+
+    def test_widget(self):
+        self.assertEqual(
+            {
+                'pattern': 'pickadate',
+                'value': u'',
+                'name': None,
+                'pattern_options': {
+                    'date': {
+                        'min': [1913, 1, 1],
+                        'max': [2033, 1, 1],
+                        'clear': u'Clear',
+                        'format': 'mmmm d, yyyy',
+                        'monthsFull': [u'January', u'February', u'March',
+                                       u'April', u'May', u'June', u'July',
+                                       u'August', u'September', u'October',
+                                       u'November', u'December'],
+                        'weekdaysShort': [u'Sun', u'Mon', u'Tue', u'Wed',
+                                          u'Thu', u'Fri', u'Sat'],
+                        'weekdaysFull': [u'Sunday', u'Monday', u'Tuesday',
+                                         u'Wednesday', u'Thursday', u'Friday',
+                                         u'Saturday'],
+                        'today': u'Today',
+                        'selectYears': 200,
+                        'placeholder': u'Enter date...',
+                        'monthsShort': [u'Jan', u'Feb', u'Mar', u'Apr', u'May',
+                                        u'Jun', u'Jul', u'Aug', u'Sep', u'Oct',
+                                        u'Nov', u'Dec']
+                    },
+                    'time': False
+                }
+            },
+            self.widget._base_args(),
+        )
+
+    def test_data_converter(self):
+        from plone.app.widgets.dx import DateWidgetConverter
+        converter = DateWidgetConverter(self.field, self.widget)
+
+        self.assertEqual(
+            converter.field.missing_value,
+            converter.toFieldValue(''),
+        )
+
+        self.assertEqual(
+            date(2000, 10, 30),
+            converter.toFieldValue('2000-10-30'),
+        )
+
+        self.assertEqual(
+            date(21, 10, 30),
+            converter.toFieldValue('21-10-30'),
+        )
+
+        self.assertEqual(
+            '',
+            converter.toWidgetValue(converter.field.missing_value),
+        )
+
+        self.assertEqual(
+            '2000-10-30',
+            converter.toWidgetValue(date(2000, 10, 30)),
+        )
+
+        self.assertEqual(
+            '21-10-30',
+            converter.toWidgetValue(date(21, 10, 30)),
+        )
 
 
 class DatetimeWidgetTests(unittest.TestCase):
@@ -30,7 +110,6 @@ class DatetimeWidgetTests(unittest.TestCase):
 
     def test_widget(self):
         self.assertEqual(
-            self.widget._base_args(),
             {
                 'pattern': 'pickadate',
                 'value': u'',
@@ -63,7 +142,8 @@ class DatetimeWidgetTests(unittest.TestCase):
                         'format': 'h:i a'
                     }
                 }
-            }
+            },
+            self.widget._base_args(),
         )
 
     def test_data_converter(self):
@@ -101,85 +181,73 @@ class DatetimeWidgetTests(unittest.TestCase):
         )
 
 
-class DateWidgetTests(unittest.TestCase):
+class SelectWidgetTests(unittest.TestCase):
+
+    layer = UNIT_TESTING
 
     def setUp(self):
-        from plone.app.widgets.dx import DateWidget
-
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.field = Date(__name__='datefield')
-        self.widget = DateWidget(self.request)
-        self.widget.field = self.field
 
     def test_widget(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        widget.field = Choice(
+            __name__='selectfield',
+            values=['one', 'two', 'three']
+        )
+        widget.terms = widget.field.vocabulary
         self.assertEqual(
-            self.widget._widget_args(),
             {
-                'pattern': 'pickadate',
-                'value': u' 00:00',
+                'multiple': False,
                 'name': None,
-                'pattern_options': {
-                    'placeholderTime': u'Enter time...',
-                    'min': [1913, 1, 1],
-                    'monthsFull': [u'January', u'February', u'March', u'April',
-                                   u'May', u'June', u'July', u'August',
-                                   u'September', u'October', u'November',
-                                   u'December'],
-                    'max': [2033, 1, 1],
-                    'clear': u'Clear',
-                    'time': False,
-                    'weekdaysShort': [u'Sun', u'Mon', u'Tue', u'Wed', u'Thu',
-                                      u'Fri', u'Sat'],
-                    'weekdaysFull': [u'Sunday', u'Monday', u'Tuesday',
-                                     u'Wednesday', u'Thursday', u'Friday',
-                                     u'Saturday'],
-                    'monthsShort': [u'Jan', u'Feb', u'Mar', u'Apr', u'May',
-                                    u'Jun', u'Jul', u'Aug', u'Sep', u'Oct',
-                                    u'Nov', u'Dec'],
-                    'selectYears': 200,
-                    'format_date': 'mmmm d, yyyy',
-                    'placeholderDate': u'Enter date...',
-                    'today': u'Today',
-                }
-            }
+                'pattern_options': {},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
         )
 
-    def test_data_converter(self):
-        from plone.app.widgets.dx import DateWidgetConverter
-        converter = DateWidgetConverter(self.field, self.widget)
-
+        widget.multiple = True
         self.assertEqual(
-            converter.toFieldValue(''),
-            converter.field.missing_value,
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
         )
 
+        widget.value = 'one'
         self.assertEqual(
-            converter.toFieldValue('2000-10-30'),
-            date(2000, 10, 30),
-        )
-
-        self.assertEqual(
-            converter.toFieldValue('21-10-30'),
-            date(21, 10, 30),
-        )
-
-        self.assertEqual(
-            converter.toWidgetValue(converter.field.missing_value),
-            '',
-        )
-
-        self.assertEqual(
-            converter.toWidgetValue(date(2000, 10, 30)),
-            '2000-10-30',
-        )
-
-        self.assertEqual(
-            converter.toWidgetValue(date(21, 10, 30)),
-            '21-10-30',
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {},
+                'pattern': 'select2',
+                'value': ('one'),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
         )
 
 
-class SelectWidgetTests(unittest.TestCase):
+class AjaxSelectWidgetTests(unittest.TestCase):
 
     layer = UNIT_TESTING
 
@@ -188,27 +256,27 @@ class SelectWidgetTests(unittest.TestCase):
         provideUtility(ExampleVocabulary(), name=u'example')
 
     def test_widget(self):
-        from plone.app.widgets.dx import Select2Widget
-        widget = Select2Widget(self.request)
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
         self.assertEqual(
-            widget._widget_args(),
             {
                 'name': None,
                 'value': None,
                 'pattern': 'select2',
                 'pattern_options': {'separator': ';'},
-            }
+            },
+            widget._base_args()
         )
 
-        widget.ajax_vocabulary = 'example'
+        widget.vocabulary = 'example'
         self.assertEqual(
-            widget._widget_args(),
+            widget._base_args(),
             {
                 'name': None,
                 'value': None,
                 'pattern': 'select2',
                 'pattern_options': {
-                    'ajaxVocabulary': '/@@getVocabulary?name=example',
+                    'vocabularyUrl': '/@@getVocabulary?name=example',
                     'separator': ';'
                 },
             }
@@ -216,84 +284,115 @@ class SelectWidgetTests(unittest.TestCase):
 
         widget.value = 'three;two'
         self.assertEqual(
-            widget._widget_args(),
+            widget._base_args(),
             {
                 'name': None,
                 'value': 'three;two',
                 'pattern': 'select2',
                 'pattern_options': {
-                    'ajaxVocabulary': '/@@getVocabulary?name=example',
-                    'initvaluemap': {'three': u'Three', 'two': u'Two'},
+                    'vocabularyUrl': '/@@getVocabulary?name=example',
+                    'initialValues': {'three': u'Three', 'two': u'Two'},
                     'separator': ';'
                 },
             }
         )
 
-    def test_data_converter(self):
-        from plone.app.widgets.dx import Select2Widget
-        from plone.app.widgets.dx import Select2WidgetConverter
+    def test_data_converter_list(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        from plone.app.widgets.dx import AjaxSelectWidgetConverter
 
-        field1 = List(__name__='listfield', value_type=TextLine())
-        widget1 = Select2Widget(self.request)
-        widget1.field = field1
-        converter1 = Select2WidgetConverter(field1, widget1)
+        field = List(__name__='listfield', value_type=TextLine())
+        widget = AjaxSelectWidget(self.request)
+        widget.field = field
+        converter = AjaxSelectWidgetConverter(field, widget)
 
         self.assertEqual(
-            converter1.toFieldValue(''),
-            field1.missing_value,
+            converter.toFieldValue(''),
+            field.missing_value,
         )
 
         self.assertEqual(
-            converter1.toFieldValue('123;456;789'),
+            converter.toFieldValue('123;456;789'),
             ['123', '456', '789'],
         )
 
         self.assertEqual(
-            converter1.toWidgetValue([]),
-            '',
+            converter.toWidgetValue([]),
+            None,
         )
 
         self.assertEqual(
-            converter1.toWidgetValue(['123', '456', '789']),
+            converter.toWidgetValue(['123', '456', '789']),
             '123;456;789',
         )
 
-        field2 = Tuple(__name__='tuplefield', value_type=TextLine())
-        widget2 = Select2Widget(self.request)
-        widget2.field = field2
-        converter2 = Select2WidgetConverter(field2, widget2)
+    def test_data_converter_tuple(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        from plone.app.widgets.dx import AjaxSelectWidgetConverter
+
+        field = Tuple(__name__='tuplefield', value_type=TextLine())
+        widget = AjaxSelectWidget(self.request)
+        widget.field = field
+        converter = AjaxSelectWidgetConverter(field, widget)
 
         self.assertEqual(
-            converter2.toFieldValue(''),
-            field2.missing_value,
+            converter.toFieldValue(''),
+            field.missing_value,
         )
 
         self.assertEqual(
-            converter2.toFieldValue('123;456;789'),
+            converter.toFieldValue('123;456;789'),
             ('123', '456', '789'),
         )
 
         self.assertEqual(
-            converter2.toWidgetValue(tuple()),
-            '',
+            converter.toWidgetValue(tuple()),
+            None,
         )
 
         self.assertEqual(
-            converter2.toWidgetValue(('123', '456', '789')),
+            converter.toWidgetValue(('123', '456', '789')),
             '123;456;789',
         )
-
-
-class AjaxSelectWidgetTests(unittest.TestCase):
-
-    layer = UNIT_TESTING
 
 
 class QueryStringWidgetTests(unittest.TestCase):
 
     layer = UNIT_TESTING
 
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+
+    def test_widget(self):
+        from plone.app.widgets.dx import QueryStringWidget
+        widget = QueryStringWidget(self.request)
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'querystring',
+                'pattern_options': {'indexOptionsUrl': '/@@qsOptions'},
+            },
+            widget._base_args()
+        )
+
 
 class RelatedItemsWidgetTests(unittest.TestCase):
 
     layer = UNIT_TESTING
+
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+
+    def test_widget(self):
+        from plone.app.widgets.dx import RelatedItemsWidget
+        widget = RelatedItemsWidget(self.request)
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'relateditems',
+                'pattern_options': {'separator': ';'},
+            },
+            widget._base_args()
+        )
