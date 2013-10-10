@@ -57,19 +57,9 @@ class PloneAppWidgetsLayer(PloneSandboxLayer):
         # Load ZCML
         import plone.app.widgets
         self.loadZCML(package=plone.app.widgets)
-        import plone.app.widgets.tests.example
-        self.loadZCML(package=plone.app.widgets.tests.example)
-
-        # Install product and call its initialize() function
-        z2.installProduct(app, 'plone.app.widgets.tests.example')
-
-    def tearDownZope(self, app):
-        # Uninstall product and call its uninstall() function
-        z2.uninstallProduct(app, 'plone.app.widgets.tests.example')
 
     def setUpPloneSite(self, portal):
         self.applyProfile(portal, 'plone.app.widgets:default')
-        self.applyProfile(portal, 'plone.app.widgets.tests.example:example')
 
 
 PLONEAPPWIDGETS_FIXTURE = PloneAppWidgetsLayer()
@@ -77,9 +67,6 @@ PLONEAPPWIDGETS_FIXTURE = PloneAppWidgetsLayer()
 PLONEAPPWIDGETS_INTEGRATION_TESTING = IntegrationTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE,),
     name="PloneAppWidgetsLayer:Integration")
-PLONEAPPWIDGETS_FUNCTIONAL_TESTING = FunctionalTesting(
-    bases=(PLONEAPPWIDGETS_FIXTURE,),
-    name="PloneAppWidgetsLayer:Functional")
 PLONEAPPWIDGETS_ACCEPTANCE_TESTING = FunctionalTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE, z2.ZSERVER_FIXTURE),
     name="PloneAppWidgetsLayer:Acceptance")
