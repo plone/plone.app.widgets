@@ -25,12 +25,12 @@ class NotImplemented(Exception):
     """Raised when method/property is not implemented"""
 
 
-class IDatetimeWidget(z3cform_interfaces.ITextWidget):
-    """Marker interface for the DatetimeWidget."""
-
-
 class IDateWidget(z3cform_interfaces.ITextWidget):
     """Marker interface for the DateWidget."""
+
+
+class IDatetimeWidget(z3cform_interfaces.ITextWidget):
+    """Marker interface for the DatetimeWidget."""
 
 
 class ISelectWidget(z3cform_interfaces.ISelectWidget):
@@ -47,6 +47,39 @@ class IQueryStringWidget(z3cform_interfaces.ITextWidget):
 
 class IRelatedItemsWidget(z3cform_interfaces.ITextWidget):
     """Marker interface for the RelatedItemsWidget."""
+
+
+class DateWidgetConverter(BaseDataConverter):
+    """Data converter for date fields."""
+
+    adapts(IDate, IDateWidget)
+
+    def toWidgetValue(self, value):
+        """Converts from field value to widget.
+
+        :param value: Field value.
+        :type value: date
+
+        :returns: Date in format `Y-m-d`
+        :rtype: string
+        """
+        if value is self.field.missing_value:
+            return u''
+        return ('{value.year:}-{value.month:02}-{value.day:02}'
+                ).format(value=value)
+
+    def toFieldValue(self, value):
+        """Converts from widget value to field.
+
+        :param value: Value inserted by date widget.
+        :type value: string
+
+        :returns: `date.date` object.
+        :rtype: date
+        """
+        if not value:
+            return self.field.missing_value
+        return date(*map(int, value.split('-')))
 
 
 class DatetimeWidgetConverter(BaseDataConverter):
@@ -85,39 +118,6 @@ class DatetimeWidgetConverter(BaseDataConverter):
         value = tmp[0].split('-')
         value += tmp[1].split(':')
         return datetime(*map(int, value))
-
-
-class DateWidgetConverter(BaseDataConverter):
-    """Data converter for date fields."""
-
-    adapts(IDate, IDateWidget)
-
-    def toWidgetValue(self, value):
-        """Converts from field value to widget.
-
-        :param value: Field value.
-        :type value: date
-
-        :returns: Date in format `Y-m-d`
-        :rtype: string
-        """
-        if value is self.field.missing_value:
-            return u''
-        return ('{value.year:}-{value.month:02}-{value.day:02}'
-                ).format(value=value)
-
-    def toFieldValue(self, value):
-        """Converts from widget value to field.
-
-        :param value: Value inserted by date widget.
-        :type value: string
-
-        :returns: `date.date` object.
-        :rtype: date
-        """
-        if not value:
-            return self.field.missing_value
-        return date(*map(int, value.split('-')))
 
 
 class AjaxSelectWidgetConverter(BaseDataConverter):
@@ -273,85 +273,17 @@ class BaseWidget(Widget):
         return self._base(**self._base_args()).render()
 
 
-class DatetimeWidget(BaseWidget):
-    """Datetime widget for z3c.form."""
+class DateWidget(BaseWidget):
+    """Date widget for z3c.form."""
 
     _base = base.InputWidget
-
-    implementsOnly(IDatetimeWidget)
-
-    pattern = 'pickadate'
-    pattern_options = BaseWidget.pattern_options.copy()
-
-    def _base_args(self):
-        """Method which will calculate _base class arguments.
-
-        Returns (as python dictionary):
-            - `pattern`: pattern name
-            - `pattern_options`: pattern options
-            - `name`: field name
-            - `value`: field value
-            - `date`: options for pickdate widget
-            - `time`: options for picktime widget
-
-        :returns: Arguments which will be passed to _base
-        :rtype: dict
-        """
-        args = super(DatetimeWidget, self)._base_args()
-        args['name'] = self.name
-
-        value = (self.request.get(self.name, self.value) or u'').strip()
-        if value and len(value.split(' ')) == 1:
-            value += ' 00:00'
-        args['value'] = value
-
-        args.setdefault('pattern_options', {})
-
-        args['pattern_options'].setdefault('date', {})
-        args['pattern_options']['date'] = base.dict_merge(
-            args['pattern_options']['date'],
-            utils.get_date_options(self.request))
-
-        args['pattern_options'].setdefault('time', {})
-        args['pattern_options']['time'] = base.dict_merge(
-            args['pattern_options']['time'],
-            utils.get_time_options(self.request))
-
-        return args
-
-    def render(self):
-        """Render widget.
-
-        :returns: Widget's HTML.
-        :rtype: string
-        """
-        if self.mode != 'display':
-            return super(DatetimeWidget, self).render()
-
-        if not self.value:
-            return u''
-
-        field_value = DatetimeWidgetConverter(
-            self.field, self).toFieldValue(self.value)
-
-        if field_value is self.fields.missing_value:
-            return u''
-
-        formatter = self.request.locale.dates.getFormatter("dateTime", "short")
-        if field_value.year > 1900:
-            return formatter.format(field_value)
-
-        # due to fantastic datetime.strftime we need this hack
-        # for now ctime is default
-        return field_value.ctime()
-
-
-class DateWidget(DatetimeWidget):
-    """Date widget for z3c.form."""
+    _converter = DateWidgetConverter
+    _formater = 'date'
 
     implementsOnly(IDateWidget)
 
-    pattern_options = DatetimeWidget.pattern_options.copy()
+    pattern = 'pickadate'
+    pattern_options = BaseWidget.pattern_options.copy()
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -366,11 +298,26 @@ class DateWidget(DatetimeWidget):
         :rtype: dict
         """
         args = super(DateWidget, self)._base_args()
+        args['name'] = self.name
+        args['value'] = (self.request.get(self.name,
+                                          self.value) or u'').strip()
+
+        args.setdefault('pattern_options', {})
+
+        args['pattern_options'].setdefault('date', {})
+        args['pattern_options']['date'] = base.dict_merge(
+            args['pattern_options']['date'],
+            utils.get_date_options(self.request))
+
         args['pattern_options']['time'] = False
+
         return args
 
     def render(self):
-        """
+        """Render widget.
+
+        :returns: Widget's HTML.
+        :rtype: string
         """
         if self.mode != 'display':
             return super(DateWidget, self).render()
@@ -378,18 +325,56 @@ class DateWidget(DatetimeWidget):
         if not self.value:
             return ''
 
-        field_value = DateWidgetConverter(
+        field_value = self._base_converter(
             self.field, self).toFieldValue(self.value)
         if field_value is self.fields.missing_value:
             return u''
 
-        formatter = self.request.locale.dates.getFormatter("date", "short")
+        formatter = self.request.locale.dates.getFormatter(
+            self._formater, "short")
         if field_value.year > 1900:
             return formatter.format(field_value)
 
         # due to fantastic datetime.strftime we need this hack
         # for now ctime is default
         return field_value.ctime()
+
+
+class DatetimeWidget(DateWidget):
+    """Datetime widget for z3c.form."""
+
+    _converter = DatetimeWidgetConverter
+    _formater = 'dateTime'
+
+    implementsOnly(IDatetimeWidget)
+
+    pattern_options = DateWidget.pattern_options.copy()
+
+    def _base_args(self):
+        """Method which will calculate _base class arguments.
+
+        Returns (as python dictionary):
+            - `pattern`: pattern name
+            - `pattern_options`: pattern options
+            - `name`: field name
+            - `value`: field value
+
+        :returns: Arguments which will be passed to _base
+        :rtype: dict
+        """
+        args = super(DatetimeWidget, self)._base_args()
+
+        if args['value'] and len(args['value'].split(' ')) == 1:
+            args['value'] += ' 00:00'
+
+        if args['pattern_options']['time'] is False:
+            args['pattern_options']['time'] = {}
+
+        args['pattern_options']['time'] = base.dict_merge(
+            args['pattern_options']['time'],
+            utils.get_time_options(self.request))
+
+        return args
 
 
 class SelectWidget(BaseWidget, z3cform_SelectWidget):
