@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
+
+from AccessControl import Unauthorized
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
+from plone.app.testing import login
+from plone.app.testing import setRoles
+from plone.app.widgets.browser.vocabulary import VocabularyView
+from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
+from plone.app.widgets.testing import TestRequest
+from zope.globalrequest import setRequest
+
+import json
+
 try:
     import unittest2 as unittest
 except ImportError:  # pragma: nocover
     import unittest  # pragma: nocover
     assert unittest  # pragma: nocover
-
-from AccessControl import Unauthorized
-from zope.globalrequest import setRequest
-from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
-from plone.app.widgets.testing import TestRequest
-from plone.app.widgets.browser.vocabulary import VocabularyView
-import json
-from plone.app.testing import TEST_USER_NAME
-from plone.app.testing import login
-from plone.app.testing import setRoles
-from plone.app.testing import TEST_USER_ID
 
 
 class BrowserTest(unittest.TestCase):
