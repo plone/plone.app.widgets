@@ -12,6 +12,10 @@ _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')
 
 
+class NotImplemented(Exception):
+    """Raised when method/property is not implemented"""
+
+
 def get_date_options(request):
     calendar = request.locale.dates.calendars['gregorian']
     # TODO: take first weekday into account when you like

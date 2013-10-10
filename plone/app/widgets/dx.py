@@ -4,7 +4,10 @@ from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
 from plone.app.widgets import base
-from plone.app.widgets import utils
+from plone.app.widgets.utils import NotImplemented
+from plone.app.widgets.utils import get_date_options
+from plone.app.widgets.utils import get_portal_url
+from plone.app.widgets.utils import get_time_options
 from z3c.form import interfaces as z3cform_interfaces
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
@@ -19,10 +22,6 @@ from zope.schema.interfaces import IList
 from zope.schema.interfaces import IVocabularyFactory
 
 import json
-
-
-class NotImplemented(Exception):
-    """Raised when method/property is not implemented"""
 
 
 class IDateWidget(z3cform_interfaces.ITextWidget):
@@ -241,7 +240,7 @@ class BaseWidget(Widget):
     pattern = None
     pattern_options = {}
 
-    def _base(self):
+    def _base(self, pattern, pattern_options={}):
         """Base widget class."""
         raise NotImplemented
 
@@ -307,7 +306,7 @@ class DateWidget(BaseWidget):
         args['pattern_options'].setdefault('date', {})
         args['pattern_options']['date'] = base.dict_merge(
             args['pattern_options']['date'],
-            utils.get_date_options(self.request))
+            get_date_options(self.request))
 
         args['pattern_options']['time'] = False
 
@@ -372,7 +371,7 @@ class DatetimeWidget(DateWidget):
 
         args['pattern_options']['time'] = base.dict_merge(
             args['pattern_options']['time'],
-            utils.get_time_options(self.request))
+            get_time_options(self.request))
 
         return args
 
@@ -453,7 +452,7 @@ class AjaxSelectWidget(BaseWidget):
         # get url which will be used to lookup vocabulary
         if self.vocabulary:
             vocabulary_url = '%s/@@getVocabulary?name=%s' % (
-                utils.get_portal_url(self.context), self.vocabulary)
+                get_portal_url(self.context), self.vocabulary)
             args['pattern_options']['vocabularyUrl'] = vocabulary_url
 
             # initial values
@@ -505,7 +504,7 @@ class QueryStringWidget(BaseWidget):
         args['name'] = self.name
         args['value'] = self.value
         args['pattern_options']['indexOptionsUrl'] = '%s/@@qsOptions' % (
-            utils.get_portal_url(self.context))
+            get_portal_url(self.context))
         return args
 
 
