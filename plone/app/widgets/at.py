@@ -12,7 +12,9 @@ from plone.uuid.interfaces import IUUID
 
 
 class BaseWidget(TypesWidget):
-    """ Example usage
+    """
+
+        Example usage
 
             TextField(
                 id='text',
@@ -21,18 +23,19 @@ class BaseWidget(TypesWidget):
                 widget=BaseWidget(
                     label='Insert text',
                     pattern='example',
-                    pattern_option1='value1',
-                    pattern_option2='value2'
-                )
+                    pattern_options={
+                        'option1': 'value1',
+                        'option2': 'value2',
+                    },
+                ),
             )
 
         above widget would produce
 
             <input
-                class="pat-example'
-                data-pat-example="{'option1': 'value1',
-                                   'options2': value2' }"
                 value=""
+                class="pat-example'
+                data-pat-example='{"option1": 'value1', "options2": "value2" }'
                 />
 
     """
@@ -40,9 +43,11 @@ class BaseWidget(TypesWidget):
     _properties = TypesWidget._properties.copy()
     _properties.update({
         'macro': 'patterns_widget',
-        'klass': base.InputWidget,
         'pattern': '',
+        'pattern_options': {},
     })
+
+    _base = base.InputWidget,
 
     def _widget_args(self, context, field, request):
         pattern_options = {}
@@ -64,6 +69,32 @@ class BaseWidget(TypesWidget):
         args = self._widget_args(context, field, request)
         return self._widget(**args).render()
 
+
+class DatetimeWidget(BaseWidget):
+    _properties = BaseWidget._properties.copy()
+
+    def _widget_args(self, context, field, request):
+        args = super(DatetimeWidget, self)._widget_args(context, field,
+                                                        request)
+        value = request.get(field.getName(), field.getAccessor(context)())
+        if value:
+            if isinstance(value, DateTime):
+                value = '%02d:%02d' % (value.hour(), value.minute())
+            else:
+                value = '%02d:%02d' % (value.hour, value.minute)
+        else:
+            value = ''
+        args['pattern_options']['time'] = {'value': value}
+
+        return args
+
+
+registerWidget(
+    DatetimeWidget,
+    title='Datetime widget',
+    description=('Datetime widget'),
+    used_for=('Products.Archetypes.Field.DateTimeField',)
+)
 
 
 
@@ -170,33 +201,6 @@ registerWidget(
     DateWidget,
     title='Date widget',
     description=('Date widget'),
-    used_for=('Products.Archetypes.Field.DateTimeField',)
-)
-
-
-class DatetimeWidget(DateWidget):
-    _properties = DateWidget._properties.copy()
-
-    def _widget_args(self, context, field, request):
-        args = super(DatetimeWidget, self)._widget_args(context, field,
-                                                        request)
-        value = request.get(field.getName(), field.getAccessor(context)())
-        if value:
-            if isinstance(value, DateTime):
-                value = '%02d:%02d' % (value.hour(), value.minute())
-            else:
-                value = '%02d:%02d' % (value.hour, value.minute)
-        else:
-            value = ''
-        args['pattern_options']['time'] = {'value': value}
-
-        return args
-
-
-registerWidget(
-    DatetimeWidget,
-    title='Datetime widget',
-    description=('Datetime widget'),
     used_for=('Products.Archetypes.Field.DateTimeField',)
 )
 
