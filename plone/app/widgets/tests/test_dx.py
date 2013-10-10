@@ -20,6 +20,52 @@ except ImportError:  # pragma: nocover
     assert unittest  # pragma: nocover
 
 
+class BaseWidgetTests(unittest.TestCase):
+
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        self.field = TextLine(__name__='textlinefield')
+
+    def test_widget_pattern_notimplemented(self):
+        from plone.app.widgets.dx import BaseWidget
+        from plone.app.widgets.utils import NotImplemented
+
+        widget = BaseWidget(self.request)
+        widget.field = self.field
+
+        self.assertRaises(
+            NotImplemented,
+            widget._base_args)
+
+        widget.pattern = 'example'
+
+        self.assertEqual(
+            {
+                'pattern': 'example',
+                'pattern_options': {}
+            },
+            widget._base_args())
+
+    def test_widget_base_notimplemented(self):
+        from plone.app.widgets.dx import BaseWidget
+        from plone.app.widgets.base import InputWidget
+        from plone.app.widgets.utils import NotImplemented
+
+        widget = BaseWidget(self.request)
+        widget.field = self.field
+        widget.pattern = 'example'
+
+        self.assertRaises(
+            NotImplemented,
+            widget.render)
+
+        widget._base = InputWidget
+
+        self.assertEqual(
+            '<input class="pat-example" type="text"/>',
+            widget.render())
+
+
 class DateWidgetTests(unittest.TestCase):
 
     def setUp(self):
@@ -182,8 +228,6 @@ class DatetimeWidgetTests(unittest.TestCase):
 
 
 class SelectWidgetTests(unittest.TestCase):
-
-    layer = UNIT_TESTING
 
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
@@ -358,8 +402,6 @@ class AjaxSelectWidgetTests(unittest.TestCase):
 
 class QueryStringWidgetTests(unittest.TestCase):
 
-    layer = UNIT_TESTING
-
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
 
@@ -378,8 +420,6 @@ class QueryStringWidgetTests(unittest.TestCase):
 
 
 class RelatedItemsWidgetTests(unittest.TestCase):
-
-    layer = UNIT_TESTING
 
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
