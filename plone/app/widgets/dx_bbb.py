@@ -22,7 +22,7 @@ from plone.app.widgets.interfaces import IWidgetsLayer
 @implementer(IFieldWidget)
 def SubjectsFieldWidget(field, request):
     widget = FieldWidget(field, AjaxSelectWidget(request))
-    widget.ajax_vocabulary = 'plone.app.vocabularies.Keywords'
+    widget.vocabulary = 'plone.app.vocabularies.Keywords'
     return widget
 
 
@@ -51,7 +51,7 @@ def ExpirationDateFieldWidget(field, request):
 @implementer(IFieldWidget)
 def ContributorsFieldWidget(field, request):
     widget = FieldWidget(field, AjaxSelectWidget(request))
-    widget.ajax_vocabulary = 'plone.app.vocabularies.Users'
+    widget.vocabulary = 'plone.app.vocabularies.Users'
     return widget
 
 
@@ -59,7 +59,7 @@ def ContributorsFieldWidget(field, request):
 @implementer(IFieldWidget)
 def CreatorsFieldWidget(field, request):
     widget = FieldWidget(field, AjaxSelectWidget(request))
-    widget.ajax_vocabulary = 'plone.app.vocabularies.Users'
+    widget.vocabulary = 'plone.app.vocabularies.Users'
     return widget
 
 
@@ -68,5 +68,5 @@ if HAS_RF:
     @implementer(IFieldWidget)
     def RelatedItemsFieldWidget(field, request):
         widget = FieldWidget(field, RelatedItemsWidget(request))
-        widget.ajax_vocabulary = 'plone.app.vocabularies.Catalog'
+        widget.vocabulary = 'plone.app.vocabularies.Catalog'
         return widget
