@@ -477,14 +477,18 @@ class AjaxSelectWidget(BaseWidget):
                 if vocabulary:
                     initialValues = {}
                     vocabulary = vocabulary(self.context)
-                    for value in self.value.split(self.separator):
-                        term = vocabulary.getTerm(value)
-                        initialValues[term.token] = term.title
-                        try:
-                            term = vocabulary.getTerm(value)
-                            initialValues[term.token] = term.title
-                        except LookupError:
-                            initialValues[value] = value
+                    if self.vocabulary == 'plone.app.vocabularies.Catalog':
+                        uids = self.value.split(self.separator)
+                        catalog = getToolByName(self.context, 'portal_catalog')
+                        for item in catalog(UID=uids):
+                            initialValues[item.UID] = item.Title
+                    else:
+                        for value in self.value.split(self.separator):
+                            try:
+                                term = vocabulary.getTerm(value)
+                                initialValues[term.token] = term.title
+                            except LookupError:
+                                initialValues[value] = value
                 args['pattern_options']['initialValues'] = initialValues
 
         return args
