@@ -6,9 +6,13 @@ from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
 from plone.app.testing import setRoles
 from plone.app.widgets.browser.vocabulary import VocabularyView
+from plone.app.widgets.browser.query import QueryStringIndexOptions
+from plone.app.widgets.browser.file import FileUploadView
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
 from zope.globalrequest import setRequest
+from StringIO import StringIO
+import transaction
 
 import json
 
@@ -127,3 +131,22 @@ class BrowserTest(unittest.TestCase):
         })
         data = json.loads(view())
         self.assertEqual(len(data['results']), amount)
+
+    def testQueryStringConfiguration(self):
+        view = QueryStringIndexOptions(self.portal, self.request)
+        data = json.loads(view())
+        # just test one so we know it's working...
+        self.assertEqual(data['indexes']['sortable_title']['sortable'], True)
+
+    def testFileUpload(self):
+        view = FileUploadView(self.portal, self.request)
+        fdata = StringIO('foobar')
+        fdata.filename = 'foobar.txt'
+        self.request.form['file'] = fdata
+        self.request.REQUEST_METHOD = 'POST'
+        data = json.loads(view())
+        self.assertEqual(data['url'], 'http://nohost/plone/foobar.txt')
+        self.assertTrue(data['UID'] is not None)
+        # clean it up...
+        self.portal.manage_delObjects(['foobar.txt'])
+        transaction.commit()
