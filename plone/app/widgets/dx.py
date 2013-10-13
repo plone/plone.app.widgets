@@ -3,7 +3,9 @@
 from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
-from plone.app.widgets import base
+from plone.app.widgets.base import InputWidget
+from plone.app.widgets.base import SelectWidget
+from plone.app.widgets.base import dict_merge
 from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_portal_url
@@ -255,7 +257,7 @@ class BaseWidget(Widget):
         :rtype: dict
         """
         if self.pattern is None:
-            raise NotImplemented("'pattern' options not provided.")
+            raise NotImplemented("'pattern' option is not provided.")
         return {
             'pattern': self.pattern,
             'pattern_options': self.pattern_options,
@@ -275,7 +277,7 @@ class BaseWidget(Widget):
 class DateWidget(BaseWidget):
     """Date widget for z3c.form."""
 
-    _base = base.InputWidget
+    _base = InputWidget
     _converter = DateWidgetConverter
     _formater = 'date'
 
@@ -304,7 +306,7 @@ class DateWidget(BaseWidget):
         args.setdefault('pattern_options', {})
 
         args['pattern_options'].setdefault('date', {})
-        args['pattern_options']['date'] = base.dict_merge(
+        args['pattern_options']['date'] = dict_merge(
             args['pattern_options']['date'],
             get_date_options(self.request))
 
@@ -369,7 +371,7 @@ class DatetimeWidget(DateWidget):
         if args['pattern_options']['time'] is False:
             args['pattern_options']['time'] = {}
 
-        args['pattern_options']['time'] = base.dict_merge(
+        args['pattern_options']['time'] = dict_merge(
             args['pattern_options']['time'],
             get_time_options(self.request))
 
@@ -379,7 +381,7 @@ class DatetimeWidget(DateWidget):
 class SelectWidget(BaseWidget, z3cform_SelectWidget):
     """Select widget for z3c.form."""
 
-    _base = base.SelectWidget
+    _base = SelectWidget
 
     implementsOnly(ISelectWidget)
 
@@ -417,7 +419,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
 class AjaxSelectWidget(BaseWidget):
     """Ajax select widget for z3c.form."""
 
-    _base = base.InputWidget
+    _base = InputWidget
 
     implementsOnly(IAjaxSelectWidget)
 
@@ -481,7 +483,7 @@ class AjaxSelectWidget(BaseWidget):
 class QueryStringWidget(BaseWidget):
     """QueryString widget for z3c.form."""
 
-    _base = base.InputWidget
+    _base = InputWidget
 
     implementsOnly(IQueryStringWidget)
 
