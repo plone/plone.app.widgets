@@ -38,9 +38,11 @@ setup(
     ],
     extras_require={
         'test': [
+            'plone.app.robotframework',
             'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing',
             'mock',
+            'mockup',
         ],
         'archetypes': [
             'archetypes.schemaextender',
