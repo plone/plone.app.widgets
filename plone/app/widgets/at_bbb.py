@@ -26,12 +26,12 @@ class MetadataExtender(object):
         for field in schema.fields():
             old = field.widget
 
-            #if field.__name__ in ['subject']:
-            #    field.widget = at.AjaxSelectWidget(
-            #        label=old.label,
-            #        description=old.description,
-            #        ajax_vocabulary='plone.app.vocabularies.Keywords',
-            #    )
+            if field.__name__ in ['subject']:
+                field.widget = at.AjaxSelectWidget(
+                    label=old.label,
+                    description=old.description,
+                    vocabulary='plone.app.vocabularies.Keywords',
+                )
 
             if field.__name__ in ['language']:
                 field.widget = at.SelectWidget(
@@ -45,39 +45,39 @@ class MetadataExtender(object):
                     description=old.description
                 )
 
-            #if field.__name__ in ['contributors']:
-            #    field.widget = at.AjaxSelectWidget(
-            #        label=old.label,
-            #        description=_plone(u"The names of people that have "
-            #                           u"contributed to this item."),
-            #        ajax_vocabulary="plone.app.vocabularies.Users",
-            #    )
+            if field.__name__ in ['contributors']:
+                field.widget = at.AjaxSelectWidget(
+                    label=old.label,
+                    description=_plone(u"The names of people that have "
+                                       u"contributed to this item."),
+                    vocabulary="plone.app.vocabularies.Users",
+                )
 
-            #if field.__name__ in ['creators']:
-            #    field.widget = at.AjaxSelectWidget(
-            #        label=old.label,
-            #        description=_plone(u"The names of people that are "
-            #                           u"creators to this item."),
-            #        ajax_vocabulary="plone.app.vocabularies.Users",
-            #    )
+            if field.__name__ in ['creators']:
+                field.widget = at.AjaxSelectWidget(
+                    label=old.label,
+                    description=_plone(u"The names of people that are "
+                                       u"creators to this item."),
+                    vocabulary="plone.app.vocabularies.Users",
+                )
 
-            #if field.__name__ in ['text']:
-            #    field.widget = at.TinyMCEWidget(
-            #        label=old.label,
-            #        description=old.description,
-            #    )
+            if field.__name__ in ['text']:
+                field.widget = at.TinyMCEWidget(
+                    label=old.label,
+                    description=old.description,
+                )
 
-            #if field.__name__ == 'relatedItems':
-            #    field.widget = at.RelatedItemsWidget(
-            #        label=old.label,
-            #        description=old.description
-            #    )
+            if field.__name__ == 'relatedItems':
+                field.widget = at.RelatedItemsWidget(
+                    label=old.label,
+                    description=old.description
+                )
 
-            #if field.__name__ == 'query':
-            #    field.widget = at.QueryStringWidget(
-            #        label=old.label,
-            #        description=old.description
-            #    )
+            if field.__name__ == 'query':
+                field.widget = at.QueryStringWidget(
+                    label=old.label,
+                    description=old.description
+                )
 
         #if 'customViewFields' in schema:
         #    field = schema['customViewFields']

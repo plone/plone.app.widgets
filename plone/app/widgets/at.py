@@ -83,7 +83,8 @@ class DateWidget(BaseWidget):
 
     _properties = BaseWidget._properties.copy()
     _properties.update({
-        'pattern': 'pickadate'
+        'pattern': 'pickadate',
+        'pattern_options': {},
     })
 
     def _base_args(self, context, field, request):
@@ -158,6 +159,10 @@ class DatetimeWidget(DateWidget):
     """Date widget for Archetypes."""
 
     _properties = DateWidget._properties.copy()
+    _properties.update({
+        'pattern': 'pickadate',
+        'pattern_options': {},
+    })
 
     def _base_args(self, context, field, request):
         """Method which will calculate _base class arguments.
@@ -201,6 +206,9 @@ class DatetimeWidget(DateWidget):
 
         return args
 
+    security = ClassSecurityInfo()
+    security.declarePublic('process_form')
+
     def process_form(self, instance, field, form, empty_marker=None):
         """Basic impl for form processing in a widget"""
 
@@ -221,6 +229,7 @@ class DatetimeWidget(DateWidget):
 
         return value, {}
 
+
 registerWidget(
     DatetimeWidget,
     title='Datetime widget',
@@ -237,6 +246,7 @@ class SelectWidget(BaseWidget):
     _properties = BaseWidget._properties.copy()
     _properties.update({
         'pattern': 'select2',
+        'pattern_options': {},
         'separator': ';',
         'multiple': False,
     })
@@ -266,8 +276,13 @@ class SelectWidget(BaseWidget):
             items.append((item[0], item[1]))
         args['items'] = items
 
+        args.setdefault('pattern_options', {})
+
+        if self.separator:
+            args['pattern_options']['separator'] = self.separator
+
         return args
-        return args
+
 
 registerWidget(
     SelectWidget,
@@ -277,185 +292,190 @@ registerWidget(
 )
 
 
+class AjaxSelectWidget(BaseWidget):
+    """Ajax select widget for Archetypes."""
+
+    _base = InputWidget
+
+    _properties = BaseWidget._properties.copy()
+    _properties.update({
+        'pattern': 'select2',
+        'pattern_options': {},
+        'separator': ';',
+        'orderable': False,
+        'vocabulary': None,
+        'vocabulary_view': '@@getVocabulary',
+    })
+
+    def getWidgetValue(self, context, field, request):
+        return self.separator.join(
+            request.get(field.getName(), field.getAccessor(context)()))
+
+    def _base_args(self, context, field, request):
+        args = super(AjaxSelectWidget, self)._base_args(context, field,
+                                                        request)
+        args['name'] = field.getName()
+        args['value'] = self.getWidgetValue(context, field, request)
+
+        args.setdefault('pattern_options', {})
+
+        if self.vocabulary:
+            args['pattern_options']['vocabularyUrl'] = \
+                '{}/{}?name={}'.format(
+                    get_portal_url(context),
+                    self.vocabulary_view,
+                    self.vocabulary,
+                )
+
+        if self.separator:
+            args['pattern_options']['separator'] = self.separator
+
+        return args
+
+    security = ClassSecurityInfo()
+    security.declarePublic('process_form')
+
+    def process_form(self, instance, field, form, empty_marker=None):
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
+        value = value.strip().split(self.separator)
+        return value, {}
 
 
+registerWidget(
+    AjaxSelectWidget,
+    title='Ajax select widget',
+    description=('Ajax select widget'),
+    used_for=('Products.Archetypes.Field.LinesField',)
+)
 
 
+class RelatedItemsWidget(AjaxSelectWidget):
+    """Related items widget for Archetypes."""
+
+    _properties = AjaxSelectWidget._properties.copy()
+    _properties.update({
+        'pattern': 'relateditems',
+        'pattern_options': {},
+        'separator': ';',
+        'vocabulary': 'plone.app.vocabularies.Catalog',
+    })
+
+    def getWidgetValue(self, context, field, request):
+        value = request.get(field.getName(), None)
+        if not value:
+            value = request.get(field.getName(), field.getAccessor(context)())
+            value = [IUUID(o) for o in value if o]
+        else:
+            value = [v.split('/')[0]
+                     for v in value.strip().split(self.separator)]
+        return self.separator.join(value)
+
+    def _base_args(self, context, field, request):
+        args = super(RelatedItemsWidget, self)._base_args(
+            context, field, request)
+
+        args.setdefault('pattern_options', {})
+
+        args['pattern_options'].setdefault('folderTypes', ['Folder'])
+        properties = getToolByName(context, 'portal_properties', None)
+        if properties:
+            args['pattern_options']['folderTypes'] = \
+                properties.site_properties.getProperty(
+                    'typesLinkToFolderContentsInFC', ['Folder'])
+
+        if self.separator:
+            args['pattern_options']['separator'] = self.separator
+
+        return args
+
+    security = ClassSecurityInfo()
+    security.declarePublic('process_form')
+
+    def process_form(self, instance, field, form, empty_marker=None):
+        # select2 will add unique identifier information to results
+        # so we're stripping it out here.
+        value, other = super(RelatedItemsWidget, self).process_form(
+            instance, field, form, empty_marker)
+        value = [v.split('/')[0] for v in value]
+        return value, other
 
 
+registerWidget(
+    RelatedItemsWidget,
+    title='Related items widget',
+    description=('Related items widget'),
+    used_for='Products.Archetypes.Field.ReferenceField')
 
 
+class QueryStringWidget(BaseWidget):
+    """Query string widget for Archetypes."""
+
+    _base = TextareaWidget
+
+    _properties = BaseWidget._properties.copy()
+    _properties.update({
+        'pattern': 'querystring',
+        'pattern_options': {},
+        'querystring_view': '@@qsOptions',
+    })
+
+    def _base_args(self, context, field, request):
+        args = super(QueryStringWidget, self)._base_args(
+            context, field, request)
+
+        args.setdefault('pattern_options', {})
+        args['pattern_options']['indexOptionsUrl'] = '{}/{}'.format(
+            get_portal_url(context),
+            self.querystring_view,
+        )
+
+        criterias = [dict(c) for c in field.getRaw(context)]
+        args['value'] = request.get(field.getName(), json.dumps(criterias))
+        return args
+
+    security = ClassSecurityInfo()
+    security.declarePublic('process_form')
+
+    def process_form(self, instance, field, form, empty_marker=None,
+                     emptyReturnsMarker=False, validating=True):
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
+        value = json.loads(value)
+        return value, {}
 
 
+registerWidget(
+    QueryStringWidget,
+    title='Querystring widget',
+    description=('Querystring widget'),
+    used_for='archetypes.querywidget.field.QueryField')
 
 
+class TinyMCEWidget(BaseWidget):
+    """TinyMCE widget for Archetypes."""
+
+    _base = TextareaWidget
+
+    _properties = BaseWidget._properties.copy()
+    _properties.update({
+        'pattern': 'tinymce',
+        'pattern_options': {},
+    })
+
+    def _base_args(self, context, field, request):
+        args = super(TinyMCEWidget, self)._base_args(context, field, request)
+        args['name'] = field.getName()
+        args['value'] = (request.get(field.getName(),
+                                     field.getAccessor(context)())
+                         ).decode('utf-8')
+        return args
 
 
-
-
-
-
-
-
-#class TinyMCEWidget(BaseWidget):
-#    _properties = BaseWidget._properties.copy()
-#    _properties.update({
-#        'pattern': 'tinymce',
-#    })
-#    _widget = TextareaWidget
-#
-#    def _widget_args(self, context, field, request):
-#        args = super(TinyMCEWidget, self)._widget_args(context, field, request)
-#        return args
-#
-#
-#registerWidget(
-#    TinyMCEWidget,
-#    title='TinyMCE widget',
-#    description=('TinyMCE widget'),
-#    used_for=('Products.Archetypes.Field.TextField',)
-#)
-#
-#
-#class AjaxSelectWidget(BaseWidget):
-#    _properties = BaseWidget._properties.copy()
-#    _properties.update({
-#        'pattern': 'select2',
-#        'separator': ';',
-#        'orderable': False,
-#        'ajax_vocabulary': None
-#    })
-#    _widget = InputWidget
-#
-#    def getWidgetValue(self, context, field, request):
-#        return self.separator.join(
-#            request.get(field.getName(), field.getAccessor(context)()))
-#
-#    def _widget_args(self, context, field, request):
-#        args = super(AjaxSelectWidget, self)._widget_args(context, field, request)
-#
-#        vocabulary_name = getattr(field, 'vocabulary_factory', None)
-#        if self.ajax_vocabulary:
-#            vocabulary_name = self.ajax_vocabulary
-#        if vocabulary_name:
-#            url = base_url(context, request)
-#            url += '/@@getVocabulary?name=' + vocabulary_name
-#            if 'pattern_options' not in args:
-#                args['pattern_options'] = {}
-#            args['pattern_options']['ajaxVocabulary'] = url
-#        args['value'] = self.getWidgetValue(context, field, request)
-#        return args
-#
-#    def process_form(self, instance, field, form, empty_marker=None):
-#        value = form.get(field.getName(), empty_marker)
-#        if value is empty_marker:
-#            return empty_marker
-#        value = value.strip().split(self.separator)
-#        return value, {}
-#
-#
-#registerWidget(
-#    AjaxSelectWidget,
-#    title='Ajax select widget',
-#    description=('Ajax select widget'),
-#    used_for=('Products.Archetypes.Field.LinesField',)
-#)
-#
-#
-#class RelatedItemsWidget(AjaxSelectWidget):
-#    _properties = AjaxSelectWidget._properties.copy()
-#    _properties.update({
-#        'pattern': 'relateditems',
-#        'separator': ','
-#    })
-#    vocabulary_view = "@@getVocabulary"
-#
-#    def getWidgetValue(self, context, field, request):
-#        reqvalues = request.get(field.getName(), None)
-#        if not reqvalues:
-#            values = request.get(field.getName(), field.getAccessor(context)())
-#            values = [IUUID(o) for o in values if o]
-#        else:
-#            values = [v.split('/')[0]
-#                      for v in reqvalues.strip().split(self.separator)]
-#        return self.separator.join(values)
-#
-#    def _widget_args(self, context, field, request):
-#        args = super(RelatedItemsWidget, self)._widget_args(
-#            context, field, request)
-#
-#        vocabulary_name = getattr(field, 'vocabulary_factory',
-#                                  self.ajax_vocabulary)
-#        if not vocabulary_name:
-#            vocabulary_name = 'plone.app.vocabularies.Catalog'
-#        url = base_url(context, request)
-#        vocabulary_view = self.vocabulary_view
-#        url += '/' + vocabulary_view + '?name=' + vocabulary_name
-#        if 'pattern_options' not in args:
-#            args['pattern_options'] = {}
-#        args['pattern_options']['ajaxVocabulary'] = url
-#
-#        pprops = getToolByName(context, 'portal_properties', None)
-#        folder_types = ['Folder']
-#        if pprops:
-#            site_props = pprops.site_properties
-#            folder_types = site_props.getProperty(
-#                'typesLinkToFolderContentsInFC',
-#                ['Folder'])
-#        args['pattern_options']['folderTypes'] = folder_types
-#        return args
-#
-#    def process_form(self, instance, field, form, empty_marker=None):
-#        # select2 will add unique identifier information to results
-#        # so we're stripping it out here.
-#        value, other = super(RelatedItemsWidget, self).process_form(
-#            instance, field, form, empty_marker)
-#        value = [v.split('/')[0] for v in value]
-#        return value, other
-#
-#
-#registerWidget(
-#    RelatedItemsWidget,
-#    title='Related items widget',
-#    description=('Related items widget'),
-#    used_for='Products.Archetypes.Field.ReferenceField')
-#
-#
-#class QueryStringWidget(BaseWidget):
-#    _properties = BaseWidget._properties.copy()
-#    _properties.update({
-#        'pattern': 'querystring',
-#    })
-#
-#    def _widget_args(self, context, field, request):
-#        args = super(QueryStringWidget, self)._widget_args(
-#            context, field, request)
-#
-#        if 'pattern_options' not in args:
-#            args['pattern_options'] = {}
-#
-#        args['pattern_options']['indexOptionsUrl'] = '%s/@@qsOptions' % (
-#            base_url(context, request))
-#
-#        criterias = [dict(c) for c in field.getRaw(context)]
-#        args['value'] = request.get(field.getName(),
-#                                    json.dumps(criterias))
-#        return args
-#
-#    security = ClassSecurityInfo()
-#    security.declarePublic('process_form')
-#
-#    def process_form(self, instance, field, form, empty_marker=None,
-#                     emptyReturnsMarker=False, validating=True):
-#        value = form.get(field.getName(), empty_marker)
-#        if value is empty_marker:
-#            return empty_marker
-#        value = json.loads(value)
-#        return value, {}
-#
-#
-#registerWidget(
-#    QueryStringWidget,
-#    title='Querystring widget',
-#    description=('Querystring widget'),
-#    used_for='archetypes.querywidget.field.QueryField')
+registerWidget(
+    TinyMCEWidget,
+    title='TinyMCE widget',
+    description=('TinyMCE widget'),
+    used_for='Products.Archetypes.Field.TextField')
