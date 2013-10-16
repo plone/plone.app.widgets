@@ -188,7 +188,7 @@ class SelectWidgetTests(unittest.TestCase):
             {
                 'multiple': False,
                 'name': 'fieldname',
-                'pattern_options': {},
+                'pattern_options': {'separator': ';'},
                 'pattern': 'select2',
                 'value': (),
                 'items': [
@@ -205,7 +205,7 @@ class SelectWidgetTests(unittest.TestCase):
             {
                 'multiple': True,
                 'name': 'fieldname',
-                'pattern_options': {},
+                'pattern_options': {'separator': ';'},
                 'pattern': 'select2',
                 'value': (),
                 'items': [
@@ -222,7 +222,7 @@ class SelectWidgetTests(unittest.TestCase):
             {
                 'multiple': True,
                 'name': 'fieldname',
-                'pattern_options': {},
+                'pattern_options': {'separator': ';'},
                 'pattern': 'select2',
                 'value': (u'one'),
                 'items': [
