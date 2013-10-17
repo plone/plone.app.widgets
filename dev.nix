@@ -12,7 +12,6 @@ buildEnv {
     python27
     python27Packages.recursivePthLoader
     python27Packages.virtualenv
-    python27Packages."zc.buildout-1.7.1"
-    python27Packages."Plone-4.3.2"
+    python27Packages.Plone
   ] ++ lib.attrValues python27.modules;
 }
