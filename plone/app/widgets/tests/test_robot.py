@@ -22,7 +22,6 @@ def test_suite():
         robottestsuite.level = ROBOT_TEST_LEVEL
         suite.addTests([
             layered(robottestsuite,
-                    layer=PLONEAPPWIDGETS_DX_ROBOT_TESTING
-            ),
+                    layer=PLONEAPPWIDGETS_DX_ROBOT_TESTING),
         ])
     return suite

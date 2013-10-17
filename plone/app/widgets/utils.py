@@ -67,4 +67,3 @@ def get_portal_url(context):
         if root:
             return root.absolute_url()
     return ''
-

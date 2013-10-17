@@ -72,8 +72,7 @@ class PloneAppWidgetsDXLayer(PloneAppWidgetsLayer):
         import plone.app.contenttypes
         xmlconfig.file('configure.zcml',
                        plone.app.contenttypes,
-                       context=configurationContext
-        )
+                       context=configurationContext)
 
         try:
             import mockup
