@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
-import doctest
 
-from zope.configuration import xmlconfig
-from zope.interface import implements
-from zope.schema.interfaces import IVocabularyFactory
-from zope.schema.vocabulary import SimpleTerm
-from zope.schema.vocabulary import SimpleVocabulary
-from zope.publisher.browser import TestRequest as BaseTestRequest
-
-from plone.testing import z2
-
+from doctest import ELLIPSIS
+from doctest import NORMALIZE_WHITESPACE
+from plone.app.robotframework.testing import AUTOLOGIN_LIBRARY_FIXTURE
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
 from plone.app.widgets.interfaces import IWidgetsLayer
-from plone.app.robotframework.testing import AUTOLOGIN_LIBRARY_FIXTURE
+from plone.testing import z2
+from zope.configuration import xmlconfig
+from zope.interface import implements
+from zope.publisher.browser import TestRequest as BaseTestRequest
+from zope.schema.interfaces import IVocabularyFactory
+from zope.schema.vocabulary import SimpleTerm
+from zope.schema.vocabulary import SimpleVocabulary
 
 
 class ExampleVocabulary(object):
@@ -101,4 +100,4 @@ PLONEAPPWIDGETS_DX_ROBOT_TESTING = FunctionalTesting(
            z2.ZSERVER_FIXTURE),
     name="PloneAppWidgetsLayerDX:Robot")
 
-optionflags = (doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE)
+optionflags = (ELLIPSIS | NORMALIZE_WHITESPACE)
