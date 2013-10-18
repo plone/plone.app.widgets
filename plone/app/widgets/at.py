@@ -364,9 +364,8 @@ class RelatedItemsWidget(AjaxSelectWidget):
 
     def getWidgetValue(self, context, field, request):
         value = request.get(field.getName(), None)
-        if not value:
-            value = request.get(field.getName(), field.getAccessor(context)())
-            value = [IUUID(o) for o in value if o]
+        if value is None:
+            value = [IUUID(o) for o in field.getAccessor(context)() if o]
         else:
             value = [v.split('/')[0]
                      for v in value.strip().split(self.separator)]
