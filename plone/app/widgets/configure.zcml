@@ -19,9 +19,6 @@
   <include package="mockup"
       zcml:condition="installed mockup" />
 
-  <!-- TODO: demos should be only loaded when in development mode -->
-  <!--include package=".demos" /-->
-
   <browser:resource
       name="plone.app.widgets-fontawesome-webfont.eot"
       file="static/widgets-fontawesome-webfont.eot"
