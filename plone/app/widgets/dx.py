@@ -10,7 +10,8 @@ from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_portal_url
 from plone.app.widgets.utils import get_time_options
-from z3c.form import interfaces as z3cform_interfaces
+from z3c.form.interfaces import ITextWidget
+from z3c.form.interfaces import ISelectWidget
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.widget import Widget
@@ -26,27 +27,27 @@ from zope.schema.interfaces import IVocabularyFactory
 import json
 
 
-class IDateWidget(z3cform_interfaces.ITextWidget):
+class IDateWidget(ITextWidget):
     """Marker interface for the DateWidget."""
 
 
-class IDatetimeWidget(z3cform_interfaces.ITextWidget):
+class IDatetimeWidget(ITextWidget):
     """Marker interface for the DatetimeWidget."""
 
 
-class ISelectWidget(z3cform_interfaces.ISelectWidget):
+class ISelectWidget(ISelectWidget):
     """Marker interface for the SelectWidget."""
 
 
-class IAjaxSelectWidget(z3cform_interfaces.ITextWidget):
+class IAjaxSelectWidget(ITextWidget):
     """Marker interface for the Select2Widget."""
 
 
-class IQueryStringWidget(z3cform_interfaces.ITextWidget):
+class IQueryStringWidget(ITextWidget):
     """Marker interface for the QueryStringWidget."""
 
 
-class IRelatedItemsWidget(z3cform_interfaces.ITextWidget):
+class IRelatedItemsWidget(ITextWidget):
     """Marker interface for the RelatedItemsWidget."""
 
 
