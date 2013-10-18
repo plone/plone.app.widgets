@@ -2,6 +2,9 @@
 
 from datetime import datetime
 from plone.app.widgets.testing import TestRequest
+from plone.testing.zca import ZCML_DIRECTIVES
+from plone.testing.zca import stackConfigurationContext
+from zope.configuration import xmlconfig
 
 try:
     import unittest2 as unittest
@@ -10,6 +13,7 @@ except ImportError:  # pragma: nocover
     assert unittest  # pragma: nocover
 
 import mock
+import plone.uuid
 
 
 class BaseWidgetTests(unittest.TestCase):
@@ -237,26 +241,54 @@ class SelectWidgetTests(unittest.TestCase):
 
 class RelatedItemsWidgetTests(unittest.TestCase):
 
+    layer = ZCML_DIRECTIVES
+
     def setUp(self):
+
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.context = mock.Mock()
         self.field = mock.Mock()
-        self.field.getAccessor.return_value = lambda: 'fieldvalue'
-        self.field.getName.return_value = 'fieldname'
 
-    # TODO: we need to mock IUUID stuff to work
-    #def test_widget(self):
-    #    from plone.app.widgets.at import RelatedItemsWidget
-    #    widget = RelatedItemsWidget()
-    #    self.assertEqual(
-    #        {
-    #            'name': 'fieldname',
-    #            'value': 'fieldvalue',
-    #            'pattern': 'relateditems',
-    #            'pattern_options': {'separator': ';'},
-    #        },
-    #        widget._base_args(self.context, self.field, self.request),
-    #    )
+        xmlconfig.file('configure.zcml', plone.uuid,
+                       context=self.layer['configurationContext'])
+
+    def test_widget(self):
+        from zope.event import notify
+        from zope.interface import implements
+        from zope.lifecycleevent import ObjectCreatedEvent
+        from plone.uuid.interfaces import IUUID
+        from plone.uuid.interfaces import IAttributeUUID
+        from plone.app.widgets.at import RelatedItemsWidget
+
+        class ExampleContent(object):
+            implements(IAttributeUUID)
+
+        obj1 = ExampleContent()
+        obj2 = ExampleContent()
+        notify(ObjectCreatedEvent(obj1))
+        notify(ObjectCreatedEvent(obj2))
+
+        self.field.getName.return_value = 'fieldname'
+        self.field.getAccessor.return_value = lambda: [obj1, obj2]
+        self.context.portal_properties.site_properties\
+            .getProperty.return_value = ['SomeType']
+
+        widget = RelatedItemsWidget()
+
+        self.assertEqual(
+            {
+                'name': 'fieldname',
+                'value': '{};{}'.format(IUUID(obj1), IUUID(obj2)),
+                'pattern': 'relateditems',
+                'pattern_options': {
+                    'folderTypes': ['SomeType'],
+                    'separator': ';',
+                    'vocabularyUrl': '/@@getVocabulary?name='
+                                     'plone.app.vocabularies.Catalog',
+                },
+            },
+            widget._base_args(self.context, self.field, self.request),
+        )
 
 
 class TinyMCEWidgetTests(unittest.TestCase):
