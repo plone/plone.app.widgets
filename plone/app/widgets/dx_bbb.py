@@ -1,22 +1,24 @@
-from z3c.form.widget import FieldWidget
-from z3c.form.interfaces import IFieldWidget
-from z3c.form.util import getSpecification
-from zope.interface import implementer
-from zope.component import adapter
+# -*- coding: utf-8 -*-
+
 from plone.app.dexterity.behaviors.metadata import ICategorization
 from plone.app.dexterity.behaviors.metadata import IOwnership
 from plone.app.dexterity.behaviors.metadata import IPublication
+from plone.app.widgets.dx import AjaxSelectWidget
+from plone.app.widgets.dx import DatetimeWidget
+from plone.app.widgets.dx import RelatedItemsWidget
+from plone.app.widgets.dx import SelectWidget
+from plone.app.widgets.interfaces import IWidgetsLayer
+from z3c.form.interfaces import IFieldWidget
+from z3c.form.util import getSpecification
+from z3c.form.widget import FieldWidget
+from zope.component import adapter
+from zope.interface import implementer
+
 try:
     from plone.app.relationfield.behavior import IRelatedItems
     HAS_RF = True
 except ImportError:
     HAS_RF = False
-from plone.app.widgets.dx import DatetimeWidget
-from plone.app.widgets.dx import SelectWidget
-from plone.app.widgets.dx import AjaxSelectWidget
-from plone.app.widgets.dx import RelatedItemsWidget
-from plone.app.widgets.interfaces import IWidgetsLayer
-
 
 @adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
 @implementer(IFieldWidget)
