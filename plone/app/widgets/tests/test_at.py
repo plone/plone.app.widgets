@@ -170,13 +170,13 @@ class SelectWidgetTests(unittest.TestCase):
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.context = mock.Mock()
-        self.field = mock.Mock()
         self.vocabulary = mock.Mock()
         self.vocabulary.items.return_value = [
             ('one', 'one'),
             ('two', 'two'),
             ('three', 'three'),
         ]
+        self.field = mock.Mock()
         self.field.getAccessor.return_value = lambda: ()
         self.field.getName.return_value = 'fieldname'
         self.field.Vocabulary.return_value = self.vocabulary
@@ -230,6 +230,52 @@ class SelectWidgetTests(unittest.TestCase):
                     ('two', 'two'),
                     ('three', 'three')
                 ]
+            },
+            widget._base_args(self.context, self.field, self.request),
+        )
+
+
+class RelatedItemsWidgetTests(unittest.TestCase):
+
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        self.context = mock.Mock()
+        self.field = mock.Mock()
+        self.field.getAccessor.return_value = lambda: 'fieldvalue'
+        self.field.getName.return_value = 'fieldname'
+
+    def test_widget(self):
+        from plone.app.widgets.at import RelatedItemsWidget
+        widget = RelatedItemsWidget()
+        self.assertEqual(
+            {
+                'name': 'fieldname',
+                'value': 'fieldvalue',
+                'pattern': 'relateditems',
+                'pattern_options': {'separator': ';'},
+            },
+            widget._base_args(self.context, self.field, self.request),
+        )
+
+
+class TinyMCEWidgetTests(unittest.TestCase):
+
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        self.context = mock.Mock()
+        self.field = mock.Mock()
+        self.field.getAccessor.return_value = lambda: 'fieldvalue'
+        self.field.getName.return_value = 'fieldname'
+
+    def test_widget(self):
+        from plone.app.widgets.at import TinyMCEWidget
+        widget = TinyMCEWidget()
+        self.assertEqual(
+            {
+                'name': 'fieldname',
+                'value': 'fieldvalue',
+                'pattern': 'tinymce',
+                'pattern_options': {},
             },
             widget._base_args(self.context, self.field, self.request),
         )
