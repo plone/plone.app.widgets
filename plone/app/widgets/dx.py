@@ -5,15 +5,18 @@ from datetime import date
 from datetime import datetime
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
+from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_portal_url
 from plone.app.widgets.utils import get_time_options
-from z3c.form.interfaces import ITextWidget
-from z3c.form.interfaces import ISelectWidget
+from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
+from z3c.form.interfaces import ISelectWidget
+from z3c.form.interfaces import ITextAreaWidget
+from z3c.form.interfaces import ITextWidget
 from z3c.form.widget import Widget
 from zope.component import adapts
 from zope.component import queryUtility
@@ -49,6 +52,10 @@ class IQueryStringWidget(ITextWidget):
 
 class IRelatedItemsWidget(ITextWidget):
     """Marker interface for the RelatedItemsWidget."""
+
+
+class ITinyMCEWidget(ITextAreaWidget):
+    """Marker interface for the TinyMCEWidget."""
 
 
 class DateWidgetConverter(BaseDataConverter):
@@ -180,7 +187,7 @@ class RelatedItemsDataConverter(BaseDataConverter):
         if not value:
             return self.field.missing_value
         separator = getattr(self.widget, 'separator', ';')
-        return separator.join(unicode(v.UID()) for v in value)
+        return separator.join([IUUID(o) for o in value if value])
 
     def toFieldValue(self, value):
         """Converts from widget value to field.
@@ -194,15 +201,18 @@ class RelatedItemsDataConverter(BaseDataConverter):
         collectionType = self.field._type
         if isinstance(collectionType, tuple):
             collectionType = collectionType[-1]
+
         if not len(value):
             return self.field.missing_value
 
-        catalog = getToolByName(self.widget.context, 'portal_catalog')
         separator = getattr(self.widget, 'separator', ';')
         value = value.split(separator)
         value = [v.split('/')[0] for v in value]
-        results = catalog(UID=value)
-        return collectionType(item.getObject() for item in results)
+
+        catalog = getToolByName(self.widget.context, 'portal_catalog')
+
+        return collectionType(item.getObject()
+                              for item in catalog(UID=value) if item)
 
 
 class QueryStringDataConverter(BaseDataConverter):
@@ -518,3 +528,33 @@ class RelatedItemsWidget(AjaxSelectWidget):
     pattern_options = AjaxSelectWidget.pattern_options.copy()
 
     implementsOnly(IRelatedItemsWidget)
+
+
+class TinyMCEWidget(BaseWidget):
+    """TinyMCE widget for z3c.form."""
+
+    _base = TextareaWidget
+
+    implementsOnly(ITextAreaWidget)
+
+    pattern = 'tinymce'
+    pattern_options = BaseWidget.pattern_options.copy()
+
+    def _base_args(self):
+        """Method which will calculate _base class arguments.
+
+        Returns (as python dictionary):
+            - `pattern`: pattern name
+            - `pattern_options`: pattern options
+            - `name`: field name
+            - `value`: field value
+
+        :returns: Arguments which will be passed to _base
+        :rtype: dict
+        """
+        args = super(TinyMCEWidget, self)._base_args()
+
+        args['name'] = self.name
+        args['value'] = self.value
+
+        return args
