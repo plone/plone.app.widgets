@@ -226,6 +226,7 @@ class DatetimeWidget(DateWidget):
 
         return value, {}
 
+
 registerWidget(
     DatetimeWidget,
     title='Datetime widget',
@@ -343,6 +344,8 @@ registerWidget(
 class RelatedItemsWidget(BaseWidget):
     """Related items widget for Archetypes."""
 
+    _base = InputWidget
+
     _properties = BaseWidget._properties.copy()
     _properties.update({
         'pattern': 'relateditems',
@@ -382,12 +385,11 @@ class RelatedItemsWidget(BaseWidget):
     security.declarePublic('process_form')
 
     def process_form(self, instance, field, form, empty_marker=None):
-        # select2 will add unique identifier information to results
-        # so we're stripping it out here.
-        value, other = super(RelatedItemsWidget, self).process_form(
-            instance, field, form, empty_marker)
-        value = [v.split('/')[0] for v in value]
-        return value, other
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
+        value = [v.split('/')[0] for v in value.strip().split(self.separator)]
+        return value, {}
 
 
 registerWidget(

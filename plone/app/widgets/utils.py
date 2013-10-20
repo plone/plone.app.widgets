@@ -75,7 +75,7 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
                     uids = value.split(separator)
                     catalog = getToolByName(context, 'portal_catalog')
                     for item in catalog(UID=uids):
-                        options['initialValues'] = [item.UID] = item.Title
+                        options['initialValues'][item.UID] = item.Title
                 else:
                     for value in value.split(separator):
                         try:
