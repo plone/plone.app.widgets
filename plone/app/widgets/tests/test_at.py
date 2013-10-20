@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+from mock import Mock
 from plone.app.widgets.testing import TestRequest
 from plone.testing.zca import ZCML_DIRECTIVES
-from plone.testing.zca import stackConfigurationContext
 from zope.configuration import xmlconfig
 
 try:
@@ -12,7 +12,6 @@ except ImportError:  # pragma: nocover
     import unittest  # pragma: nocover
     assert unittest  # pragma: nocover
 
-import mock
 import plone.uuid
 
 
@@ -58,8 +57,8 @@ class DateWidgetTests(unittest.TestCase):
     def setUp(self):
         from plone.app.widgets.at import DateWidget
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = mock.Mock()
-        self.field = mock.Mock()
+        self.context = Mock()
+        self.field = Mock()
         self.field.getAccessor.return_value = lambda: u''
         self.field.getName.return_value = 'fieldname'
         self.widget = DateWidget()
@@ -72,6 +71,7 @@ class DateWidgetTests(unittest.TestCase):
                 'name': 'fieldname',
                 'pattern_options': {
                     'date': {
+                        'firstDay': 0,
                         'min': [1913, 1, 1],
                         'max': [2033, 1, 1],
                         'clear': u'Clear',
@@ -114,8 +114,8 @@ class DatetimeWidgetTests(unittest.TestCase):
     def setUp(self):
         from plone.app.widgets.at import DatetimeWidget
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = mock.Mock()
-        self.field = mock.Mock()
+        self.context = Mock()
+        self.field = Mock()
         self.field.getAccessor.return_value = lambda: u''
         self.field.getName.return_value = 'fieldname'
         self.widget = DatetimeWidget()
@@ -128,6 +128,7 @@ class DatetimeWidgetTests(unittest.TestCase):
                 'name': 'fieldname',
                 'pattern_options': {
                     'date': {
+                        'firstDay': 0,
                         'min': [1913, 1, 1],
                         'max': [2033, 1, 1],
                         'clear': u'Clear',
@@ -173,14 +174,14 @@ class SelectWidgetTests(unittest.TestCase):
 
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = mock.Mock()
-        self.vocabulary = mock.Mock()
+        self.context = Mock()
+        self.vocabulary = Mock()
         self.vocabulary.items.return_value = [
             ('one', 'one'),
             ('two', 'two'),
             ('three', 'three'),
         ]
-        self.field = mock.Mock()
+        self.field = Mock()
         self.field.getAccessor.return_value = lambda: ()
         self.field.getName.return_value = 'fieldname'
         self.field.Vocabulary.return_value = self.vocabulary
@@ -239,6 +240,9 @@ class SelectWidgetTests(unittest.TestCase):
         )
 
 
+# TODO
+#class AjaxSelectWidgetTests(unittest.TestCase):
+
 class RelatedItemsWidgetTests(unittest.TestCase):
 
     layer = ZCML_DIRECTIVES
@@ -246,8 +250,8 @@ class RelatedItemsWidgetTests(unittest.TestCase):
     def setUp(self):
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = mock.Mock()
-        self.field = mock.Mock()
+        self.context = Mock()
+        self.field = Mock()
 
         xmlconfig.file('configure.zcml', plone.uuid,
                        context=self.layer['configurationContext'])
@@ -291,18 +295,49 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         )
 
 
+class QueryStringWidgetTests(unittest.TestCase):
+
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        self.context = Mock()
+        self.field = Mock()
+
+    def test_widget(self):
+        from plone.app.widgets.at import QueryStringWidget
+
+        self.field.getName.return_value = 'fieldname'
+        self.field.getRaw.return_value = [
+            {'query': 'string1'},
+            {'query': 'string2'},
+        ]
+
+        widget = QueryStringWidget()
+
+        self.assertEqual(
+            {
+                'name': 'fieldname',
+                'value': '[{"query": "string1"}, {"query": "string2"}]',
+                'pattern': 'querystring',
+                'pattern_options': {'indexOptionsUrl': '/@@qsOptions'},
+            },
+            widget._base_args(self.context, self.field, self.request),
+        )
+
+
 class TinyMCEWidgetTests(unittest.TestCase):
 
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = mock.Mock()
-        self.field = mock.Mock()
+        self.context = Mock()
+        self.field = Mock()
         self.field.getAccessor.return_value = lambda: 'fieldvalue'
         self.field.getName.return_value = 'fieldname'
 
     def test_widget(self):
         from plone.app.widgets.at import TinyMCEWidget
         widget = TinyMCEWidget()
+        self.context.portal_properties.site_properties\
+            .getProperty.return_value = 'utf-8'
         self.assertEqual(
             {
                 'name': 'fieldname',

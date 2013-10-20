@@ -12,8 +12,10 @@ from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_date_options
-from plone.app.widgets.utils import get_portal_url
-from plone.app.widgets.utils import get_time_options
+from plone.app.widgets.utils import get_datetime_options
+from plone.app.widgets.utils import get_ajaxselect_options
+from plone.app.widgets.utils import get_relateditems_options
+from plone.app.widgets.utils import get_querystring_options
 from plone.uuid.interfaces import IUUID
 
 import json
@@ -119,13 +121,9 @@ class DateWidget(BaseWidget):
             )
 
         args.setdefault('pattern_options', {})
-
-        args['pattern_options'].setdefault('date', {})
-        args['pattern_options']['date'] = dict_merge(
-            args['pattern_options']['date'],
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
             get_date_options(request))
-
-        args['pattern_options']['time'] = False
 
         return args
 
@@ -180,6 +178,7 @@ class DatetimeWidget(DateWidget):
         args['name'] = field.getName()
         args['value'] = (request.get(field.getName(),
                                      field.getAccessor(context)()))
+
         if args['value'] and isinstance(args['value'], DateTime):
             args['value'] = ('{year:}-{month:02}-{day:02}').format(
                 year=args['value'].year(),
@@ -197,12 +196,10 @@ class DatetimeWidget(DateWidget):
         if args['value'] and len(args['value'].split(' ')) == 1:
             args['value'] += ' 00:00'
 
-        if args['pattern_options']['time'] is False:
-            args['pattern_options']['time'] = {}
-
-        args['pattern_options']['time'] = dict_merge(
-            args['pattern_options']['time'],
-            get_time_options(request))
+        args.setdefault('pattern_options', {})
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_datetime_options(request))
 
         return args
 
@@ -228,7 +225,6 @@ class DatetimeWidget(DateWidget):
             return empty_marker, {}
 
         return value, {}
-
 
 registerWidget(
     DatetimeWidget,
@@ -302,33 +298,27 @@ class AjaxSelectWidget(BaseWidget):
         'pattern': 'select2',
         'pattern_options': {},
         'separator': ';',
-        'orderable': False,
         'vocabulary': None,
         'vocabulary_view': '@@getVocabulary',
     })
 
-    def getWidgetValue(self, context, field, request):
-        return self.separator.join(
-            request.get(field.getName(), field.getAccessor(context)()))
-
     def _base_args(self, context, field, request):
         args = super(AjaxSelectWidget, self)._base_args(context, field,
                                                         request)
+
+        vocabulary_factory = getattr(field, 'vocabulary_factory', None)
+        if not self.vocabulary:
+            self.vocabulary = vocabulary_factory
+
         args['name'] = field.getName()
-        args['value'] = self.getWidgetValue(context, field, request)
+        args['value'] = self.separator.join(request.get(
+            field.getName(), field.getAccessor(context)()))
 
         args.setdefault('pattern_options', {})
-
-        if self.vocabulary:
-            args['pattern_options']['vocabularyUrl'] = \
-                '{}/{}?name={}'.format(
-                    get_portal_url(context),
-                    self.vocabulary_view,
-                    self.vocabulary,
-                )
-
-        if self.separator:
-            args['pattern_options']['separator'] = self.separator
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_ajaxselect_options(context, args['value'], self.separator,
+                                   self.vocabulary, self.vocabulary_view))
 
         return args
 
@@ -347,45 +337,44 @@ registerWidget(
     AjaxSelectWidget,
     title='Ajax select widget',
     description=('Ajax select widget'),
-    used_for=('Products.Archetypes.Field.LinesField',)
-)
+    used_for=('Products.Archetypes.Field.LinesField',))
 
 
-class RelatedItemsWidget(AjaxSelectWidget):
+class RelatedItemsWidget(BaseWidget):
     """Related items widget for Archetypes."""
 
-    _properties = AjaxSelectWidget._properties.copy()
+    _properties = BaseWidget._properties.copy()
     _properties.update({
         'pattern': 'relateditems',
         'pattern_options': {},
         'separator': ';',
         'vocabulary': 'plone.app.vocabularies.Catalog',
+        'vocabulary_view': '@@getVocabulary',
     })
 
-    def getWidgetValue(self, context, field, request):
+    def _base_args(self, context, field, request):
+        args = super(RelatedItemsWidget, self)._base_args(context, field,
+                                                          request)
+
         value = request.get(field.getName(), None)
         if value is None:
             value = [IUUID(o) for o in field.getAccessor(context)() if o]
         else:
             value = [v.split('/')[0]
                      for v in value.strip().split(self.separator)]
-        return self.separator.join(value)
 
-    def _base_args(self, context, field, request):
-        args = super(RelatedItemsWidget, self)._base_args(
-            context, field, request)
+        vocabulary_factory = getattr(field, 'vocabulary_factory', None)
+        if not self.vocabulary:
+            self.vocabulary = vocabulary_factory
+
+        args['name'] = field.getName()
+        args['value'] = self.separator.join(value)
 
         args.setdefault('pattern_options', {})
-
-        args['pattern_options'].setdefault('folderTypes', ['Folder'])
-        properties = getToolByName(context, 'portal_properties', None)
-        if properties:
-            args['pattern_options']['folderTypes'] = \
-                properties.site_properties.getProperty(
-                    'typesLinkToFolderContentsInFC', ['Folder'])
-
-        if self.separator:
-            args['pattern_options']['separator'] = self.separator
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_relateditems_options(context, args['value'], self.separator,
+                                     self.vocabulary, self.vocabulary_view))
 
         return args
 
@@ -424,14 +413,16 @@ class QueryStringWidget(BaseWidget):
         args = super(QueryStringWidget, self)._base_args(
             context, field, request)
 
-        args.setdefault('pattern_options', {})
-        args['pattern_options']['indexOptionsUrl'] = '{}/{}'.format(
-            get_portal_url(context),
-            self.querystring_view,
-        )
+        args['name'] = field.getName()
+        args['value'] = request.get(field.getName(), json.dumps(
+            [dict(c) for c in field.getRaw(context)]
+        ))
 
-        criterias = [dict(c) for c in field.getRaw(context)]
-        args['value'] = request.get(field.getName(), json.dumps(criterias))
+        args.setdefault('pattern_options', {})
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_querystring_options(context, self.querystring_view))
+
         return args
 
     security = ClassSecurityInfo()
@@ -467,9 +458,12 @@ class TinyMCEWidget(BaseWidget):
     def _base_args(self, context, field, request):
         args = super(TinyMCEWidget, self)._base_args(context, field, request)
         args['name'] = field.getName()
+        properties = getToolByName(context, 'portal_properties')
+        charset = properties.site_properties.getProperty('default_charset',
+                                                         'utf-8')
         args['value'] = (request.get(field.getName(),
                                      field.getAccessor(context)())
-                         ).decode('utf-8')
+                         ).decode(charset)
         return args
 
 

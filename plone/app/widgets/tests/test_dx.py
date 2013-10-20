@@ -2,6 +2,7 @@
 
 from datetime import date
 from datetime import datetime
+from mock import Mock
 from plone.app.widgets.testing import ExampleVocabulary
 from plone.app.widgets.testing import TestRequest
 from plone.testing.zca import UNIT_TESTING
@@ -70,6 +71,7 @@ class DateWidgetTests(unittest.TestCase):
 
     def setUp(self):
         from plone.app.widgets.dx import DateWidget
+        self.maxDiff = None
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Date(__name__='datefield')
@@ -84,6 +86,7 @@ class DateWidgetTests(unittest.TestCase):
                 'name': None,
                 'pattern_options': {
                     'date': {
+                        'firstDay': 0,
                         'min': [1913, 1, 1],
                         'max': [2033, 1, 1],
                         'clear': u'Clear',
@@ -149,6 +152,7 @@ class DatetimeWidgetTests(unittest.TestCase):
 
     def setUp(self):
         from plone.app.widgets.dx import DatetimeWidget
+        self.maxDiff = None
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Datetime(__name__='datetimefield')
@@ -162,6 +166,7 @@ class DatetimeWidgetTests(unittest.TestCase):
                 'name': None,
                 'pattern_options': {
                     'date': {
+                        'firstDay': 0,
                         'min': [1913, 1, 1],
                         'max': [2033, 1, 1],
                         'clear': u'Clear',
@@ -426,13 +431,22 @@ class RelatedItemsWidgetTests(unittest.TestCase):
 
     def test_widget(self):
         from plone.app.widgets.dx import RelatedItemsWidget
+        context = Mock()
+        context.portal_properties.site_properties\
+            .getProperty.return_value = ['SomeType']
         widget = RelatedItemsWidget(self.request)
+        widget.context = context
         self.assertEqual(
             {
                 'name': None,
                 'value': None,
                 'pattern': 'relateditems',
-                'pattern_options': {'separator': ';'},
+                'pattern_options': {
+                    'folderTypes': ['SomeType'],
+                    'separator': ';',
+                    'vocabularyUrl': '/@@getVocabulary?name='
+                                     'plone.app.vocabularies.Catalog',
+                },
             },
             widget._base_args()
         )

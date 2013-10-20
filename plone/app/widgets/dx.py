@@ -8,9 +8,12 @@ from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.utils import NotImplemented
-from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_portal_url
-from plone.app.widgets.utils import get_time_options
+from plone.app.widgets.utils import get_date_options
+from plone.app.widgets.utils import get_datetime_options
+from plone.app.widgets.utils import get_ajaxselect_options
+from plone.app.widgets.utils import get_relateditems_options
+from plone.app.widgets.utils import get_querystring_options
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
@@ -315,13 +318,9 @@ class DateWidget(BaseWidget):
                                           self.value) or u'').strip()
 
         args.setdefault('pattern_options', {})
-
-        args['pattern_options'].setdefault('date', {})
-        args['pattern_options']['date'] = dict_merge(
-            args['pattern_options']['date'],
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
             get_date_options(self.request))
-
-        args['pattern_options']['time'] = False
 
         return args
 
@@ -337,7 +336,7 @@ class DateWidget(BaseWidget):
         if not self.value:
             return ''
 
-        field_value = self._base_converter(
+        field_value = self._converter(
             self.field, self).toFieldValue(self.value)
         if field_value is self.fields.missing_value:
             return u''
@@ -379,12 +378,10 @@ class DatetimeWidget(DateWidget):
         if args['value'] and len(args['value'].split(' ')) == 1:
             args['value'] += ' 00:00'
 
-        if args['pattern_options']['time'] is False:
-            args['pattern_options']['time'] = {}
-
-        args['pattern_options']['time'] = dict_merge(
-            args['pattern_options']['time'],
-            get_time_options(self.request))
+        args.setdefault('pattern_options', {})
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_datetime_options(self.request))
 
         return args
 
@@ -439,6 +436,7 @@ class AjaxSelectWidget(BaseWidget):
 
     separator = ';'
     vocabulary = None
+    vocabulary_view = '@@getVocabulary'
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -454,39 +452,65 @@ class AjaxSelectWidget(BaseWidget):
         """
 
         args = super(AjaxSelectWidget, self)._base_args()
-        args['name'] = self.name
-        args['value'] = self.value
-        args['pattern_options']['separator'] = self.separator
 
         vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
         if not self.vocabulary:
             self.vocabulary = vocabulary_factory
 
-        # get url which will be used to lookup vocabulary
-        if self.vocabulary:
-            vocabulary_url = '%s/@@getVocabulary?name=%s' % (
-                get_portal_url(self.context), self.vocabulary)
-            args['pattern_options']['vocabularyUrl'] = vocabulary_url
+        args['name'] = self.name
+        args['value'] = self.value
 
-            # initial values
-            if self.value:
-                vocabulary = queryUtility(IVocabularyFactory, self.vocabulary)
-                if vocabulary:
-                    initialValues = {}
-                    vocabulary = vocabulary(self.context)
-                    if self.vocabulary == 'plone.app.vocabularies.Catalog':
-                        uids = self.value.split(self.separator)
-                        catalog = getToolByName(self.context, 'portal_catalog')
-                        for item in catalog(UID=uids):
-                            initialValues[item.UID] = item.Title
-                    else:
-                        for value in self.value.split(self.separator):
-                            try:
-                                term = vocabulary.getTerm(value)
-                                initialValues[term.token] = term.title
-                            except LookupError:
-                                initialValues[value] = value
-                args['pattern_options']['initialValues'] = initialValues
+        args.setdefault('pattern_options', {})
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_ajaxselect_options(self.context, args['value'], self.separator,
+                                   self.vocabulary, self.vocabulary_view))
+
+        return args
+
+
+class RelatedItemsWidget(BaseWidget):
+    """RelatedItems widget for z3c.form."""
+
+    _base = InputWidget
+
+    implementsOnly(IRelatedItemsWidget)
+
+    pattern = 'relateditems'
+    pattern_options = BaseWidget.pattern_options.copy()
+
+    separator = ';'
+    vocabulary = 'plone.app.vocabularies.Catalog'
+    vocabulary_view = '@@getVocabulary'
+
+    def _base_args(self):
+        """Method which will calculate _base class arguments.
+
+        Returns (as python dictionary):
+            - `pattern`: pattern name
+            - `pattern_options`: pattern options
+            - `name`: field name
+            - `value`: field value
+
+        :returns: Arguments which will be passed to _base
+        :rtype: dict
+        """
+
+        args = super(RelatedItemsWidget, self)._base_args()
+
+        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
+        if not self.vocabulary:
+            self.vocabulary = vocabulary_factory
+
+        args['name'] = self.name
+        args['value'] = self.value
+
+        args.setdefault('pattern_options', {})
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_relateditems_options(self.context, args['value'],
+                                     self.separator, self.vocabulary,
+                                     self.vocabulary_view))
 
         return args
 
@@ -500,6 +524,8 @@ class QueryStringWidget(BaseWidget):
 
     pattern = 'querystring'
     pattern_options = BaseWidget.pattern_options.copy()
+
+    querystring_view = '@@qsOptions'
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -516,18 +542,13 @@ class QueryStringWidget(BaseWidget):
         args = super(QueryStringWidget, self)._base_args()
         args['name'] = self.name
         args['value'] = self.value
-        args['pattern_options']['indexOptionsUrl'] = '%s/@@qsOptions' % (
-            get_portal_url(self.context))
+
+        args.setdefault('pattern_options', {})
+        args['pattern_options'] = dict_merge(
+            args['pattern_options'],
+            get_querystring_options(self.context, self.querystring_view))
+
         return args
-
-
-class RelatedItemsWidget(AjaxSelectWidget):
-    """RelatedItems widget for z3c.form."""
-
-    pattern = 'relateditems'
-    pattern_options = AjaxSelectWidget.pattern_options.copy()
-
-    implementsOnly(IRelatedItemsWidget)
 
 
 class TinyMCEWidget(BaseWidget):
