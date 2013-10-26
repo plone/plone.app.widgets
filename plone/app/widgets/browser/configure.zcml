@@ -7,7 +7,7 @@
 
   <browser:page
     name="getVocabulary"
-    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    for="*"
     class=".vocabulary.VocabularyView"
     permission="zope2.View"
     layer="..interfaces.IWidgetsLayer"

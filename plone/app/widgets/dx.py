@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from AccessControl import getSecurityManager
 from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
@@ -7,13 +8,17 @@ from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
+from plone.app.widgets.interfaces import IFieldPermissionChecker
 from plone.app.widgets.utils import NotImplemented
-from plone.app.widgets.utils import get_portal_url
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
 from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
+from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
+from plone.dexterity.interfaces import IDexterityContent
+from plone.dexterity.utils import iterSchemata
+from plone.supermodel.utils import mergedTaggedValueDict
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
@@ -23,12 +28,13 @@ from z3c.form.interfaces import ITextWidget
 from z3c.form.widget import Widget
 from zope.component import adapts
 from zope.component import queryUtility
+from zope.interface import implements
 from zope.interface import implementsOnly
+from zope.security.interfaces import IPermission
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import IList
-from zope.schema.interfaces import IVocabularyFactory
 
 import json
 
@@ -460,11 +466,13 @@ class AjaxSelectWidget(BaseWidget):
         args['name'] = self.name
         args['value'] = self.value
 
-        args.setdefault('pattern_options', {})
+        options = args.setdefault('pattern_options', {})
+        field_name = self.field and self.field.__name__ or None
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
+            options,
             get_ajaxselect_options(self.context, args['value'], self.separator,
-                                   self.vocabulary, self.vocabulary_view))
+                                   self.vocabulary, self.vocabulary_view,
+                                   field_name))
 
         return args
 
@@ -506,11 +514,13 @@ class RelatedItemsWidget(BaseWidget):
         args['value'] = self.value
 
         args.setdefault('pattern_options', {})
+        field_name = self.field and self.field.__name__ or None
         args['pattern_options'] = dict_merge(
             args['pattern_options'],
             get_relateditems_options(self.context, args['value'],
                                      self.separator, self.vocabulary,
-                                     self.vocabulary_view))
+                                     self.vocabulary_view,
+                                     field_name))
 
         return args
 
@@ -579,3 +589,34 @@ class TinyMCEWidget(BaseWidget):
         args['value'] = self.value
 
         return args
+
+
+DEFAULT_PERMISSION = 'Modify portal content'
+
+
+class DXFieldPermissionChecker(object):
+    implements(IFieldPermissionChecker)
+    adapts(IDexterityContent)
+
+    def __init__(self, context):
+        self.context = context
+
+    def validate(self, field_name):
+        context = self.context
+        checker = getSecurityManager().checkPermission
+        for schema in iterSchemata(context):
+            if field_name in schema:
+                # Create mapping of all schema permissions
+                permissions = mergedTaggedValueDict(schema,
+                                                    WRITE_PERMISSIONS_KEY)
+                permission_name = permissions.get(field_name, None)
+                if permission_name is not None:
+                    permission = queryUtility(IPermission,
+                                              name=permission_name)
+                    if permission:
+                        return checker(permission.title, context)
+                # If the field is in the schema, but no permission is
+                # specified, fall back to the default edit permission
+                return checker(DEFAULT_PERMISSION, context)
+        else:
+            raise AttributeError('No such field: {}'.format(field_name))
