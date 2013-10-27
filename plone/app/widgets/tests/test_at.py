@@ -251,6 +251,27 @@ class SelectWidgetTests(unittest.TestCase):
             widget._base_args(self.context, self.field, self.request),
         )
 
+    def test_widget_orderable(self):
+        from plone.app.widgets.at import SelectWidget
+        widget = SelectWidget()
+        widget.multiple = True
+        widget.orderable = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': 'fieldname',
+                'pattern_options': {'orderable': True, 'separator': ';'},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(self.context, self.field, self.request),
+        )
+
 
 # TODO
 #class AjaxSelectWidgetTests(unittest.TestCase):

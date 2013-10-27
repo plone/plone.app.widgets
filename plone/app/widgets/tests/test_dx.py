@@ -24,6 +24,7 @@ from zope.schema import List
 from zope.schema import Choice
 from zope.schema import TextLine
 from zope.schema import Tuple
+from zope.schema import Set
 
 import json
 
@@ -306,10 +307,87 @@ class SelectWidgetTests(unittest.TestCase):
             widget._base_args(),
         )
 
+    def test_widget_list_orderable(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        widget.field = List(
+            __name__='selectfield',
+            value_type=Choice(values=['one', 'two', 'three'])
+        )
+        widget.terms = widget.field.value_type.vocabulary
+        widget.multiple = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {'orderable': True},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_tuple_orderable(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        widget.field = Tuple(
+            __name__='selectfield',
+            value_type=Choice(values=['one', 'two', 'three'])
+        )
+        widget.terms = widget.field.value_type.vocabulary
+        widget.multiple = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {'orderable': True},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_set_not_orderable(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        # A set is not orderable
+        widget.field = Set(
+            __name__='selectfield',
+            value_type=Choice(values=['one', 'two', 'three'])
+        )
+        widget.terms = widget.field.value_type.vocabulary
+        widget.multiple = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
 
 class AjaxSelectWidgetTests(unittest.TestCase):
 
     layer = UNIT_TESTING
+    maxDiff = None
 
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
@@ -355,6 +433,49 @@ class AjaxSelectWidgetTests(unittest.TestCase):
                     'separator': ';'
                 },
             }
+        )
+
+    def test_widget_list_orderable(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
+        widget.field = List(__name__='selectfield')
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'orderable': True, 'separator': ';'},
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_tuple_orderable(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
+        widget.field = Tuple(__name__='selectfield')
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'orderable': True, 'separator': ';'},
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_set_not_orderable(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
+        # A set is not orderable
+        widget.field = Set(__name__='selectfield')
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'separator': ';'},
+            },
+            widget._base_args(),
         )
 
     def test_data_converter_list(self):

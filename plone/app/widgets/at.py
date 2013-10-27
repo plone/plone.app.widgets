@@ -250,6 +250,7 @@ class SelectWidget(BaseWidget):
         'pattern_options': {},
         'separator': ';',
         'multiple': False,
+        'orderable': False,
     })
 
     def _base_args(self, context, field, request):
@@ -282,6 +283,10 @@ class SelectWidget(BaseWidget):
         if self.separator:
             options['separator'] = self.separator
 
+        if self.orderable and self.multiple:
+            options = args.setdefault('pattern_options', {})
+            options['orderable'] = True
+
         return args
 
 
@@ -305,6 +310,7 @@ class AjaxSelectWidget(BaseWidget):
         'separator': ';',
         'vocabulary': None,
         'vocabulary_view': '@@getVocabulary',
+        'orderable': False,
     })
 
     def _base_args(self, context, field, request):
@@ -325,6 +331,10 @@ class AjaxSelectWidget(BaseWidget):
             get_ajaxselect_options(context, args['value'], self.separator,
                                    self.vocabulary, self.vocabulary_view,
                                    field.getName()))
+
+        if self.orderable:
+            options = args.setdefault('pattern_options', {})
+            options['orderable'] = True
 
         return args
 

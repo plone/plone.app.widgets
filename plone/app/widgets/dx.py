@@ -35,6 +35,7 @@ from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import IList
+from zope.schema.interfaces import ISequence
 
 import json
 
@@ -280,7 +281,7 @@ class BaseWidget(Widget):
             raise NotImplemented("'pattern' option is not provided.")
         return {
             'pattern': self.pattern,
-            'pattern_options': self.pattern_options,
+            'pattern_options': self.pattern_options.copy(),
         }
 
     def render(self):
@@ -427,6 +428,11 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
             items.append((item['value'], item['content']))
         args['items'] = items
 
+        # ISequence represents an orderable collection
+        if ISequence.providedBy(self.field):
+            options = args.setdefault('pattern_options', {})
+            options['orderable'] = True
+
         return args
 
 
@@ -473,6 +479,9 @@ class AjaxSelectWidget(BaseWidget):
             get_ajaxselect_options(self.context, args['value'], self.separator,
                                    self.vocabulary, self.vocabulary_view,
                                    field_name))
+        # ISequence represents an orderable collection
+        if ISequence.providedBy(self.field):
+            args['pattern_options']['orderable'] = True
 
         return args
 
