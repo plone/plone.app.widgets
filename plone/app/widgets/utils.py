@@ -118,5 +118,8 @@ def get_portal_url(context):
     if portal:
         root = getNavigationRootObject(context, portal)
         if root:
-            return root.absolute_url()
+            try:
+                return root.absolute_url()
+            except AttributeError:
+                return portal.absolute_url()
     return ''
