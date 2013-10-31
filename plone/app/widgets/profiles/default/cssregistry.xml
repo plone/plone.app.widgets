@@ -8,8 +8,7 @@
     <stylesheet bundle="deprecated" id="++resource++tinymce.stylesheets/tinymce.css" />
 
     <stylesheet
-        cacheable="False" compression="none" cookable="True"
-        enabled="True" bundle="widgets"
+        cacheable="False" compression="none" cookable="True" enabled="True"
         id="++resource++plone.app.widgets.css"
         />
 

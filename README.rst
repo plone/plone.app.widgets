@@ -1,67 +1,76 @@
-The goal of ``plone.app.widgets`` is to provide an implementation for a new
-set of javascript widgets being developed in the `Plone Mockup`_ project. It
-overrides existing widgets used in dexterity and archetypes to provide tested
-and modularized widgets based on the concept of *patterns*.
+The goal of ``plone.app.widgets`` is to provide an implementation for a new set
+of javascript widgets being developed outside Plone as part of `Mockup`_
+project. It overrides explicit widgets used in dexterity and archetypes to
+provide tested and modularized widgets based on the concept of *patterns*.
 
-.. image:: https://travis-ci.org/plone/plone.app.widgets.png?branch=master
+.. image:: https://travis-ci.org/plone/plone.app.widgets.png
    :target: https://travis-ci.org/plone/plone.app.widgets
 
 .. contents::
 
-Introduction
-============
+Is safe to use this package?
+============================
 
-The widgets that are provided currently are:
+This package should be safe to install and easy to uninstall (there is also
+uninstall profile). That means its fairly safe to give it a try, but just in
+case don't forget to create backup before testing it.
 
-- Adjust Text Size -- *Easily change text size on a page.*
-- Cookie Directive -- *A pattern that checks cookies enabled and asks
-  permission for the user to allow cookies or not.*
-- Expose -- *Exposes the focused element by darkening everything else on the
-  page. Useful to focus the user attention on a particular area.*
-- Form Unload Alert -- *A pattern to warn user when changes are unsaved and
-  they try to navigate away from page.*
-- Live Search -- *Dynamically query the server and display results.*
-- Modal -- *Creates a modal dialog (also called overlay).*
-- Pick A Date -- *Allows the user to select a date (with or without time)
-  through a calendar.*
-- Picture -- *A responsive image widget.*
-- Prevent Double Submit -- *A pattern to prevent submitting a form twice.*
-- Query String for Collections -- *A widget for creating query's for
-  collections*
-- Related Items -- *An advanced widget for selecting related items.*
-- Select2 -- *Autocompletes, multiple or single selections from any kind of
-  data source (with search!).*
-- Table Sorter -- *A pattern you can apply to a table so it can have its items
-  rearranged when clicking the header.*
-- TinyMCE (v4!!!) -- *Rich text editor.*
-- Table of Contents -- *Automatically generate a table of contents.*
-- Tooltip -- *A pattern to show a tooltip on hover.*
-- DropZone -- *Drag 'n drop file upload*
+As of version 1.4.0 there is quite comprehensive unittest coverage of python
+code as well as high coverage of our javascript code. There are also some robot
+tests which are testing integration with Plone, but this will be improved with
+future releases.
 
-Widgets that are overridden in ``Edit`` forms are:
+This project will be integrated with Plone 5 and will never reach version
+2.0.0. You can monitor progress of `PLIP here`_.
 
-- ``subject``
-- ``language``
-- ``effectiveDate``
-- ``expirationDate``
-- ``contributrors``
-- ``creators``
-- ``relatedItems``
-- ``query``
+If you wonder why there is no Alpha/Beta marker in version, its because version
+of this package is kept in sync with other projects deriving from `Mockup`_
+(eg. `plone.app.toolbar`_).  Version 1.4.1 would then mean we're using
+`Mockup`_ version 1.4 and there was one bugfix only to the python code. Version
+packaged javascript inside is still in sync with `Mockup`_ project.
+
+
+What is included?
+=================
+
+The fields that are using updated widgets are:
+
+- **Tags field** (AjaxSelectWidget)
+- **Language field** (SelectWidget)
+- **Effective date field** (DatetimeWidget)
+- **Expire date field** (DatetimeWidget)
+- **Contributors field** (AjaxSelectWidget)
+- **Creators field** (AjaxSelectWidget)
+- **Text field** (TinyMCEWidget)
+- **Related items field** (RelatedItemsWidget)
+- **Query string field** (QueryStringWidget) in case `plone.app.contenttypes`_
+  is installed.
 
 All client side code (javascript/css/images) is done and tested as part of
-`Plone Mockup`_ project.
+`Mockup`_ project.
 
-Any feature / bug / compliment please insert in the `issue tracker`_.
+.. image:: https://travis-ci.org/plone/mockup.png
+   :target: https://travis-ci.org/plone/mockup
+   :alt: Travis CI
+
+.. image:: https://coveralls.io/repos/plone/mockup/badge.png?branch=master
+   :target: https://coveralls.io/r/plone/mockup?branch=master
+   :alt: Coveralls
+
+.. image:: https://d2weczhvl823v0.cloudfront.net/plone/mockup/trend.png
+   :target: https://bitdeli.com/free
+   :alt: Bitdeli
+
+For any feature / bug / comment please create an issue in the `issue tracker`_.
 
 
 Installation
 ============
 
-For now only tested with Plone 4.3::
+For now only tested with Plone 4.3.2::
 
     [buildout]
-    extends = http://dist.plone.org/release/4.3.1/versions.cfg
+    extends = http://dist.plone.org/release/4.3.2/versions.cfg
     versions = versions
     parts = instance
 
@@ -78,22 +87,15 @@ For now only tested with Plone 4.3::
 
     [versions]
     plone.app.jquery = 1.8.3
-    plone.app.vocabularies = 2.1.11
+    plone.app.vocabularies = 2.1.12
+    plone.app.querystring = 1.1.0
+
+Make sure you install the "Plone Widgets" profile when creating your Plone site
+or include ``plone.app.widgets`` profile in your ``metadata.xml``..
 
 
-..
-    Fields and widgets demo gallery
-    ================================
-    ``plone.app.widgets`` provides view ``@@widgets-demo`` which will render
-    examples of ``zope.schema`` fields and ``plone.app.z3cform`` widgets (Dexterity).
-    To see the examples go on your Plone site::
-        http://localhost:8080/Plone/@@widgets-demo
-    Contributing to fields and widgets gallery
-    ---------------------------------------------
-    External packages can add widgets to the demo by inheriting
-    and registering a demo form snippet. For examples,
-    see ``plone.app.widgets.demos`` source code.
-
-
-.. _`Plone Mockup`: http://plone.github.io/mockup
+.. _`Mockup`: http://plone.github.io/mockup
 .. _`issue tracker`: https://github.com/plone/mockup/issues?labels=widgets
+.. _`PLIP here`: https://dev.plone.org/ticket/13476
+.. _`plone.app.toolbar`: https:/github.com/plone/plone.app.toolbar
+.. _`plone.app.contenttypes`: https:/github.com/plone/plone.app.contenttypes
