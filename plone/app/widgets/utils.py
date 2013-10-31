@@ -101,8 +101,16 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
 
 
 def get_querystring_options(context, querystring_view):
-    return {'indexOptionsUrl': '{}/{}'.format(get_portal_url(context),
-                                              querystring_view)}
+    portal_url = get_portal_url(context)
+    try:
+        base_url = context.absolute_url()
+    except AttributeError:
+        base_url = portal_url
+    return {
+        'indexOptionsUrl': '{}/{}'.format(portal_url, querystring_view),
+        'previewURL': '%s/@@querybuilder_html_results' % base_url,
+        'previewCountURL': '%s/@@querybuildernumberofresults' % base_url
+    }
 
 
 def get_portal():
