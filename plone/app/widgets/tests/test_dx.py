@@ -3,16 +3,30 @@
 from datetime import date
 from datetime import datetime
 from mock import Mock
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
+from plone.app.testing import login
+from plone.app.testing import setRoles
+from plone.app.widgets.browser.vocabulary import VocabularyView
 from plone.app.widgets.testing import ExampleVocabulary
+from plone.app.widgets.testing import PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
+from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
+from plone.dexterity.fti import DexterityFTI
 from plone.testing.zca import UNIT_TESTING
+from zope import schema
 from zope.component import provideUtility
+from zope.interface import Interface
+from zope.globalrequest import setRequest
 from zope.schema import Date
 from zope.schema import Datetime
 from zope.schema import List
 from zope.schema import Choice
 from zope.schema import TextLine
 from zope.schema import Tuple
+from zope.schema import Set
+
+import json
 
 try:
     import unittest2 as unittest
@@ -71,7 +85,6 @@ class DateWidgetTests(unittest.TestCase):
 
     def setUp(self):
         from plone.app.widgets.dx import DateWidget
-        self.maxDiff = None
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Date(__name__='datefield')
@@ -152,7 +165,6 @@ class DatetimeWidgetTests(unittest.TestCase):
 
     def setUp(self):
         from plone.app.widgets.dx import DatetimeWidget
-        self.maxDiff = None
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Datetime(__name__='datetimefield')
@@ -295,10 +307,87 @@ class SelectWidgetTests(unittest.TestCase):
             widget._base_args(),
         )
 
+    def test_widget_list_orderable(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        widget.field = List(
+            __name__='selectfield',
+            value_type=Choice(values=['one', 'two', 'three'])
+        )
+        widget.terms = widget.field.value_type.vocabulary
+        widget.multiple = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {'orderable': True},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_tuple_orderable(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        widget.field = Tuple(
+            __name__='selectfield',
+            value_type=Choice(values=['one', 'two', 'three'])
+        )
+        widget.terms = widget.field.value_type.vocabulary
+        widget.multiple = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {'orderable': True},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_set_not_orderable(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        # A set is not orderable
+        widget.field = Set(
+            __name__='selectfield',
+            value_type=Choice(values=['one', 'two', 'three'])
+        )
+        widget.terms = widget.field.value_type.vocabulary
+        widget.multiple = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
 
 class AjaxSelectWidgetTests(unittest.TestCase):
 
     layer = UNIT_TESTING
+    maxDiff = None
 
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
@@ -344,6 +433,49 @@ class AjaxSelectWidgetTests(unittest.TestCase):
                     'separator': ';'
                 },
             }
+        )
+
+    def test_widget_list_orderable(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
+        widget.field = List(__name__='selectfield')
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'orderable': True, 'separator': ';'},
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_tuple_orderable(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
+        widget.field = Tuple(__name__='selectfield')
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'orderable': True, 'separator': ';'},
+            },
+            widget._base_args(),
+        )
+
+    def test_widget_set_not_orderable(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
+        # A set is not orderable
+        widget.field = Set(__name__='selectfield')
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'separator': ';'},
+            },
+            widget._base_args(),
         )
 
     def test_data_converter_list(self):
@@ -426,12 +558,13 @@ class QueryStringWidgetTests(unittest.TestCase):
 
 class RelatedItemsWidgetTests(unittest.TestCase):
 
+
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
 
     def test_widget(self):
         from plone.app.widgets.dx import RelatedItemsWidget
-        context = Mock()
+        context = Mock(absolute_url=lambda: 'fake_url')
         context.portal_properties.site_properties\
             .getProperty.return_value = ['SomeType']
         widget = RelatedItemsWidget(self.request)
@@ -444,9 +577,103 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
                     'separator': ';',
-                    'vocabularyUrl': '/@@getVocabulary?name='
+                    'vocabularyUrl': 'fake_url/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog',
                 },
             },
             widget._base_args()
         )
+
+
+def add_mock_fti(portal):
+    # Fake DX Type
+    fti = DexterityFTI('dx_mock')
+    portal.portal_types._setObject('dx_mock', fti)
+    fti.klass = 'plone.dexterity.content.Item'
+    fti.schema = 'plone.app.widgets.tests.test_dx.IMockSchema'
+    fti.filter_content_types = False
+    fti.behaviors = ('plone.app.dexterity.behaviors.metadata.IBasic',)
+
+
+class IMockSchema(Interface):
+    allowed_field = schema.TextLine()
+    disallowed_field = schema.TextLine()
+    default_field = schema.TextLine()
+IMockSchema.setTaggedValue(WRITE_PERMISSIONS_KEY, {
+    'allowed_field': u'zope2.View',
+    'disallowed_field': u'zope2.ViewManagementScreens'
+    })
+
+
+class DexterityVocabularyPermissionTests(unittest.TestCase):
+
+    layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
+
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        setRequest(self.request)
+        self.portal = self.layer['portal']
+
+        login(self.portal, TEST_USER_NAME)
+        setRoles(self.portal, TEST_USER_ID, ['Manager'])
+
+        add_mock_fti(self.portal)
+        self.portal.invokeFactory('dx_mock', 'test_dx')
+
+        self.portal.test_dx.manage_permission('View',
+                                              ('Anonymous',),
+                                              acquire=False)
+        self.portal.test_dx.manage_permission('View management screens',
+                                              (),
+                                              acquire=False)
+        self.portal.test_dx.manage_permission('Modify portal content',
+                                              ('Editor', 'Manager',
+                                               'Site Adiminstrator'),
+                                              acquire=False)
+
+    def testVocabularyFieldAllowed(self):
+        view = VocabularyView(self.portal.test_dx, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'allowed_field',
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']),
+                          len(self.portal.portal_types.objectIds()))
+
+    def testVocabularyFieldDisallowed(self):
+        view = VocabularyView(self.portal.test_dx, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'disallowed_field',
+        })
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+    def testVocabularyFieldDefaultPermission(self):
+        view = VocabularyView(self.portal.test_dx, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'default_field',
+        })
+        # If the field is does not have a security declaration, the
+        # default edit permission is tested (Modify portal content)
+        setRoles(self.portal, TEST_USER_ID, ['Member'])
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+        setRoles(self.portal, TEST_USER_ID, ['Editor'])
+        # Now access should be allowed, but the vocabulary does not exist
+        data = json.loads(view())
+        self.assertEquals(len(data['results']),
+                          len(self.portal.portal_types.objectIds()))
+
+    def testVocabularyMissingField(self):
+        view = VocabularyView(self.portal.test_dx, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'missing_field',
+        })
+        setRoles(self.portal, TEST_USER_ID, ['Member'])
+        with self.assertRaises(AttributeError):
+            view()

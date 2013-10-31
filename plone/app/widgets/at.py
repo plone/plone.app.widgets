@@ -2,6 +2,7 @@
 
 from AccessControl import ClassSecurityInfo
 from DateTime import DateTime
+from Products.Archetypes.interfaces import IBaseObject
 from Products.Archetypes.Registry import registerWidget
 from Products.Archetypes.Widget import TypesWidget
 from Products.CMFCore.utils import getToolByName
@@ -10,6 +11,7 @@ from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
+from plone.app.widgets.interfaces import IFieldPermissionChecker
 from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
@@ -17,6 +19,8 @@ from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
 from plone.uuid.interfaces import IUUID
+from zope.interface import implements
+from zope.component import adapts
 
 import json
 
@@ -246,6 +250,7 @@ class SelectWidget(BaseWidget):
         'pattern_options': {},
         'separator': ';',
         'multiple': False,
+        'orderable': False,
     })
 
     def _base_args(self, context, field, request):
@@ -273,10 +278,14 @@ class SelectWidget(BaseWidget):
             items.append((item[0], item[1]))
         args['items'] = items
 
-        args.setdefault('pattern_options', {})
+        options = args.setdefault('pattern_options', {})
 
         if self.separator:
-            args['pattern_options']['separator'] = self.separator
+            options['separator'] = self.separator
+
+        if self.orderable and self.multiple:
+            options = args.setdefault('pattern_options', {})
+            options['orderable'] = True
 
         return args
 
@@ -301,6 +310,7 @@ class AjaxSelectWidget(BaseWidget):
         'separator': ';',
         'vocabulary': None,
         'vocabulary_view': '@@getVocabulary',
+        'orderable': False,
     })
 
     def _base_args(self, context, field, request):
@@ -315,11 +325,16 @@ class AjaxSelectWidget(BaseWidget):
         args['value'] = self.separator.join(request.get(
             field.getName(), field.getAccessor(context)()))
 
-        args.setdefault('pattern_options', {})
+        options = args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
+            options,
             get_ajaxselect_options(context, args['value'], self.separator,
-                                   self.vocabulary, self.vocabulary_view))
+                                   self.vocabulary, self.vocabulary_view,
+                                   field.getName()))
+
+        if self.orderable:
+            options = args.setdefault('pattern_options', {})
+            options['orderable'] = True
 
         return args
 
@@ -377,7 +392,8 @@ class RelatedItemsWidget(BaseWidget):
         args['pattern_options'] = dict_merge(
             args['pattern_options'],
             get_relateditems_options(context, args['value'], self.separator,
-                                     self.vocabulary, self.vocabulary_view))
+                                     self.vocabulary, self.vocabulary_view,
+                                     field.getName()))
 
         return args
 
@@ -474,3 +490,17 @@ registerWidget(
     title='TinyMCE widget',
     description=('TinyMCE widget'),
     used_for='Products.Archetypes.Field.TextField')
+
+
+class ATFieldPermissionChecker(object):
+    implements(IFieldPermissionChecker)
+    adapts(IBaseObject)
+
+    def __init__(self, context):
+        self.context = context
+
+    def validate(self, field_name):
+        field = self.context.getField(field_name)
+        if field is not None:
+            return field.checkPermission('w', self.context)
+        raise AttributeError('No such field: {}'.format(field_name))

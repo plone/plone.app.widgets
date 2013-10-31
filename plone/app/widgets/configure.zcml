@@ -145,6 +145,8 @@
         provides="archetypes.schemaextender.interfaces.ISchemaModifier"
         />
 
+    <adapter factory=".at.ATFieldPermissionChecker" />
+
   </configure>
 
   <!-- dexterity -->
@@ -160,6 +162,8 @@
     <adapter factory=".dx.AjaxSelectWidgetConverter" />
     <adapter factory=".dx.QueryStringDataConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
+
+    <adapter factory=".dx.DXFieldPermissionChecker" />
 
     <!-- override metadata widgets -->
     <adapter factory=".dx_bbb.SubjectsFieldWidget" />
