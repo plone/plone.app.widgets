@@ -130,4 +130,6 @@ def get_portal_url(context):
                 return root.absolute_url()
             except AttributeError:
                 return portal.absolute_url()
+        else:
+            return portal.absolute_url()
     return ''
