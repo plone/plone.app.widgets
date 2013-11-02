@@ -5,7 +5,8 @@ Changelog
 1.3.4 (unreleased)
 ------------------
 
-- no updates
+- Support query arguments for function based vocabularies.
+  [thet]
 
 
 1.3.3 (2013-09-11)
@@ -21,7 +22,7 @@ Changelog
   [davisagli]
 
 - Allow to define a different vocabulary view for select widget
-  [do3c]]
+  [do3c]
 
 - Don't do double batching in select widget code
   [do3cc]

@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
-
 from AccessControl import Unauthorized
+from StringIO import StringIO
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
 from plone.app.testing import setRoles
-from plone.app.widgets.browser.vocabulary import VocabularyView
-from plone.app.widgets.browser.query import QueryStringIndexOptions
 from plone.app.widgets.browser.file import FileUploadView
+from plone.app.widgets.browser.query import QueryStringIndexOptions
+from plone.app.widgets.browser.vocabulary import VocabularyView
+from plone.app.widgets.browser import vocabulary
+from plone.app.widgets.testing import ExampleFunctionVocabulary
+from plone.app.widgets.testing import ExampleVocabulary
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
+from zope.component import provideUtility
 from zope.globalrequest import setRequest
-from StringIO import StringIO
-import transaction
-
 import json
+import transaction
 
 try:
     import unittest2 as unittest
@@ -33,6 +35,34 @@ class BrowserTest(unittest.TestCase):
         self.portal = self.layer['portal']
         login(self.portal, TEST_USER_NAME)
         setRoles(self.portal, TEST_USER_ID, ['Manager'])
+        provideUtility(ExampleVocabulary(), name=u'vocab_class')
+        provideUtility(ExampleFunctionVocabulary, name=u'vocab_function')
+        vocabulary._permissions.update({
+            'vocab_class': 'Modify portal content',
+            'vocab_function': 'Modify portal content',
+        })
+
+    def testVocabularyQueryString(self):
+        """Test querying a class based vocabulary with a search string.
+        """
+        view = VocabularyView(self.portal, self.request)
+        self.request.form.update({
+            'name': 'vocab_class',
+            'query': 'three'
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']), 1)
+
+    def testVocabularyFunctionQueryString(self):
+        """Test querying a function based vocabulary with a search string.
+        """
+        view = VocabularyView(self.portal, self.request)
+        self.request.form.update({
+            'name': 'vocab_function',
+            'query': 'third'
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']), 1)
 
     def testVocabularyNoResults(self):
         """Tests that the widgets displays correctly
