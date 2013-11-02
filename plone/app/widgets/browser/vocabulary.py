@@ -85,20 +85,19 @@ class VocabularyView(BrowserView):
         else:
             factory_spec = inspect.getargspec(factory.__call__)
         try:
-            supports_query = False
             supports_batch = False
+            vocabulary = None
             if query and 'query' in factory_spec.args:
-                supports_query = True
                 if 'batch' in factory_spec.args:
+                    vocabulary = factory(self.context,
+                                         query=query, batch=batch)
                     supports_batch = True
-            if (not supports_query and query):
+                else:
+                    vocabulary = factory(self.context, query=query)
+            elif query:
                 raise KeyError("The vocabulary factory %s does not support "
                                "query arguments",
                                factory)
-            if batch and supports_batch:
-                    vocabulary = factory(self.context, query=query, batch=batch)
-            elif query:
-                    vocabulary = factory(self.context, query=query)
             else:
                 vocabulary = factory(self.context)
         except (TypeError, ParseError):
