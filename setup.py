@@ -45,6 +45,7 @@ setup(
             'mockup',
         ],
         'archetypes': [
+            'Products.Archetypes',
             'archetypes.schemaextender',
         ],
         'dexterity': [
