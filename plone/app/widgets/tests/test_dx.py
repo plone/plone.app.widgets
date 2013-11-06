@@ -584,7 +584,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
                     'separator': ';',
-                    'vocabularyUrl': 'fake_url/@@getVocabulary?name='
+                    'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog',
                 },
             },

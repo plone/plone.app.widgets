@@ -90,7 +90,8 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
                              vocabulary_view, field_name=None):
-    options = get_ajaxselect_options(context, value, separator,
+    portal = get_portal()
+    options = get_ajaxselect_options(portal, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
 
