@@ -9,6 +9,7 @@ from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.interfaces import IFieldPermissionChecker
+from plone.app.widgets.testing import TestRequest
 from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
@@ -16,6 +17,8 @@ from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
+from plone.autoform.interfaces import WIDGETS_KEY
+from plone.autoform.utils import resolveDottedName
 from plone.dexterity.interfaces import IDexterityContent
 from plone.dexterity.utils import iterSchemata
 from plone.supermodel.utils import mergedTaggedValueDict
@@ -25,9 +28,11 @@ from z3c.form.converter import BaseDataConverter
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextAreaWidget
 from z3c.form.interfaces import ITextWidget
+from z3c.form.interfaces import IFieldWidget
 from z3c.form.widget import Widget
 from zope.component import adapts
 from zope.component import queryUtility
+from zope.component import queryMultiAdapter
 from zope.interface import implements
 from zope.interface import implementsOnly
 from zope.security.interfaces import IPermission
@@ -609,12 +614,32 @@ class DXFieldPermissionChecker(object):
 
     def __init__(self, context):
         self.context = context
+        self._mock_request = TestRequest()
 
-    def validate(self, field_name):
+    def validate(self, field_name, vocabulary_name=None):
         context = self.context
         checker = getSecurityManager().checkPermission
         for schema in iterSchemata(context):
             if field_name in schema:
+                # If a vocabulary name was specified and it does not
+                # match the vocabulary name for the field or widget,
+                # fail.
+                field = schema[field_name]
+                if vocabulary_name and (
+                   vocabulary_name != getattr(field, 'vocabulary', None) and
+                   vocabulary_name != getattr(field, 'vocabularyName', None)):
+                    # Determine the widget to check for vocabulary there
+                    widgets = mergedTaggedValueDict(schema, WIDGETS_KEY)
+                    widget = widgets.get(field_name)
+                    if widget:
+                        widget = (isinstance(widget, basestring) and
+                                  resolveDottedName(widget) or widget)
+                        widget = widget and widget(field, self._mock_request)
+                    else:
+                        widget = queryMultiAdapter((field, self._mock_request),
+                                                   IFieldWidget)
+                    if getattr(widget, 'vocabulary', None) != vocabulary_name:
+                        return False
                 # Create mapping of all schema permissions
                 permissions = mergedTaggedValueDict(schema,
                                                     WRITE_PERMISSIONS_KEY)

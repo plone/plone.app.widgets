@@ -388,6 +388,7 @@ class ArchetypesVocabularyPermissionTests(unittest.TestCase):
     layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
 
     def setUp(self):
+        from plone.app.widgets.at import AjaxSelectWidget
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         setRequest(self.request)
         self.portal = self.layer['portal']
@@ -398,12 +399,23 @@ class ArchetypesVocabularyPermissionTests(unittest.TestCase):
         class TestAT(BaseContent):
 
             schema = BaseContent.schema.copy() + Schema((
-                StringField('allowed_field',
-                            write_permission='View'),
-                StringField('disallowed_field',
-                            write_permission='View management screens'),
-                StringField('default_field'),
-                ))
+                StringField(
+                    'allowed_field',
+                    vocabulary_factory='plone.app.vocabularies.PortalTypes',
+                    write_permission='View'),
+                StringField(
+                    'disallowed_field',
+                    vocabulary_factory='plone.app.vocabularies.PortalTypes',
+                    write_permission='View management screens'),
+                StringField(
+                    'default_field',
+                    vocabulary_factory='plone.app.vocabularies.PortalTypes'),
+                StringField(
+                    'allowed_widget_vocab',
+                    write_permission='View',
+                    widget=AjaxSelectWidget(
+                        vocabulary='plone.app.vocabularies.PortalTypes'),
+                )))
 
         self.portal._setObject('test_at', TestAT('test_at'),
                                suppress_events=True)
@@ -419,7 +431,7 @@ class ArchetypesVocabularyPermissionTests(unittest.TestCase):
                                                'Site Adiminstrator'),
                                               acquire=False)
 
-    def testVocabularyFieldAllowed(self):
+    def test_vocabulary_field_allowed(self):
         view = VocabularyView(self.portal.test_at, self.request)
         self.request.form.update({
             'name': 'plone.app.vocabularies.PortalTypes',
@@ -429,7 +441,16 @@ class ArchetypesVocabularyPermissionTests(unittest.TestCase):
         self.assertEquals(len(data['results']),
                           len(self.portal.portal_types.objectIds()))
 
-    def testVocabularyFieldDisallowed(self):
+    def test_vocabulary_field_wrong_vocab_disallowed(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.Fake',
+            'field': 'allowed_field',
+        })
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+    def test_vocabulary_field_disallowed(self):
         view = VocabularyView(self.portal.test_at, self.request)
         self.request.form.update({
             'name': 'plone.app.vocabularies.PortalTypes',
@@ -438,7 +459,7 @@ class ArchetypesVocabularyPermissionTests(unittest.TestCase):
         data = json.loads(view())
         self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
 
-    def testVocabularyFieldDefaultPermission(self):
+    def test_vocabulary_field_default_permission(self):
         view = VocabularyView(self.portal.test_at, self.request)
         self.request.form.update({
             'name': 'plone.app.vocabularies.PortalTypes',
@@ -456,7 +477,28 @@ class ArchetypesVocabularyPermissionTests(unittest.TestCase):
         self.assertEquals(len(data['results']),
                           len(self.portal.portal_types.objectIds()))
 
-    def testVocabularyMissingField(self):
+    def test_vocabulary_field_default_permission_wrong_vocab(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.Fake',
+            'field': 'default_field',
+        })
+        setRoles(self.portal, TEST_USER_ID, ['Editor'])
+        # Now access should be allowed, but the vocabulary does not exist
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+    def test_vocabulary_widget_vocab_allowed(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'allowed_widget_vocab',
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']),
+                          len(self.portal.portal_types.objectIds()))
+
+    def test_vocabulary_missing_field(self):
         view = VocabularyView(self.portal.test_at, self.request)
         self.request.form.update({
             'name': 'plone.app.vocabularies.PortalTypes',

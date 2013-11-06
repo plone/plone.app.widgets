@@ -2,6 +2,7 @@ from AccessControl import getSecurityManager
 from logging import getLogger
 from plone.app.vocabularies.interfaces import ISlicableVocabulary
 from plone.app.widgets.interfaces import IFieldPermissionChecker
+from Products.CMFPlone.interfaces import IPloneSiteRoot
 from Products.Five import BrowserView
 from Products.ZCTextIndex.ParseTree import ParseError
 from types import FunctionType
@@ -62,6 +63,7 @@ class VocabularyView(BrowserView):
             size: size of paged results
         }
         """
+        context = self.context
         self.request.response.setHeader("Content-type", "application/json")
 
         factory_name = self.request.get('name', None)
@@ -70,17 +72,20 @@ class VocabularyView(BrowserView):
             return json.dumps({'error': 'No factory provided.'})
         authorized = None
         sm = getSecurityManager()
-        if factory_name not in _permissions:
+        if (factory_name not in _permissions or
+                not IPloneSiteRoot.providedBy(context)):
             # Check field specific permission
             if field_name:
-                permission_checker = queryAdapter(self.context,
+                permission_checker = queryAdapter(context,
                                                   IFieldPermissionChecker)
                 if permission_checker is not None:
-                    authorized = permission_checker.validate(field_name)
+                    authorized = permission_checker.validate(field_name,
+                                                             factory_name)
             if not authorized:
                 return json.dumps({'error': 'Vocabulary lookup not allowed'})
-        # Short Circuit if permission is in global registry
-        elif not sm.checkPermission(_permissions[factory_name], self.context):
+        # Short circuit if we are on the site root and permission is
+        # in global registry
+        elif not sm.checkPermission(_permissions[factory_name], context):
             return json.dumps({'error': 'Vocabulary lookup not allowed'})
 
         factory = queryUtility(IVocabularyFactory, factory_name)
@@ -110,11 +115,11 @@ class VocabularyView(BrowserView):
                                "query arguments",
                                factory)
             if batch and supports_batch:
-                    vocabulary = factory(self.context, query, batch)
+                    vocabulary = factory(context, query, batch)
             elif query:
-                    vocabulary = factory(self.context, query)
+                    vocabulary = factory(context, query)
             else:
-                vocabulary = factory(self.context)
+                vocabulary = factory(context)
         except (TypeError, ParseError):
             raise
             return self.error()
@@ -145,7 +150,7 @@ class VocabularyView(BrowserView):
             attributes = attributes.split(',')
 
         if attributes:
-            base_path = '/'.join(self.context.getPhysicalPath())
+            base_path = '/'.join(context.getPhysicalPath())
             for vocab_item in vocabulary:
                 item = {}
                 for attr in attributes:

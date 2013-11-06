@@ -33,7 +33,7 @@ class PermissionChecker(object):
     def __init__(self, context):
         pass
 
-    def validate(self, field_name):
+    def validate(self, field_name, vocabulary_name=None):
         if field_name == 'allowed_field':
             return True
         elif field_name == 'disallowed_field':
@@ -41,13 +41,16 @@ class PermissionChecker(object):
         else:
             raise AttributeError('Missing Field')
 
+
 class ICustomPermissionProvider(Interface):
     pass
+
 
 def _enable_permission_checker(context):
     provideAdapter(PermissionChecker, adapts=(ICustomPermissionProvider,),
                    provides=IFieldPermissionChecker)
     alsoProvides(context, ICustomPermissionProvider)
+
 
 def _disable_permission_checker(context):
     noLongerProvides(context, ICustomPermissionProvider)

@@ -499,8 +499,14 @@ class ATFieldPermissionChecker(object):
     def __init__(self, context):
         self.context = context
 
-    def validate(self, field_name):
+    def validate(self, field_name, vocabulary_name=None):
         field = self.context.getField(field_name)
         if field is not None:
+            # If a vocabulary name was specified and it doesn't match
+            # the value for the field or the widget, fail.
+            if vocabulary_name and (
+               vocabulary_name != getattr(field.widget, 'vocabulary', None) and
+               vocabulary_name != getattr(field, 'vocabulary_factory', None)):
+                return False
             return field.checkPermission('w', self.context)
         raise AttributeError('No such field: {}'.format(field_name))
