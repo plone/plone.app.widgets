@@ -131,52 +131,84 @@
 
   <cmf:registerDirectory name="plone_widgets" />
 
-  <!-- archetypes -->
-  <configure zcml:condition="installed Products.ATContentTypes">
+  <configure zcml:condition="not-have plone-5">
 
-    <include package="archetypes.schemaextender" />
+    <!-- archetypes -->
+    <configure zcml:condition="installed Products.ATContentTypes">
 
-    <adapter factory=".factories.ATCTFileFactory" />
+      <include package="archetypes.schemaextender" />
 
-    <adapter
-        name="plone.app.widgets"
-        factory=".at_bbb.MetadataExtender"
-        for="Products.ATContentTypes.interface.IATContentType"
-        provides="archetypes.schemaextender.interfaces.ISchemaModifier"
-        />
+      <adapter factory=".factories.ATCTFileFactory" />
+
+      <adapter
+          name="plone.app.widgets"
+          factory=".at_bbb.MetadataExtender"
+          for="Products.ATContentTypes.interface.IATContentType"
+          provides="archetypes.schemaextender.interfaces.ISchemaModifier"
+          />
+
+    </configure>
+
+    <!-- dexterity -->
+    <configure zcml:condition="installed plone.app.dexterity">
+
+      <include package="z3c.form" file="meta.zcml"/>
+      <include package="z3c.form" />
+
+      <adapter factory=".factories.DXFileFactory" />
+
+      <adapter factory=".dx.DatetimeWidgetConverter" />
+      <adapter factory=".dx.DateWidgetConverter" />
+      <adapter factory=".dx.AjaxSelectWidgetConverter" />
+      <adapter factory=".dx.QueryStringDataConverter" />
+      <adapter factory=".dx.RelatedItemsDataConverter" />
+
+      <!-- override metadata widgets -->
+      <adapter factory=".dx_bbb.SubjectsFieldWidget" />
+      <adapter factory=".dx_bbb.LanguageFieldWidget" />
+      <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
+      <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
+      <adapter factory=".dx_bbb.ContributorsFieldWidget" />
+      <adapter factory=".dx_bbb.CreatorsFieldWidget" />
+
+      <configure zcml:condition="installed plone.app.relationfield">
+        <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
+      </configure>
+
+      <!-- override contenttypes specific widgets -->
+      <configure zcml:condition="installed plone.app.contenttypes">
+          <adapter factory=".dx_pac_bbb.QueryStringFieldWidget" />
+      </configure>
+
+    </configure>
 
   </configure>
 
-  <!-- dexterity -->
-  <configure zcml:condition="installed plone.app.dexterity">
+  <configure zcml:condition="have plone-5">
 
-    <include package="z3c.form" file="meta.zcml"/>
-    <include package="z3c.form" />
+    <class class=".dx.DateWidget">
+      <require permission="zope.Public"
+               interface=".dx.IDateWidget" />
+    </class>
+    <class class="zope.schema._field.Date">
+      <implements interface=".dx.IDateField"/>
+    </class>
+    <adapter
+        factory=".dx.DateFieldWidget"
+        for=".dx.IDateField
+             z3c.form.interfaces.IFormLayer" />
 
-    <adapter factory=".factories.DXFileFactory" />
-
-    <adapter factory=".dx.DatetimeWidgetConverter" />
-    <adapter factory=".dx.DateWidgetConverter" />
-    <adapter factory=".dx.AjaxSelectWidgetConverter" />
-    <adapter factory=".dx.QueryStringDataConverter" />
-    <adapter factory=".dx.RelatedItemsDataConverter" />
-
-    <!-- override metadata widgets -->
-    <adapter factory=".dx_bbb.SubjectsFieldWidget" />
-    <adapter factory=".dx_bbb.LanguageFieldWidget" />
-    <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
-    <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
-    <adapter factory=".dx_bbb.ContributorsFieldWidget" />
-    <adapter factory=".dx_bbb.CreatorsFieldWidget" />
-
-    <configure zcml:condition="installed plone.app.relationfield">
-      <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
-    </configure>
-
-    <!-- override contenttypes specific widgets -->
-    <configure zcml:condition="installed plone.app.contenttypes">
-        <adapter factory=".dx_pac_bbb.QueryStringFieldWidget" />
-    </configure>
+    <class class=".dx.DatetimeWidget">
+      <require permission="zope.Public"
+               interface=".dx.IDatetimeWidget" />
+    </class>
+    <class class="zope.schema._field.Datetime">
+      <implements interface=".dx.IDatetimeField"/>
+    </class>
+    <adapter
+        factory=".dx.DatetimeFieldWidget"
+        for=".dx.IDatetimeField
+             z3c.form.interfaces.IFormLayer" />
 
   </configure>
 

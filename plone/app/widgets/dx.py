@@ -20,18 +20,22 @@ from plone.event.utils import utc
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
+from z3c.form.interfaces import IFieldWidget
+from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextAreaWidget
 from z3c.form.interfaces import ITextWidget
+from z3c.form.widget import FieldWidget
 from z3c.form.widget import Widget
+from zope.component import adapter
 from zope.component import adapts
-from zope.component import queryUtility
+from zope.interface import implementer
 from zope.interface import implementsOnly
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
+from zope.schema.interfaces import IField
 from zope.schema.interfaces import IList
-from zope.schema.interfaces import IVocabularyFactory
 
 import pytz
 import json
@@ -51,6 +55,14 @@ class Utc(tzinfo):
     def dst(self, dt):
         return ZERO
 UTC = Utc()
+
+
+class IDateField(IDate):
+    """Marker interface for the DateField."""
+
+
+class IDatetimeField(IDatetime):
+    """Marker interface for the DatetimeField."""
 
 
 class IDateWidget(ITextWidget):
@@ -619,3 +631,15 @@ class TinyMCEWidget(BaseWidget):
         args['value'] = self.value
 
         return args
+
+
+@adapter(IField, IFormLayer)
+@implementer(IFieldWidget)
+def DateFieldWidget(field, request):
+    return FieldWidget(field, DateWidget(request))
+
+
+@adapter(IField, IFormLayer)
+@implementer(IFieldWidget)
+def DatetimeFieldWidget(field, request):
+    return FieldWidget(field, DatetimeWidget(request))
