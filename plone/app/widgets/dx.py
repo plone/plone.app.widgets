@@ -8,7 +8,6 @@ from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.utils import NotImplemented
-from plone.app.widgets.utils import get_portal_url
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
 from plone.app.widgets.utils import get_ajaxselect_options

@@ -300,6 +300,7 @@ class QueryStringWidgetTests(unittest.TestCase):
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.context = Mock()
+        self.context.absolute_url.return_value = ''
         self.field = Mock()
 
     def test_widget(self):
@@ -318,7 +319,11 @@ class QueryStringWidgetTests(unittest.TestCase):
                 'name': 'fieldname',
                 'value': '[{"query": "string1"}, {"query": "string2"}]',
                 'pattern': 'querystring',
-                'pattern_options': {'indexOptionsUrl': '/@@qsOptions'},
+                'pattern_options': {
+                    'indexOptionsUrl': '/@@qsOptions',
+                    'previewCountURL': '/@@querybuildernumberofresults',
+                    'previewURL': '/@@querybuilder_html_results',
+                },
             },
             widget._base_args(self.context, self.field, self.request),
         )
