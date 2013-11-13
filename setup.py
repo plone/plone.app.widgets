@@ -45,6 +45,7 @@ setup(
             'mockup',
         ],
         'archetypes': [
+            'DateTime',
             'Products.Archetypes',
             'archetypes.schemaextender',
         ],

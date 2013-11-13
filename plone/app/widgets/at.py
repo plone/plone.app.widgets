@@ -180,17 +180,25 @@ class DatetimeWidget(DateWidget):
                                      field.getAccessor(context)()))
 
         if args['value'] and isinstance(args['value'], DateTime):
-            args['value'] = ('{year:}-{month:02}-{day:02}').format(
+            args['value'] = (
+                '{year:}-{month:02}-{day:02} {hour:02}:{minute:02}'
+            ).format(
                 year=args['value'].year(),
                 month=args['value'].month(),
                 day=args['value'].day(),
+                hour=args['value'].hour(),
+                minute=args['value'].minute(),
             )
 
         elif args['value'] and isinstance(args['value'], datetime):
-            args['value'] = ('{year:}-{month:02}-{day:02}').format(
+            args['value'] = (
+                '{year:}-{month:02}-{day:02} {hour:02}:{minute:02}'
+            ).format(
                 year=args['value'].year,
                 month=args['value'].month,
                 day=args['value'].day,
+                hour=args['value'].hour,
+                minute=args['value'].minute,
             )
 
         if args['value'] and len(args['value'].split(' ')) == 1:

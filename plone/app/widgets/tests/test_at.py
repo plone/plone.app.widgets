@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from DateTime import DateTime
 from datetime import datetime
 from mock import Mock
 from plone.app.widgets.testing import TestRequest
@@ -116,7 +117,9 @@ class DatetimeWidgetTests(unittest.TestCase):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.context = Mock()
         self.field = Mock()
-        self.field.getAccessor.return_value = lambda: u''
+        self.field.getAccessor.return_value = lambda: DateTime(
+            '2013-11-13 10:20 Europe/Amsterdam'
+        )
         self.field.getName.return_value = 'fieldname'
         self.widget = DatetimeWidget()
 
@@ -124,7 +127,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'pattern': 'pickadate',
-                'value': u'',
+                'value': '2013-11-13 10:20',
                 'name': 'fieldname',
                 'pattern_options': {
                     'date': {

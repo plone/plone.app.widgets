@@ -5,6 +5,14 @@ Changelog
 1.3.4 (unreleased)
 ------------------
 
+- For Archetypes DatetimeWidget, the value on pattern options is fixed, which
+  was the time component missing.
+  [thet]
+
+- Change the start and end date fields of Products.ATContentTypes ATEvent
+  types to use plone.app.widgets.
+  [thet]
+
 - On converting the widget value to the field value, try to get the timezone
   from the context and localize the value, if possible. When editing a timezone
   aware context, the widget now timezone aware widget value gets correctly
