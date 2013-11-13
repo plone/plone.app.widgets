@@ -26,6 +26,18 @@ class MetadataExtender(object):
         for field in schema.fields():
             old = field.widget
 
+            if field.__name__ in ['startDate']:
+                field.widget = at.DatetimeWidget(
+                    label=old.label,
+                    description=old.description,
+                )
+
+            if field.__name__ in ['endDate']:
+                field.widget = at.DatetimeWidget(
+                    label=old.label,
+                    description=old.description,
+                )
+
             if field.__name__ in ['subject']:
                 field.widget = at.AjaxSelectWidget(
                     label=old.label,
