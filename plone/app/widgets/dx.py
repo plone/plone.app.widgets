@@ -3,6 +3,8 @@
 from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
+from datetime import tzinfo
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
@@ -31,6 +33,22 @@ from zope.schema.interfaces import IList
 from zope.schema.interfaces import IVocabularyFactory
 
 import json
+
+ZERO = timedelta(0)
+
+
+class Utc(tzinfo):
+    """UTC tzinfo subclass"""
+
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+UTC = Utc()
 
 
 class IDateWidget(ITextWidget):
@@ -129,6 +147,8 @@ class DatetimeWidgetConverter(BaseDataConverter):
             return self.field.missing_value
         value = tmp[0].split('-')
         value += tmp[1].split(':')
+        if getattr(self.widget, 'with_fake_timezone', False):
+            return datetime(*map(int, value), tzinfo=UTC)
         return datetime(*map(int, value))
 
 
@@ -360,6 +380,7 @@ class DatetimeWidget(DateWidget):
     implementsOnly(IDatetimeWidget)
 
     pattern_options = DateWidget.pattern_options.copy()
+    with_fake_timezone = False
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
