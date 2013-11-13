@@ -515,8 +515,17 @@ class RelatedItemsWidget(BaseWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    vocabulary = 'plone.app.vocabularies.Catalog'
     vocabulary_view = '@@getVocabulary'
+    
+    def update(self, *args, **kwargs):
+        value_type = getattr(self.field, 'value_type', None)
+        if value_type:
+            self.vocabulary = getattr(value_type,
+                                      'vocabularyName',
+                                      'plone.app.vocabularies.Catalog')
+        else:
+            self.vocabulary = 'plone.app.vocabularies.Catalog'
+        super(RelatedItemsWidget, self).update()
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -532,10 +541,6 @@ class RelatedItemsWidget(BaseWidget):
         """
 
         args = super(RelatedItemsWidget, self)._base_args()
-
-        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
-        if not self.vocabulary:
-            self.vocabulary = vocabulary_factory
 
         args['name'] = self.name
         args['value'] = self.value

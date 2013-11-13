@@ -493,6 +493,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
             .getProperty.return_value = ['SomeType']
         widget = RelatedItemsWidget(self.request)
         widget.context = context
+        widget.update()
         self.assertEqual(
             {
                 'name': None,
