@@ -1,6 +1,7 @@
 import datetime
 assert datetime
 from plone.app.widgets.formlib import UberRelatedItemWidget
+from plone.app.widgets.widget import RelatedItemsFieldWidget
 from plone.portlet.collection import collection
 from plone.app.portlets.portlets import navigation
 
