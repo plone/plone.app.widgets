@@ -231,6 +231,57 @@ class DatetimeWidgetTests(unittest.TestCase):
             '21-10-30 15:40',
         )
 
+    def test_data_converter_timezone(self):
+        from plone.app.widgets.dx import DatetimeWidgetConverter
+        context = Mock()
+
+        # Test for previously set datetime, without tzinfo and no timezone on
+        # context.
+        # Should not apply a timezone to the field value.
+        dt = datetime(2013, 11, 13, 10, 20)
+        setattr(context, self.field.getName(), dt)
+        self.widget.context = context
+        converter = DatetimeWidgetConverter(self.field, self.widget)
+        self.assertEqual(
+            converter.toFieldValue('2013-11-13 10:20'),
+            datetime(2013, 11, 13, 10, 20),
+        )
+
+        # Test for previously set datetime, with tzinfo but no timezone on
+        # context.
+        # Should apply UTZ zone to field value, to be able to be compared with
+        # the timezone aware datetime from the context.
+        import pytz
+        nl = pytz.timezone('Europe/Amsterdam')
+        dt = nl.localize(datetime(2013, 11, 13, 10, 20))
+        setattr(context, self.field.getName(), dt)
+        context.timezone = None
+        self.widget.context = context
+        converter = DatetimeWidgetConverter(self.field, self.widget)
+        self.assertEqual(
+            converter.toFieldValue('2013-11-13 10:20'),
+            pytz.utc.localize(datetime(2013, 11, 13, 10, 20)),
+        )
+
+        # Test for previously set datetime, with tzinfo and timezone one
+        # context.
+        # Should apply the zone based on "timezone" value to field value, to be
+        # able to be CORRECTLY compared with the timezone aware datetime from
+        # the context.
+        nl = pytz.timezone('Europe/Amsterdam')
+        dt = nl.localize(datetime(2013, 11, 13, 10, 20))
+        setattr(context, self.field.getName(), dt)
+        context.timezone = "Europe/Amsterdam"
+        self.widget.context = context
+        converter = DatetimeWidgetConverter(self.field, self.widget)
+        self.assertEqual(
+            converter.toFieldValue('2013-11-13 10:20'),
+            nl.localize(datetime(2013, 11, 13, 10, 20)),
+        )
+
+        # cleanup
+        self.widget.context = None
+
 
 class SelectWidgetTests(unittest.TestCase):
 

@@ -13,11 +13,12 @@ Changelog
   types to use plone.app.widgets.
   [thet]
 
-- On converting the widget value to the field value, try to get the timezone
-  from the context and localize the value, if possible. When editing a timezone
-  aware context, the widget now timezone aware widget value gets correctly
-  compared with the context's value. If not, don't apply a timezone.
-  Fixes "TypeError: can't compare offset-naive and offset-aware datetimes" bug.
+- For Dexterity DatetimeWidgetConverter, when converting to the field value,
+  try to localize the value, if the old value is a timezone aware datetime
+  object. It uses the 'timezone' attribute on the widget's context, if
+  available, otherwise UTC.  We do not use the tzinfo object in the first
+  place, because it might already be converted from user's input timezone to
+  UTC, as it is the case with plone.app.event.
   [thet]
 
 - Support query arguments for function based vocabularies.

@@ -145,23 +145,24 @@ class DatetimeWidgetConverter(BaseDataConverter):
 
         # Eventually set timezone
         old_val = getattr(self.widget.context, self.field.getName(), None)
-        if old_val and isinstance(old_val, datetime):
-            # Only set when field was previously set.
-            if getattr(old_val, 'tzinfo'):
-                # Only set for timezone aware fields. effective date for
-                # example is timezone naive.
-                #
-                # We only need, if there is a timezone information at all.
-                # plone.app.event stores in UTC on context, which cannot be
-                # used for converting the "local", timezone naive value.
-                timezone = getattr(self.widget.context, 'timezone', None)
-                if timezone:
-                    # plone.app.event stores it's timezone on the context.
-                    timezone = pytz.timezone(timezone)
-                    return pydt(
-                        datetime(*map(int, value)),
-                        missing_zone=timezone
-                    )
+        if getattr(old_val, 'tzinfo', False):
+            # Only set when field was previously set and only if it's value
+            # is a timezone aware datetime object.
+            # effective date for example is timezone naive, at the moment.
+            #
+            # We only ask, if there is a timezone information at all but try to
+            # use the 'timezone' attribute on the widget's context, since it
+            # represents the timezone, the event and it's form input are
+            # related to.
+            timezone = getattr(self.widget.context, 'timezone', None)
+            if timezone:
+                # plone.app.event stores it's timezone on the context.
+                timezone = pytz.timezone(timezone)
+            else:
+                # This better should use the tzinfo object from old_val. But we
+                # have to find, how to correctly localize the value with it.
+                timezone = pytz.utc
+            return timezone.localize(datetime(*map(int, value)))
         return datetime(*map(int, value))
 
 
