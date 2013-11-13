@@ -418,7 +418,11 @@ class QueryStringWidgetTests(unittest.TestCase):
                 'name': None,
                 'value': None,
                 'pattern': 'querystring',
-                'pattern_options': {'indexOptionsUrl': '/@@qsOptions'},
+                'pattern_options': {
+                    'indexOptionsUrl': '/@@qsOptions',
+                    'previewCountURL': '/@@querybuildernumberofresults',
+                    'previewURL': '/@@querybuilder_html_results',
+                },
             },
             widget._base_args()
         )
