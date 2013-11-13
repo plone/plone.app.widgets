@@ -176,9 +176,9 @@
       </configure>
 
       <!-- override contenttypes specific widgets -->
-      <configure zcml:condition="installed plone.app.contenttypes">
           <adapter factory=".dx_pac_bbb.QueryStringFieldWidget" />
-      </configure>
+          <adapter factory=".dx_pac_bbb.StartDateFieldWidget" />
+          <adapter factory=".dx_pac_bbb.EndDateFieldWidget" />
 
     </configure>
 
@@ -211,15 +211,6 @@
              z3c.form.interfaces.IFormLayer" />
 
   </configure>
-
-  <!--adapter factory=".bbb.SiteRSSItemsFieldWidget" /-->
-  <browser:viewlet
-    name="plone.searchbox"
-    manager="plone.app.layout.viewlets.interfaces.IPortalHeader"
-    class=".bbb.SearchBoxViewlet"
-    permission="zope2.View"
-    layer=".interfaces.IWidgetsLayer"
-    />
 
   <genericsetup:registerProfile
     name="default"
