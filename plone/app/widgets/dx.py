@@ -3,8 +3,6 @@
 from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
-from datetime import timedelta
-from datetime import tzinfo
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
@@ -16,7 +14,6 @@ from plone.app.widgets.utils import get_datetime_options
 from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.event.utils import pydt
-from plone.event.utils import utc
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
@@ -39,22 +36,6 @@ from zope.schema.interfaces import IList
 
 import pytz
 import json
-
-ZERO = timedelta(0)
-
-
-class Utc(tzinfo):
-    """UTC tzinfo subclass"""
-
-    def utcoffset(self, dt):
-        return ZERO
-
-    def tzname(self, dt):
-        return "UTC"
-
-    def dst(self, dt):
-        return ZERO
-UTC = Utc()
 
 
 class IDateField(IDate):
