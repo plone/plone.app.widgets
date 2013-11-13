@@ -5,7 +5,7 @@ Changelog
 1.3.4 (unreleased)
 ------------------
 
-- Add fake_timezone parameter. When True, it adds a UTC timezone when
+- Add with_fake_timezone parameter. When True, it adds a UTC timezone when
   converting to the field value. Useful, when instead comparing the timezone
   naive widget value with a timezone aware one from the field leads to:
   "TypeError: can't compare offset-naive and offset-aware datetimes"
