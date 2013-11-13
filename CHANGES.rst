@@ -5,10 +5,11 @@ Changelog
 1.3.4 (unreleased)
 ------------------
 
-- Add with_fake_timezone parameter. When True, it adds a UTC timezone when
-  converting to the field value. Useful, when instead comparing the timezone
-  naive widget value with a timezone aware one from the field leads to:
-  "TypeError: can't compare offset-naive and offset-aware datetimes"
+- On converting the widget value to the field value, try to get the timezone
+  from the context and localize the value, if possible. When editing a timezone
+  aware context, the widget now timezone aware widget value gets correctly
+  compared with the context's value. If not, don't apply a timezone.
+  Fixes "TypeError: can't compare offset-naive and offset-aware datetimes" bug.
   [thet]
 
 - Support query arguments for function based vocabularies.

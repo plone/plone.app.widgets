@@ -10,11 +10,13 @@ from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.utils import NotImplemented
+from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
-from plone.app.widgets.utils import get_ajaxselect_options
-from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
+from plone.app.widgets.utils import get_relateditems_options
+from plone.event.utils import pydt
+from plone.event.utils import utc
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
@@ -31,6 +33,7 @@ from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import IVocabularyFactory
 
+import pytz
 import json
 
 ZERO = timedelta(0)
@@ -146,8 +149,26 @@ class DatetimeWidgetConverter(BaseDataConverter):
             return self.field.missing_value
         value = tmp[0].split('-')
         value += tmp[1].split(':')
-        if getattr(self.widget, 'with_fake_timezone', False):
-            return datetime(*map(int, value), tzinfo=UTC)
+
+        # Eventually set timezone
+        old_val = getattr(self.widget.context, self.field.getName(), None)
+        if old_val and isinstance(old_val, datetime):
+            # Only set when field was previously set.
+            if getattr(old_val, 'tzinfo'):
+                # Only set for timezone aware fields. effective date for
+                # example is timezone naive.
+                #
+                # We only need, if there is a timezone information at all.
+                # plone.app.event stores in UTC on context, which cannot be
+                # used for converting the "local", timezone naive value.
+                timezone = getattr(self.widget.context, 'timezone', None)
+                if timezone:
+                    # plone.app.event stores it's timezone on the context.
+                    timezone = pytz.timezone(timezone)
+                    return pydt(
+                        datetime(*map(int, value)),
+                        missing_zone=timezone
+                    )
         return datetime(*map(int, value))
 
 
@@ -379,7 +400,6 @@ class DatetimeWidget(DateWidget):
     implementsOnly(IDatetimeWidget)
 
     pattern_options = DateWidget.pattern_options.copy()
-    with_fake_timezone = False
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
