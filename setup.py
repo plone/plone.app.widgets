@@ -52,7 +52,7 @@ setup(
         'dexterity': [
             'plone.event',
             'plone.app.dexterity',
-            'plone.app.contenttypes'
+            'plone.app.contenttypes>=1.1.dev0'
         ],
     },
     entry_points="""
