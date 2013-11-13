@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
+<<<<<<< HEAD
 from plone.app.widgets.dx import AjaxSelectWidget
 from plone.app.widgets.dx import QueryStringWidget
+=======
+>>>>>>> Do not override the relatedItems, and provide a related field to use.
 from plone.app.widgets.dx import RelatedItemsWidget
 from z3c.form.interfaces import IFieldWidget
 from z3c.form.widget import FieldWidget
