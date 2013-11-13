@@ -10,8 +10,8 @@
     <javascript bundle="deprecated" id="calendar_formfield.js" />
     <javascript bundle="deprecated" id="collapsibleformfields.js" />
     <javascript bundle="deprecated" id="collapsiblesections.js" />
-    <javascript bundle="deprecated" id="jquery.tinymce.js" />
-    <javascript bundle="deprecated" id="tiny_mce_gzip.js" />
+    <!--javascript bundle="deprecated" id="jquery.tinymce.js" />
+    <javascript bundle="deprecated" id="tiny_mce_gzip.js" /-->
 
     <javascript
         cacheable="False" compression="none" cookable="False"

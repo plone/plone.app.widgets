@@ -5,7 +5,7 @@
     <stylesheet bundle="deprecated" id="++resource++plone.formwidget.autocomplete/jquery.autocomplete.css" />
     <stylesheet bundle="deprecated" id="++resource++plone.formwidget.contenttree/contenttree.css" />
     <stylesheet bundle="deprecated" id="++resource++plone.formwidget.querystring.querywidget.css" />
-    <stylesheet bundle="deprecated" id="++resource++tinymce.stylesheets/tinymce.css" />
+    <!--stylesheet bundle="deprecated" id="++resource++tinymce.stylesheets/tinymce.css" /-->
 
     <stylesheet
         cacheable="False" compression="none" cookable="True" enabled="True"
