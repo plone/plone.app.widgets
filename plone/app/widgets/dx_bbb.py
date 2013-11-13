@@ -34,7 +34,7 @@ def LanguageFieldWidget(field, request):
     widget = FieldWidget(field, SelectWidget(request))
     return widget
 
-"""
+
 @adapter(getSpecification(IPublication['effective']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def EffectiveDateFieldWidget(field, request):
@@ -47,7 +47,7 @@ def EffectiveDateFieldWidget(field, request):
 def ExpirationDateFieldWidget(field, request):
     widget = FieldWidget(field, DatetimeWidget(request))
     return widget
-"""
+
 
 @adapter(getSpecification(IOwnership['contributors']), IWidgetsLayer)
 @implementer(IFieldWidget)
