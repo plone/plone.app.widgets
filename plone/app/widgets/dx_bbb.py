@@ -20,6 +20,7 @@ try:
 except ImportError:
     HAS_RF = False
 
+
 @adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
 @implementer(IFieldWidget)
 def SubjectsFieldWidget(field, request):
