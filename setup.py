@@ -50,7 +50,7 @@ setup(
             'archetypes.schemaextender',
         ],
         'dexterity': [
-            'plone.event',
+            'pytz',
             'plone.app.dexterity',
             'plone.app.contenttypes'
         ],
