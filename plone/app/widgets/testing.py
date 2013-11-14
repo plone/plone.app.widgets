@@ -93,6 +93,8 @@ class PloneAppWidgetsDXLayer(PloneAppWidgetsLayer):
         except:
             pass
 
+        z2.installProduct(app, 'Products.DateRecurringIndex')
+
         super(PloneAppWidgetsDXLayer, self).setUpZope(app,
                                                       configurationContext)
 

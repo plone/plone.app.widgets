@@ -205,6 +205,8 @@ class DatetimeWidget(DateWidget):
             args['value'] += ' 00:00'
 
         args.setdefault('pattern_options', {})
+        if 'time' in args['pattern_options']:
+            del args['pattern_options']['time']
         args['pattern_options'] = dict_merge(
             get_datetime_options(request),
             args['pattern_options'])
