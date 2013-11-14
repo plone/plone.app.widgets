@@ -176,9 +176,9 @@
       </configure>
 
       <!-- override contenttypes specific widgets -->
-      <configure zcml:condition="installed plone.app.contenttypes">
           <adapter factory=".dx_pac_bbb.QueryStringFieldWidget" />
-      </configure>
+          <adapter factory=".dx_pac_bbb.StartDateFieldWidget" />
+          <adapter factory=".dx_pac_bbb.EndDateFieldWidget" />
 
     </configure>
 
@@ -212,15 +212,6 @@
 
   </configure>
 
-  <!--adapter factory=".bbb.SiteRSSItemsFieldWidget" /-->
-  <browser:viewlet
-    name="plone.searchbox"
-    manager="plone.app.layout.viewlets.interfaces.IPortalHeader"
-    class=".bbb.SearchBoxViewlet"
-    permission="zope2.View"
-    layer=".interfaces.IWidgetsLayer"
-    />
-
   <genericsetup:registerProfile
     name="default"
     title="Plone Widgets"
@@ -230,6 +221,15 @@
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     />
 
+  <genericsetup:importStep
+    name="plone.app.widgets-default"
+    title="plone.app.widgets: Deprecate resource"
+    description=""
+    handler=".setuphandlers.default">
+      <depends name="jsregistry"/>
+      <depends name="cssregistry"/>
+  </genericsetup:importStep>
+
   <genericsetup:registerProfile
     name="uninstall"
     title="Plone Widgets Uninstall"
@@ -238,5 +238,14 @@
     provides="Products.GenericSetup.interfaces.EXTENSION"
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     />
+
+  <genericsetup:importStep
+    name="plone.app.widgets-uninstall"
+    title="plone.app.widgets: Restore resource"
+    description=""
+    handler=".setuphandlers.uninstall">
+      <depends name="jsregistry"/>
+      <depends name="cssregistry"/>
+  </genericsetup:importStep>
 
 </configure>

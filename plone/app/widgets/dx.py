@@ -352,8 +352,8 @@ class DateWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_date_options(self.request))
+            get_date_options(self.request),
+            args['pattern_options'])
 
         return args
 
@@ -413,8 +413,8 @@ class DatetimeWidget(DateWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_datetime_options(self.request))
+            get_datetime_options(self.request),
+            args['pattern_options'])
 
         return args
 
@@ -495,9 +495,9 @@ class AjaxSelectWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
             get_ajaxselect_options(self.context, args['value'], self.separator,
-                                   self.vocabulary, self.vocabulary_view))
+                                   self.vocabulary, self.vocabulary_view),
+            args['pattern_options'])
 
         return args
 
@@ -540,10 +540,10 @@ class RelatedItemsWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
             get_relateditems_options(self.context, args['value'],
                                      self.separator, self.vocabulary,
-                                     self.vocabulary_view))
+                                     self.vocabulary_view),
+            args['pattern_options'])
 
         return args
 
@@ -578,8 +578,8 @@ class QueryStringWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_querystring_options(self.context, self.querystring_view))
+            get_querystring_options(self.context, self.querystring_view),
+            args['pattern_options'])
 
         return args
 
