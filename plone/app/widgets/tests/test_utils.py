@@ -43,4 +43,8 @@ class UtilsTests(unittest.TestCase):
             # test without plone.app.event installed
             utils.HAS_PAE = False
             self.assertEquals(utils.first_weekday(), 0)
+
+            # restore original state
             utils.HAS_PAE = orig_HAS_PAE
+            reload(utils)
+            reload(base)
