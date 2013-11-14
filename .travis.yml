@@ -8,7 +8,6 @@ addons:
 install:
   - mkdir -p buildout-cache/downloads
   - git clone git://github.com/plone/plone.app.contenttypes.git
-  - git clone git://github.com/plone/mockup.git
   - python bootstrap.py -c travis.cfg
   - bin/buildout -N -t 3 -c travis.cfg
 script:
