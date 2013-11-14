@@ -212,12 +212,12 @@
         for=".dx.IDatetimeField
              z3c.form.interfaces.IFormLayer" />
 
-    <adapter factory=".dx.RelatedItemsFieldWidget"
+    <adapter factory=".widget.RelatedItemsFieldWidget"
             for="z3c.relationfield.interfaces.IRelationChoice
                   z3c.form.interfaces.IFormLayer"
             />
         
-    <adapter factory=".dx.MultiRelatedItemsFieldWidget"
+    <adapter factory=".widget.MultiRelatedItemsFieldWidget"
             for="z3c.relationfield.interfaces.IRelationList
                   z3c.form.interfaces.IFormLayer"
             />
