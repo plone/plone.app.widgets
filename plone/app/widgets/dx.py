@@ -470,8 +470,13 @@ class AjaxSelectWidget(BaseWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    vocabulary = None
     vocabulary_view = '@@getVocabulary'
+
+    def update(self, *args, **kwargs):
+        self.vocabulary = getattr(self.field,
+                                  'vocabularyName',
+                                  'plone.app.vocabularies.Catalog')
+        super(AjaxSelectWidget, self).update()
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -487,10 +492,6 @@ class AjaxSelectWidget(BaseWidget):
         """
 
         args = super(AjaxSelectWidget, self)._base_args()
-
-        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
-        if not self.vocabulary:
-            self.vocabulary = vocabulary_factory
 
         args['name'] = self.name
         args['value'] = self.value
