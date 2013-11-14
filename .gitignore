@@ -16,6 +16,7 @@ nixenv
 plone.app.contenttypes
 plone.app.vocabularies
 plone.app.querystring
+plone.app.event
 mockup
 
 # local development

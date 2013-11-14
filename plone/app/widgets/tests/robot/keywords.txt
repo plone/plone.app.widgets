@@ -1,14 +1,8 @@
+*** Settings ***
+
+Resource  plone/app/robotframework/saucelabs.robot
+
 *** Keywords ***
-
-# ----------------------------------------------------------------------------
-# Suite
-# ----------------------------------------------------------------------------
-
-Suite Setup
-  Open browser  ${PLONE_URL}  browser=${BROWSER}  remote_url=${REMOTE_URL}  desired_capabilities=${DESIRED_CAPABILITIES}
-
-Suite Teardown
-  Close All Browsers
 
 
 # ----------------------------------------------------------------------------

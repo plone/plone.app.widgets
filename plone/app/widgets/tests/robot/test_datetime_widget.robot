@@ -8,8 +8,10 @@ Library  Remote  ${PLONE_URL}/RobotRemote
 
 Resource  plone/app/widgets/tests/robot/keywords.txt
 
-Suite Setup  Suite Setup
-Suite Teardown  Suite Teardown
+#Suite Setup  Suite Setup
+#Suite Teardown  Suite Teardown
+Test Setup  Open SauceLabs test browser
+Test Teardown  Run keywords  Report test status  Close all browsers
 
 
 *** Variables ***
