@@ -1,10 +1,6 @@
 <?xml version="1.0"?>
 <object name="portal_javascripts">
 
-    <javascript bundle="default" id="++resource++plone.formwidget.autocomplete/formwidget-autocomplete.js" />
-    <javascript bundle="default" id="++resource++plone.formwidget.autocomplete/jquery.autocomplete.min.js" />
-    <javascript bundle="default" id="++resource++plone.formwidget.contenttree/contenttree.js" />
-    <javascript bundle="default" id="++resource++plone.formwidget.querystring.querywidget.js" />
     <javascript bundle="default" id="calendar_formfield.js" />
     <javascript bundle="default" id="collapsibleformfields.js" />
     <javascript bundle="default" id="collapsiblesections.js" />

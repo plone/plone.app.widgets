@@ -221,6 +221,15 @@
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     />
 
+  <genericsetup:importStep
+    name="plone.app.widgets-default"
+    title="plone.app.widgets: Deprecate resource"
+    description=""
+    handler=".setuphandlers.default">
+      <depends name="jsregistry"/>
+      <depends name="cssregistry"/>
+  </genericsetup:importStep>
+
   <genericsetup:registerProfile
     name="uninstall"
     title="Plone Widgets Uninstall"
@@ -229,5 +238,14 @@
     provides="Products.GenericSetup.interfaces.EXTENSION"
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     />
+
+  <genericsetup:importStep
+    name="plone.app.widgets-uninstall"
+    title="plone.app.widgets: Restore resource"
+    description=""
+    handler=".setuphandlers.uninstall">
+      <depends name="jsregistry"/>
+      <depends name="cssregistry"/>
+  </genericsetup:importStep>
 
 </configure>
