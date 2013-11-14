@@ -176,9 +176,11 @@
       </configure>
 
       <!-- override contenttypes specific widgets -->
+      <configure zcml:condition="installed plone.app.contenttypes">
           <adapter factory=".dx_pac_bbb.QueryStringFieldWidget" />
           <adapter factory=".dx_pac_bbb.StartDateFieldWidget" />
           <adapter factory=".dx_pac_bbb.EndDateFieldWidget" />
+      </configure>
 
     </configure>
 
