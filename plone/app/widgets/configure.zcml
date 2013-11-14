@@ -212,6 +212,16 @@
         for=".dx.IDatetimeField
              z3c.form.interfaces.IFormLayer" />
 
+    <adapter factory=".dx.RelatedItemsFieldWidget"
+            for="z3c.relationfield.interfaces.IRelationChoice
+                  z3c.form.interfaces.IFormLayer"
+            />
+        
+    <adapter factory=".dx.MultiRelatedItemsFieldWidget"
+            for="z3c.relationfield.interfaces.IRelationList
+                  z3c.form.interfaces.IFormLayer"
+            />
+
   </configure>
 
   <genericsetup:registerProfile
