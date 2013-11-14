@@ -47,4 +47,3 @@ class UtilsTests(unittest.TestCase):
             # restore original state
             utils.HAS_PAE = orig_HAS_PAE
             reload(utils)
-            reload(base)
