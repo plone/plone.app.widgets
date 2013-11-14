@@ -45,7 +45,7 @@ def dict_merge(dict_a, dict_b):
     """Helper method which merges two dictionaries.
 
     Recursively merges dict's. not just simple a['key'] = b['key'], if
-    both a and bhave a key who's value is a dict then dict_merge is called
+    both a and b have a key who's value is a dict then dict_merge is called
     on both values and the result stored in the returned dictionary.
 
     http://www.xormedia.com/recursively-merge-dictionaries-in-python

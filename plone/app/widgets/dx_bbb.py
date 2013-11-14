@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from plone.app.dexterity.behaviors.metadata import ICategorization
 from plone.app.dexterity.behaviors.metadata import IOwnership
 from plone.app.dexterity.behaviors.metadata import IPublication
@@ -8,6 +7,7 @@ from plone.app.widgets.dx import DatetimeWidget
 from plone.app.widgets.dx import RelatedItemsWidget
 from plone.app.widgets.dx import SelectWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
+from plone.app.widgets.utils import first_weekday
 from z3c.form.interfaces import IFieldWidget
 from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
@@ -40,6 +40,9 @@ def LanguageFieldWidget(field, request):
 @implementer(IFieldWidget)
 def EffectiveDateFieldWidget(field, request):
     widget = FieldWidget(field, DatetimeWidget(request))
+    widget.pattern_options.setdefault('date', {})
+    widget.pattern_options['date']['firstDay'] = first_weekday()
+    print first_weekday()
     return widget
 
 
@@ -47,6 +50,9 @@ def EffectiveDateFieldWidget(field, request):
 @implementer(IFieldWidget)
 def ExpirationDateFieldWidget(field, request):
     widget = FieldWidget(field, DatetimeWidget(request))
+    widget.pattern_options.setdefault('date', {})
+    widget.pattern_options['date']['firstDay'] = first_weekday()
+    print first_weekday()
     return widget
 
 
