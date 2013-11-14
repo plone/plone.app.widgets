@@ -77,6 +77,7 @@ class DateWidgetTests(unittest.TestCase):
         self.field = Date(__name__='datefield')
         self.widget = DateWidget(self.request)
         self.widget.field = self.field
+        self.widget.pattern_options = {'date': {'firstDay': 0}}
 
     def test_widget(self):
         self.assertEqual(
@@ -157,6 +158,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Datetime(__name__='datetimefield')
         self.widget = DatetimeWidget(self.request)
+        self.widget.pattern_options = {'date': {'firstDay': 0}}
 
     def test_widget(self):
         self.assertEqual(
