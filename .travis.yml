@@ -11,6 +11,7 @@ install:
   - python bootstrap.py -c travis.cfg
   - bin/buildout -N -t 3 -c travis.cfg
 script:
+  - export ROBOT_DESIRED_CAPABILITIES="$BROWSER,tunnel-identifier:$TRAVIS_JOB_NUMBER"
   - bin/flake8 setup.py
   - bin/flake8 plone
   - bin/test -vvv --all
@@ -32,4 +33,3 @@ env:
     - secure: "dUvjYjw0i4MLTg8Y+l5iVRAIXOYCX6GjKZ0I0rAoD4DMEQZyNcbDnTEUYDz2uqREmCmGCfUsDy96xyVd+MZpBCVAlxGeZorbykxEmfLet+hoU4McddGuyC5SOgrfDjseLGMYgvZgB32UE5XqxEvUK0/cpWLXCZ4G6oqzKR4YH5U="
     - ROBOT_BUILD_NUMBER=travis-$TRAVIS_BUILD_NUMBER
     - ROBOT_REMOTE_URL=http://$SAUCE_USERNAME:$SAUCE_ACCESS_KEY@ondemand.saucelabs.com:80/wd/hub
-    - ROBOT_DESIRED_CAPABILITIES="$BROWSER,tunnel-identifier:$TRAVIS_JOB_NUMBER"
