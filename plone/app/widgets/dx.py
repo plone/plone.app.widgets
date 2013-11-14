@@ -475,7 +475,7 @@ class AjaxSelectWidget(BaseWidget):
     def update(self, *args, **kwargs):
         self.vocabulary = getattr(self.field,
                                   'vocabularyName',
-                                  'plone.app.vocabularies.Catalog')
+                                  None)
         super(AjaxSelectWidget, self).update()
 
     def _base_args(self):

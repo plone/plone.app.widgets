@@ -360,6 +360,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
     def test_widget(self):
         from plone.app.widgets.dx import AjaxSelectWidget
         widget = AjaxSelectWidget(self.request)
+        widget.update()
         self.assertEqual(
             {
                 'name': None,
