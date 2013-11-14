@@ -13,7 +13,6 @@ install:
 script:
   - bin/flake8 setup.py
   - bin/flake8 plone
-  - cat bin/test
   - bin/test -vvv --all
 env:
   matrix:
