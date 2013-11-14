@@ -31,7 +31,8 @@ class UtilsTests(unittest.TestCase):
             base.wkday_to_mon1 = lambda x: x
             from plone.app.widgets import utils
             reload(utils)  # reload utils, so that plone.app.event mock import
-                           # works, even if it was imported before.
+                           # works, even if it was imported before.,,
+            orig_HAS_PAE = utils.HAS_PAE
             utils.HAS_PAE = True
             self.assertEquals(utils.first_weekday(), 0)
             base.first_weekday = lambda: 1
@@ -42,3 +43,4 @@ class UtilsTests(unittest.TestCase):
             # test without plone.app.event installed
             utils.HAS_PAE = False
             self.assertEquals(utils.first_weekday(), 0)
+            utils.HAS_PAE = orig_HAS_PAE
