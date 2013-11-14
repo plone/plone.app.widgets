@@ -1,9 +1,11 @@
 *** Settings ***
 
+Resource  plone/app/robotframework/selenium.robot
 Resource  plone/app/robotframework/saucelabs.robot
 
-*** Keywords ***
+Library  Remote  ${PLONE_URL}/RobotRemote
 
+*** Keywords ***
 
 # ----------------------------------------------------------------------------
 # Login/Logout
@@ -35,7 +37,7 @@ I edit
 
 I create a folder
   [Arguments]  ${title}
-  Go to  ${TEST_FOLDER}/++add++Folder
+  Go to  ${PLONE_URL}/++add++Folder
   Wait until page contains  Add Folder
   Input text  name=form.widgets.IDublinCore.title  ${title}
 
