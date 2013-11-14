@@ -42,7 +42,6 @@ setup(
             'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing',
             'mock',
-            'mockup',
         ],
         'archetypes': [
             'DateTime',
