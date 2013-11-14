@@ -42,7 +42,6 @@ def EffectiveDateFieldWidget(field, request):
     widget = FieldWidget(field, DatetimeWidget(request))
     widget.pattern_options.setdefault('date', {})
     widget.pattern_options['date']['firstDay'] = first_weekday()
-    print first_weekday()
     return widget
 
 
@@ -52,7 +51,6 @@ def ExpirationDateFieldWidget(field, request):
     widget = FieldWidget(field, DatetimeWidget(request))
     widget.pattern_options.setdefault('date', {})
     widget.pattern_options['date']['firstDay'] = first_weekday()
-    print first_weekday()
     return widget
 
 
