@@ -4,9 +4,19 @@ project. It overrides explicit widgets used in dexterity and archetypes to
 provide tested and modularized widgets based on the concept of *patterns*.
 
 .. image:: https://travis-ci.org/plone/plone.app.widgets.png
-   :target: https://travis-ci.org/plone/plone.app.widgets
+    :target: https://travis-ci.org/plone/plone.app.widgets
+
+.. image:: https://coveralls.io/repos/plone/plone.app.widgets/badge.png?branch=master
+    :target: https://coveralls.io/r/coagulant/coveralls-python
+
+.. image:: https://pypip.in/v/plone.app.widgets/badge.png
+    :target: https://crate.io/packages/plone.app.widgets
+
+.. image:: https://pypip.in/d/plone.app.widgets/badge.png
+    :target: https://crate.io/packages/plone.app.widgets
 
 .. contents::
+
 
 Is safe to use this package?
 ============================
