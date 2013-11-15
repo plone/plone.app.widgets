@@ -4,26 +4,27 @@
 *.egg-info
 
 # folders
-bin/
-parts/
-buildout-cache/
-develop-eggs/
-dist/
-var/
-include/
-lib/
-nixenv
-plone.app.contenttypes
-plone.app.vocabularies
-plone.app.querystring
-plone.app.event
-mockup
+/bin/
+/parts/
+/buildout-cache/
+/develop-eggs/
+/dist/
+/var/
+/include/
+/lib/
+/nixenv
+/plone.app.contenttypes
+/plone.app.vocabularies
+/plone.app.querystring
+/plone.app.event
+/mockup
+/.coverage
 
 # local development
-local.cfg
-buildout.cfg
+/local.cfg
+/buildout.cfg
 
 # eclipse
-.installed.cfg
-.pydevproject
-.project
+/.installed.cfg
+/.pydevproject
+/.project
