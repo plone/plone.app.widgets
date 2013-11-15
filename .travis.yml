@@ -16,18 +16,24 @@ script:
   - bin/flake8 plone
   - bin/test -vvv --all
 env:
+  - BROWSER="platform:OS X 10.8,browserName:iphone,version:6.1,device-orientation:portrait"
+  - BROWSER="platform:OS X 10.8,browserName:ipad,version:6.1,device-orientation:portrait"
+  - BROWSER="platform:Linux,browserName:android,version:4.0,device-type:tablet,device-orientation:portrait"
+  - BROWSER="platform:Windows 7,browserName:firefox,version:25"
+  - BROWSER="platform:Windows 7,browserName:chrome,version:31"
+  - BROWSER="platform:Windows 8.1,browserName:internet explorer,version:11"
+  - BROWSER="platform:Windows 7,browserName:internet explorer,version:10"
+  - BROWSER="platform:Windows 7,browserName:internet explorer,version:9"
+  - BROWSER="platform:Windows 7,browserName:internet explorer,version:8"
+  - BROWSER="platform:Windows 7,browserName:opera,version:12"
+  - BROWSER="platform:OS X 10.8,browserName:safari,version:6"
   matrix:
-    - BROWSER="platform:OS X 10.8,browserName:iphone,version:6.1,device-orientation:portrait"
-    - BROWSER="platform:OS X 10.8,browserName:ipad,version:6.1,device-orientation:portrait"
-    - BROWSER="platform:Linux,browserName:android,version:4.0,device-type:tablet,device-orientation:portrait"
-    - BROWSER="platform:Windows 7,browserName:firefox,version:25"
-    - BROWSER="platform:Windows 7,browserName:chrome,version:31"
-    - BROWSER="platform:Windows 8.1,browserName:internet explorer,version:11"
-    - BROWSER="platform:Windows 7,browserName:internet explorer,version:10"
-    - BROWSER="platform:Windows 7,browserName:internet explorer,version:9"
-    - BROWSER="platform:Windows 7,browserName:internet explorer,version:8"
-    - BROWSER="platform:Windows 7,browserName:opera,version:12"
-    - BROWSER="platform:OS X 10.8,browserName:safari,version:6"
+    allow_failures:
+      - env: BROWSER="platform:Linux,browserName:android,version:4.0,device-type:tablet,device-orientation:portrait"
+      - env: BROWSER="platform:Windows 8.1,browserName:internet explorer,version:11"
+      - env: BROWSER="platform:Windows 7,browserName:internet explorer,version:10"
+      - env: BROWSER="platform:Windows 7,browserName:internet explorer,version:9"
+      - env: BROWSER="platform:Windows 7,browserName:internet explorer,version:8"
   global:
     - secure: "IrzlpI2waEvdXdHOFlhUkGX8hdPAEygLm30gQPFdP7I9M37nXUvXaE2w+R6TG0l1hRMCf78NtCa66hbmbodRJwO+MwVQFub2+Px3YQB4k+bDD2vFSG5MDhgcWyrEJjUPu9TF1yH922EZfBnt4IzGibvPj5/vGLmn71jZ1Av/cG8="
     - secure: "dUvjYjw0i4MLTg8Y+l5iVRAIXOYCX6GjKZ0I0rAoD4DMEQZyNcbDnTEUYDz2uqREmCmGCfUsDy96xyVd+MZpBCVAlxGeZorbykxEmfLet+hoU4McddGuyC5SOgrfDjseLGMYgvZgB32UE5XqxEvUK0/cpWLXCZ4G6oqzKR4YH5U="
