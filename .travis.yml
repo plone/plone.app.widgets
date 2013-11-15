@@ -15,7 +15,7 @@ script:
   - if [ "$BROWSER" != "code-analysis" ]; then bin/test -vvv --all; fi
   - if [ "$BROWSER" == "code-analysis" ]; then bin/flake8 setup.py; fi
   - if [ "$BROWSER" == "code-analysis" ]; then bin/flake8 plone; fi
-  - if [ "$BROWSER" == "code-analysis" ]; then bin/coverage run --source=plone.app.widgets bin/test -vvv; fi
+  - if [ "$BROWSER" == "code-analysis" ]; then bin/coverage run --source=plone.app.widgets --omit=plone/app/widgets/at_bbb.py,plone/app/widgets/dx_bbb.py,plone/app/widgets/dx_pac_bbb.py,plone/app/widgets/test\* bin/test --layer=\!PloneAppWidgetsLayer; fi
 after_success:
   - bin/coveralls
 env:

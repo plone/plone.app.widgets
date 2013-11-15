@@ -17,9 +17,9 @@ from Products.CMFPlone import utils as ploneutils
 try:
     from plone.namedfile.file import NamedBlobImage
     from plone.namedfile.file import NamedBlobFile
-except ImportError:
+except ImportError:  # pragma: no cover
     # only for dext
-    pass
+    pass  # pragma: no cover
 from plone.i18n.normalizer.interfaces import IFileNameNormalizer
 from plone.app.widgets.interfaces import IATCTFileFactory, IDXFileFactory
 
