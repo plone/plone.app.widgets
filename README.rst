@@ -7,7 +7,7 @@ provide tested and modularized widgets based on the concept of *patterns*.
     :target: https://travis-ci.org/plone/plone.app.widgets
 
 .. image:: https://coveralls.io/repos/plone/plone.app.widgets/badge.png?branch=master
-    :target: https://coveralls.io/r/coagulant/coveralls-python
+    :target: https://coveralls.io/r/plone/plone.app.widgets?branch=master
 
 .. image:: https://pypip.in/v/plone.app.widgets/badge.png
     :target: https://crate.io/packages/plone.app.widgets
