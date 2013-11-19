@@ -351,6 +351,61 @@ registerWidget(
     used_for=('Products.Archetypes.Field.LinesField',))
 
 
+class KeywordsWidget(AjaxSelectWidget):
+    """Keywords widget for Archetypes."""
+
+    _base = InputWidget
+
+    _properties = BaseWidget._properties.copy()
+    _properties.update({
+        'pattern': 'select2',
+        'pattern_options': {},
+        'separator': ';',
+        'vocabulary': 'plone.app.vocabularies.Keywords',
+        'vocabulary_view': '@@getVocabulary',
+    })
+
+    def _base_args(self, context, field, request):
+        args = super(KeywordsWidget, self)._base_args(context, field,
+                                                      request)
+
+        membership = getToolByName(context, 'portal_membership')
+        user = membership.getAuthenticatedMember()
+
+        site_properties = getToolByName(
+            context, 'portal_properties')['site_properties']
+        allowRolesToAddKeywords = site_properties.getProperty(
+            'allowRolesToAddKeywords', None)
+
+        allowNewItems = False
+        if allowRolesToAddKeywords and [
+            role for role in user.getRolesInContext(context)
+                if role in allowRolesToAddKeywords]:
+            allowNewItems = True
+
+        args.setdefault('pattern_options', {})
+        args['pattern_options']['allowNewItems'] = allowNewItems
+
+        return args
+
+    security = ClassSecurityInfo()
+    security.declarePublic('process_form')
+
+    def process_form(self, instance, field, form, empty_marker=None):
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
+        value = value.strip().split(self.separator)
+        return value, {}
+
+
+registerWidget(
+    KeywordsWidget,
+    title='Keywords widget',
+    description=('Keywords widget'),
+    used_for=('Products.Archetypes.Field.LinesField',))
+
+
 class RelatedItemsWidget(BaseWidget):
     """Related items widget for Archetypes."""
 
