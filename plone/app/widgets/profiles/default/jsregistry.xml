@@ -1,6 +1,13 @@
 <?xml version="1.0"?>
 <object name="portal_javascripts">
 
+    <!-- deprecated -->
+    <javascript bundle="deprecated" id="++resource++plone.app.jquery.js" />
+    <javascript bundle="deprecated" id="++resource++plone.app.jquerytools.dateinput.js" />
+    <javascript bundle="deprecated" id="++resource++plone.formwidget.autocomplete/formwidget-autocomplete.js" />
+    <javascript bundle="deprecated" id="++resource++plone.formwidget.autocomplete/jquery.autocomplete.min.js" />
+    <javascript bundle="deprecated" id="++resource++plone.formwidget.contenttree/contenttree.js" />
+    <javascript bundle="deprecated" id="++resource++plone.formwidget.querystring.querywidget.js" />
     <javascript bundle="deprecated" id="calendar_formfield.js" />
     <javascript bundle="deprecated" id="collapsibleformfields.js" />
     <javascript bundle="deprecated" id="collapsiblesections.js" />
