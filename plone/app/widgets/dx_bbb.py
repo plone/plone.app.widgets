@@ -68,3 +68,10 @@ def CreatorsFieldWidget(field, request):
     widget = FieldWidget(field, AjaxSelectWidget(request))
     widget.vocabulary = 'plone.app.vocabularies.Users'
     return widget
+
+
+if HAS_RF:
+    @adapter(getSpecification(IRelatedItems['relatedItems']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def RelatedItemsFieldWidget(field, request):
+        return FieldWidget(field, RelatedItemsWidget(request))

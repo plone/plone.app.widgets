@@ -517,7 +517,7 @@ class RelatedItemsWidget(BaseWidget):
 
     separator = ';'
     vocabulary_view = '@@getVocabulary'
-    
+
     def update(self, *args, **kwargs):
         value_type = getattr(self.field, 'value_type', None)
         if value_type:
