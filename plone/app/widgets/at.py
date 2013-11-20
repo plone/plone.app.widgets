@@ -418,6 +418,7 @@ class RelatedItemsWidget(BaseWidget):
         'separator': ';',
         'vocabulary': 'plone.app.vocabularies.Catalog',
         'vocabulary_view': '@@getVocabulary',
+        'allow_sorting': True,
     })
 
     def _base_args(self, context, field, request):
@@ -439,10 +440,12 @@ class RelatedItemsWidget(BaseWidget):
         args['value'] = self.separator.join(value)
 
         args.setdefault('pattern_options', {})
+        args['pattern_options']['orderable'] = self.allow_sorting
         args['pattern_options'] = dict_merge(
             get_relateditems_options(context, args['value'], self.separator,
                                      self.vocabulary, self.vocabulary_view),
             args['pattern_options'])
+
 
         return args
 
