@@ -5,8 +5,7 @@ Changelog
 1.3.4 (unreleased)
 ------------------
 
-- For Archetypes DatetimeWidget, the value on pattern options is fixed, which
-  was the time component missing.
+- Fix the date/time value in pattern options for Archetypes DatetimeWidget.
   [thet]
 
 - Change the start and end date fields of Products.ATContentTypes ATEvent
