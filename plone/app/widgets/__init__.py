@@ -1,19 +1,9 @@
 import datetime
-from plone.app.widgets.formlib import UberRelatedItemWidget
 from plone.app.widgets.widget import RelatedItemsFieldWidget
 from plone.app.widgets.widget import MultiRelatedItemsFieldWidget
 from plone.app.widgets.widget import QueryStringFieldWidget
-from plone.portlet.collection import collection
-from plone.app.portlets.portlets import navigation
 
 assert datetime
 assert RelatedItemsFieldWidget
 assert MultiRelatedItemsFieldWidget
 assert QueryStringFieldWidget
-
-collection.AddForm.form_fields['target_collection'].custom_widget = \
-    UberRelatedItemWidget
-collection.EditForm.form_fields['target_collection'].custom_widget = \
-    UberRelatedItemWidget
-navigation.AddForm.form_fields['root'].custom_widget = UberRelatedItemWidget
-navigation.EditForm.form_fields['root'].custom_widget = UberRelatedItemWidget
