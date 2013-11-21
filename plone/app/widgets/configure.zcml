@@ -188,6 +188,12 @@
 
   <configure zcml:condition="have plone-5">
 
+    <adapter factory=".dx.DatetimeWidgetConverter" />
+    <adapter factory=".dx.DateWidgetConverter" />
+    <adapter factory=".dx.AjaxSelectWidgetConverter" />
+    <adapter factory=".dx.QueryStringDataConverter" />
+    <adapter factory=".dx.RelatedItemsDataConverter" />
+
     <class class=".dx.DateWidget">
       <require permission="zope.Public"
                interface=".dx.IDateWidget" />
