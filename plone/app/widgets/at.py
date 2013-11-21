@@ -125,6 +125,12 @@ class DateWidget(BaseWidget):
             get_date_options(request),
             args['pattern_options'])
 
+        if 'date' in args['pattern_options'] and \
+           'firstDay' in args['pattern_options']['date'] and \
+           callable(args['pattern_options']['date']['firstDay']):
+            args['pattern_options']['date']['firstDay'] = \
+                args['pattern_options']['date']['firstDay']()
+
         return args
 
     security = ClassSecurityInfo()
