@@ -139,12 +139,14 @@ class DateWidget(BaseWidget):
     def process_form(self, instance, field, form, empty_marker=None):
         """Basic impl for form processing in a widget"""
 
-        value = form.get(field.getName(), None)
-        if not value:
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
             return empty_marker
 
+        value = value.split('-')
+
         try:
-            value = DateTime(datetime(*map(int, value.split('-'))))
+            value = DateTime(datetime(*map(int, value)))
         except:
             return empty_marker
 
@@ -225,20 +227,24 @@ class DatetimeWidget(DateWidget):
     def process_form(self, instance, field, form, empty_marker=None):
         """Basic impl for form processing in a widget"""
 
-        value = form.get(field.getName(), None)
-        if not value:
-            return empty_marker, {}
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
 
         tmp = value.split(' ')
         if not tmp[0]:
             return empty_marker
         value = tmp[0].split('-')
-        value += tmp[1].split(':')
+        if len(tmp) == 2 and ':' in tmp[1]:
+            value += tmp[1].split(':')
+        else:
+            value += ['00', '00']
 
         try:
             value = DateTime(datetime(*map(int, value)))
         except:
-            return empty_marker, {}
+            return empty_marker
+
 
         return value, {}
 
