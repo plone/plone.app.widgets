@@ -131,39 +131,37 @@
 
   <cmf:registerDirectory name="plone_widgets" />
 
+
+  <!-- common configuration -->
+  <configure zcml:condition="installed Products.ATContentTypes">
+    <include package="archetypes.schemaextender" />
+    <adapter factory=".factories.ATCTFileFactory" />
+  </configure>
+
+  <configure zcml:condition="installed plone.app.dexterity">
+    <include package="z3c.form" file="meta.zcml"/>
+    <include package="z3c.form" />
+    <adapter factory=".factories.DXFileFactory" />
+    <adapter factory=".dx.DatetimeWidgetConverter" />
+    <adapter factory=".dx.DateWidgetConverter" />
+    <adapter factory=".dx.AjaxSelectWidgetConverter" />
+    <adapter factory=".dx.QueryStringDataConverter" />
+    <adapter factory=".dx.RelatedItemsDataConverter" />
+  </configure>
+
+  <!-- plone<5 configuration -->
   <configure zcml:condition="not-have plone-5">
 
-    <!-- archetypes -->
     <configure zcml:condition="installed Products.ATContentTypes">
-
-      <include package="archetypes.schemaextender" />
-
-      <adapter factory=".factories.ATCTFileFactory" />
-
       <adapter
           name="plone.app.widgets"
           factory=".at_bbb.MetadataExtender"
           for="Products.ATContentTypes.interface.IATContentType"
           provides="archetypes.schemaextender.interfaces.ISchemaModifier"
           />
-
     </configure>
 
-    <!-- dexterity -->
     <configure zcml:condition="installed plone.app.dexterity">
-
-      <include package="z3c.form" file="meta.zcml"/>
-      <include package="z3c.form" />
-
-      <adapter factory=".factories.DXFileFactory" />
-
-      <adapter factory=".dx.DatetimeWidgetConverter" />
-      <adapter factory=".dx.DateWidgetConverter" />
-      <adapter factory=".dx.AjaxSelectWidgetConverter" />
-      <adapter factory=".dx.QueryStringDataConverter" />
-      <adapter factory=".dx.RelatedItemsDataConverter" />
-
-      <!-- override metadata widgets -->
       <adapter factory=".dx_bbb.SubjectsFieldWidget" />
       <adapter factory=".dx_bbb.LanguageFieldWidget" />
       <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
@@ -186,13 +184,8 @@
 
   </configure>
 
+  <!-- plone 5 configuration -->
   <configure zcml:condition="have plone-5">
-
-    <adapter factory=".dx.DatetimeWidgetConverter" />
-    <adapter factory=".dx.DateWidgetConverter" />
-    <adapter factory=".dx.AjaxSelectWidgetConverter" />
-    <adapter factory=".dx.QueryStringDataConverter" />
-    <adapter factory=".dx.RelatedItemsDataConverter" />
 
     <class class=".dx.DateWidget">
       <require permission="zope.Public"
@@ -222,7 +215,7 @@
             for="z3c.relationfield.interfaces.IRelationChoice
                   z3c.form.interfaces.IFormLayer"
             />
-        
+
     <adapter factory=".widget.MultiRelatedItemsFieldWidget"
             for="z3c.relationfield.interfaces.IRelationList
                   z3c.form.interfaces.IFormLayer"

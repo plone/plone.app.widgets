@@ -171,12 +171,12 @@ class BrowserTest(unittest.TestCase):
     def testFileUpload(self):
         view = FileUploadView(self.portal, self.request)
         fdata = StringIO('foobar')
-        fdata.filename = 'foobar.txt'
+        fdata.filename = 'foobar.xml'
         self.request.form['file'] = fdata
         self.request.REQUEST_METHOD = 'POST'
         data = json.loads(view())
-        self.assertEqual(data['url'], 'http://nohost/plone/foobar.txt')
+        self.assertEqual(data['url'], 'http://nohost/plone/foobar.xml')
         self.assertTrue(data['UID'] is not None)
         # clean it up...
-        self.portal.manage_delObjects(['foobar.txt'])
+        self.portal.manage_delObjects(['foobar.xml'])
         transaction.commit()
