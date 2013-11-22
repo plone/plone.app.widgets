@@ -23,6 +23,9 @@ from z3c.form.interfaces import ITextAreaWidget
 from z3c.form.interfaces import ITextWidget
 from z3c.form.widget import FieldWidget
 from z3c.form.widget import Widget
+from z3c.form.browser.widget import HTMLInputWidget
+from z3c.form.browser.widget import HTMLSelectWidget
+from z3c.form.browser.widget import HTMLTextAreaWidget
 from zope.component import adapter
 from zope.component import adapts
 from zope.interface import implementer
@@ -321,7 +324,7 @@ class BaseWidget(Widget):
         return self._base(**self._base_args()).render()
 
 
-class DateWidget(BaseWidget):
+class DateWidget(BaseWidget, HTMLInputWidget):
     """Date widget for z3c.form."""
 
     _base = InputWidget
@@ -371,7 +374,7 @@ class DateWidget(BaseWidget):
 
         field_value = self._converter(
             self.field, self).toFieldValue(self.value)
-        if field_value is self.fields.missing_value:
+        if field_value is self.field.missing_value:
             return u''
 
         formatter = self.request.locale.dates.getFormatter(
@@ -384,7 +387,7 @@ class DateWidget(BaseWidget):
         return field_value.ctime()
 
 
-class DatetimeWidget(DateWidget):
+class DatetimeWidget(DateWidget, HTMLInputWidget):
     """Datetime widget for z3c.form."""
 
     _converter = DatetimeWidgetConverter
@@ -421,7 +424,7 @@ class DatetimeWidget(DateWidget):
         return args
 
 
-class SelectWidget(BaseWidget, z3cform_SelectWidget):
+class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
     """Select widget for z3c.form."""
 
     _base = SelectWidget
@@ -459,7 +462,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         return args
 
 
-class AjaxSelectWidget(BaseWidget):
+class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
     """Ajax select widget for z3c.form."""
 
     _base = InputWidget
@@ -505,7 +508,7 @@ class AjaxSelectWidget(BaseWidget):
         return args
 
 
-class RelatedItemsWidget(BaseWidget):
+class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
     """RelatedItems widget for z3c.form."""
 
     _base = InputWidget
@@ -556,7 +559,7 @@ class RelatedItemsWidget(BaseWidget):
         return args
 
 
-class QueryStringWidget(BaseWidget):
+class QueryStringWidget(BaseWidget, HTMLInputWidget):
     """QueryString widget for z3c.form."""
 
     _base = InputWidget
@@ -592,7 +595,7 @@ class QueryStringWidget(BaseWidget):
         return args
 
 
-class TinyMCEWidget(BaseWidget):
+class TinyMCEWidget(BaseWidget, HTMLTextAreaWidget):
     """TinyMCE widget for z3c.form."""
 
     _base = TextareaWidget
