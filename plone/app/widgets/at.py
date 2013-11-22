@@ -452,7 +452,6 @@ class RelatedItemsWidget(BaseWidget):
                                      self.vocabulary, self.vocabulary_view),
             args['pattern_options'])
 
-
         return args
 
     security = ClassSecurityInfo()
