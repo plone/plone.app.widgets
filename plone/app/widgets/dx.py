@@ -143,7 +143,10 @@ class DatetimeWidgetConverter(BaseDataConverter):
         if not tmp[0]:
             return self.field.missing_value
         value = tmp[0].split('-')
-        value += tmp[1].split(':')
+        if len(tmp) == 2 and ':' in tmp[1]:
+            value += tmp[1].split(':')
+        else:
+            value += ['00', '00']
 
         # Eventually set timezone
         old_val = getattr(self.widget.context, self.field.getName(), None)
