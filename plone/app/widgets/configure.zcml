@@ -173,11 +173,15 @@
         <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
       </configure>
 
-      <!-- override contenttypes specific widgets -->
+      <!-- override p.a.contenttypes specific widgets -->
       <configure zcml:condition="installed plone.app.contenttypes">
-          <adapter factory=".dx_pac_bbb.QueryStringFieldWidget" />
-          <adapter factory=".dx_pac_bbb.StartDateFieldWidget" />
-          <adapter factory=".dx_pac_bbb.EndDateFieldWidget" />
+          <adapter factory=".dx_bbb.QueryStringFieldWidget" />
+      </configure>
+
+      <!-- override p.a.event specific widgets -->
+      <configure zcml:condition="installed plone.app.event">
+          <adapter factory=".dx_bbb.StartDateFieldWidget" />
+          <adapter factory=".dx_bbb.EndDateFieldWidget" />
       </configure>
 
     </configure>
@@ -211,12 +215,12 @@
         for=".dx.IDatetimeField
              z3c.form.interfaces.IFormLayer" />
 
-    <adapter factory=".widget.RelatedItemsFieldWidget"
+    <adapter factory=".dx.RelatedItemsFieldWidget"
             for="z3c.relationfield.interfaces.IRelationChoice
                   z3c.form.interfaces.IFormLayer"
             />
 
-    <adapter factory=".widget.MultiRelatedItemsFieldWidget"
+    <adapter factory=".dx.RelatedItemsFieldWidget"
             for="z3c.relationfield.interfaces.IRelationList
                   z3c.form.interfaces.IFormLayer"
             />

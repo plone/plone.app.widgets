@@ -628,13 +628,23 @@ class TinyMCEWidget(BaseWidget, HTMLTextAreaWidget):
         return args
 
 
-@adapter(IField, IFormLayer)
 @implementer(IFieldWidget)
 def DateFieldWidget(field, request):
     return FieldWidget(field, DateWidget(request))
 
 
-@adapter(IField, IFormLayer)
 @implementer(IFieldWidget)
 def DatetimeFieldWidget(field, request):
     return FieldWidget(field, DatetimeWidget(request))
+
+
+@implementer(IFieldWidget)
+def RelatedItemsFieldWidget(field, request):
+    # TODO: when field is type IRelationChoice configure widget to only allow
+    # one item to be selected
+    return FieldWidget(field, RelatedItemsWidget(request))
+
+
+@implementer(IFieldWidget)
+def QueryStringFieldWidget(field, request):
+    return FieldWidget(field, QueryStringWidget(request))

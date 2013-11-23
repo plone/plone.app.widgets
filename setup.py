@@ -34,7 +34,7 @@ setup(
         # needed so it works with jquery >= 1.8
         'plone.app.search>=1.1.2',
         'plone.app.registry>=1.2.2',
-        'plone.app.querystring>=1.1.0dev'
+        'plone.app.querystring>=1.1.0'
     ],
     extras_require={
         'test': [
@@ -51,7 +51,8 @@ setup(
         'dexterity': [
             'pytz',
             'plone.app.dexterity',
-            'plone.app.contenttypes>=1.1.dev0'
+            'plone.app.contenttypes>=1.1a1'
+            'plone.app.event>=1.1a1'
         ],
     },
     entry_points="""
