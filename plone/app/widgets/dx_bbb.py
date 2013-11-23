@@ -4,7 +4,7 @@ from plone.app.dexterity.behaviors.metadata import IOwnership
 from plone.app.dexterity.behaviors.metadata import IPublication
 from plone.app.widgets.dx import AjaxSelectWidget
 from plone.app.widgets.dx import DatetimeWidget
-from plone.app.widgets.dx import QueryStringFieldWidget
+from plone.app.widgets.dx import QueryStringWidget
 from plone.app.widgets.dx import RelatedItemsFieldWidget
 from plone.app.widgets.dx import SelectWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
@@ -90,10 +90,10 @@ if HAS_RF:
     )(RelatedItemsFieldWidget)
 
 if HAS_PAC:
-    QueryStringFieldWidget = adapter(
-        getSpecification(ICollection['query']),
-        IWidgetsLayer
-    )(QueryStringFieldWidget)
+    @adapter(getSpecification(ICollection['query']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def QueryStringFieldWidget(field, request):
+        return FieldWidget(field, QueryStringWidget(request))
 
 if HAS_PAE:
     @adapter(getSpecification(IEventBasic['start']), IWidgetsLayer)
