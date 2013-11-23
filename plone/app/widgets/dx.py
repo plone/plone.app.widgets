@@ -476,9 +476,9 @@ class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
     vocabulary_view = '@@getVocabulary'
 
     def update(self, *args, **kwargs):
-        self.vocabulary = getattr(self.field,
-                                  'vocabularyName',
-                                  None)
+        if not hasattr(self, 'vocabulary'):
+            self.vocabulary = getattr(
+                self.field, 'vocabularyName', None)
         super(AjaxSelectWidget, self).update()
 
     def _base_args(self):
