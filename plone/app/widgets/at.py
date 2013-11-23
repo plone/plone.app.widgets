@@ -245,7 +245,6 @@ class DatetimeWidget(DateWidget):
         except:
             return empty_marker
 
-
         return value, {}
 
 
