@@ -51,8 +51,8 @@ setup(
         'dexterity': [
             'pytz',
             'plone.app.dexterity',
-            'plone.app.contenttypes>=1.1a1'
-            'plone.app.event>=1.1a1'
+            'plone.app.contenttypes>=1.1a1',
+            'plone.app.event>=1.1a1',
         ],
     },
     entry_points="""
