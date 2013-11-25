@@ -81,7 +81,9 @@ Installation
 For now only tested with latest Plone 4.3::
 
     [buildout]
-    extends = http://dist.plone.org/release/4.3-latest/versions.cfg
+    extends =
+        http://dist.plone.org/release/4.3-latest/versions.cfg
+        https://raw.github.com/plone/plone.app.widgets/master/versions.cfg
     versions = versions
     parts = instance
 
@@ -95,15 +97,6 @@ For now only tested with latest Plone 4.3::
         plone.app.widgets[archetypes,dexterity]
     zcml =
         plone.app.widgets
-
-    [versions]
-    plone.app.contenttypes = 1.1a1
-    plone.app.event = 1.1a1
-    plone.app.jquery = 1.8.3
-    plone.app.portlets = 2.5a1
-    plone.app.querystring = 1.1.0
-    plone.app.vocabularies = 2.1.12
-    plone.formwidget.recurrence = 1.1
 
 Make sure you install the "Plone Widgets" profile when creating your Plone site
 or include ``plone.app.widgets:default`` profile in your ``metadata.xml``..
