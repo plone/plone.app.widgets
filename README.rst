@@ -51,10 +51,11 @@ The fields that are using updated widgets are:
 - **Expire date field** (DatetimeWidget)
 - **Contributors field** (AjaxSelectWidget)
 - **Creators field** (AjaxSelectWidget)
-- **Text field** (TinyMCEWidget)
 - **Related items field** (RelatedItemsWidget)
 - **Query string field** (QueryStringWidget) in case `plone.app.contenttypes`_
   is installed.
+
+.. - **Text field** (TinyMCEWidget)
 
 All client side code (javascript/css/images) is done and tested as part of
 `Mockup`_ project.
@@ -77,10 +78,10 @@ For any feature / bug / comment please create an issue in the `issue tracker`_.
 Installation
 ============
 
-For now only tested with Plone 4.3.2::
+For now only tested with latest Plone 4.3::
 
     [buildout]
-    extends = http://dist.plone.org/release/4.3.2/versions.cfg
+    extends = http://dist.plone.org/release/4.3-latest/versions.cfg
     versions = versions
     parts = instance
 
@@ -96,12 +97,16 @@ For now only tested with Plone 4.3.2::
         plone.app.widgets
 
     [versions]
+    plone.app.contenttypes = 1.1a1
+    plone.app.event = 1.1a1
     plone.app.jquery = 1.8.3
-    plone.app.vocabularies = 2.1.12
+    plone.app.portlets = 2.5a1
     plone.app.querystring = 1.1.0
+    plone.app.vocabularies = 2.1.12
+    plone.formwidget.recurrence = 1.1
 
 Make sure you install the "Plone Widgets" profile when creating your Plone site
-or include ``plone.app.widgets`` profile in your ``metadata.xml``..
+or include ``plone.app.widgets:default`` profile in your ``metadata.xml``..
 
 
 .. _`Mockup`: http://plone.github.io/mockup

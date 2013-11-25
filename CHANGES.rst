@@ -2,8 +2,49 @@ Changelog
 =========
 
 
-1.3.4 (unreleased)
+1.4.0 (2013-11-24)
 ------------------
+
+- add firstDay option to DatetimeWidgets
+  [thet]
+
+- removing bbb.py (SiteRSSItemsFieldWidget and SearchBoxViewlet)
+  [garbas]
+
+- For Archetypes DatetimeWidget, the value on pattern options is fixed, which
+  was the time component missing.
+  [thet]
+
+- commenting out tinymce widget for the time being. will be back with next
+  release.
+  [garbas]
+
+- Add robot tests for datetime widget
+  [David Erni]
+
+- fix saving dates in dexterity
+  [vangheem]
+
+- rework of base widget code. we should now share more code between at and dx
+  [garbas]
+
+- use ajax to grab query index options for querystring widget
+  [vangheem]
+
+- rename ajaxvocabulary to ajaxVocabulary to match mockup
+  [vangheem]
+
+- use select2 widget for ISiteSyndicationSettings
+  [garbas]
+
+- select2 widget should support initvaluemap  options OOTB
+  [garbas]
+
+- adding SyndicatableFeedItems to the permitted vocabularies list
+  [garbas]
+
+- fix VocabularyView to accept 1-based batch pages as per doc
+  [djay]
 
 - Fix the date/time value in pattern options for Archetypes DatetimeWidget.
   [thet]
