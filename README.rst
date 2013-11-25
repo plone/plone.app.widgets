@@ -15,7 +15,7 @@ provide tested and modularized widgets based on the concept of *patterns*.
 .. image:: https://pypip.in/d/plone.app.widgets/badge.png
     :target: https://crate.io/packages/plone.app.widgets
 
-.. image:: https://saucelabs.com/buildstatus/plone-pa-widgets
+.. image:: https://saucelabs.com/browser-matrix/plone-pa-widgets.svg
     :target: https://saucelabs.com/u/plone-pa-widgets
 
 
