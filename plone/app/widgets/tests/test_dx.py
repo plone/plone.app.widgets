@@ -360,6 +360,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
     def test_widget(self):
         from plone.app.widgets.dx import AjaxSelectWidget
         widget = AjaxSelectWidget(self.request)
+        widget.update()
         self.assertEqual(
             {
                 'name': None,
@@ -493,6 +494,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
             .getProperty.return_value = ['SomeType']
         widget = RelatedItemsWidget(self.request)
         widget.context = context
+        widget.update()
         self.assertEqual(
             {
                 'name': None,

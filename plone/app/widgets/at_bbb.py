@@ -42,10 +42,9 @@ class MetadataExtender(object):
                 )
 
             if field.__name__ in ['subject']:
-                field.widget = at.AjaxSelectWidget(
+                field.widget = at.KeywordsWidget(
                     label=old.label,
                     description=old.description,
-                    vocabulary='plone.app.vocabularies.Keywords',
                 )
 
             if field.__name__ in ['language']:
@@ -82,12 +81,6 @@ class MetadataExtender(object):
             #        label=old.label,
             #        description=old.description,
             #    )
-
-            if field.__name__ == 'relatedItems':
-                field.widget = at.RelatedItemsWidget(
-                    label=old.label,
-                    description=old.description
-                )
 
             if field.__name__ == 'query':
                 field.widget = at.QueryStringWidget(

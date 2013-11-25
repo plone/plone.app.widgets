@@ -290,6 +290,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
                     'separator': ';',
+                    'orderable': True,
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog',
                 },

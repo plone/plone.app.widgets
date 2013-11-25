@@ -17,20 +17,20 @@ from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.interfaces import IFieldWidget
-from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextAreaWidget
 from z3c.form.interfaces import ITextWidget
 from z3c.form.widget import FieldWidget
 from z3c.form.widget import Widget
-from zope.component import adapter
+from z3c.form.browser.widget import HTMLInputWidget
+from z3c.form.browser.widget import HTMLSelectWidget
+from z3c.form.browser.widget import HTMLTextAreaWidget
 from zope.component import adapts
 from zope.interface import implementer
 from zope.interface import implementsOnly
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
-from zope.schema.interfaces import IField
 from zope.schema.interfaces import IList
 
 import pytz
@@ -140,7 +140,10 @@ class DatetimeWidgetConverter(BaseDataConverter):
         if not tmp[0]:
             return self.field.missing_value
         value = tmp[0].split('-')
-        value += tmp[1].split(':')
+        if len(tmp) == 2 and ':' in tmp[1]:
+            value += tmp[1].split(':')
+        else:
+            value += ['00', '00']
 
         # Eventually set timezone
         old_val = getattr(self.widget.context, self.field.getName(), None)
@@ -321,7 +324,7 @@ class BaseWidget(Widget):
         return self._base(**self._base_args()).render()
 
 
-class DateWidget(BaseWidget):
+class DateWidget(BaseWidget, HTMLInputWidget):
     """Date widget for z3c.form."""
 
     _base = InputWidget
@@ -371,7 +374,7 @@ class DateWidget(BaseWidget):
 
         field_value = self._converter(
             self.field, self).toFieldValue(self.value)
-        if field_value is self.fields.missing_value:
+        if field_value is self.field.missing_value:
             return u''
 
         formatter = self.request.locale.dates.getFormatter(
@@ -384,7 +387,7 @@ class DateWidget(BaseWidget):
         return field_value.ctime()
 
 
-class DatetimeWidget(DateWidget):
+class DatetimeWidget(DateWidget, HTMLInputWidget):
     """Datetime widget for z3c.form."""
 
     _converter = DatetimeWidgetConverter
@@ -421,7 +424,7 @@ class DatetimeWidget(DateWidget):
         return args
 
 
-class SelectWidget(BaseWidget, z3cform_SelectWidget):
+class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
     """Select widget for z3c.form."""
 
     _base = SelectWidget
@@ -459,7 +462,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         return args
 
 
-class AjaxSelectWidget(BaseWidget):
+class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
     """Ajax select widget for z3c.form."""
 
     _base = InputWidget
@@ -470,8 +473,13 @@ class AjaxSelectWidget(BaseWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    vocabulary = None
     vocabulary_view = '@@getVocabulary'
+
+    def update(self, *args, **kwargs):
+        if not hasattr(self, 'vocabulary'):
+            self.vocabulary = getattr(
+                self.field, 'vocabularyName', None)
+        super(AjaxSelectWidget, self).update()
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -488,10 +496,6 @@ class AjaxSelectWidget(BaseWidget):
 
         args = super(AjaxSelectWidget, self)._base_args()
 
-        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
-        if not self.vocabulary:
-            self.vocabulary = vocabulary_factory
-
         args['name'] = self.name
         args['value'] = self.value
 
@@ -504,7 +508,7 @@ class AjaxSelectWidget(BaseWidget):
         return args
 
 
-class RelatedItemsWidget(BaseWidget):
+class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
     """RelatedItems widget for z3c.form."""
 
     _base = InputWidget
@@ -515,8 +519,17 @@ class RelatedItemsWidget(BaseWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    vocabulary = 'plone.app.vocabularies.Catalog'
     vocabulary_view = '@@getVocabulary'
+
+    def update(self, *args, **kwargs):
+        value_type = getattr(self.field, 'value_type', None)
+        if value_type:
+            self.vocabulary = getattr(value_type,
+                                      'vocabularyName',
+                                      'plone.app.vocabularies.Catalog')
+        else:
+            self.vocabulary = 'plone.app.vocabularies.Catalog'
+        super(RelatedItemsWidget, self).update()
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -533,10 +546,6 @@ class RelatedItemsWidget(BaseWidget):
 
         args = super(RelatedItemsWidget, self)._base_args()
 
-        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
-        if not self.vocabulary:
-            self.vocabulary = vocabulary_factory
-
         args['name'] = self.name
         args['value'] = self.value
 
@@ -550,7 +559,7 @@ class RelatedItemsWidget(BaseWidget):
         return args
 
 
-class QueryStringWidget(BaseWidget):
+class QueryStringWidget(BaseWidget, HTMLInputWidget):
     """QueryString widget for z3c.form."""
 
     _base = InputWidget
@@ -586,7 +595,7 @@ class QueryStringWidget(BaseWidget):
         return args
 
 
-class TinyMCEWidget(BaseWidget):
+class TinyMCEWidget(BaseWidget, HTMLTextAreaWidget):
     """TinyMCE widget for z3c.form."""
 
     _base = TextareaWidget
@@ -616,13 +625,23 @@ class TinyMCEWidget(BaseWidget):
         return args
 
 
-@adapter(IField, IFormLayer)
 @implementer(IFieldWidget)
 def DateFieldWidget(field, request):
     return FieldWidget(field, DateWidget(request))
 
 
-@adapter(IField, IFormLayer)
 @implementer(IFieldWidget)
 def DatetimeFieldWidget(field, request):
     return FieldWidget(field, DatetimeWidget(request))
+
+
+@implementer(IFieldWidget)
+def RelatedItemsFieldWidget(field, request):
+    # TODO: when field is type IRelationChoice configure widget to only allow
+    # one item to be selected
+    return FieldWidget(field, RelatedItemsWidget(request))
+
+
+@implementer(IFieldWidget)
+def QueryStringFieldWidget(field, request):
+    return FieldWidget(field, QueryStringWidget(request))

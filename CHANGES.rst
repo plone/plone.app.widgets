@@ -15,6 +15,9 @@ Changelog
   was the time component missing.
   [thet]
 
+- Fix the date/time value in pattern options for Archetypes DatetimeWidget.
+  [thet]
+
 - commenting out tinymce widget for the time being. will be back with next
   release.
   [garbas]

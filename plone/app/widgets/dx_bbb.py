@@ -4,7 +4,8 @@ from plone.app.dexterity.behaviors.metadata import IOwnership
 from plone.app.dexterity.behaviors.metadata import IPublication
 from plone.app.widgets.dx import AjaxSelectWidget
 from plone.app.widgets.dx import DatetimeWidget
-from plone.app.widgets.dx import RelatedItemsWidget
+from plone.app.widgets.dx import QueryStringWidget
+from plone.app.widgets.dx import RelatedItemsFieldWidget
 from plone.app.widgets.dx import SelectWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.utils import first_weekday
@@ -19,6 +20,18 @@ try:
     HAS_RF = True
 except ImportError:
     HAS_RF = False
+
+try:
+    from plone.app.contenttypes.behaviors.collection import ICollection
+    HAS_PAC = True
+except ImportError:
+    HAS_PAC = False
+
+try:
+    from plone.app.event.dx.behaviors import IEventBasic
+    HAS_PAE = True
+except ImportError:
+    HAS_PAE = False
 
 
 @adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
@@ -71,9 +84,24 @@ def CreatorsFieldWidget(field, request):
 
 
 if HAS_RF:
-    @adapter(getSpecification(IRelatedItems['relatedItems']), IWidgetsLayer)
+    RelatedItemsFieldWidget = adapter(
+        getSpecification(IRelatedItems['relatedItems']),
+        IWidgetsLayer
+    )(RelatedItemsFieldWidget)
+
+if HAS_PAC:
+    @adapter(getSpecification(ICollection['query']), IWidgetsLayer)
     @implementer(IFieldWidget)
-    def RelatedItemsFieldWidget(field, request):
-        widget = FieldWidget(field, RelatedItemsWidget(request))
-        widget.vocabulary = 'plone.app.vocabularies.Catalog'
-        return widget
+    def QueryStringFieldWidget(field, request):
+        return FieldWidget(field, QueryStringWidget(request))
+
+if HAS_PAE:
+    @adapter(getSpecification(IEventBasic['start']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def StartDateFieldWidget(field, request):
+        return FieldWidget(field, DatetimeWidget(request))
+
+    @adapter(getSpecification(IEventBasic['end']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def EndDateFieldWidget(field, request):
+        return FieldWidget(field, DatetimeWidget(request))
