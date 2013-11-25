@@ -32,8 +32,8 @@ env:
     - BROWSER="platform:Windows 7,browserName:opera,version:12"
     - BROWSER="platform:OS X 10.8,browserName:safari,version:6"
   global:
-    - secure: "IrzlpI2waEvdXdHOFlhUkGX8hdPAEygLm30gQPFdP7I9M37nXUvXaE2w+R6TG0l1hRMCf78NtCa66hbmbodRJwO+MwVQFub2+Px3YQB4k+bDD2vFSG5MDhgcWyrEJjUPu9TF1yH922EZfBnt4IzGibvPj5/vGLmn71jZ1Av/cG8="
-    - secure: "dUvjYjw0i4MLTg8Y+l5iVRAIXOYCX6GjKZ0I0rAoD4DMEQZyNcbDnTEUYDz2uqREmCmGCfUsDy96xyVd+MZpBCVAlxGeZorbykxEmfLet+hoU4McddGuyC5SOgrfDjseLGMYgvZgB32UE5XqxEvUK0/cpWLXCZ4G6oqzKR4YH5U="
+    - secure: "X9AvF9DYKjG/E52ZKQGxxrMe/Z1FsuwJU9jk39NLia3aA3WyFKuE66BotqeZGi9Jk0V2IQWekMgZcAFIcRH6qbvMKcMtnhD+Wr8aiV7uby3wRjmPi2FznTiy+FvYwm8WiNBHw4Ek++nSCDkly0QGBUmJVvfe3zxNHSHSKx5E/yg="
+    - secure: "CvB/BK4EhZIiruAuiIFw/Bn80Wv/5jGiS2tOCaXd54v7lhld2VBxyCfccIcizKlSkIXzDausw24zEF0HV4E6k4z8AB12h1DH/6p31+epbrvDnQOZ1Br2grusOqMbjOutRkJ0w+upI+BTaeSI9bmYXZQdpkLA5mJCv0sBbqi4SPA="
     - ROBOT_BUILD_NUMBER=plone.app.widgets-travis-$TRAVIS_BUILD_NUMBER
     - ROBOT_REMOTE_URL=http://$SAUCE_USERNAME:$SAUCE_ACCESS_KEY@ondemand.saucelabs.com:80/wd/hub
 matrix:
