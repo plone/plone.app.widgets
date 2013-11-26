@@ -640,8 +640,3 @@ def RelatedItemsFieldWidget(field, request):
     # TODO: when field is type IRelationChoice configure widget to only allow
     # one item to be selected
     return FieldWidget(field, RelatedItemsWidget(request))
-
-
-@implementer(IFieldWidget)
-def QueryStringFieldWidget(field, request):
-    return FieldWidget(field, QueryStringWidget(request))
