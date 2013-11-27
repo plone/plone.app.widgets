@@ -51,7 +51,7 @@
       layer=".interfaces.IWidgetsLayer"
       />
 
-  <!--browser:resource
+  <browser:resource
       name="plone.app.widgets-tinymce-icomoon.eot"
       file="static/widgets-tinymce-icomoon.eot"
       layer=".interfaces.IWidgetsLayer"
@@ -101,7 +101,7 @@
       name="plone.app.widgets-dropzone-spritemap@2x.png"
       file="static/widgets-dropzone-spritemap@2x.png"
       layer=".interfaces.IWidgetsLayer"
-      /-->
+      />
 
   <configure zcml:condition="installed mockup">
     <browser:resource
