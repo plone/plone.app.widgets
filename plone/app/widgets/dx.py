@@ -15,16 +15,19 @@ from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
-from z3c.form.converter import BaseDataConverter
-from z3c.form.interfaces import IFieldWidget
-from z3c.form.interfaces import ISelectWidget
-from z3c.form.interfaces import ITextAreaWidget
-from z3c.form.interfaces import ITextWidget
-from z3c.form.widget import FieldWidget
-from z3c.form.widget import Widget
 from z3c.form.browser.widget import HTMLInputWidget
 from z3c.form.browser.widget import HTMLSelectWidget
 from z3c.form.browser.widget import HTMLTextAreaWidget
+from z3c.form.converter import BaseDataConverter
+from z3c.form.interfaces import IFieldWidget
+from z3c.form.interfaces import IFormLayer
+from z3c.form.interfaces import ISelectWidget
+from z3c.form.interfaces import ITextAreaWidget
+from z3c.form.interfaces import ITextWidget
+from z3c.form.util import getSpecification
+from z3c.form.widget import FieldWidget
+from z3c.form.widget import Widget
+from zope.component import adapter
 from zope.component import adapts
 from zope.interface import implementer
 from zope.interface import implementsOnly
@@ -35,6 +38,12 @@ from zope.schema.interfaces import IList
 
 import pytz
 import json
+
+try:
+    from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
+    HAS_PAC = True
+except ImportError:
+    HAS_PAC = False
 
 
 class IDateField(IDate):
@@ -642,6 +651,8 @@ def RelatedItemsFieldWidget(field, request):
     return FieldWidget(field, RelatedItemsWidget(request))
 
 
-@implementer(IFieldWidget)
-def QueryStringFieldWidget(field, request):
-    return FieldWidget(field, QueryStringWidget(request))
+if HAS_PAC:
+    @adapter(getSpecification(IDXCollection['query']), IFormLayer)
+    @implementer(IFieldWidget)
+    def QueryStringFieldWidget(field, request):
+        return FieldWidget(field, QueryStringWidget(request))

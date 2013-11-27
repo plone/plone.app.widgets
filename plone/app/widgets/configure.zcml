@@ -225,6 +225,8 @@
                   z3c.form.interfaces.IFormLayer"
             />
 
+    <adapter factory=".dx.QueryStringFieldWidget" />
+
   </configure>
 
   <genericsetup:registerProfile
