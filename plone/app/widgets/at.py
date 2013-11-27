@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from AccessControl import ClassSecurityInfo
+from Acquisition import aq_inner
 from DateTime import DateTime
 from Products.Archetypes.Registry import registerWidget
 from Products.Archetypes.Widget import TypesWidget
@@ -544,6 +545,29 @@ class TinyMCEWidget(BaseWidget):
         args['value'] = (request.get(field.getName(),
                                      field.getAccessor(context)())
                          ).decode(charset)
+
+        utility = getToolByName(aq_inner(context), 'portal_tinymce')
+        config = utility.getConfiguration(context=context,
+                                          field=field,
+                                          request=request)
+
+        config['content_css'] = config['portal_url'] + '/base.css'
+        del config['customplugins']
+        del config['plugins']
+        del config['theme']
+
+        args['pattern_options'] = {
+            'relatedItems': {
+                'vocabularyUrl': config['portal_url'] +
+                    '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
+            },
+            'rel_upload_path': '@@fileUpload',
+            'folder_url': config['document_base_url'],
+            'tiny': config,
+            'prependToUrl': 'resolveuid/',
+            'linkAttribute': 'UID',
+            'prependToScalePart': '/@@images/image/'
+        }
         return args
 
 
