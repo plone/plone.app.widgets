@@ -559,14 +559,18 @@ class TinyMCEWidget(BaseWidget):
         args['pattern_options'] = {
             'relatedItems': {
                 'vocabularyUrl': config['portal_url'] +
-                    '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
+                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
             },
             'rel_upload_path': '@@fileUpload',
             'folder_url': config['document_base_url'],
             'tiny': config,
             'prependToUrl': 'resolveuid/',
             'linkAttribute': 'UID',
-            'prependToScalePart': '/@@images/image/'
+            'prependToScalePart': '/@@images/image/',
+            'folderTypes': utility.containsobjects.replace('\n', ','),
+            'imageTypes': utility.imageobjects.replace('\n', ','),
+            'anchorSelector': utility.anchor_selector,
+            'linkableTypes': utility.linkable.replace('\n', ',')
         }
         return args
 
