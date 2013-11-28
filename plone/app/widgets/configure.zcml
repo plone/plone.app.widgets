@@ -136,12 +136,14 @@
   <configure zcml:condition="installed Products.ATContentTypes">
     <include package="archetypes.schemaextender" />
     <adapter factory=".factories.ATCTFileFactory" />
+    <adapter factory=".at.ATFieldPermissionChecker" />
   </configure>
 
   <configure zcml:condition="installed plone.app.dexterity">
     <include package="z3c.form" file="meta.zcml"/>
     <include package="z3c.form" />
     <adapter factory=".factories.DXFileFactory" />
+    <adapter factory=".dx.DXFieldPermissionChecker" />
     <adapter factory=".dx.DatetimeWidgetConverter" />
     <adapter factory=".dx.DateWidgetConverter" />
     <adapter factory=".dx.AjaxSelectWidgetConverter" />

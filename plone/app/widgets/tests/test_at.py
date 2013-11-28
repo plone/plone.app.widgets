@@ -3,9 +3,21 @@
 from DateTime import DateTime
 from datetime import datetime
 from mock import Mock
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
+from plone.app.testing import login
+from plone.app.testing import setRoles
+from plone.app.widgets.browser.vocabulary import VocabularyView
+from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
 from plone.testing.zca import ZCML_DIRECTIVES
+from Products.Archetypes.atapi import BaseContent
+from Products.Archetypes.atapi import StringField
+from Products.Archetypes.atapi import Schema
 from zope.configuration import xmlconfig
+from zope.globalrequest import setRequest
+
+import json
 
 try:
     import unittest2 as unittest
@@ -242,6 +254,27 @@ class SelectWidgetTests(unittest.TestCase):
             widget._base_args(self.context, self.field, self.request),
         )
 
+    def test_widget_orderable(self):
+        from plone.app.widgets.at import SelectWidget
+        widget = SelectWidget()
+        widget.multiple = True
+        widget.orderable = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': 'fieldname',
+                'pattern_options': {'orderable': True, 'separator': ';'},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(self.context, self.field, self.request),
+        )
+
 
 # TODO
 #class AjaxSelectWidgetTests(unittest.TestCase):
@@ -253,7 +286,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
     def setUp(self):
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = Mock()
+        self.context = Mock(absolute_url=lambda: '')
         self.field = Mock()
 
         xmlconfig.file('configure.zcml', plone.uuid,
@@ -292,7 +325,8 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                     'separator': ';',
                     'orderable': True,
                     'vocabularyUrl': '/@@getVocabulary?name='
-                                     'plone.app.vocabularies.Catalog',
+                                     'plone.app.vocabularies.Catalog'
+                                     '&field=fieldname',
                 },
             },
             widget._base_args(self.context, self.field, self.request),
@@ -356,3 +390,129 @@ class TinyMCEWidgetTests(unittest.TestCase):
             },
             widget._base_args(self.context, self.field, self.request),
         )
+
+
+class ArchetypesVocabularyPermissionTests(unittest.TestCase):
+
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
+
+    def setUp(self):
+        from plone.app.widgets.at import AjaxSelectWidget
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        setRequest(self.request)
+        self.portal = self.layer['portal']
+
+        login(self.portal, TEST_USER_NAME)
+        setRoles(self.portal, TEST_USER_ID, ['Manager'])
+
+        class TestAT(BaseContent):
+
+            schema = BaseContent.schema.copy() + Schema((
+                StringField(
+                    'allowed_field',
+                    vocabulary_factory='plone.app.vocabularies.PortalTypes',
+                    write_permission='View'),
+                StringField(
+                    'disallowed_field',
+                    vocabulary_factory='plone.app.vocabularies.PortalTypes',
+                    write_permission='View management screens'),
+                StringField(
+                    'default_field',
+                    vocabulary_factory='plone.app.vocabularies.PortalTypes'),
+                StringField(
+                    'allowed_widget_vocab',
+                    write_permission='View',
+                    widget=AjaxSelectWidget(
+                        vocabulary='plone.app.vocabularies.PortalTypes'),
+                )))
+
+        self.portal._setObject('test_at', TestAT('test_at'),
+                               suppress_events=True)
+
+        self.portal.test_at.manage_permission('View',
+                                              ('Anonymous',),
+                                              acquire=False)
+        self.portal.test_at.manage_permission('View management screens',
+                                              (),
+                                              acquire=False)
+        self.portal.test_at.manage_permission('Modify portal content',
+                                              ('Editor', 'Manager',
+                                               'Site Adiminstrator'),
+                                              acquire=False)
+
+    def test_vocabulary_field_allowed(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'allowed_field',
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']),
+                          len(self.portal.portal_types.objectIds()))
+
+    def test_vocabulary_field_wrong_vocab_disallowed(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.Fake',
+            'field': 'allowed_field',
+        })
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+    def test_vocabulary_field_disallowed(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'disallowed_field',
+        })
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+    def test_vocabulary_field_default_permission(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'default_field',
+        })
+        # If the field is does not have a security declaration, the
+        # default edit permission is tested (Modify portal content)
+        setRoles(self.portal, TEST_USER_ID, ['Member'])
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+        setRoles(self.portal, TEST_USER_ID, ['Editor'])
+        # Now access should be allowed, but the vocabulary does not exist
+        data = json.loads(view())
+        self.assertEquals(len(data['results']),
+                          len(self.portal.portal_types.objectIds()))
+
+    def test_vocabulary_field_default_permission_wrong_vocab(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.Fake',
+            'field': 'default_field',
+        })
+        setRoles(self.portal, TEST_USER_ID, ['Editor'])
+        # Now access should be allowed, but the vocabulary does not exist
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
+
+    def test_vocabulary_widget_vocab_allowed(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'allowed_widget_vocab',
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']),
+                          len(self.portal.portal_types.objectIds()))
+
+    def test_vocabulary_missing_field(self):
+        view = VocabularyView(self.portal.test_at, self.request)
+        self.request.form.update({
+            'name': 'plone.app.vocabularies.PortalTypes',
+            'field': 'missing_field',
+        })
+        setRoles(self.portal, TEST_USER_ID, ['Member'])
+        with self.assertRaises(AttributeError):
+            view()

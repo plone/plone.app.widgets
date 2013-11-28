@@ -2,6 +2,7 @@
 
 from doctest import ELLIPSIS
 from doctest import NORMALIZE_WHITESPACE
+from plone.app.dexterity.testing import DEXTERITY_INTEGRATION_TESTING
 from plone.app.robotframework.testing import AUTOLOGIN_LIBRARY_FIXTURE
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing.layers import FunctionalTesting
@@ -71,6 +72,8 @@ class PloneAppWidgetsLayer(PloneSandboxLayer):
         # Load ZCML
         import plone.app.widgets
         self.loadZCML(package=plone.app.widgets)
+        import plone.app.dexterity
+        self.loadZCML(package=plone.app.dexterity)
 
     def setUpPloneSite(self, portal):
         self.applyProfile(portal, 'plone.app.widgets:default')
@@ -110,6 +113,9 @@ PLONEAPPWIDGETS_FIXTURE_DX = PloneAppWidgetsDXLayer()
 PLONEAPPWIDGETS_INTEGRATION_TESTING = IntegrationTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE_DX,),
     name="PloneAppWidgetsLayer:Integration")
+PLONEAPPWIDGETS_DX_INTEGRATION_TESTING = IntegrationTesting(
+    bases=(PLONEAPPWIDGETS_FIXTURE, DEXTERITY_INTEGRATION_TESTING),
+    name="PloneAppWidgetsLayer:DXIntegration")
 PLONEAPPWIDGETS_DX_ROBOT_TESTING = FunctionalTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE_DX,
            AUTOLOGIN_LIBRARY_FIXTURE,

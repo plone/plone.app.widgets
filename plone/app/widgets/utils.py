@@ -82,11 +82,13 @@ def get_datetime_options(request):
 
 
 def get_ajaxselect_options(context, value, separator, vocabulary_name,
-                           vocabulary_view):
+                           vocabulary_view, field_name=None):
     options = {'separator': separator}
     if vocabulary_name:
         options['vocabularyUrl'] = '{}/{}?name={}'.format(
-            get_portal_url(context), vocabulary_view, vocabulary_name)
+            get_context_url(context), vocabulary_view, vocabulary_name)
+        if field_name:
+            options['vocabularyUrl'] += '&field={}'.format(field_name)
         if value:
             vocabulary = queryUtility(IVocabularyFactory, vocabulary_name)
             if vocabulary:
@@ -109,9 +111,11 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
-                             vocabulary_view):
-    options = get_ajaxselect_options(context, value, separator,
-                                     vocabulary_name, vocabulary_view)
+                             vocabulary_view, field_name=None):
+    portal = get_portal()
+    options = get_ajaxselect_options(portal, value, separator,
+                                     vocabulary_name, vocabulary_view,
+                                     field_name)
 
     options.setdefault('folderTypes', ['Folder'])
     properties = getToolByName(context, 'portal_properties')
@@ -155,3 +159,13 @@ def get_portal_url(context):
         else:
             return portal.absolute_url()
     return ''
+
+
+def get_context_url(context):
+    if hasattr(context, 'absolute_url'):
+        url = context.absolute_url
+        if callable(url):
+            url = url()
+    else:
+        url = get_portal_url(context)
+    return url

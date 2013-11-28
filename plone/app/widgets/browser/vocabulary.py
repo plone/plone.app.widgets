@@ -1,12 +1,17 @@
+# -*- coding: utf-8 -*-
+
 from AccessControl import getSecurityManager
-from AccessControl import Unauthorized
-from logging import getLogger
-from plone.app.vocabularies.interfaces import ISlicableVocabulary
+from Products.CMFPlone.interfaces import IPloneSiteRoot
 from Products.Five import BrowserView
 from Products.ZCTextIndex.ParseTree import ParseError
+from logging import getLogger
+from plone.app.vocabularies.interfaces import ISlicableVocabulary
+from plone.app.widgets.interfaces import IFieldPermissionChecker
 from types import FunctionType
+from zope.component import queryAdapter
 from zope.component import queryUtility
 from zope.schema.interfaces import IVocabularyFactory
+
 import inspect
 import json
 
@@ -47,6 +52,7 @@ class VocabularyView(BrowserView):
         """
         Accepts GET parameters of:
         name: Name of the vocabulary
+        field: Name of the field the vocabulary is being retrieved for
         query: string or json object of criteria and options.
             json value consists of a structure:
                 {
@@ -60,17 +66,31 @@ class VocabularyView(BrowserView):
             size: size of paged results
         }
         """
+        context = self.context
         self.request.response.setHeader("Content-type", "application/json")
 
         factory_name = self.request.get('name', None)
+        field_name = self.request.get('field', None)
         if not factory_name:
             return json.dumps({'error': 'No factory provided.'})
-        if factory_name not in _permissions:
-            return json.dumps({'error': 'Vocabulary lookup not allowed'})
+        authorized = None
         sm = getSecurityManager()
-        if not sm.checkPermission(_permissions[factory_name], self.context):
-            raise Unauthorized('You do not have permission to use this '
-                               'vocabulary')
+        if (factory_name not in _permissions or
+                not IPloneSiteRoot.providedBy(context)):
+            # Check field specific permission
+            if field_name:
+                permission_checker = queryAdapter(context,
+                                                  IFieldPermissionChecker)
+                if permission_checker is not None:
+                    authorized = permission_checker.validate(field_name,
+                                                             factory_name)
+            if not authorized:
+                return json.dumps({'error': 'Vocabulary lookup not allowed'})
+        # Short circuit if we are on the site root and permission is
+        # in global registry
+        elif not sm.checkPermission(_permissions[factory_name], context):
+            return json.dumps({'error': 'Vocabulary lookup not allowed'})
+
         factory = queryUtility(IVocabularyFactory, factory_name)
         if not factory:
             return json.dumps({
@@ -98,8 +118,14 @@ class VocabularyView(BrowserView):
                 raise KeyError("The vocabulary factory %s does not support "
                                "query arguments",
                                factory)
+
+            if batch and supports_batch:
+                    vocabulary = factory(context, query, batch)
+            elif query:
+                    vocabulary = factory(context, query)
             else:
-                vocabulary = factory(self.context)
+                vocabulary = factory(context)
+
         except (TypeError, ParseError):
             raise
             return self.error()
@@ -130,7 +156,7 @@ class VocabularyView(BrowserView):
             attributes = attributes.split(',')
 
         if attributes:
-            base_path = '/'.join(self.context.getPhysicalPath())
+            base_path = '/'.join(context.getPhysicalPath())
             for vocab_item in vocabulary:
                 item = {}
                 for attr in attributes:
