@@ -623,7 +623,6 @@ class QueryStringWidgetTests(unittest.TestCase):
 
 class RelatedItemsWidgetTests(unittest.TestCase):
 
-
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
 

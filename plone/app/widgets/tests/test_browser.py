@@ -214,9 +214,10 @@ class BrowserTest(unittest.TestCase):
             'field': 'allowed_field',
         })
         data = json.loads(view())
-        self.assertEquals(data['error'],
-                          'No factory with name "{}" exists.'.format(
-            'vocab.does.not.exist'))
+        self.assertEquals(
+            data['error'],
+            'No factory with name "{}" exists.'.format(
+                'vocab.does.not.exist'))
         _disable_permission_checker(self.portal)
 
     def testPermissionCheckerDisallowed(self):
