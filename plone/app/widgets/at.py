@@ -300,14 +300,13 @@ class SelectWidget(BaseWidget):
             items.append((item[0], item[1]))
         args['items'] = items
 
-        options = args.setdefault('pattern_options', {})
+        args.setdefault('pattern_options', {})
 
         if self.separator:
-            options['separator'] = self.separator
+            args['pattern_options']['separator'] = self.separator
 
-        if self.orderable and self.multiple:
-            options = args.setdefault('pattern_options', {})
-            options['orderable'] = True
+        if self.multiple and self.orderable:
+            args['pattern_options']['orderable'] = True
 
         return args
 
@@ -382,13 +381,9 @@ class KeywordsWidget(AjaxSelectWidget):
 
     _base = InputWidget
 
-    _properties = BaseWidget._properties.copy()
+    _properties = AjaxSelectWidget._properties.copy()
     _properties.update({
-        'pattern': 'select2',
-        'pattern_options': {},
-        'separator': ';',
         'vocabulary': 'plone.app.vocabularies.Keywords',
-        'vocabulary_view': '@@getVocabulary',
     })
 
     def _base_args(self, context, field, request):

@@ -9,7 +9,7 @@ from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.interfaces import IFieldPermissionChecker
-from plone.app.widgets.testing import TestRequest
+from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_date_options
@@ -29,7 +29,6 @@ from z3c.form.browser.widget import HTMLSelectWidget
 from z3c.form.browser.widget import HTMLTextAreaWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.interfaces import IFieldWidget
-from z3c.form.interfaces import IFieldWidget
 from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextAreaWidget
@@ -44,6 +43,7 @@ from zope.component import queryUtility
 from zope.interface import implementer
 from zope.interface import implements
 from zope.interface import implementsOnly
+from zope.publisher.browser import TestRequest
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
@@ -689,6 +689,10 @@ if HAS_PAC:
         return FieldWidget(field, QueryStringWidget(request))
 
 
+class MockRequest(TestRequest):
+    implements(IWidgetsLayer)
+
+
 class DXFieldPermissionChecker(object):
     """
     """
@@ -698,7 +702,7 @@ class DXFieldPermissionChecker(object):
 
     def __init__(self, context):
         self.context = context
-        self._mock_request = TestRequest()
+        self._mock_request = MockRequest()
 
     def validate(self, field_name, vocabulary_name=None):
         context = self.context
