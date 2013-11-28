@@ -504,7 +504,9 @@ class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
+    vocabulary = None
     vocabulary_view = '@@getVocabulary'
+    orderable = False
 
     def update(self, *args, **kwargs):
         if not hasattr(self, 'vocabulary'):
@@ -541,7 +543,7 @@ class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
             args['pattern_options'])
 
         # ISequence represents an orderable collection
-        if ISequence.providedBy(self.field):
+        if ISequence.providedBy(self.field) or self.orderable:
             args['pattern_options']['orderable'] = True
 
         return args
@@ -558,7 +560,9 @@ class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
+    vocabulary = None
     vocabulary_view = '@@getVocabulary'
+    orderable = False
 
     def update(self, *args, **kwargs):
         value_type = getattr(self.field, 'value_type', None)
