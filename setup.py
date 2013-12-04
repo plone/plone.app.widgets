@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '1.4.0dev'
+version = '1.5.0dev'
 
 setup(
     name='plone.app.widgets',
@@ -34,7 +34,7 @@ setup(
         # needed so it works with jquery >= 1.8
         'plone.app.search>=1.1.2',
         'plone.app.registry>=1.2.2',
-        'plone.app.querystring>=1.1.0dev'
+        'plone.app.querystring>=1.1.0'
     ],
     extras_require={
         'test': [
@@ -42,14 +42,17 @@ setup(
             'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing',
             'mock',
-            'mockup',
         ],
         'archetypes': [
+            'DateTime',
+            'Products.Archetypes',
             'archetypes.schemaextender',
         ],
         'dexterity': [
+            'pytz',
             'plone.app.dexterity',
-            'plone.app.contenttypes'
+            'plone.app.contenttypes>=1.0.99',
+            'plone.app.event>1.0.99',
         ],
     },
     entry_points="""

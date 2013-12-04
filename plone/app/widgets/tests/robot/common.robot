@@ -1,15 +1,11 @@
+*** Settings ***
+
+Resource  plone/app/robotframework/selenium.robot
+Resource  plone/app/robotframework/saucelabs.robot
+
+Library  Remote  ${PLONE_URL}/RobotRemote
+
 *** Keywords ***
-
-# ----------------------------------------------------------------------------
-# Suite
-# ----------------------------------------------------------------------------
-
-Suite Setup
-  Open browser  ${PLONE_URL}  browser=${BROWSER}  remote_url=${REMOTE_URL}  desired_capabilities=${DESIRED_CAPABILITIES}
-
-Suite Teardown
-  Close All Browsers
-
 
 # ----------------------------------------------------------------------------
 # Login/Logout
@@ -41,7 +37,7 @@ I edit
 
 I create a folder
   [Arguments]  ${title}
-  Go to  ${TEST_FOLDER}/++add++Folder
+  Go to  ${PLONE_URL}/++add++Folder
   Wait until page contains  Add Folder
   Input text  name=form.widgets.IDublinCore.title  ${title}
 

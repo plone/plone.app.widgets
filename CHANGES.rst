@@ -2,10 +2,70 @@ Changelog
 =========
 
 
-1.3.4 (unreleased)
+1.4.0 (2013-11-24)
 ------------------
 
-- no updates
+- add firstDay option to DatetimeWidgets
+  [thet]
+
+- removing bbb.py (SiteRSSItemsFieldWidget and SearchBoxViewlet)
+  [garbas]
+
+- For Archetypes DatetimeWidget, the value on pattern options is fixed, which
+  was the time component missing.
+  [thet]
+
+- Fix the date/time value in pattern options for Archetypes DatetimeWidget.
+  [thet]
+
+- commenting out tinymce widget for the time being. will be back with next
+  release.
+  [garbas]
+
+- Add robot tests for datetime widget
+  [David Erni]
+
+- fix saving dates in dexterity
+  [vangheem]
+
+- rework of base widget code. we should now share more code between at and dx
+  [garbas]
+
+- use ajax to grab query index options for querystring widget
+  [vangheem]
+
+- rename ajaxvocabulary to ajaxVocabulary to match mockup
+  [vangheem]
+
+- use select2 widget for ISiteSyndicationSettings
+  [garbas]
+
+- select2 widget should support initvaluemap  options OOTB
+  [garbas]
+
+- adding SyndicatableFeedItems to the permitted vocabularies list
+  [garbas]
+
+- fix VocabularyView to accept 1-based batch pages as per doc
+  [djay]
+
+- Fix the date/time value in pattern options for Archetypes DatetimeWidget.
+  [thet]
+
+- Change the start and end date fields of Products.ATContentTypes ATEvent
+  types to use plone.app.widgets.
+  [thet]
+
+- For Dexterity DatetimeWidgetConverter, when converting to the field value,
+  try to localize the value, if the old value is a timezone aware datetime
+  object. It uses the 'timezone' attribute on the widget's context, if
+  available, otherwise UTC.  We do not use the tzinfo object in the first
+  place, because it might already be converted from user's input timezone to
+  UTC, as it is the case with plone.app.event.
+  [thet]
+
+- Support query arguments for function based vocabularies.
+  [thet]
 
 
 1.3.3 (2013-09-11)
@@ -21,7 +81,7 @@ Changelog
   [davisagli]
 
 - Allow to define a different vocabulary view for select widget
-  [do3c]]
+  [do3c]
 
 - Don't do double batching in select widget code
   [do3cc]

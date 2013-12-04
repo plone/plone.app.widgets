@@ -2,6 +2,7 @@
 <object name="portal_javascripts">
 
     <!-- deprecated -->
+    <javascript bundle="deprecated" id="++resource++plone.app.jquery.js" />
     <javascript bundle="deprecated" id="++resource++plone.app.jquerytools.dateinput.js" />
     <javascript bundle="deprecated" id="++resource++plone.formwidget.autocomplete/formwidget-autocomplete.js" />
     <javascript bundle="deprecated" id="++resource++plone.formwidget.autocomplete/jquery.autocomplete.min.js" />
@@ -10,8 +11,6 @@
     <javascript bundle="deprecated" id="calendar_formfield.js" />
     <javascript bundle="deprecated" id="collapsibleformfields.js" />
     <javascript bundle="deprecated" id="collapsiblesections.js" />
-    <javascript bundle="deprecated" id="jquery.tinymce.js" />
-    <javascript bundle="deprecated" id="tiny_mce_gzip.js" />
 
     <javascript
         cacheable="False" compression="none" cookable="False"

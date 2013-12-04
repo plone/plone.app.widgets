@@ -7,6 +7,7 @@ from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
 
 from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets import at
+from plone.app.widgets.utils import first_weekday
 
 _plone = MessageFactory('plone')
 
@@ -26,11 +27,24 @@ class MetadataExtender(object):
         for field in schema.fields():
             old = field.widget
 
-            if field.__name__ in ['subject']:
-                field.widget = at.AjaxSelectWidget(
+            if field.__name__ in ['startDate']:
+                field.widget = at.DatetimeWidget(
                     label=old.label,
                     description=old.description,
-                    vocabulary='plone.app.vocabularies.Keywords',
+                    pattern_options={'date': {'firstDay': first_weekday()}},
+                )
+
+            if field.__name__ in ['endDate']:
+                field.widget = at.DatetimeWidget(
+                    label=old.label,
+                    description=old.description,
+                    pattern_options={'date': {'firstDay': first_weekday()}},
+                )
+
+            if field.__name__ in ['subject']:
+                field.widget = at.KeywordsWidget(
+                    label=old.label,
+                    description=old.description,
                 )
 
             if field.__name__ in ['language']:
@@ -42,7 +56,8 @@ class MetadataExtender(object):
             if field.__name__ in ['effectiveDate', 'expirationDate']:
                 field.widget = at.DatetimeWidget(
                     label=old.label,
-                    description=old.description
+                    description=old.description,
+                    pattern_options={'date': {'firstDay': first_weekday()}},
                 )
 
             if field.__name__ in ['contributors']:
@@ -65,12 +80,6 @@ class MetadataExtender(object):
                 field.widget = at.TinyMCEWidget(
                     label=old.label,
                     description=old.description,
-                )
-
-            if field.__name__ == 'relatedItems':
-                field.widget = at.RelatedItemsWidget(
-                    label=old.label,
-                    description=old.description
                 )
 
             if field.__name__ == 'query':

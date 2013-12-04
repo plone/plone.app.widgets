@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from AccessControl import getSecurityManager
 from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
@@ -7,31 +8,68 @@ from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
+from plone.app.widgets.interfaces import IFieldPermissionChecker
+from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.utils import NotImplemented
-from plone.app.widgets.utils import get_portal_url
+from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
-from plone.app.widgets.utils import get_ajaxselect_options
-from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
+from plone.app.widgets.utils import get_relateditems_options
+from plone.autoform.interfaces import WIDGETS_KEY
+from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
+from plone.autoform.utils import resolveDottedName
+from plone.dexterity.interfaces import IDexterityContent
+from plone.dexterity.utils import iterSchemata
+from plone.supermodel.utils import mergedTaggedValueDict
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
+from z3c.form.browser.widget import HTMLInputWidget
+from z3c.form.browser.widget import HTMLSelectWidget
+from z3c.form.browser.widget import HTMLTextAreaWidget
 from z3c.form.converter import BaseDataConverter
+from z3c.form.interfaces import IFieldWidget
+from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextAreaWidget
 from z3c.form.interfaces import ITextWidget
+from z3c.form.util import getSpecification
+from z3c.form.widget import FieldWidget
 from z3c.form.widget import Widget
+from zope.component import adapter
 from zope.component import adapts
+from zope.component import queryMultiAdapter
 from zope.component import queryUtility
+from zope.interface import implementer
+from zope.interface import implements
 from zope.interface import implementsOnly
+from zope.publisher.browser import TestRequest
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import IList
-from zope.schema.interfaces import IVocabularyFactory
 from zope.component.hooks import getSite
+from zope.schema.interfaces import ISequence
+from zope.security.interfaces import IPermission
 
+import pytz
 import json
+
+try:
+    from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
+    HAS_PAC = True
+except ImportError:
+    HAS_PAC = False
+
+DEFAULT_PERMISSION = 'Modify portal content'
+
+
+class IDateField(IDate):
+    """Marker interface for the DateField."""
+
+
+class IDatetimeField(IDatetime):
+    """Marker interface for the DatetimeField."""
 
 
 class IDateWidget(ITextWidget):
@@ -129,7 +167,31 @@ class DatetimeWidgetConverter(BaseDataConverter):
         if not tmp[0]:
             return self.field.missing_value
         value = tmp[0].split('-')
-        value += tmp[1].split(':')
+        if len(tmp) == 2 and ':' in tmp[1]:
+            value += tmp[1].split(':')
+        else:
+            value += ['00', '00']
+
+        # Eventually set timezone
+        old_val = getattr(self.widget.context, self.field.getName(), None)
+        if getattr(old_val, 'tzinfo', False):
+            # Only set when field was previously set and only if it's value
+            # is a timezone aware datetime object.
+            # effective date for example is timezone naive, at the moment.
+            #
+            # We only ask, if there is a timezone information at all but try to
+            # use the 'timezone' attribute on the widget's context, since it
+            # represents the timezone, the event and it's form input are
+            # related to.
+            timezone = getattr(self.widget.context, 'timezone', None)
+            if timezone:
+                # plone.app.event stores it's timezone on the context.
+                timezone = pytz.timezone(timezone)
+            else:
+                # This better should use the tzinfo object from old_val. But we
+                # have to find, how to correctly localize the value with it.
+                timezone = pytz.utc
+            return timezone.localize(datetime(*map(int, value)))
         return datetime(*map(int, value))
 
 
@@ -278,7 +340,7 @@ class BaseWidget(Widget):
             raise NotImplemented("'pattern' option is not provided.")
         return {
             'pattern': self.pattern,
-            'pattern_options': self.pattern_options,
+            'pattern_options': self.pattern_options.copy(),
         }
 
     def render(self):
@@ -292,7 +354,7 @@ class BaseWidget(Widget):
         return self._base(**self._base_args()).render()
 
 
-class DateWidget(BaseWidget):
+class DateWidget(BaseWidget, HTMLInputWidget):
     """Date widget for z3c.form."""
 
     _base = InputWidget
@@ -323,8 +385,8 @@ class DateWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_date_options(self.request))
+            get_date_options(self.request),
+            args['pattern_options'])
 
         return args
 
@@ -342,7 +404,7 @@ class DateWidget(BaseWidget):
 
         field_value = self._converter(
             self.field, self).toFieldValue(self.value)
-        if field_value is self.fields.missing_value:
+        if field_value is self.field.missing_value:
             return u''
 
         formatter = self.request.locale.dates.getFormatter(
@@ -355,7 +417,7 @@ class DateWidget(BaseWidget):
         return field_value.ctime()
 
 
-class DatetimeWidget(DateWidget):
+class DatetimeWidget(DateWidget, HTMLInputWidget):
     """Datetime widget for z3c.form."""
 
     _converter = DatetimeWidgetConverter
@@ -383,14 +445,16 @@ class DatetimeWidget(DateWidget):
             args['value'] += ' 00:00'
 
         args.setdefault('pattern_options', {})
+        if 'time' in args['pattern_options']:
+            del args['pattern_options']['time']
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_datetime_options(self.request))
+            get_datetime_options(self.request),
+            args['pattern_options'])
 
         return args
 
 
-class SelectWidget(BaseWidget, z3cform_SelectWidget):
+class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
     """Select widget for z3c.form."""
 
     _base = SelectWidget
@@ -425,10 +489,15 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
             items.append((item['value'], item['content']))
         args['items'] = items
 
+        # ISequence represents an orderable collection
+        if ISequence.providedBy(self.field):
+            options = args.setdefault('pattern_options', {})
+            options['orderable'] = True
+
         return args
 
 
-class AjaxSelectWidget(BaseWidget):
+class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
     """Ajax select widget for z3c.form."""
 
     _base = InputWidget
@@ -441,6 +510,13 @@ class AjaxSelectWidget(BaseWidget):
     separator = ';'
     vocabulary = None
     vocabulary_view = '@@getVocabulary'
+    orderable = False
+
+    def update(self, *args, **kwargs):
+        if not hasattr(self, 'vocabulary'):
+            self.vocabulary = getattr(
+                self.field, 'vocabularyName', None)
+        super(AjaxSelectWidget, self).update()
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -457,23 +533,27 @@ class AjaxSelectWidget(BaseWidget):
 
         args = super(AjaxSelectWidget, self)._base_args()
 
-        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
-        if not self.vocabulary:
-            self.vocabulary = vocabulary_factory
-
         args['name'] = self.name
         args['value'] = self.value
 
         args.setdefault('pattern_options', {})
+
+        field_name = self.field and self.field.__name__ or None
+
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
             get_ajaxselect_options(self.context, args['value'], self.separator,
-                                   self.vocabulary, self.vocabulary_view))
+                                   self.vocabulary, self.vocabulary_view,
+                                   field_name),
+            args['pattern_options'])
+
+        # ISequence represents an orderable collection
+        if ISequence.providedBy(self.field) or self.orderable:
+            args['pattern_options']['orderable'] = True
 
         return args
 
 
-class RelatedItemsWidget(BaseWidget):
+class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
     """RelatedItems widget for z3c.form."""
 
     _base = InputWidget
@@ -484,8 +564,19 @@ class RelatedItemsWidget(BaseWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    vocabulary = 'plone.app.vocabularies.Catalog'
+    vocabulary = None
     vocabulary_view = '@@getVocabulary'
+    orderable = False
+
+    def update(self, *args, **kwargs):
+        value_type = getattr(self.field, 'value_type', None)
+        if value_type:
+            self.vocabulary = getattr(value_type,
+                                      'vocabularyName',
+                                      'plone.app.vocabularies.Catalog')
+        else:
+            self.vocabulary = 'plone.app.vocabularies.Catalog'
+        super(RelatedItemsWidget, self).update()
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -502,24 +593,21 @@ class RelatedItemsWidget(BaseWidget):
 
         args = super(RelatedItemsWidget, self)._base_args()
 
-        vocabulary_factory = getattr(self.field, 'vocabulary_factory', None)
-        if not self.vocabulary:
-            self.vocabulary = vocabulary_factory
-
         args['name'] = self.name
         args['value'] = self.value
 
         args.setdefault('pattern_options', {})
+        field_name = self.field and self.field.__name__ or None
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
             get_relateditems_options(self.context, args['value'],
                                      self.separator, self.vocabulary,
-                                     self.vocabulary_view))
+                                     self.vocabulary_view, field_name),
+            args['pattern_options'])
 
         return args
 
 
-class QueryStringWidget(BaseWidget):
+class QueryStringWidget(BaseWidget, HTMLInputWidget):
     """QueryString widget for z3c.form."""
 
     _base = InputWidget
@@ -549,13 +637,13 @@ class QueryStringWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_querystring_options(self.context, self.querystring_view))
+            get_querystring_options(self.context, self.querystring_view),
+            args['pattern_options'])
 
         return args
 
 
-class TinyMCEWidget(BaseWidget):
+class TinyMCEWidget(BaseWidget, HTMLTextAreaWidget):
     """TinyMCE widget for z3c.form."""
 
     _base = TextareaWidget
@@ -583,3 +671,82 @@ class TinyMCEWidget(BaseWidget):
         args['value'] = self.value
 
         return args
+
+
+@implementer(IFieldWidget)
+def DateFieldWidget(field, request):
+    return FieldWidget(field, DateWidget(request))
+
+
+@implementer(IFieldWidget)
+def DatetimeFieldWidget(field, request):
+    return FieldWidget(field, DatetimeWidget(request))
+
+
+@implementer(IFieldWidget)
+def RelatedItemsFieldWidget(field, request):
+    # TODO: when field is type IRelationChoice configure widget to only allow
+    # one item to be selected
+    return FieldWidget(field, RelatedItemsWidget(request))
+
+
+if HAS_PAC:
+    @adapter(getSpecification(IDXCollection['query']), IFormLayer)
+    @implementer(IFieldWidget)
+    def QueryStringFieldWidget(field, request):
+        return FieldWidget(field, QueryStringWidget(request))
+
+
+class MockRequest(TestRequest):
+    implements(IWidgetsLayer)
+
+
+class DXFieldPermissionChecker(object):
+    """
+    """
+
+    implements(IFieldPermissionChecker)
+    adapts(IDexterityContent)
+
+    def __init__(self, context):
+        self.context = context
+        self._mock_request = MockRequest()
+
+    def validate(self, field_name, vocabulary_name=None):
+        context = self.context
+        checker = getSecurityManager().checkPermission
+        for schema in iterSchemata(context):
+            if field_name in schema:
+                # If a vocabulary name was specified and it does not
+                # match the vocabulary name for the field or widget,
+                # fail.
+                field = schema[field_name]
+                if vocabulary_name and (
+                   vocabulary_name != getattr(field, 'vocabulary', None) and
+                   vocabulary_name != getattr(field, 'vocabularyName', None)):
+                    # Determine the widget to check for vocabulary there
+                    widgets = mergedTaggedValueDict(schema, WIDGETS_KEY)
+                    widget = widgets.get(field_name)
+                    if widget:
+                        widget = (isinstance(widget, basestring) and
+                                  resolveDottedName(widget) or widget)
+                        widget = widget and widget(field, self._mock_request)
+                    else:
+                        widget = queryMultiAdapter((field, self._mock_request),
+                                                   IFieldWidget)
+                    if getattr(widget, 'vocabulary', None) != vocabulary_name:
+                        return False
+                # Create mapping of all schema permissions
+                permissions = mergedTaggedValueDict(schema,
+                                                    WRITE_PERMISSIONS_KEY)
+                permission_name = permissions.get(field_name, None)
+                if permission_name is not None:
+                    permission = queryUtility(IPermission,
+                                              name=permission_name)
+                    if permission:
+                        return checker(permission.title, context)
+                # If the field is in the schema, but no permission is
+                # specified, fall back to the default edit permission
+                return checker(DEFAULT_PERMISSION, context)
+        else:
+            raise AttributeError('No such field: {}'.format(field_name))

@@ -20,27 +20,6 @@
       zcml:condition="installed mockup" />
 
   <browser:resource
-      name="plone.app.widgets-fontawesome-webfont.eot"
-      file="static/widgets-fontawesome-webfont.eot"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-fontawesome-webfont.woff"
-      file="static/widgets-fontawesome-webfont.woff"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-fontawesome-webfont.ttf"
-      file="static/widgets-fontawesome-webfont.ttf"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-fontawesome-webfont.svg"
-      file="static/widgets-fontawesome-webfont.svg"
-      layer=".interfaces.IWidgetsLayer"
-      />
-
-  <browser:resource
       name="plone.app.widgets-select2.png"
       file="static/widgets-select2.png"
       layer=".interfaces.IWidgetsLayer"
@@ -52,54 +31,75 @@
       />
 
   <browser:resource
-      name="plone.app.widgets-icomoon.eot"
-      file="static/widgets-icomoon.eot"
+      name="plone.app.widgets-glyphicons-halflings-regular.eot"
+      file="static/widgets-glyphicons-halflings-regular.eot"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-icomoon.svg"
-      file="static/widgets-icomoon.svg"
+      name="plone.app.widgets-glyphicons-halflings-regular.svg"
+      file="static/widgets-glyphicons-halflings-regular.svg"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-icomoon.woff"
-      file="static/widgets-icomoon.woff"
+      name="plone.app.widgets-glyphicons-halflings-regular.ttf"
+      file="static/widgets-glyphicons-halflings-regular.ttf"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-icomoon.ttf"
-      file="static/widgets-icomoon.ttf"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-icomoon-small.eot"
-      file="static/widgets-icomoon-small.eot"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-icomoon-small.svg"
-      file="static/widgets-icomoon-small.svg"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-icomoon-small.woff"
-      file="static/widgets-icomoon-small.woff"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-icomoon-small.ttf"
-      file="static/widgets-icomoon-small.ttf"
+      name="plone.app.widgets-glyphicons-halflings-regular.woff"
+      file="static/widgets-glyphicons-halflings-regular.woff"
       layer=".interfaces.IWidgetsLayer"
       />
 
   <browser:resource
-      name="plone.app.widgets-spritemap.png"
-      file="static/widgets-spritemap.png"
+      name="plone.app.widgets-tinymce-icomoon.eot"
+      file="static/widgets-tinymce-icomoon.eot"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-spritemap@2x.png"
-      file="static/widgets-spritemap@2x.png"
+      name="plone.app.widgets-tinymce-icomoon.svg"
+      file="static/widgets-tinymce-icomoon.svg"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-icomoon.woff"
+      file="static/widgets-tinymce-icomoon.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-icomoon.ttf"
+      file="static/widgets-tinymce-icomoon.ttf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-icomoon-small.eot"
+      file="static/widgets-tinymce-icomoon-small.eot"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-icomoon-small.svg"
+      file="static/widgets-tinymce-icomoon-small.svg"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-icomoon-small.woff"
+      file="static/widgets-tinymce-icomoon-small.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-icomoon-small.ttf"
+      file="static/widgets-tinymce-icomoon-small.ttf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
+  <browser:resource
+      name="plone.app.widgets-dropzone-spritemap.png"
+      file="static/widgets-dropzone-spritemap.png"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-dropzone-spritemap@2x.png"
+      file="static/widgets-dropzone-spritemap@2x.png"
       layer=".interfaces.IWidgetsLayer"
       />
 
@@ -131,63 +131,105 @@
 
   <cmf:registerDirectory name="plone_widgets" />
 
-  <!-- archetypes -->
+
+  <!-- common configuration -->
   <configure zcml:condition="installed Products.ATContentTypes">
-
     <include package="archetypes.schemaextender" />
-
     <adapter factory=".factories.ATCTFileFactory" />
-
-    <adapter
-        name="plone.app.widgets"
-        factory=".at_bbb.MetadataExtender"
-        for="Products.ATContentTypes.interface.IATContentType"
-        provides="archetypes.schemaextender.interfaces.ISchemaModifier"
-        />
-
+    <adapter factory=".at.ATFieldPermissionChecker" />
   </configure>
 
-  <!-- dexterity -->
   <configure zcml:condition="installed plone.app.dexterity">
-
     <include package="z3c.form" file="meta.zcml"/>
     <include package="z3c.form" />
-
     <adapter factory=".factories.DXFileFactory" />
-
+    <adapter factory=".dx.DXFieldPermissionChecker" />
     <adapter factory=".dx.DatetimeWidgetConverter" />
     <adapter factory=".dx.DateWidgetConverter" />
     <adapter factory=".dx.AjaxSelectWidgetConverter" />
     <adapter factory=".dx.QueryStringDataConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
+  </configure>
 
-    <!-- override metadata widgets -->
-    <adapter factory=".dx_bbb.SubjectsFieldWidget" />
-    <adapter factory=".dx_bbb.LanguageFieldWidget" />
-    <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
-    <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
-    <adapter factory=".dx_bbb.ContributorsFieldWidget" />
-    <adapter factory=".dx_bbb.CreatorsFieldWidget" />
+  <!-- plone<5 configuration -->
+  <configure zcml:condition="not-have plone-5">
 
-    <configure zcml:condition="installed plone.app.relationfield">
-      <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
+    <configure zcml:condition="installed Products.ATContentTypes">
+      <adapter
+          name="plone.app.widgets"
+          factory=".at_bbb.MetadataExtender"
+          for="Products.ATContentTypes.interface.IATContentType"
+          provides="archetypes.schemaextender.interfaces.ISchemaModifier"
+          />
     </configure>
 
-    <!-- override contenttypes specific widgets -->
-    <configure zcml:condition="installed plone.app.contenttypes">
-        <adapter factory=".dx_pac_bbb.QueryStringFieldWidget" />
+    <configure zcml:condition="installed plone.app.dexterity">
+      <adapter factory=".dx_bbb.SubjectsFieldWidget" />
+      <adapter factory=".dx_bbb.LanguageFieldWidget" />
+      <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
+      <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
+      <adapter factory=".dx_bbb.ContributorsFieldWidget" />
+      <adapter factory=".dx_bbb.CreatorsFieldWidget" />
+
+      <configure zcml:condition="installed plone.app.relationfield">
+        <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
+      </configure>
+
+      <!-- override p.a.contenttypes specific widgets -->
+      <configure zcml:condition="installed plone.app.contenttypes">
+          <adapter factory=".dx_bbb.QueryStringFieldWidget" />
+      </configure>
+
+      <!-- override p.a.event specific widgets -->
+      <configure zcml:condition="installed plone.app.event">
+          <adapter factory=".dx_bbb.StartDateFieldWidget" />
+          <adapter factory=".dx_bbb.EndDateFieldWidget" />
+      </configure>
+
     </configure>
 
   </configure>
 
-  <!--adapter factory=".bbb.SiteRSSItemsFieldWidget" /-->
-  <browser:viewlet
-    name="plone.searchbox"
-    manager="plone.app.layout.viewlets.interfaces.IPortalHeader"
-    class=".bbb.SearchBoxViewlet"
-    permission="zope2.View"
-    layer=".interfaces.IWidgetsLayer"
-    />
+  <!-- plone 5 configuration -->
+  <configure zcml:condition="have plone-5">
+
+    <class class=".dx.DateWidget">
+      <require permission="zope.Public"
+               interface=".dx.IDateWidget" />
+    </class>
+    <class class="zope.schema._field.Date">
+      <implements interface=".dx.IDateField"/>
+    </class>
+    <adapter
+        factory=".dx.DateFieldWidget"
+        for=".dx.IDateField
+             z3c.form.interfaces.IFormLayer" />
+
+    <class class=".dx.DatetimeWidget">
+      <require permission="zope.Public"
+               interface=".dx.IDatetimeWidget" />
+    </class>
+    <class class="zope.schema._field.Datetime">
+      <implements interface=".dx.IDatetimeField"/>
+    </class>
+    <adapter
+        factory=".dx.DatetimeFieldWidget"
+        for=".dx.IDatetimeField
+             z3c.form.interfaces.IFormLayer" />
+
+    <adapter factory=".dx.RelatedItemsFieldWidget"
+            for="z3c.relationfield.interfaces.IRelationChoice
+                  z3c.form.interfaces.IFormLayer"
+            />
+
+    <adapter factory=".dx.RelatedItemsFieldWidget"
+            for="z3c.relationfield.interfaces.IRelationList
+                  z3c.form.interfaces.IFormLayer"
+            />
+
+    <adapter factory=".dx.QueryStringFieldWidget" />
+
+  </configure>
 
   <genericsetup:registerProfile
     name="default"
@@ -198,6 +240,15 @@
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     />
 
+  <genericsetup:importStep
+    name="plone.app.widgets-default"
+    title="plone.app.widgets: Deprecate resource"
+    description=""
+    handler=".setuphandlers.default">
+      <depends name="jsregistry"/>
+      <depends name="cssregistry"/>
+  </genericsetup:importStep>
+
   <genericsetup:registerProfile
     name="uninstall"
     title="Plone Widgets Uninstall"
@@ -206,5 +257,14 @@
     provides="Products.GenericSetup.interfaces.EXTENSION"
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     />
+
+  <genericsetup:importStep
+    name="plone.app.widgets-uninstall"
+    title="plone.app.widgets: Restore resource"
+    description=""
+    handler=".setuphandlers.uninstall">
+      <depends name="jsregistry"/>
+      <depends name="cssregistry"/>
+  </genericsetup:importStep>
 
 </configure>

@@ -1,15 +1,9 @@
 *** Settings ***
 
-Variables  plone/app/testing/interfaces.py
-Variables  plone/app/widgets/tests/robot/variables.py
+Resource  common.robot
 
-Library  Selenium2Library  timeout=${SELENIUM_TIMEOUT}  implicit_wait=${SELENIUM_IMPLICIT_WAIT}
-Library  Remote  ${PLONE_URL}/RobotRemote
-
-Resource  plone/app/widgets/tests/robot/keywords.txt
-
-Suite Setup  Suite Setup
-Suite Teardown  Suite Teardown
+Test Setup  Open SauceLabs test browser
+Test Teardown  Run keywords  Report test status  Close all browsers
 
 
 *** Variables ***

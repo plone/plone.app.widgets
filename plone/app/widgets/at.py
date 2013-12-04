@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from AccessControl import ClassSecurityInfo
+from Acquisition import aq_inner
 from DateTime import DateTime
+from Products.Archetypes.interfaces import IBaseObject
 from Products.Archetypes.Registry import registerWidget
 from Products.Archetypes.Widget import TypesWidget
 from Products.CMFCore.utils import getToolByName
@@ -10,6 +12,7 @@ from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
+from plone.app.widgets.interfaces import IFieldPermissionChecker
 from plone.app.widgets.utils import NotImplemented
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
@@ -17,6 +20,8 @@ from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
 from plone.uuid.interfaces import IUUID
+from zope.interface import implements
+from zope.component import adapts
 
 import json
 
@@ -122,8 +127,14 @@ class DateWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_date_options(request))
+            get_date_options(request),
+            args['pattern_options'])
+
+        if 'date' in args['pattern_options'] and \
+           'firstDay' in args['pattern_options']['date'] and \
+           callable(args['pattern_options']['date']['firstDay']):
+            args['pattern_options']['date']['firstDay'] = \
+                args['pattern_options']['date']['firstDay']()
 
         return args
 
@@ -133,12 +144,14 @@ class DateWidget(BaseWidget):
     def process_form(self, instance, field, form, empty_marker=None):
         """Basic impl for form processing in a widget"""
 
-        value = form.get(field.getName(), None)
-        if not value:
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
             return empty_marker
 
+        value = value.split('-')
+
         try:
-            value = DateTime(datetime(*map(int, value.split('-'))))
+            value = DateTime(datetime(*map(int, value)))
         except:
             return empty_marker
 
@@ -180,26 +193,36 @@ class DatetimeWidget(DateWidget):
                                      field.getAccessor(context)()))
 
         if args['value'] and isinstance(args['value'], DateTime):
-            args['value'] = ('{year:}-{month:02}-{day:02}').format(
+            args['value'] = (
+                '{year:}-{month:02}-{day:02} {hour:02}:{minute:02}'
+            ).format(
                 year=args['value'].year(),
                 month=args['value'].month(),
                 day=args['value'].day(),
+                hour=args['value'].hour(),
+                minute=args['value'].minute(),
             )
 
         elif args['value'] and isinstance(args['value'], datetime):
-            args['value'] = ('{year:}-{month:02}-{day:02}').format(
+            args['value'] = (
+                '{year:}-{month:02}-{day:02} {hour:02}:{minute:02}'
+            ).format(
                 year=args['value'].year,
                 month=args['value'].month,
                 day=args['value'].day,
+                hour=args['value'].hour,
+                minute=args['value'].minute,
             )
 
         if args['value'] and len(args['value'].split(' ')) == 1:
             args['value'] += ' 00:00'
 
         args.setdefault('pattern_options', {})
+        if 'time' in args['pattern_options']:
+            del args['pattern_options']['time']
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_datetime_options(request))
+            get_datetime_options(request),
+            args['pattern_options'])
 
         return args
 
@@ -209,20 +232,23 @@ class DatetimeWidget(DateWidget):
     def process_form(self, instance, field, form, empty_marker=None):
         """Basic impl for form processing in a widget"""
 
-        value = form.get(field.getName(), None)
-        if not value:
-            return empty_marker, {}
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
 
         tmp = value.split(' ')
         if not tmp[0]:
             return empty_marker
         value = tmp[0].split('-')
-        value += tmp[1].split(':')
+        if len(tmp) == 2 and ':' in tmp[1]:
+            value += tmp[1].split(':')
+        else:
+            value += ['00', '00']
 
         try:
             value = DateTime(datetime(*map(int, value)))
         except:
-            return empty_marker, {}
+            return empty_marker
 
         return value, {}
 
@@ -246,6 +272,7 @@ class SelectWidget(BaseWidget):
         'pattern_options': {},
         'separator': ';',
         'multiple': False,
+        'orderable': False,
     })
 
     def _base_args(self, context, field, request):
@@ -278,6 +305,9 @@ class SelectWidget(BaseWidget):
         if self.separator:
             args['pattern_options']['separator'] = self.separator
 
+        if self.multiple and self.orderable:
+            args['pattern_options']['orderable'] = True
+
         return args
 
 
@@ -301,6 +331,7 @@ class AjaxSelectWidget(BaseWidget):
         'separator': ';',
         'vocabulary': None,
         'vocabulary_view': '@@getVocabulary',
+        'orderable': False,
     })
 
     def _base_args(self, context, field, request):
@@ -317,9 +348,13 @@ class AjaxSelectWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
             get_ajaxselect_options(context, args['value'], self.separator,
-                                   self.vocabulary, self.vocabulary_view))
+                                   self.vocabulary, self.vocabulary_view,
+                                   field.getName()),
+            args['pattern_options'])
+
+        if self.orderable:
+            args['pattern_options']['orderable'] = True
 
         return args
 
@@ -341,6 +376,57 @@ registerWidget(
     used_for=('Products.Archetypes.Field.LinesField',))
 
 
+class KeywordsWidget(AjaxSelectWidget):
+    """Keywords widget for Archetypes."""
+
+    _base = InputWidget
+
+    _properties = AjaxSelectWidget._properties.copy()
+    _properties.update({
+        'vocabulary': 'plone.app.vocabularies.Keywords',
+    })
+
+    def _base_args(self, context, field, request):
+        args = super(KeywordsWidget, self)._base_args(context, field,
+                                                      request)
+
+        membership = getToolByName(context, 'portal_membership')
+        user = membership.getAuthenticatedMember()
+
+        site_properties = getToolByName(
+            context, 'portal_properties')['site_properties']
+        allowRolesToAddKeywords = site_properties.getProperty(
+            'allowRolesToAddKeywords', None)
+
+        allowNewItems = False
+        if allowRolesToAddKeywords and [
+            role for role in user.getRolesInContext(context)
+                if role in allowRolesToAddKeywords]:
+            allowNewItems = True
+
+        args.setdefault('pattern_options', {})
+        args['pattern_options']['allowNewItems'] = allowNewItems
+
+        return args
+
+    security = ClassSecurityInfo()
+    security.declarePublic('process_form')
+
+    def process_form(self, instance, field, form, empty_marker=None):
+        value = form.get(field.getName(), empty_marker)
+        if value is empty_marker:
+            return empty_marker
+        value = value.strip().split(self.separator)
+        return value, {}
+
+
+registerWidget(
+    KeywordsWidget,
+    title='Keywords widget',
+    description=('Keywords widget'),
+    used_for=('Products.Archetypes.Field.LinesField',))
+
+
 class RelatedItemsWidget(BaseWidget):
     """Related items widget for Archetypes."""
 
@@ -353,6 +439,7 @@ class RelatedItemsWidget(BaseWidget):
         'separator': ';',
         'vocabulary': 'plone.app.vocabularies.Catalog',
         'vocabulary_view': '@@getVocabulary',
+        'allow_sorting': True,
     })
 
     def _base_args(self, context, field, request):
@@ -374,10 +461,12 @@ class RelatedItemsWidget(BaseWidget):
         args['value'] = self.separator.join(value)
 
         args.setdefault('pattern_options', {})
+        args['pattern_options']['orderable'] = self.allow_sorting
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
             get_relateditems_options(context, args['value'], self.separator,
-                                     self.vocabulary, self.vocabulary_view))
+                                     self.vocabulary, self.vocabulary_view,
+                                     field.getName()),
+            args['pattern_options'])
 
         return args
 
@@ -422,8 +511,8 @@ class QueryStringWidget(BaseWidget):
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
-            args['pattern_options'],
-            get_querystring_options(context, self.querystring_view))
+            get_querystring_options(context, self.querystring_view),
+            args['pattern_options'])
 
         return args
 
@@ -466,6 +555,33 @@ class TinyMCEWidget(BaseWidget):
         args['value'] = (request.get(field.getName(),
                                      field.getAccessor(context)())
                          ).decode(charset)
+
+        utility = getToolByName(aq_inner(context), 'portal_tinymce')
+        config = utility.getConfiguration(context=context,
+                                          field=field,
+                                          request=request)
+
+        config['content_css'] = config['portal_url'] + '/base.css'
+        del config['customplugins']
+        del config['plugins']
+        del config['theme']
+
+        args['pattern_options'] = {
+            'relatedItems': {
+                'vocabularyUrl': config['portal_url'] +
+                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
+            },
+            'rel_upload_path': '@@fileUpload',
+            'folder_url': config['document_base_url'],
+            'tiny': config,
+            'prependToUrl': 'resolveuid/',
+            'linkAttribute': 'UID',
+            'prependToScalePart': '/@@images/image/',
+            'folderTypes': utility.containsobjects.replace('\n', ','),
+            'imageTypes': utility.imageobjects.replace('\n', ','),
+            'anchorSelector': utility.anchor_selector,
+            'linkableTypes': utility.linkable.replace('\n', ',')
+        }
         return args
 
 
@@ -474,3 +590,23 @@ registerWidget(
     title='TinyMCE widget',
     description=('TinyMCE widget'),
     used_for='Products.Archetypes.Field.TextField')
+
+
+class ATFieldPermissionChecker(object):
+    implements(IFieldPermissionChecker)
+    adapts(IBaseObject)
+
+    def __init__(self, context):
+        self.context = context
+
+    def validate(self, field_name, vocabulary_name=None):
+        field = self.context.getField(field_name)
+        if field is not None:
+            # If a vocabulary name was specified and it doesn't match
+            # the value for the field or the widget, fail.
+            if vocabulary_name and (
+               vocabulary_name != getattr(field.widget, 'vocabulary', None) and
+               vocabulary_name != getattr(field, 'vocabulary_factory', None)):
+                return False
+            return field.checkPermission('w', self.context)
+        raise AttributeError('No such field: {}'.format(field_name))
