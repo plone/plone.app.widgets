@@ -29,6 +29,7 @@ from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import IVocabularyFactory
+from zope.component.hooks import getSite
 
 import json
 
@@ -212,7 +213,10 @@ class RelatedItemsDataConverter(BaseDataConverter):
         value = value.split(separator)
         value = [v.split('/')[0] for v in value]
 
-        catalog = getToolByName(self.widget.context, 'portal_catalog')
+        try:
+            catalog = getToolByName(self.widget.context, 'portal_catalog')
+        except AttributeError:
+            catalog = getToolByName(getSite(), 'portal_catalog')
 
         return collectionType(item.getObject()
                               for item in catalog(UID=value) if item)
