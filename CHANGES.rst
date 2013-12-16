@@ -4,6 +4,9 @@ Changelog
 1.4.1 (unreleased)
 ------------------
 
+- handle unicode filesnames for dexterity file uploads
+  [vangheem]
+
 - just always default to using File objects for uploads that aren't images.
   [vangheem]
 
