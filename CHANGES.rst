@@ -1,6 +1,12 @@
 Changelog
 =========
 
+1.4.1 (unreleased)
+------------------
+
+- just always default to using File objects for uploads that aren't images.
+  [vangheem]
+
 
 1.4.0 (2013-11-24)
 ------------------
