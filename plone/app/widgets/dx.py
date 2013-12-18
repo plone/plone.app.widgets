@@ -28,11 +28,13 @@ from z3c.form.browser.widget import HTMLInputWidget
 from z3c.form.browser.widget import HTMLSelectWidget
 from z3c.form.browser.widget import HTMLTextAreaWidget
 from z3c.form.converter import BaseDataConverter
+from z3c.form.converter import CollectionSequenceDataConverter
 from z3c.form.interfaces import IFieldWidget
 from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextAreaWidget
 from z3c.form.interfaces import ITextWidget
+from z3c.form.interfaces import NO_VALUE
 from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
 from z3c.form.widget import Widget
@@ -193,6 +195,31 @@ class DatetimeWidgetConverter(BaseDataConverter):
                 timezone = pytz.utc
             return timezone.localize(datetime(*map(int, value)))
         return datetime(*map(int, value))
+
+
+class SelectWidgetConverter(CollectionSequenceDataConverter):
+    """Data converter for Select widget."""
+
+    adapts(ICollection, ISelectWidget)
+
+    def toFieldValue(self, value):
+        """Converts from widget value to field.
+
+        :param value: Value inserted by Select2 widget or default html
+                      select/multi-select
+        :type value: string | list
+
+        :returns: List of items
+        :rtype: list | tuple | set
+        """
+        separator = getattr(self.widget, 'separator', ';')
+        if isinstance(value, basestring):
+            value = value.strip()
+            if value:
+                value = value.split(separator)
+            else:
+                return self.field.missing_value
+        return super(SelectWidgetConverter, self).toFieldValue(value)
 
 
 class AjaxSelectWidgetConverter(BaseDataConverter):
@@ -463,7 +490,10 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
 
     pattern = 'select2'
     pattern_options = BaseWidget.pattern_options.copy()
+
+    separator = ';'
     multiple = False
+    orderable = False
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -489,12 +519,28 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
             items.append((item['value'], item['content']))
         args['items'] = items
 
+        options = args.setdefault('pattern_options', {})
+        if self.multiple or ICollection.providedBy(self.field):
+            options['multiple'] = args['multiple'] = self.multiple = True
+
         # ISequence represents an orderable collection
-        if ISequence.providedBy(self.field):
-            options = args.setdefault('pattern_options', {})
+        if ISequence.providedBy(self.field) or self.orderable:
             options['orderable'] = True
 
+        if self.multiple:
+            options['separator'] = self.separator
+
         return args
+
+    def extract(self, default=NO_VALUE):
+        """Override extract to handle delimited response values.
+        Skip the vocabulary validation provided in the parent
+        method, since it's not ever done for single selects."""
+        if (self.name not in self.request and
+                self.name + '-empty-marker' in self.request):
+            return []
+        value = self.request.get(self.name, default)
+        return value
 
 
 class AjaxSelectWidget(BaseWidget, HTMLInputWidget):

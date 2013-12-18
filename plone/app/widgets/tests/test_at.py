@@ -275,6 +275,18 @@ class SelectWidgetTests(unittest.TestCase):
             widget._base_args(self.context, self.field, self.request),
         )
 
+    def test_process_form(self):
+        from plone.app.widgets.at import SelectWidget
+        widget = SelectWidget()
+        form = {'fieldname': 'aaa.bbb.ccc'}
+        self.assertEquals('aaa.bbb.ccc',
+                          widget.process_form(self.context,
+                                              self.field, form)[0])
+        widget.multiple = True
+        widget.separator = "."
+        self.assertEquals(['aaa', 'bbb', 'ccc'],
+                          widget.process_form(self.context,
+                                              self.field, form)[0])
 
 # TODO
 #class AjaxSelectWidgetTests(unittest.TestCase):

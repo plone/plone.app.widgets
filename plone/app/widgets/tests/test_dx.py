@@ -16,7 +16,7 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.interfaces import WIDGETS_KEY
 from plone.dexterity.fti import DexterityFTI
 from plone.testing.zca import UNIT_TESTING
-from z3c.form.interfaces import IFieldWidget
+from z3c.form.interfaces import IFieldWidget, IFormLayer
 from z3c.form.widget import FieldWidget
 from z3c.form.util import getSpecification
 from zope import schema
@@ -24,6 +24,7 @@ from zope.component import provideUtility
 from zope.component import provideAdapter
 from zope.component.globalregistry import base
 from zope.interface import Interface
+from zope.interface import alsoProvides
 from zope.globalrequest import setRequest
 from zope.schema import Date
 from zope.schema import Datetime
@@ -308,6 +309,20 @@ class SelectWidgetTests(unittest.TestCase):
 
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        alsoProvides(self.request, IFormLayer)
+
+        # ITerms Adapters are needed for data converter
+        from z3c.form import term
+        import zope.component
+        zope.component.provideAdapter(term.CollectionTerms)
+        zope.component.provideAdapter(term.CollectionTermsVocabulary)
+        zope.component.provideAdapter(term.CollectionTermsSource)
+
+    def tearDown(self):
+        from z3c.form import term
+        base.unregisterAdapter(term.CollectionTerms)
+        base.unregisterAdapter(term.CollectionTermsVocabulary)
+        base.unregisterAdapter(term.CollectionTermsSource)
 
     def test_widget(self):
         from plone.app.widgets.dx import SelectWidget
@@ -338,7 +353,7 @@ class SelectWidgetTests(unittest.TestCase):
             {
                 'multiple': True,
                 'name': None,
-                'pattern_options': {},
+                'pattern_options': {'separator': ';', 'multiple': True},
                 'pattern': 'select2',
                 'value': (),
                 'items': [
@@ -355,7 +370,7 @@ class SelectWidgetTests(unittest.TestCase):
             {
                 'multiple': True,
                 'name': None,
-                'pattern_options': {},
+                'pattern_options': {'separator': ';', 'multiple': True},
                 'pattern': 'select2',
                 'value': ('one'),
                 'items': [
@@ -370,17 +385,18 @@ class SelectWidgetTests(unittest.TestCase):
     def test_widget_list_orderable(self):
         from plone.app.widgets.dx import SelectWidget
         widget = SelectWidget(self.request)
+        widget.separator = '.'
         widget.field = List(
             __name__='selectfield',
             value_type=Choice(values=['one', 'two', 'three'])
         )
         widget.terms = widget.field.value_type.vocabulary
-        widget.multiple = True
         self.assertEqual(
             {
                 'multiple': True,
                 'name': None,
-                'pattern_options': {'orderable': True},
+                'pattern_options': {'orderable': True, 'multiple': True,
+                                    'separator': '.'},
                 'pattern': 'select2',
                 'value': (),
                 'items': [
@@ -400,12 +416,12 @@ class SelectWidgetTests(unittest.TestCase):
             value_type=Choice(values=['one', 'two', 'three'])
         )
         widget.terms = widget.field.value_type.vocabulary
-        widget.multiple = True
         self.assertEqual(
             {
                 'multiple': True,
                 'name': None,
-                'pattern_options': {'orderable': True},
+                'pattern_options': {'orderable': True, 'multiple': True,
+                                    'separator': ';'},
                 'pattern': 'select2',
                 'value': (),
                 'items': [
@@ -426,12 +442,11 @@ class SelectWidgetTests(unittest.TestCase):
             value_type=Choice(values=['one', 'two', 'three'])
         )
         widget.terms = widget.field.value_type.vocabulary
-        widget.multiple = True
         self.assertEqual(
             {
                 'multiple': True,
                 'name': None,
-                'pattern_options': {},
+                'pattern_options': {'multiple': True, 'separator': ';'},
                 'pattern': 'select2',
                 'value': (),
                 'items': [
@@ -441,6 +456,94 @@ class SelectWidgetTests(unittest.TestCase):
                 ]
             },
             widget._base_args(),
+        )
+
+    def test_widget_extract(self):
+        from plone.app.widgets.dx import SelectWidget
+        widget = SelectWidget(self.request)
+        widget.field = Choice(
+            __name__='selectfield',
+            values=['one', 'two', 'three']
+        )
+        widget.name = 'selectfield'
+        self.request.form['selectfield'] = 'one'
+        self.assertEquals(widget.extract(), 'one')
+        widget.multiple = True
+        self.request.form['selectfield'] = 'one;two'
+        self.assertEquals(widget.extract(), 'one;two')
+
+    def test_data_converter_list(self):
+        from plone.app.widgets.dx import SelectWidget
+        from plone.app.widgets.dx import SelectWidgetConverter
+
+        field = List(__name__='listfield',
+                     value_type=Choice(__name__='selectfield',
+                                       values=['one', 'two', 'three']))
+        widget = SelectWidget(self.request)
+        widget.field = field
+        widget.multiple = True
+        converter = SelectWidgetConverter(field, widget)
+
+        self.assertEqual(
+            converter.toFieldValue(''),
+            field.missing_value,
+        )
+
+        self.assertEqual(
+            converter.toFieldValue('one;two;three'),
+            ['one', 'two', 'three'],
+        )
+
+        self.assertEqual(
+            converter.toWidgetValue([]),
+            [],
+        )
+
+        widget.separator = ','
+        self.assertEqual(
+            converter.toFieldValue('one,two,three'),
+            ['one', 'two', 'three'],
+        )
+        self.assertRaises(
+            LookupError,
+            converter.toFieldValue, 'one;two;three'
+        )
+
+        self.assertEqual(
+            converter.toWidgetValue(['one', 'two', 'three']),
+            ['one', 'two', 'three']
+        )
+
+    def test_data_converter_tuple(self):
+        from plone.app.widgets.dx import SelectWidget
+        from plone.app.widgets.dx import SelectWidgetConverter
+
+        field = Tuple(__name__='tuplefield',
+                      value_type=Choice(__name__='selectfield',
+                                        values=['one', 'two', 'three']))
+        widget = SelectWidget(self.request)
+        widget.field = field
+        widget.multiple = True
+        converter = SelectWidgetConverter(field, widget)
+
+        self.assertEqual(
+            converter.toFieldValue(''),
+            field.missing_value,
+        )
+
+        self.assertEqual(
+            converter.toFieldValue('one;two;three'),
+            ('one', 'two', 'three'),
+        )
+
+        self.assertEqual(
+            converter.toWidgetValue(tuple()),
+            [],
+        )
+
+        self.assertEqual(
+            converter.toWidgetValue(('one', 'two', 'three')),
+            ['one', 'two', 'three'],
         )
 
 

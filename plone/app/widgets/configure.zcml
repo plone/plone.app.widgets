@@ -146,6 +146,7 @@
     <adapter factory=".dx.DXFieldPermissionChecker" />
     <adapter factory=".dx.DatetimeWidgetConverter" />
     <adapter factory=".dx.DateWidgetConverter" />
+    <adapter factory=".dx.SelectWidgetConverter" />
     <adapter factory=".dx.AjaxSelectWidgetConverter" />
     <adapter factory=".dx.QueryStringDataConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
