@@ -369,9 +369,11 @@ class QueryStringWidgetTests(unittest.TestCase):
 
 class TinyMCEWidgetTests(unittest.TestCase):
 
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
+
     def setUp(self):
+        self.portal = self.layer['portal']
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = Mock()
         self.field = Mock()
         self.field.getAccessor.return_value = lambda: 'fieldvalue'
         self.field.getName.return_value = 'fieldname'
@@ -379,17 +381,17 @@ class TinyMCEWidgetTests(unittest.TestCase):
     def test_widget(self):
         from plone.app.widgets.at import TinyMCEWidget
         widget = TinyMCEWidget()
-        self.context.portal_properties.site_properties\
-            .getProperty.return_value = 'utf-8'
-        self.assertEqual(
-            {
-                'name': 'fieldname',
-                'value': 'fieldvalue',
-                'pattern': 'tinymce',
-                'pattern_options': {},
-            },
-            widget._base_args(self.context, self.field, self.request),
-        )
+        self.field.widget = widget
+        base_args = widget._base_args(self.portal, self.field, self.request)
+        self.assertEqual(base_args['name'], 'fieldname')
+        self.assertEqual(base_args['value'], 'fieldvalue')
+        self.assertEqual(base_args['pattern'], 'tinymce')
+        self.assertEqual(base_args['pattern_options']['prependToUrl'],
+                         'resolveuid/')
+        self.assertEqual(base_args['pattern_options']['prependToUrl'],
+                         'resolveuid/')
+        self.assertEqual(base_args['pattern_options']['anchorSelector'],
+                         self.portal.portal_tinymce.anchor_selector)
 
 
 class ArchetypesVocabularyPermissionTests(unittest.TestCase):
