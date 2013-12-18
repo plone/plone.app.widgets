@@ -10,6 +10,7 @@ from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
+from z3c.form.interfaces import IAddForm
 
 _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')
@@ -169,6 +170,8 @@ def get_context_url(context):
         url = context.absolute_url
         if callable(url):
             url = url()
+    elif IAddForm.providedBy(context):
+        url = context.request.get('URL')
     else:
         url = get_portal_url(context)
     return url

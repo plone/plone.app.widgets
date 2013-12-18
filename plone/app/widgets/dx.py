@@ -29,6 +29,7 @@ from z3c.form.browser.widget import HTMLSelectWidget
 from z3c.form.browser.widget import HTMLTextAreaWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.converter import CollectionSequenceDataConverter
+from z3c.form.interfaces import IAddForm
 from z3c.form.interfaces import IFieldWidget
 from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
@@ -586,8 +587,13 @@ class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
 
         field_name = self.field and self.field.__name__ or None
 
+        context = self.context
+        # We need special handling for AddForms
+        if IAddForm.providedBy(getattr(self, 'form')):
+            context = self.form
+
         args['pattern_options'] = dict_merge(
-            get_ajaxselect_options(self.context, args['value'], self.separator,
+            get_ajaxselect_options(context, args['value'], self.separator,
                                    self.vocabulary, self.vocabulary_view,
                                    field_name),
             args['pattern_options'])
