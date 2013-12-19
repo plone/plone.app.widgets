@@ -144,6 +144,9 @@
     <include package="z3c.form" />
     <adapter factory=".factories.DXFileFactory" />
     <adapter factory=".dx.DXFieldPermissionChecker" />
+    <adapter factory=".dx.DXAddViewFieldPermissionChecker" />
+    <adapter factory=".dx.DXAddViewFieldPermissionChecker"
+             for="plone.z3cform.interfaces.IFormWrapper" />
     <adapter factory=".dx.DatetimeWidgetConverter" />
     <adapter factory=".dx.DateWidgetConverter" />
     <adapter factory=".dx.SelectWidgetConverter" />

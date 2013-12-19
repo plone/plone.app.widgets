@@ -166,12 +166,13 @@ def get_portal_url(context):
 
 
 def get_context_url(context):
-    if hasattr(context, 'absolute_url'):
+    if IAddForm.providedBy(context):
+        # Use the request URL if we are looking at an addform
+        url = context.request.get('URL')
+    elif hasattr(context, 'absolute_url'):
         url = context.absolute_url
         if callable(url):
             url = url()
-    elif IAddForm.providedBy(context):
-        url = context.request.get('URL')
     else:
         url = get_portal_url(context)
     return url

@@ -642,6 +642,38 @@ class AjaxSelectWidgetTests(unittest.TestCase):
             widget._base_args(),
         )
 
+    def test_widget_addform_url_on_addform(self):
+        from plone.app.widgets.dx import AjaxSelectWidget
+        widget = AjaxSelectWidget(self.request)
+        form = Mock()
+        from zope.interface import directlyProvides
+        from z3c.form.interfaces import IAddForm
+        directlyProvides(form, IAddForm)
+        form.request = {'URL': 'http://addform_url'}
+        widget.form = form
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'separator': ';'},
+            },
+            widget._base_args(),
+        )
+        widget.vocabulary = 'vocabulary1'
+        self.assertEqual(
+            {
+                'name': None,
+                'value': None,
+                'pattern': 'select2',
+                'pattern_options': {'separator': ';',
+                                    'vocabularyUrl':
+                        'http://addform_url/@@getVocabulary?name=vocabulary1',}
+
+            },
+            widget._base_args(),
+        )
+
     def test_data_converter_list(self):
         from plone.app.widgets.dx import AjaxSelectWidget
         from plone.app.widgets.dx import AjaxSelectWidgetConverter

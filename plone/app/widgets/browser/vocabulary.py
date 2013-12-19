@@ -69,13 +69,6 @@ class VocabularyView(BrowserView):
         }
         """
         context = self.context
-        # Handle Content that does not yet exist
-        if (hasattr(aq_base(context), 'form') and
-                IAddForm.implementedBy(context.form)):
-            form = getattr(context, 'form_instance')
-            create = getattr(form, 'create')
-            if callable(create):
-                context = form.create({}).__of__(form.context)
         self.request.response.setHeader("Content-type", "application/json")
 
         factory_name = self.request.get('name', None)
