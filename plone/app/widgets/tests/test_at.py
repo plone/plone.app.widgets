@@ -85,8 +85,8 @@ class DateWidgetTests(unittest.TestCase):
                 'pattern_options': {
                     'date': {
                         'firstDay': 0,
-                        'min': [1913, 1, 1],
-                        'max': [2033, 1, 1],
+                        'min': [1914, 1, 1],
+                        'max': [2034, 1, 1],
                         'clear': u'Clear',
                         'format': 'mmmm d, yyyy',
                         'monthsFull': [u'January', u'February', u'March',
@@ -144,8 +144,8 @@ class DatetimeWidgetTests(unittest.TestCase):
                 'pattern_options': {
                     'date': {
                         'firstDay': 0,
-                        'min': [1913, 1, 1],
-                        'max': [2033, 1, 1],
+                        'min': [1914, 1, 1],
+                        'max': [2034, 1, 1],
                         'clear': u'Clear',
                         'format': 'mmmm d, yyyy',
                         'monthsFull': [u'January', u'February', u'March',
