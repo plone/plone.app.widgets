@@ -5,7 +5,7 @@ from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
 from plone.app.widgets.base import InputWidget
-from plone.app.widgets.base import SelectWidget
+from plone.app.widgets.base import SelectWidget as BaseSelectWidget
 from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.interfaces import IFieldPermissionChecker
@@ -483,7 +483,7 @@ class DatetimeWidget(DateWidget, HTMLInputWidget):
 class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
     """Select widget for z3c.form."""
 
-    _base = SelectWidget
+    _base = BaseSelectWidget
 
     implementsOnly(ISelectWidget)
 
@@ -539,6 +539,8 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
                 self.name + '-empty-marker' in self.request):
             return []
         value = self.request.get(self.name, default)
+        if not isinstance(value, (tuple, list)):
+            value = (value,)
         return value
 
 
@@ -624,7 +626,7 @@ class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
             self.vocabulary = getattr(value_type,
                                       'vocabularyName',
                                       'plone.app.vocabularies.Catalog')
-        else:
+        if self.vocabulary is None:
             self.vocabulary = 'plone.app.vocabularies.Catalog'
         super(RelatedItemsWidget, self).update()
 
@@ -640,7 +642,6 @@ class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
         :returns: Arguments which will be passed to _base
         :rtype: dict
         """
-
         args = super(RelatedItemsWidget, self)._base_args()
 
         args['name'] = self.name

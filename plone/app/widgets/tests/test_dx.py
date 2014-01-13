@@ -467,10 +467,10 @@ class SelectWidgetTests(unittest.TestCase):
         )
         widget.name = 'selectfield'
         self.request.form['selectfield'] = 'one'
-        self.assertEquals(widget.extract(), 'one')
+        self.assertEquals(widget.extract(), ('one',))
         widget.multiple = True
         self.request.form['selectfield'] = 'one;two'
-        self.assertEquals(widget.extract(), 'one;two')
+        self.assertEquals(widget.extract(), ('one;two', ))
 
     def test_data_converter_list(self):
         from plone.app.widgets.dx import SelectWidget

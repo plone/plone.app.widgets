@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from AccessControl import getSecurityManager
-from Acquisition import aq_base
 from Products.CMFPlone.interfaces import IPloneSiteRoot
 from Products.Five import BrowserView
 from Products.ZCTextIndex.ParseTree import ParseError
@@ -12,7 +11,6 @@ from types import FunctionType
 from zope.component import queryAdapter
 from zope.component import queryUtility
 from zope.schema.interfaces import IVocabularyFactory
-from z3c.form.interfaces import IAddForm
 
 import inspect
 import json
