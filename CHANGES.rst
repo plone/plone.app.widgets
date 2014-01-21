@@ -4,6 +4,9 @@ Changelog
 1.4.1 (unreleased)
 ------------------
 
+- add support for the tus resumable file upload protocol
+  [vangheem]
+
 - handle unicode filesnames for dexterity file uploads
   [vangheem]
 
