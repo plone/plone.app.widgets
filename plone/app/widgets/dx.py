@@ -26,6 +26,7 @@ from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.browser.text import TextWidget as z3cform_TextWidget
 from z3c.form.browser.textarea import TextAreaWidget as z3cform_TextAreaWidget
+from z3c.form.browser.widget import HTMLInputWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.converter import CollectionSequenceDataConverter
 from z3c.form.interfaces import IAddForm
@@ -380,7 +381,7 @@ class BaseWidget(Widget):
         return self._base(**self._base_args()).render()
 
 
-class DateWidget(BaseWidget, z3cform_TextWidget):
+class DateWidget(BaseWidget, HTMLInputWidget):
     """Date widget for z3c.form."""
 
     _base = InputWidget
@@ -443,7 +444,7 @@ class DateWidget(BaseWidget, z3cform_TextWidget):
         return field_value.ctime()
 
 
-class DatetimeWidget(DateWidget, z3cform_SelectWidget):
+class DatetimeWidget(DateWidget, HTMLInputWidget):
     """Datetime widget for z3c.form."""
 
     _converter = DatetimeWidgetConverter
