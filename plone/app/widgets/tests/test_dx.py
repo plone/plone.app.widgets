@@ -575,7 +575,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
             widget._base_args(),
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'select2',
                 'pattern_options': {
                     'vocabularyUrl': '/@@getVocabulary?name=example',
@@ -664,7 +664,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'select2',
                 'pattern_options': {
                     'separator': ';',
