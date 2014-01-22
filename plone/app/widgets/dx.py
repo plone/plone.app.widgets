@@ -24,9 +24,8 @@ from plone.dexterity.utils import iterSchemata, getAdditionalSchemata
 from plone.supermodel.utils import mergedTaggedValueDict
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
-from z3c.form.browser.widget import HTMLInputWidget
-from z3c.form.browser.widget import HTMLSelectWidget
-from z3c.form.browser.widget import HTMLTextAreaWidget
+from z3c.form.browser.text import TextWidget as z3cform_TextWidget
+from z3c.form.browser.textarea import TextAreaWidget as z3cform_TextAreaWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.converter import CollectionSequenceDataConverter
 from z3c.form.interfaces import IAddForm
@@ -43,6 +42,8 @@ from zope.component import adapter
 from zope.component import adapts
 from zope.component import queryMultiAdapter
 from zope.component import queryUtility
+from zope.component.hooks import getSite
+from zope.i18n import translate
 from zope.interface import implementer
 from zope.interface import implements
 from zope.interface import implementsOnly
@@ -51,7 +52,6 @@ from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
 from zope.schema.interfaces import IList
-from zope.component.hooks import getSite
 from zope.schema.interfaces import ISequence
 from zope.security.interfaces import IPermission
 
@@ -380,7 +380,7 @@ class BaseWidget(Widget):
         return self._base(**self._base_args()).render()
 
 
-class DateWidget(BaseWidget, HTMLInputWidget):
+class DateWidget(BaseWidget, z3cform_TextWidget):
     """Date widget for z3c.form."""
 
     _base = InputWidget
@@ -443,7 +443,7 @@ class DateWidget(BaseWidget, HTMLInputWidget):
         return field_value.ctime()
 
 
-class DatetimeWidget(DateWidget, HTMLInputWidget):
+class DatetimeWidget(DateWidget, z3cform_SelectWidget):
     """Datetime widget for z3c.form."""
 
     _converter = DatetimeWidgetConverter
@@ -480,7 +480,7 @@ class DatetimeWidget(DateWidget, HTMLInputWidget):
         return args
 
 
-class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
+class SelectWidget(BaseWidget, z3cform_SelectWidget):
     """Select widget for z3c.form."""
 
     _base = BaseSelectWidget
@@ -515,6 +515,11 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
 
         items = []
         for item in self.items():
+            if not isinstance(item['content'], basestring):
+                item['content'] = translate(
+                    item['content'],
+                    context=self.request,
+                    default=item['value'])
             items.append((item['value'], item['content']))
         args['items'] = items
 
@@ -544,7 +549,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget, HTMLSelectWidget):
         return value
 
 
-class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
+class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
     """Ajax select widget for z3c.form."""
 
     _base = InputWidget
@@ -561,9 +566,8 @@ class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
 
     def update(self, *args, **kwargs):
         if not hasattr(self, 'vocabulary'):
-            self.vocabulary = getattr(
-                self.field, 'vocabularyName', None)
-        super(AjaxSelectWidget, self).update()
+            self.vocabulary = getattr(self.field, 'vocabularyName', None)
+        z3cform_TextWidget.update(self, *args, **kwargs)
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -605,7 +609,7 @@ class AjaxSelectWidget(BaseWidget, HTMLInputWidget):
         return args
 
 
-class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
+class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
     """RelatedItems widget for z3c.form."""
 
     _base = InputWidget
@@ -628,7 +632,7 @@ class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
                                       'plone.app.vocabularies.Catalog')
         if self.vocabulary is None:
             self.vocabulary = 'plone.app.vocabularies.Catalog'
-        super(RelatedItemsWidget, self).update()
+        z3cform_TextWidget.update(self, *args, **kwargs)
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -658,7 +662,7 @@ class RelatedItemsWidget(BaseWidget, HTMLInputWidget):
         return args
 
 
-class QueryStringWidget(BaseWidget, HTMLInputWidget):
+class QueryStringWidget(BaseWidget, z3cform_TextWidget):
     """QueryString widget for z3c.form."""
 
     _base = InputWidget
@@ -694,7 +698,7 @@ class QueryStringWidget(BaseWidget, HTMLInputWidget):
         return args
 
 
-class TinyMCEWidget(BaseWidget, HTMLTextAreaWidget):
+class TinyMCEWidget(BaseWidget, z3cform_TextAreaWidget):
     """TinyMCE widget for z3c.form."""
 
     _base = TextareaWidget
