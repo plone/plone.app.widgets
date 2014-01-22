@@ -291,6 +291,7 @@ class SelectWidgetTests(unittest.TestCase):
 # TODO
 #class AjaxSelectWidgetTests(unittest.TestCase):
 
+
 class RelatedItemsWidgetTests(unittest.TestCase):
 
     layer = ZCML_DIRECTIVES

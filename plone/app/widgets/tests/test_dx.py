@@ -563,7 +563,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'select2',
                 'pattern_options': {'separator': ';'},
             },
@@ -606,7 +606,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'select2',
                 'pattern_options': {'orderable': True, 'separator': ';'},
             },
@@ -620,7 +620,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'select2',
                 'pattern_options': {'orderable': True, 'separator': ';'},
             },
@@ -635,7 +635,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'select2',
                 'pattern_options': {'separator': ';'},
             },
@@ -654,7 +654,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'select2',
                 'pattern_options': {'separator': ';'},
             },
@@ -666,9 +666,10 @@ class AjaxSelectWidgetTests(unittest.TestCase):
                 'name': None,
                 'value': None,
                 'pattern': 'select2',
-                'pattern_options': {'separator': ';',
-                                    'vocabularyUrl':
-                        'http://addform_url/@@getVocabulary?name=vocabulary1',}
+                'pattern_options': {
+                    'separator': ';',
+                    'vocabularyUrl':
+                    'http://addform_url/@@getVocabulary?name=vocabulary1'}
 
             },
             widget._base_args(),
@@ -744,7 +745,7 @@ class QueryStringWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'querystring',
                 'pattern_options': {
                     'indexOptionsUrl': '/@@qsOptions',
@@ -772,7 +773,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         self.assertEqual(
             {
                 'name': None,
-                'value': None,
+                'value': u'',
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
