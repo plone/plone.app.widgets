@@ -219,6 +219,8 @@ class SelectWidgetConverter(CollectionSequenceDataConverter):
                 value = value.split(separator)
             else:
                 return self.field.missing_value
+        elif value == (u'',):
+            return self.field.missing_value
         return super(SelectWidgetConverter, self).toFieldValue(value)
 
 

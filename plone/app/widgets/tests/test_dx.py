@@ -546,6 +546,23 @@ class SelectWidgetTests(unittest.TestCase):
             ['one', 'two', 'three'],
         )
 
+    def test_data_converter_handles_empty_value(self):
+        from plone.app.widgets.dx import SelectWidget
+        from plone.app.widgets.dx import SelectWidgetConverter
+
+        field = Tuple(__name__='tuplefield',
+                      value_type=Choice(__name__='selectfield',
+                                        values=['one', 'two', 'three']))
+        widget = SelectWidget(self.request)
+        widget.field = field
+        widget.multiple = True
+        converter = SelectWidgetConverter(field, widget)
+
+        self.assertEqual(
+            converter.toFieldValue((u'',)),
+            field.missing_value,
+        )
+
 
 class AjaxSelectWidgetTests(unittest.TestCase):
 
