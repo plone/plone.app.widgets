@@ -20,37 +20,60 @@
       zcml:condition="installed mockup" />
 
   <browser:resource
-      name="plone.app.widgets-select2.png"
-      file="static/widgets-select2.png"
+      name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.eot"
+      file="static/widgets-bootstrap-glyphicons-halflings-regular.eot"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-select2-spinner.gif"
-      file="static/widgets-select2-spinner.gif"
-      layer=".interfaces.IWidgetsLayer"
-      />
-
-  <browser:resource
-      name="plone.app.widgets-glyphicons-halflings-regular.eot"
-      file="static/widgets-glyphicons-halflings-regular.eot"
+      name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.svg"
+      file="static/widgets-bootstrap-glyphicons-halflings-regular.svg"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-glyphicons-halflings-regular.svg"
-      file="static/widgets-glyphicons-halflings-regular.svg"
+      name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.ttf"
+      file="static/widgets-bootstrap-glyphicons-halflings-regular.ttf"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-glyphicons-halflings-regular.ttf"
-      file="static/widgets-glyphicons-halflings-regular.ttf"
+      name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.woff"
+      file="static/widgets-bootstrap-glyphicons-halflings-regular.woff"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-glyphicons-halflings-regular.woff"
-      file="static/widgets-glyphicons-halflings-regular.woff"
+      name="plone.app.widgets-dropzone-spritemap@2x.png"
+      file="static/widgets-dropzone-spritemap@2x.png"
       layer=".interfaces.IWidgetsLayer"
       />
-
+  <browser:resource
+      name="plone.app.widgets-dropzone-spritemap.png"
+      file="static/widgets-dropzone-spritemap.png"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-jqtree-jqtree-circle.png"
+      file="static/widgets-jqtree-jqtree-circle.png"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets.min.css"
+      file="static/widgets.min.css"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-select2-select2.png"
+      file="static/widgets-select2-select2.png"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-select2-select2-spinner.gif"
+      file="static/widgets-select2-select2-spinner.gif"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-select2-select2x2.png"
+      file="static/widgets-select2-select2x2.png"
+      layer=".interfaces.IWidgetsLayer"
+      />
   <browser:resource
       name="plone.app.widgets-tinymce-icomoon.eot"
       file="static/widgets-tinymce-icomoon.eot"
@@ -62,44 +85,18 @@
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-icomoon.woff"
-      file="static/widgets-tinymce-icomoon.woff"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
       name="plone.app.widgets-tinymce-icomoon.ttf"
       file="static/widgets-tinymce-icomoon.ttf"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-icomoon-small.eot"
-      file="static/widgets-tinymce-icomoon-small.eot"
+      name="plone.app.widgets-tinymce-icomoon.woff"
+      file="static/widgets-tinymce-icomoon.woff"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-icomoon-small.svg"
-      file="static/widgets-tinymce-icomoon-small.svg"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-tinymce-icomoon-small.woff"
-      file="static/widgets-tinymce-icomoon-small.woff"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-tinymce-icomoon-small.ttf"
-      file="static/widgets-tinymce-icomoon-small.ttf"
-      layer=".interfaces.IWidgetsLayer"
-      />
-
-  <browser:resource
-      name="plone.app.widgets-dropzone-spritemap.png"
-      file="static/widgets-dropzone-spritemap.png"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-dropzone-spritemap@2x.png"
-      file="static/widgets-dropzone-spritemap@2x.png"
+      name="plone.app.widgets-tinymce-loader.gif"
+      file="static/widgets-tinymce-loader.gif"
       layer=".interfaces.IWidgetsLayer"
       />
 
