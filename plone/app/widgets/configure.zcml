@@ -142,7 +142,14 @@
   <configure zcml:condition="installed plone.app.dexterity">
     <include package="z3c.form" file="meta.zcml"/>
     <include package="z3c.form" />
+
     <adapter factory=".factories.DXFileFactory" />
+    <utility
+      name="ZPublisher.HTTPRequest.FileUpload"
+      provides="plone.namedfile.interfaces.IStorage"
+      factory=".factories.Zope2FileUploadStorable"
+      />
+
     <adapter factory=".dx.DXFieldPermissionChecker" />
     <adapter factory=".dx.DXAddViewFieldPermissionChecker" />
     <adapter factory=".dx.DXAddViewFieldPermissionChecker"

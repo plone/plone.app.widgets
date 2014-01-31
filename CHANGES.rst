@@ -7,7 +7,7 @@ Changelog
 - add support for the tus resumable file upload protocol
   [vangheem]
 
-- handle unicode filesnames for dexterity file uploads
+- handle unicode filenames for dexterity file uploads
   [vangheem]
 
 - just always default to using File objects for uploads that aren't images.

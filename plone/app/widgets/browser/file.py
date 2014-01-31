@@ -1,4 +1,3 @@
-
 from Products.CMFCore.utils import getToolByName
 from Products.Five.browser import BrowserView
 
@@ -61,8 +60,17 @@ if os.environ.get('TUS_ENABLED'):
                 logger.warn('The TUS_TMP_FILE_DIR is not writable')
             else:
                 TUS_ENABLED = True
+                logger.info('tus file upload support is successfully '
+                            'configured')
     except ImportError:
-        pass
+        logger.warn('TUS_ENABLED is set; however, tus python package is '
+                    'not installed')
+else:
+    try:
+        import tus
+    except ImportError:
+        logger.warn('You have the tus python package installed but it is '
+                    'not configured for this plone client')
 
 
 class FileUploadView(BrowserView):

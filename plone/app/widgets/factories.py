@@ -17,9 +17,14 @@ from Products.CMFPlone import utils as ploneutils
 try:
     from plone.namedfile.file import NamedBlobImage
     from plone.namedfile.file import NamedBlobFile
+    from plone.namedfile.storages import MAXCHUNKSIZE
+    from plone.namedfile.interfaces import IStorage
 except ImportError:  # pragma: no cover
     # only for dext
-    pass  # pragma: no cover
+    from zope.interface import Interface
+
+    class IStorage(Interface):
+        pass
 from plone.i18n.normalizer.interfaces import IFileNameNormalizer
 from plone.app.widgets.interfaces import IATCTFileFactory, IDXFileFactory
 
@@ -79,6 +84,20 @@ class ATCTFileFactory(object):
         finally:
             upload_lock.release()
         return obj
+
+
+class Zope2FileUploadStorable(object):
+    implements(IStorage)
+
+    def store(self, data, blob):
+        data.seek(0)
+
+        fp = blob.open('w')
+        block = data.read(MAXCHUNKSIZE)
+        while block:
+            fp.write(block)
+            block = data.read(MAXCHUNKSIZE)
+        fp.close()
 
 
 class DXFileFactory(object):
