@@ -88,6 +88,12 @@ class MetadataExtender(object):
                     description=old.description
                 )
 
+            if field.__name__ == 'relatedItems':
+                field.widget = at.RelatedItemsWidget(
+                    label=old.label,
+                    description=old.description
+                )
+
         #if 'customViewFields' in schema:
         #    field = schema['customViewFields']
         #    widget = field.widget
