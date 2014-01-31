@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-
-from StringIO import StringIO
+import os
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
@@ -24,6 +23,8 @@ from zope.interface import noLongerProvides
 
 import json
 import transaction
+
+_dir = os.path.dirname(__file__)
 
 try:
     import unittest2 as unittest
@@ -284,13 +285,14 @@ class BrowserTest(unittest.TestCase):
 
     def testFileUpload(self):
         view = FileUploadView(self.portal, self.request)
-        fdata = StringIO('foobar')
-        fdata.filename = 'foobar.xml'
-        self.request.form['file'] = fdata
+        from plone.namedfile.file import FileChunk
+        chunk = FileChunk('foobar')
+        chunk.filename = 'test.xml'
+        self.request.form['file'] = chunk
         self.request.REQUEST_METHOD = 'POST'
         data = json.loads(view())
-        self.assertEqual(data['url'], 'http://nohost/plone/foobar.xml')
+        self.assertEqual(data['url'], 'http://nohost/plone/test.xml')
         self.assertTrue(data['UID'] is not None)
         # clean it up...
-        self.portal.manage_delObjects(['foobar.xml'])
+        self.portal.manage_delObjects(['test.xml'])
         transaction.commit()
