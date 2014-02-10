@@ -5,7 +5,7 @@ import robotsuite
 import unittest
 
 
-ROBOT_TEST_LEVEL = 5
+from plone.app.testing.interfaces import ROBOT_TEST_LEVEL
 
 
 def test_suite():
