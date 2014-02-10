@@ -49,6 +49,7 @@ from zope.interface import implementer
 from zope.interface import implements
 from zope.interface import implementsOnly
 from zope.publisher.browser import TestRequest
+from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
@@ -655,6 +656,8 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
         args['value'] = self.value
 
         args.setdefault('pattern_options', {})
+        if IChoice.providedBy(self.field):
+            args['pattern_options']['maximumSelectionSize'] = 1
         field_name = self.field and self.field.__name__ or None
         args['pattern_options'] = dict_merge(
             get_relateditems_options(self.context, args['value'],

@@ -802,6 +802,42 @@ class RelatedItemsWidgetTests(unittest.TestCase):
             widget._base_args()
         )
 
+    def test_single_selection(self):
+        """The pattern_options value for maximumSelectionSize should
+        be 1 when the field only allows a single selection."""
+        from plone.app.widgets.dx import RelatedItemsFieldWidget
+        context = Mock(absolute_url=lambda: 'fake_url')
+        context.portal_properties.site_properties\
+            .getProperty.return_value = ['SomeType']
+        field = Choice(
+            __name__='selectfield',
+            values=['one', 'two', 'three'],
+        )
+        widget = RelatedItemsFieldWidget(field, self.request)
+        widget.context = context
+        widget.update()
+        base_args = widget._base_args()
+        pattern_options = base_args['pattern_options']
+        self.assertEquals(pattern_options.get('maximumSelectionSize', 0), 1)
+
+    def test_multiple_selection(self):
+        """The pattern_options key maximumSelectionSize shouldn't be
+        set when the field allows multiple selections"""
+        from plone.app.widgets.dx import RelatedItemsFieldWidget
+        context = Mock(absolute_url=lambda: 'fake_url')
+        context.portal_properties.site_properties\
+            .getProperty.return_value = ['SomeType']
+        field = List(
+            __name__='selectfield',
+            value_type=Choice(values=['one', 'two', 'three'])
+        )
+        widget = RelatedItemsFieldWidget(field, self.request)
+        widget.context = context
+        widget.update()
+        base_args = widget._base_args()
+        patterns_options = base_args['pattern_options']
+        self.assertFalse('maximumSelectionSize' in patterns_options)
+
 
 def add_mock_fti(portal):
     # Fake DX Type
