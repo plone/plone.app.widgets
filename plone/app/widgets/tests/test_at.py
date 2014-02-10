@@ -14,6 +14,7 @@ from plone.testing.zca import ZCML_DIRECTIVES
 from Products.Archetypes.atapi import BaseContent
 from Products.Archetypes.atapi import StringField
 from Products.Archetypes.atapi import Schema
+from Products.CMFCore.utils import getToolByName
 from zope.configuration import xmlconfig
 from zope.globalrequest import setRequest
 
@@ -392,6 +393,11 @@ class TinyMCEWidgetTests(unittest.TestCase):
         self.field.getName.return_value = 'fieldname'
 
     def test_widget(self):
+        # BBB: portal_tinymce is removed in Plone 5. Remove this check when
+        # Plone < 5 is no longer supported.
+        utility = getToolByName(self.portal, 'portal_tinymce', None)
+        if not utility:
+            return
         from plone.app.widgets.at import TinyMCEWidget
         widget = TinyMCEWidget()
         self.field.widget = widget

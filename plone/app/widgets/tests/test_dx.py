@@ -16,6 +16,7 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.interfaces import WIDGETS_KEY
 from plone.dexterity.fti import DexterityFTI
 from plone.testing.zca import UNIT_TESTING
+from Products.CMFCore.utils import getToolByName
 from z3c.form.interfaces import IFieldWidget, IFormLayer
 from z3c.form.widget import FieldWidget
 from z3c.form.util import getSpecification
@@ -865,6 +866,11 @@ class TinyMCEWidgetTests(unittest.TestCase):
         self.field.getName.return_value = 'fieldname'
 
     def test_widget(self):
+        # BBB: portal_tinymce is removed in Plone 5. Remove this check when
+        # Plone < 5 is no longer supported.
+        utility = getToolByName(self.portal, 'portal_tinymce', None)
+        if not utility:
+            return
         from plone.app.widgets.at import TinyMCEWidget
         widget = TinyMCEWidget()
         self.field.widget = widget
