@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from AccessControl import ClassSecurityInfo
-from Acquisition import aq_inner
 from DateTime import DateTime
 from Products.Archetypes.interfaces import IBaseObject
 from Products.Archetypes.Registry import registerWidget
@@ -19,6 +18,7 @@ from plone.app.widgets.utils import get_datetime_options
 from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
+from plone.app.widgets.utils import get_tinymce_options
 from plone.uuid.interfaces import IUUID
 from zope.interface import implements
 from zope.component import adapts
@@ -566,32 +566,11 @@ class TinyMCEWidget(BaseWidget):
                                      field.getAccessor(context)())
                          ).decode(charset)
 
-        utility = getToolByName(aq_inner(context), 'portal_tinymce')
-        config = utility.getConfiguration(context=context,
-                                          field=field,
-                                          request=request)
+        args.setdefault('pattern_options', {})
+        merged = dict_merge(get_tinymce_options(context, field, request),
+                            args['pattern_options'])
+        args['pattern_options'] = merged
 
-        config['content_css'] = config['portal_url'] + '/base.css'
-        del config['customplugins']
-        del config['plugins']
-        del config['theme']
-
-        args['pattern_options'] = {
-            'relatedItems': {
-                'vocabularyUrl': config['portal_url'] +
-                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
-            },
-            'rel_upload_path': '@@fileUpload',
-            'folder_url': config['document_base_url'],
-            'tiny': config,
-            'prependToUrl': 'resolveuid/',
-            'linkAttribute': 'UID',
-            'prependToScalePart': '/@@images/image/',
-            'folderTypes': utility.containsobjects.replace('\n', ','),
-            'imageTypes': utility.imageobjects.replace('\n', ','),
-            'anchorSelector': utility.anchor_selector,
-            'linkableTypes': utility.linkable.replace('\n', ',')
-        }
         return args
 
 
