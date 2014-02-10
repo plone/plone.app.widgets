@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from Acquisition import aq_inner
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
 from datetime import datetime
@@ -142,6 +143,36 @@ def get_querystring_options(context, querystring_view):
         'previewCountURL': '%s/@@querybuildernumberofresults' % base_url
     }
 
+
+def get_tinymce_options(context, field, request):
+    args = {}
+    utility = getToolByName(aq_inner(context), 'portal_tinymce')
+    config = utility.getConfiguration(context=context,
+                                      field=field,
+                                      request=request)
+
+    config['content_css'] = config['portal_url'] + '/base.css'
+    del config['customplugins']
+    del config['plugins']
+    del config['theme']
+
+    args['pattern_options'] = {
+        'relatedItems': {
+            'vocabularyUrl': config['portal_url'] +
+            '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
+        },
+        'rel_upload_path': '@@fileUpload',
+        'folder_url': config['document_base_url'],
+        'tiny': config,
+        'prependToUrl': 'resolveuid/',
+        'linkAttribute': 'UID',
+        'prependToScalePart': '/@@images/image/',
+        'folderTypes': utility.containsobjects.replace('\n', ','),
+        'imageTypes': utility.imageobjects.replace('\n', ','),
+        'anchorSelector': utility.anchor_selector,
+        'linkableTypes': utility.linkable.replace('\n', ',')
+    }
+    return args
 
 def get_portal():
     closest_site = getSite()

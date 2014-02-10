@@ -16,6 +16,7 @@ from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
 from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
+from plone.app.widgets.utils import get_tinymce_options
 from plone.autoform.interfaces import WIDGETS_KEY
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.utils import resolveDottedName
@@ -711,22 +712,20 @@ class TinyMCEWidget(BaseWidget, z3cform_TextAreaWidget):
     pattern = 'tinymce'
     pattern_options = BaseWidget.pattern_options.copy()
 
-    def _base_args(self):
-        """Method which will calculate _base class arguments.
-
-        Returns (as python dictionary):
-            - `pattern`: pattern name
-            - `pattern_options`: pattern options
-            - `name`: field name
-            - `value`: field value
-
-        :returns: Arguments which will be passed to _base
-        :rtype: dict
-        """
-        args = super(TinyMCEWidget, self)._base_args()
-
+    def _base_args(self, context, field, request):
+        args = super(TinyMCEWidget, self)._base_args(context, field, request)
         args['name'] = self.name
-        args['value'] = self.value
+        properties = getToolByName(context, 'portal_properties')
+        charset = properties.site_properties.getProperty('default_charset',
+                                                         'utf-8')
+        args['value'] = (request.get(field.getName(),
+                                     field.getAccessor(context)())
+                         ).decode(charset)
+
+        args.setdefault('pattern_options', {})
+        merged = dict_merge(get_tinymce_options(context, field, request),
+                            args['pattern_options'])
+        args['pattern_options'] = merged
 
         return args
 
