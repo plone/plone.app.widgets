@@ -3,6 +3,7 @@
     xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:plone="http://namespaces.plone.org/plone"
     xmlns:i18n="http://namespaces.zope.org/i18n"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
     i18n_domain="plone.app.widgets">
 
   <browser:page
@@ -27,6 +28,15 @@
     class=".query.QueryStringIndexOptions"
     permission="zope2.View"
     layer="..interfaces.IWidgetsLayer"
+    />
+
+  <browser:page
+    zcml:condition="installed Products.Archetypes"
+    name="patterns_widget"
+    for="Products.Archetypes.interfaces.IBaseObject"
+    class=".at_widget.PatternsWidgetMacros"
+    template="patterns_widget.pt"
+    permission="zope.Public"
     />
 
 </configure>
