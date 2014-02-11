@@ -240,9 +240,20 @@
   </configure>
 
   <genericsetup:registerProfile
+    zcml:condition="not-have plone-5"
     name="default"
     title="Plone Widgets"
     directory="profiles/default"
+    description="Better widgets for Plone"
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    />
+
+  <genericsetup:registerProfile
+    zcml:condition="have plone-5"
+    name="default"
+    title="Plone Widgets"
+    directory="profiles/p5"
     description="Better widgets for Plone"
     provides="Products.GenericSetup.interfaces.EXTENSION"
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
