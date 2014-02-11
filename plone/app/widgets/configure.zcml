@@ -186,6 +186,7 @@
       <!-- override p.a.contenttypes specific widgets -->
       <configure zcml:condition="installed plone.app.contenttypes">
           <adapter factory=".dx_bbb.QueryStringFieldWidget" />
+          <adapter factory=".dx_bbb.RichTextFieldWidget" />
       </configure>
 
       <!-- override p.a.event specific widgets -->
@@ -236,6 +237,7 @@
             />
 
     <adapter factory=".dx.QueryStringFieldWidget" />
+    <adapter factory=".dx.RichTextFieldWidget" />
 
   </configure>
 

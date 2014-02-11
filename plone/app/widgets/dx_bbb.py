@@ -6,6 +6,7 @@ from plone.app.widgets.dx import AjaxSelectWidget
 from plone.app.widgets.dx import DatetimeWidget
 from plone.app.widgets.dx import QueryStringWidget
 from plone.app.widgets.dx import RelatedItemsFieldWidget
+from plone.app.widgets.dx import RichTextWidget
 from plone.app.widgets.dx import SelectWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.utils import first_weekday
@@ -23,6 +24,7 @@ except ImportError:
 
 try:
     from plone.app.contenttypes.behaviors.collection import ICollection
+    from plone.app.contenttypes.behaviors.richtext import IRichText
     HAS_PAC = True
 except ImportError:
     HAS_PAC = False
@@ -94,6 +96,11 @@ if HAS_PAC:
     @implementer(IFieldWidget)
     def QueryStringFieldWidget(field, request):
         return FieldWidget(field, QueryStringWidget(request))
+
+    @adapter(getSpecification(IRichText['text']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def RichTextFieldWidget(field, request):
+        return FieldWidget(field, RichTextWidget(request))
 
 if HAS_PAE:
     @adapter(getSpecification(IEventBasic['start']), IWidgetsLayer)

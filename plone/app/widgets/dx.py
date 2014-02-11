@@ -4,6 +4,12 @@ from AccessControl import getSecurityManager
 from Products.CMFCore.utils import getToolByName
 from datetime import date
 from datetime import datetime
+
+from plone.app.textfield.widget import IRichTextWidget \
+        as patextfield_IRichTextWidget
+from plone.app.textfield.widget import RichTextWidget \
+        as patextfield_RichTextWidget
+from plone.app.textfield.value import RichTextValue
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget as BaseSelectWidget
 from plone.app.widgets.base import TextareaWidget
@@ -26,7 +32,6 @@ from plone.supermodel.utils import mergedTaggedValueDict
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.browser.text import TextWidget as z3cform_TextWidget
-from z3c.form.browser.textarea import TextAreaWidget as z3cform_TextAreaWidget
 from z3c.form.browser.widget import HTMLInputWidget
 from z3c.form.converter import BaseDataConverter
 from z3c.form.converter import CollectionSequenceDataConverter
@@ -34,7 +39,6 @@ from z3c.form.interfaces import IAddForm
 from z3c.form.interfaces import IFieldWidget
 from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
-from z3c.form.interfaces import ITextAreaWidget
 from z3c.form.interfaces import ITextWidget
 from z3c.form.interfaces import NO_VALUE
 from z3c.form.util import getSpecification
@@ -62,6 +66,7 @@ import json
 
 try:
     from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
+    from plone.app.contenttypes.behaviors.richtext import IRichText # noqa
     HAS_PAC = True
 except ImportError:
     HAS_PAC = False
@@ -99,7 +104,7 @@ class IRelatedItemsWidget(ITextWidget):
     """Marker interface for the RelatedItemsWidget."""
 
 
-class ITinyMCEWidget(ITextAreaWidget):
+class IRichTextWidget(patextfield_IRichTextWidget):
     """Marker interface for the TinyMCEWidget."""
 
 
@@ -702,32 +707,50 @@ class QueryStringWidget(BaseWidget, z3cform_TextWidget):
         return args
 
 
-class TinyMCEWidget(BaseWidget, z3cform_TextAreaWidget):
+class RichTextWidget(BaseWidget, patextfield_RichTextWidget):
     """TinyMCE widget for z3c.form."""
 
     _base = TextareaWidget
 
-    implementsOnly(ITextAreaWidget)
+    implementsOnly(IRichTextWidget)
 
     pattern = 'tinymce'
     pattern_options = BaseWidget.pattern_options.copy()
 
-    def _base_args(self, context, field, request):
-        args = super(TinyMCEWidget, self)._base_args(context, field, request)
+    def _base_args(self):
+        args = super(RichTextWidget, self)._base_args()
         args['name'] = self.name
-        properties = getToolByName(context, 'portal_properties')
+        properties = getToolByName(self.context, 'portal_properties')
         charset = properties.site_properties.getProperty('default_charset',
                                                          'utf-8')
-        args['value'] = (request.get(field.getName(),
-                                     field.getAccessor(context)())
+        value = self.value and self.value.raw or u''
+        args['value'] = (self.request.get(self.field.getName(),
+                                     value)
                          ).decode(charset)
 
         args.setdefault('pattern_options', {})
-        merged = dict_merge(get_tinymce_options(context, field, request),
+        merged = dict_merge(get_tinymce_options(self.context, self.field, self.request),
                             args['pattern_options'])
         args['pattern_options'] = merged
 
         return args
+
+    def render(self):
+        """Render widget.
+
+        :returns: Widget's HTML.
+        :rtype: string
+        """
+        if self.mode != 'display':
+            return super(RichTextWidget, self).render()
+
+        if not self.value:
+            return ''
+
+        if isinstance(self.value, RichTextValue):
+            return self.value.output
+
+        return super(RichTextWidget, self).render()
 
 
 @implementer(IFieldWidget)
@@ -752,6 +775,12 @@ if HAS_PAC:
     @implementer(IFieldWidget)
     def QueryStringFieldWidget(field, request):
         return FieldWidget(field, QueryStringWidget(request))
+
+
+    @adapter(getSpecification(IRichText['text']), IFormLayer)
+    @implementer(IFieldWidget)
+    def RichTextFieldWidget(field, request):
+        return FieldWidget(field, RichTextWidget(request))
 
 
 class MockRequest(TestRequest):
