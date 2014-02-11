@@ -29,7 +29,7 @@ def _tus_int(val):
     try:
         return int(val)
     except:
-        return 60*60  # default here...
+        return 60 * 60  # default here...
 
 
 possible_tus_options = {
@@ -68,7 +68,10 @@ if os.environ.get('TUS_ENABLED'):
 else:
     try:
         import tus
+        tus  # pyflakes
     except ImportError:
+        pass
+    else:
         logger.warn('You have the tus python package installed but it is '
                     'not configured for this plone client')
 

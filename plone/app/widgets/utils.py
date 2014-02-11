@@ -174,6 +174,7 @@ def get_tinymce_options(context, field, request):
     }
     return args
 
+
 def get_portal():
     closest_site = getSite()
     if closest_site is not None:
