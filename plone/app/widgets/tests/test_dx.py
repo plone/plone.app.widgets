@@ -889,10 +889,10 @@ IMockSchema.setTaggedValue(WRITE_PERMISSIONS_KEY, {
     'disallowed_field': u'zope2.ViewManagementScreens',
     'custom_widget_field': u'zope2.View',
     'adapted_widget_field': u'zope2.View',
-    })
+})
 IMockSchema.setTaggedValue(WIDGETS_KEY, {
     'custom_widget_field': _custom_field_widget,
-    })
+})
 
 
 class RichTextWidgetTests(unittest.TestCase):
