@@ -757,6 +757,11 @@ class QueryStringWidgetTests(unittest.TestCase):
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
 
+    def test_converter_empty_value(self):
+        from plone.app.widgets.dx import QueryStringDataConverter
+        converter = QueryStringDataConverter(List(), None)
+        self.assertEqual(converter.toFieldValue(u''), None)
+
     def test_widget(self):
         from plone.app.widgets.dx import QueryStringWidget
         widget = QueryStringWidget(self.request)
