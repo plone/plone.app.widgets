@@ -329,7 +329,7 @@ class QueryStringDataConverter(BaseDataConverter):
         :returns: Query string converted to JSON.
         :rtype: string
         """
-        if value is self.field.missing_value:
+        if not value is self.field.missing_value:
             return self.field.missing_value
         return json.dumps(value)
 
@@ -342,7 +342,7 @@ class QueryStringDataConverter(BaseDataConverter):
         :returns: Query string.
         :rtype: list
         """
-        if value is self.field.missing_value:
+        if not value:
             return self.field.missing_value
         return json.loads(value)
 
