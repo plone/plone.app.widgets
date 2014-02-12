@@ -3,6 +3,7 @@
 from datetime import date
 from datetime import datetime
 from mock import Mock
+from Products.PloneTestCase.version import PLONE50
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
@@ -16,7 +17,6 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.interfaces import WIDGETS_KEY
 from plone.dexterity.fti import DexterityFTI
 from plone.testing.zca import UNIT_TESTING
-from Products.CMFCore.utils import getToolByName
 from z3c.form.interfaces import IFieldWidget, IFormLayer
 from z3c.form.widget import FieldWidget
 from z3c.form.util import getSpecification
@@ -895,36 +895,40 @@ IMockSchema.setTaggedValue(WIDGETS_KEY, {
     })
 
 
-class TinyMCEWidgetTests(unittest.TestCase):
+class RichTextWidgetTests(unittest.TestCase):
 
     layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
 
     def setUp(self):
+        from plone.app.textfield import RichText as RichTextField
+
         self.portal = self.layer['portal']
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.field = Mock()
-        self.field.getAccessor.return_value = lambda: 'fieldvalue'
-        self.field.getName.return_value = 'fieldname'
 
-    def test_widget(self):
-        # BBB: portal_tinymce is removed in Plone 5. Remove this check when
-        # Plone < 5 is no longer supported.
-        utility = getToolByName(self.portal, 'portal_tinymce', None)
-        if not utility:
-            return
-        from plone.app.widgets.at import TinyMCEWidget
-        widget = TinyMCEWidget()
-        self.field.widget = widget
-        base_args = widget._base_args(self.portal, self.field, self.request)
-        self.assertEqual(base_args['name'], 'fieldname')
-        self.assertEqual(base_args['value'], 'fieldvalue')
+        class IWithText(Interface):
+            text = RichTextField(title=u"Text")
+
+        self.field = IWithText['text']
+
+    def test_widget_params(self):
+        from plone.app.widgets.dx import RichTextWidget
+
+        widget = FieldWidget(self.field, RichTextWidget(self.request))
+        widget.update()
+        base_args = widget._base_args()
+        self.assertEqual(base_args['name'], 'text')
+        self.assertEqual(base_args['value'], u'')
         self.assertEqual(base_args['pattern'], 'tinymce')
-        self.assertEqual(base_args['pattern_options']['prependToUrl'],
-                         'resolveuid/')
-        self.assertEqual(base_args['pattern_options']['prependToUrl'],
-                         'resolveuid/')
-        self.assertEqual(base_args['pattern_options']['anchorSelector'],
-                         self.portal.portal_tinymce.anchor_selector)
+
+        if PLONE50:
+            self.assertEqual(base_args['pattern_options'], {})
+        else:
+            self.assertEqual(base_args['pattern_options']['prependToUrl'],
+                             'resolveuid/')
+            self.assertEqual(base_args['pattern_options']['prependToUrl'],
+                             'resolveuid/')
+            self.assertEqual(base_args['pattern_options']['anchorSelector'],
+                             self.portal.portal_tinymce.anchor_selector)
 
 
 class DexterityVocabularyPermissionTests(unittest.TestCase):
