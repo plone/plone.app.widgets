@@ -932,6 +932,17 @@ class RichTextWidgetTests(unittest.TestCase):
             self.assertEqual(base_args['pattern_options']['anchorSelector'],
                              self.portal.portal_tinymce.anchor_selector)
 
+    def test_widget_values(self):
+        from plone.app.widgets.dx import RichTextWidget
+        from plone.app.textfield.value import RichTextValue
+
+        widget = FieldWidget(self.field, RichTextWidget(self.request))
+        # set the context so we can get tinymce settings
+        widget.context = self.portal
+        widget.value = RichTextValue(u'Lorem ipsum \u2026')
+        base_args = widget._base_args()
+        self.assertEquals(base_args['value'], u'Lorem ipsum \u2026')
+
 
 class DexterityVocabularyPermissionTests(unittest.TestCase):
 
