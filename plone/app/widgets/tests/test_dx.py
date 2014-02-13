@@ -914,6 +914,8 @@ class RichTextWidgetTests(unittest.TestCase):
         from plone.app.widgets.dx import RichTextWidget
 
         widget = FieldWidget(self.field, RichTextWidget(self.request))
+        # set the context so we can get tinymce settings
+        widget.context = self.portal
         widget.update()
         base_args = widget._base_args()
         self.assertEqual(base_args['name'], 'text')

@@ -6,9 +6,9 @@ from datetime import date
 from datetime import datetime
 
 from plone.app.textfield.widget import IRichTextWidget \
-        as patextfield_IRichTextWidget
+    as patextfield_IRichTextWidget
 from plone.app.textfield.widget import RichTextWidget \
-        as patextfield_RichTextWidget
+    as patextfield_RichTextWidget
 from plone.app.textfield.value import RichTextValue
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget as BaseSelectWidget
@@ -67,7 +67,7 @@ import json
 
 try:
     from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
-    from plone.app.contenttypes.behaviors.richtext import IRichText # noqa
+    from plone.app.contenttypes.behaviors.richtext import IRichText  # noqa
     HAS_PAC = True
 except ImportError:
     HAS_PAC = False
@@ -727,14 +727,13 @@ class RichTextWidget(BaseWidget, patextfield_RichTextWidget):
         charset = properties.site_properties.getProperty('default_charset',
                                                          'utf-8')
         value = self.value and self.value.raw or u''
-        args['value'] = (self.request.get(self.field.getName(),
-                                     value)
-                         ).decode(charset)
+        args['value'] = (self.request.get(
+            self.field.getName(), value)).decode(charset)
 
         args.setdefault('pattern_options', {})
-        merged = dict_merge(get_tinymce_options(self.context, self.field, self.request),
+        merged = dict_merge(get_tinymce_options(self.context, self.field, self.request),  # noqa
                             args['pattern_options'])
-        args['pattern_options'] = merged
+        args['pattern_options'] = merged['pattern_options']
 
         return args
 
@@ -778,7 +777,6 @@ if HAS_PAC:
     @implementer(IFieldWidget)
     def QueryStringFieldWidget(field, request):
         return FieldWidget(field, QueryStringWidget(request))
-
 
     @adapter(getSpecification(IRichText['text']), IFormLayer)
     @implementer(IFieldWidget)
