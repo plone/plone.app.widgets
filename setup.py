@@ -40,7 +40,7 @@ setup(
         'test': [
             'plone.app.robotframework',
             'plone.app.widgets[archetypes, dexterity]',
-            'plone.app.testing',
+            'plone.app.testing>=4.2.4',  # we need ROBOT_TEST_LEVEL
             'mock',
         ],
         'archetypes': [
@@ -51,7 +51,7 @@ setup(
         'dexterity': [
             'pytz',
             'plone.app.dexterity',
-            'plone.app.contenttypes>=1.0.99',
+            'plone.app.contenttypes>=1.1a2.dev0',
             'plone.app.event',
         ],
     },

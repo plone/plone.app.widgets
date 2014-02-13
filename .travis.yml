@@ -7,8 +7,7 @@ addons:
     - access_key: $SAUCE_ACCESS_KEY
 install:
   - mkdir -p buildout-cache/downloads
-  - mkdir src
-  - git clone git://github.com/plone/plone.app.contenttypes.git -b mockup-issue-220 src/plone.app.contenttypes
+  - git clone git://github.com/plone/plone.app.contenttypes.git -b mockup-issue-220
   - python bootstrap.py -c travis.cfg
   - bin/buildout -N -t 3 -c travis.cfg
 script:
