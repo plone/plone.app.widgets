@@ -145,7 +145,7 @@ def get_querystring_options(context, querystring_view):
 
 
 def get_tinymce_options(context, field, request):
-    args = {}
+    args = {'pattern_options': {}}
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
     if not utility:
         return args
