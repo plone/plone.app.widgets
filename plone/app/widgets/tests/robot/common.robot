@@ -28,7 +28,7 @@ I save
   Wait until page contains  Item created
 
 I edit
-  Click link  Edit
+  Click link  css=#contentview-edit a
   Wait until page contains Element  id=form-buttons-save
 
 # ----------------------------------------------------------------------------
