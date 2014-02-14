@@ -458,7 +458,11 @@ class RelatedItemsWidget(BaseWidget):
 
         value = request.get(field.getName(), None)
         if value is None:
-            value = [IUUID(o) for o in field.getAccessor(context)() if o]
+            value = field.getAccessor(context)()
+            if field.multiValued:
+                value = [IUUID(o) for o in value if o]
+            else:
+                value = '' if value is None else IUUID(value)
         else:
             value = [v.split('/')[0]
                      for v in value.strip().split(self.separator)]
@@ -468,9 +472,14 @@ class RelatedItemsWidget(BaseWidget):
             self.vocabulary = vocabulary_factory
 
         args['name'] = field.getName()
-        args['value'] = self.separator.join(value)
+        if field.multiValued:
+            args['value'] = self.separator.join(value)
+        else:
+            args['value'] = value
 
         args.setdefault('pattern_options', {})
+        args['pattern_options']['maximumSelectionSize'] = \
+            -1 if field.multiValued else 1
         args['pattern_options']['orderable'] = self.allow_sorting
         args['pattern_options'] = dict_merge(
             get_relateditems_options(context, args['value'], self.separator,
