@@ -334,8 +334,8 @@ class QueryStringDataConverter(BaseDataConverter):
         :returns: Query string converted to JSON.
         :rtype: string
         """
-        if not value is self.field.missing_value:
-            return self.field.missing_value
+        if not value:
+            return '[]'
         return json.dumps(value)
 
     def toFieldValue(self, value):
@@ -347,9 +347,13 @@ class QueryStringDataConverter(BaseDataConverter):
         :returns: Query string.
         :rtype: list
         """
+        try:
+            value = json.loads(value)
+        except ValueError:
+            value = None
         if not value:
             return self.field.missing_value
-        return json.loads(value)
+        return value
 
 
 class BaseWidget(Widget):
