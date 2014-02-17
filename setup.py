@@ -38,7 +38,7 @@ setup(
     ],
     extras_require={
         'test': [
-            'plone.app.robotframework',
+            'plone.app.robotframework[debug]',
             'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing>=4.2.4',  # we need ROBOT_TEST_LEVEL
             'mock',
