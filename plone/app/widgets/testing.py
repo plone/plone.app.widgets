@@ -6,12 +6,20 @@ from plone.app.robotframework.testing import AUTOLOGIN_LIBRARY_FIXTURE
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
+from plone.app.widgets.dx import SelectWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
+from plone.autoform import directives
+from plone.autoform.form import AutoExtensibleForm
 from plone.testing import z2
+from z3c.form import button
+from z3c.form import form
 from zope.configuration import xmlconfig
+from zope.interface import Interface
 from zope.interface import directlyProvides
 from zope.interface import implements
 from zope.publisher.browser import TestRequest as BaseTestRequest
+from zope.schema import Choice
+from zope.schema import List
 from zope.schema.interfaces import IVocabularyFactory
 from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
@@ -123,3 +131,43 @@ PLONEAPPWIDGETS_DX_ROBOT_TESTING = FunctionalTesting(
     name="PloneAppWidgetsLayerDX:Robot")
 
 optionflags = (ELLIPSIS | NORMALIZE_WHITESPACE)
+
+
+class ITestSelectWidgetSchema(Interface):
+
+    directives.widget('select_field', SelectWidget)
+    select_field = Choice(
+        title=u'Select Widget',
+        values=['one', 'two', 'three', ]
+    )
+
+    directives.widget('list_field', SelectWidget)
+    list_field = List(
+        title=u'Select Multiple Widget',
+        value_type=Choice(values=['four', 'five', 'six', ]),
+    )
+
+
+class TestSelectWidgetForm(AutoExtensibleForm, form.EditForm):
+
+    schema = ITestSelectWidgetSchema
+    ignoreContext = True
+
+
+class SelectWidgetLayer(PloneAppWidgetsLayer):
+
+    defaultBases = (PLONEAPPWIDGETS_FIXTURE_DX, )
+
+    def setUpZope(self, app, configurationContext):
+        super(SelectWidgetLayer, self).setUpZope(app, configurationContext)
+        import plone.app.widgets.tests
+        from zope.configuration import xmlconfig
+        xmlconfig.file('configure.zcml', plone.app.widgets.tests,
+                       context=configurationContext)
+
+
+SELECT_WIDGET_FIXTURE = SelectWidgetLayer()
+SELECT_WIDGET_ROBOT_TESTING = FunctionalTesting(
+    bases=(SELECT_WIDGET_FIXTURE,
+           z2.ZSERVER_FIXTURE),
+    name="SelectWidgetLayer:Robot")
