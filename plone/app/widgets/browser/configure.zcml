@@ -14,6 +14,13 @@
     />
 
   <browser:page
+    name="getSource"
+    for="z3c.form.interfaces.IWidget"
+    class=".vocabulary.SourceView"
+    permission="zope.Public"
+    />
+
+  <browser:page
     name="fileUpload"
     for="Products.CMFCore.interfaces._content.IFolderish"
     class=".file.FileUploadView"
