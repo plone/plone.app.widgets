@@ -76,12 +76,6 @@ class MetadataExtender(object):
                     vocabulary="plone.app.vocabularies.Users",
                 )
 
-            if field.__name__ in ['text']:
-                field.widget = at.TinyMCEWidget(
-                    label=old.label,
-                    description=old.description,
-                )
-
             if field.__name__ == 'query':
                 field.widget = at.QueryStringWidget(
                     label=old.label,
