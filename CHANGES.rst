@@ -1,8 +1,48 @@
 Changelog
 =========
 
-1.4.1 (unreleased)
+1.5.0 (2014-03-05)
 ------------------
+
+- robot tests for SelectWidget
+  [gforcada]
+
+- make tests pass for plone 5
+  [davisagli]
+
+- add more tests for richtext widget
+  [amleczko]
+
+- fix querystring converter with empty input
+  [davisagli]
+
+- add richtext widget support and remove Products.TinyMCE dependency
+  [amleczko]
+
+- Add sphinx-based documentation.
+  [tisto]
+
+- move the AT macros to a browser view
+  [davisagli]
+
+- make the profile not do anything on plone 5, which already includes the
+  widgets bundle in the plone bundle
+  [davisagli]
+
+- Fix tests when portal_tinymce is missing.
+  [jaroel]
+
+- Create robot tests for querystring widget
+  [ale-rt]
+
+- Add DX tinymce test
+  [jaroel]
+
+- Fix to import ROBOT_TEST_LEVEL from plone.app.testing.interfaces
+  [datakurre]
+
+- RelatedItems widget: use a single selection for Choice fields
+  [cillian]
 
 - add support for the tus resumable file upload protocol
   [vangheem]
