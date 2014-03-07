@@ -122,6 +122,10 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
 
+    options.setdefault('searchText', _(u'Search'))
+    options.setdefault('searchAllText', _(u'entire site'))
+    options.setdefault('homeText', _(u'home'))
+
     options.setdefault('folderTypes', ['Folder'])
     properties = getToolByName(context, 'portal_properties')
     if properties:

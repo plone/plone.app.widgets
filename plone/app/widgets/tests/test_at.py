@@ -336,6 +336,9 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
+                    'homeText': u'home',
+                    'searchAllText': u'entire site',
+                    'searchText': u'Search',
                     'separator': ';',
                     'orderable': True,
                     'vocabularyUrl': '/@@getVocabulary?name='
