@@ -46,7 +46,7 @@ except ImportError:  # pragma: nocover
 try:
     from Products.CMFPlone.factory import _IMREALLYPLONE5  # noqa
     PLONE50 = True
-except:
+except ImportError:
     PLONE50 = False
 
 
