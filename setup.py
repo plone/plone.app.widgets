@@ -42,6 +42,7 @@ setup(
             'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing>=4.2.4',  # we need ROBOT_TEST_LEVEL
             'mock',
+            'Products.PloneTestCase',
         ],
         'archetypes': [
             'DateTime',
