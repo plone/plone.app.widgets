@@ -3,7 +3,6 @@
 from datetime import date
 from datetime import datetime
 from mock import Mock
-from Products.PloneTestCase.version import PLONE50
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
@@ -44,6 +43,11 @@ except ImportError:  # pragma: nocover
     import unittest  # pragma: nocover
     assert unittest  # pragma: nocover
 
+try:
+    from Products.CMFPlone.factory import _IMREALLYPLONE5
+    PLONE50 = True
+except:
+    PLONE50 = False
 
 class BaseWidgetTests(unittest.TestCase):
 
