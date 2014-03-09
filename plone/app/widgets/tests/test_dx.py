@@ -44,10 +44,11 @@ except ImportError:  # pragma: nocover
     assert unittest  # pragma: nocover
 
 try:
-    from Products.CMFPlone.factory import _IMREALLYPLONE5
+    from Products.CMFPlone.factory import _IMREALLYPLONE5  # noqa
     PLONE50 = True
 except:
     PLONE50 = False
+
 
 class BaseWidgetTests(unittest.TestCase):
 
