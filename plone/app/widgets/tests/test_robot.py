@@ -1,5 +1,4 @@
 from plone.app.widgets.testing import PLONEAPPWIDGETS_DX_ROBOT_TESTING
-from plone.app.widgets.testing import SELECT_WIDGET_ROBOT_TESTING
 from plone.testing import layered
 import os
 import robotsuite
@@ -24,20 +23,6 @@ def test_suite():
         suite.addTests([
             layered(robottestsuite,
                     layer=PLONEAPPWIDGETS_DX_ROBOT_TESTING),
-        ])
-
-    robot_widgets_dir = os.path.join(current_dir, 'robot_widgets')
-    robot_widgets_tests = [
-        os.path.join('robot_widgets', doc) for doc in
-        os.listdir(robot_widgets_dir) if doc.endswith('.robot') and
-        doc.startswith('test_')
-    ]
-    for robot_test in robot_widgets_tests:
-        robottestsuite = robotsuite.RobotTestSuite(robot_test)
-        robottestsuite.level = ROBOT_TEST_LEVEL
-        suite.addTests([
-            layered(robottestsuite,
-                    layer=SELECT_WIDGET_ROBOT_TESTING),
         ])
 
     return suite
