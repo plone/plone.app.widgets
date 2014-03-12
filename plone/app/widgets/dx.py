@@ -688,7 +688,7 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    vocabulary = 'plone.app.vocabularies.Catalog'
+    vocabulary = None
     vocabulary_view = '@@getVocabulary'
     orderable = False
 
@@ -710,15 +710,19 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
         args['value'] = self.value
         args.setdefault('pattern_options', {})
 
-        vocabulary_name = self.vocabulary
         field = None
         if IChoice.providedBy(self.field):
             args['pattern_options']['maximumSelectionSize'] = 1
             field = self.field
         elif ICollection.providedBy(self.field):
             field = self.field.value_type
-        if field is not None and field.vocabularyName:
-            vocabulary_name = field.vocabularyName
+
+        vocabulary_name = self.vocabulary
+        if not vocabulary_name:
+            if field is not None and field.vocabularyName:
+                vocabulary_name = field.vocabularyName
+            else:
+                vocabulary_name = 'plone.app.vocabularies.Catalog'
 
         field_name = self.field and self.field.__name__ or None
         args['pattern_options'] = dict_merge(
@@ -727,10 +731,12 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
                                      self.vocabulary_view, field_name),
             args['pattern_options'])
 
-        if field and getattr(field, 'vocabulary', None):
-            form_url = self.request.getURL()
-            source_url = "%s/++widget++%s/@@getSource" % (form_url, self.name)
-            args['pattern_options']['vocabularyUrl'] = source_url
+        if not self.vocabulary:  # widget vocab takes precedence over field
+            if field and getattr(field, 'vocabulary', None):
+                form_url = self.request.getURL()
+                source_url = "%s/++widget++%s/@@getSource" % (
+                    form_url, self.name)
+                args['pattern_options']['vocabularyUrl'] = source_url
 
         return args
 
