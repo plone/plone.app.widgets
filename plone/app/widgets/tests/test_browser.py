@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
+from mock import Mock
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
+from plone.app.testing import logout
 from plone.app.testing import setRoles
 from plone.app.widgets.browser import vocabulary
 from plone.app.widgets.browser.file import FileUploadView
@@ -276,6 +278,122 @@ class BrowserTest(unittest.TestCase):
         })
         data = json.loads(view())
         self.assertEqual(len(data['results']), amount)
+
+    def testSource(self):
+        from z3c.form.browser.text import TextWidget
+        from zope.interface import implementer
+        from zope.interface import Interface
+        from zope.schema import Choice
+        from zope.schema.interfaces import ISource
+
+        @implementer(ISource)
+        class DummyCatalogSource(object):
+            def search_catalog(self, query):
+                querytext = query['SearchableText']['query']
+                return [Mock(id=querytext)]
+
+        widget = TextWidget(self.request)
+        widget.context = self.portal
+        widget.field = Choice(source=DummyCatalogSource())
+        widget.field.interface = Interface
+
+        from plone.app.widgets.browser.vocabulary import SourceView
+        view = SourceView(widget, self.request)
+        query = {
+            'criteria': [
+                {
+                    'i': 'SearchableText',
+                    'o': 'plone.app.querystring.operation.string.is',
+                    'v': 'foo'
+                }
+            ]
+        }
+        self.request.form.update({
+            'query': json.dumps(query),
+            'attributes': 'id',
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']), 1)
+        self.assertEquals(data['results'][0]['id'], 'foo')
+
+    def testSourceCollectionField(self):
+        # This test uses a collection field
+        # and a source providing the 'search' method
+        # to help achieve coverage.
+        from z3c.form.browser.text import TextWidget
+        from zope.interface import implementer
+        from zope.interface import Interface
+        from zope.schema import List, Choice
+        from zope.schema.interfaces import ISource
+        from zope.schema.vocabulary import SimpleTerm
+
+        @implementer(ISource)
+        class DummySource(object):
+            def search(self, query):
+                terms = [SimpleTerm(query, query)]
+                return iter(terms)
+
+        widget = TextWidget(self.request)
+        widget.context = self.portal
+        widget.field = List(value_type=Choice(source=DummySource()))
+        widget.field.interface = Interface
+
+        from plone.app.widgets.browser.vocabulary import SourceView
+        view = SourceView(widget, self.request)
+        query = {
+            'criteria': [
+                {
+                    'i': 'SearchableText',
+                    'o': 'plone.app.querystring.operation.string.is',
+                    'v': 'foo'
+                }
+            ],
+            'sort_on': 'id',
+            'sort_order': 'ascending',
+        }
+        self.request.form.update({
+            'query': json.dumps(query),
+            'batch': json.dumps({'size': 10, 'page': 1}),
+        })
+        data = json.loads(view())
+        self.assertEquals(len(data['results']), 1)
+        self.assertEquals(data['results'][0]['id'], 'foo')
+
+    def testSourcePermissionDenied(self):
+        from z3c.form.browser.text import TextWidget
+        from zope.interface import implementer
+        from zope.interface import Interface
+        from zope.schema import Choice
+        from zope.schema.interfaces import ISource
+
+        @implementer(ISource)
+        class DummyCatalogSource(object):
+            def search_catalog(self, query):
+                querytext = query['SearchableText']['query']
+                return [Mock(id=querytext)]
+
+        widget = TextWidget(self.request)
+        widget.context = self.portal
+        widget.field = Choice(source=DummyCatalogSource())
+        widget.field.interface = Interface
+
+        from plone.app.widgets.browser.vocabulary import SourceView
+        view = SourceView(widget, self.request)
+        query = {
+            'criteria': [
+                {
+                    'i': 'SearchableText',
+                    'o': 'plone.app.querystring.operation.string.is',
+                    'v': 'foo'
+                }
+            ]
+        }
+        self.request.form.update({
+            'query': json.dumps(query),
+        })
+        logout()
+        data = json.loads(view())
+        self.assertEquals(data['error'], 'Vocabulary lookup not allowed.')
 
     def testQueryStringConfiguration(self):
         view = QueryStringIndexOptions(self.portal, self.request)

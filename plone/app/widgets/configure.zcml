@@ -156,6 +156,7 @@
     <adapter factory=".dx.SelectWidgetConverter" />
     <adapter factory=".dx.AjaxSelectWidgetConverter" />
     <adapter factory=".dx.QueryStringDataConverter" />
+    <adapter factory=".dx.RelationChoiceRelatedItemsWidgetConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
   </configure>
 
@@ -235,6 +236,12 @@
             for="z3c.relationfield.interfaces.IRelationList
                   z3c.form.interfaces.IFormLayer"
             />
+
+    <adapter
+      factory=".dx.RelatedItemsFieldWidget"
+      for="zope.schema.interfaces.IChoice
+           plone.app.vocabularies.catalog.CatalogSource
+           z3c.form.interfaces.IFormLayer" />
 
     <adapter factory=".dx.QueryStringFieldWidget" />
     <adapter factory=".dx.RichTextFieldWidget" />

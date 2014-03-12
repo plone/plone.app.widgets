@@ -53,6 +53,7 @@ from zope.i18n import translate
 from zope.interface import implementer
 from zope.interface import implements
 from zope.interface import implementsOnly
+from zope.interface import Interface
 from zope.publisher.browser import TestRequest
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ICollection
@@ -71,6 +72,17 @@ try:
     HAS_PAC = True
 except ImportError:
     HAS_PAC = False
+
+
+try:
+    from z3c.relationfield.interfaces import IRelationChoice
+    from z3c.relationfield.interfaces import IRelationList
+except ImportError:  # pragma: no cover
+    class IRelationChoice(Interface):
+        pass
+
+    class IRelationList(Interface):
+        pass
 
 
 class IDateField(IDate):
@@ -232,7 +244,8 @@ class SelectWidgetConverter(CollectionSequenceDataConverter):
 
 
 class AjaxSelectWidgetConverter(BaseDataConverter):
-    """Data converter for ICollection."""
+    """Data converter for ICollection fields using the AjaxSelectWidget.
+    """
 
     adapts(ICollection, IAjaxSelectWidget)
 
@@ -272,8 +285,34 @@ class AjaxSelectWidgetConverter(BaseDataConverter):
                               for v in value.split(separator))
 
 
+class RelationChoiceRelatedItemsWidgetConverter(BaseDataConverter):
+    """Data converter for RelationChoice fields using the RelatedItemsWidget.
+    """
+
+    adapts(IRelationChoice, IRelatedItemsWidget)
+
+    def toWidgetValue(self, value):
+        if not value:
+            return self.field.missing_value
+        return IUUID(value)
+
+    def toFieldValue(self, value):
+        if not value:
+            return self.field.missing_value
+        try:
+            catalog = getToolByName(self.widget.context, 'portal_catalog')
+        except AttributeError:
+            catalog = getToolByName(getSite(), 'portal_catalog')
+
+        res = catalog(UID=value)
+        if res:
+            return res[0].getObject()
+        else:
+            return self.field.missing_value
+
+
 class RelatedItemsDataConverter(BaseDataConverter):
-    """Data converter for ICollection."""
+    """Data converter for ICollection fields using the RelatedItemsWidget."""
 
     adapts(ICollection, IRelatedItemsWidget)
 
@@ -289,7 +328,10 @@ class RelatedItemsDataConverter(BaseDataConverter):
         if not value:
             return self.field.missing_value
         separator = getattr(self.widget, 'separator', ';')
-        return separator.join([IUUID(o) for o in value if value])
+        if IRelationList.providedBy(self.field):
+            return separator.join([IUUID(o) for o in value if value])
+        else:
+            return separator.join(v for v in value if v)
 
     def toFieldValue(self, value):
         """Converts from widget value to field.
@@ -300,24 +342,26 @@ class RelatedItemsDataConverter(BaseDataConverter):
         :returns: List of content objects
         :rtype: list | tuple | set
         """
+        if not value:
+            return self.field.missing_value
+
         collectionType = self.field._type
         if isinstance(collectionType, tuple):
             collectionType = collectionType[-1]
 
-        if not len(value):
-            return self.field.missing_value
-
         separator = getattr(self.widget, 'separator', ';')
         value = value.split(separator)
-        value = [v.split('/')[0] for v in value]
 
-        try:
-            catalog = getToolByName(self.widget.context, 'portal_catalog')
-        except AttributeError:
-            catalog = getToolByName(getSite(), 'portal_catalog')
+        if IRelationList.providedBy(self.field):
+            try:
+                catalog = getToolByName(self.widget.context, 'portal_catalog')
+            except AttributeError:
+                catalog = getToolByName(getSite(), 'portal_catalog')
 
-        return collectionType(item.getObject()
-                              for item in catalog(UID=value) if item)
+            return collectionType(item.getObject()
+                                  for item in catalog(UID=value) if item)
+        else:
+            return collectionType(v for v in value)
 
 
 class QueryStringDataConverter(BaseDataConverter):
@@ -578,11 +622,6 @@ class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
     vocabulary_view = '@@getVocabulary'
     orderable = False
 
-    def update(self, *args, **kwargs):
-        if not hasattr(self, 'vocabulary'):
-            self.vocabulary = getattr(self.field, 'vocabularyName', None)
-        z3cform_TextWidget.update(self, *args, **kwargs)
-
     def _base_args(self):
         """Method which will calculate _base class arguments.
 
@@ -610,11 +649,26 @@ class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
         if IAddForm.providedBy(getattr(self, 'form')):
             context = self.form
 
+        vocabulary_name = self.vocabulary
+        field = None
+        if IChoice.providedBy(self.field):
+            args['pattern_options']['maximumSelectionSize'] = 1
+            field = self.field
+        elif ICollection.providedBy(self.field):
+            field = self.field.value_type
+        if not vocabulary_name and field is not None:
+            vocabulary_name = field.vocabularyName
+
         args['pattern_options'] = dict_merge(
             get_ajaxselect_options(context, args['value'], self.separator,
-                                   self.vocabulary, self.vocabulary_view,
+                                   vocabulary_name, self.vocabulary_view,
                                    field_name),
             args['pattern_options'])
+
+        if field and getattr(field, 'vocabulary', None):
+            form_url = self.request.getURL()
+            source_url = "%s/++widget++%s/@@getSource" % (form_url, self.name)
+            args['pattern_options']['vocabularyUrl'] = source_url
 
         # ISequence represents an orderable collection
         if ISequence.providedBy(self.field) or self.orderable:
@@ -634,19 +688,9 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    vocabulary = None
+    vocabulary = 'plone.app.vocabularies.Catalog'
     vocabulary_view = '@@getVocabulary'
     orderable = False
-
-    def update(self, *args, **kwargs):
-        value_type = getattr(self.field, 'value_type', None)
-        if value_type:
-            self.vocabulary = getattr(value_type,
-                                      'vocabularyName',
-                                      'plone.app.vocabularies.Catalog')
-        if self.vocabulary is None:
-            self.vocabulary = 'plone.app.vocabularies.Catalog'
-        z3cform_TextWidget.update(self, *args, **kwargs)
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -664,16 +708,29 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
 
         args['name'] = self.name
         args['value'] = self.value
-
         args.setdefault('pattern_options', {})
+
+        vocabulary_name = self.vocabulary
+        field = None
         if IChoice.providedBy(self.field):
             args['pattern_options']['maximumSelectionSize'] = 1
+            field = self.field
+        elif ICollection.providedBy(self.field):
+            field = self.field.value_type
+        if field is not None and field.vocabularyName:
+            vocabulary_name = field.vocabularyName
+
         field_name = self.field and self.field.__name__ or None
         args['pattern_options'] = dict_merge(
             get_relateditems_options(self.context, args['value'],
-                                     self.separator, self.vocabulary,
+                                     self.separator, vocabulary_name,
                                      self.vocabulary_view, field_name),
             args['pattern_options'])
+
+        if field and getattr(field, 'vocabulary', None):
+            form_url = self.request.getURL()
+            source_url = "%s/++widget++%s/@@getSource" % (form_url, self.name)
+            args['pattern_options']['vocabularyUrl'] = source_url
 
         return args
 
@@ -770,9 +827,16 @@ def DatetimeFieldWidget(field, request):
 
 
 @implementer(IFieldWidget)
-def RelatedItemsFieldWidget(field, request):
-    # TODO: when field is type IRelationChoice configure widget to only allow
-    # one item to be selected
+def AjaxSelectFieldWidget(field, request, extra=None):
+    if extra is not None:
+        request = extra
+    return FieldWidget(field, AjaxSelectWidget(request))
+
+
+@implementer(IFieldWidget)
+def RelatedItemsFieldWidget(field, request, extra=None):
+    if extra is not None:
+        request = extra
     return FieldWidget(field, RelatedItemsWidget(request))
 
 
