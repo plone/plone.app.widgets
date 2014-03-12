@@ -26,3 +26,20 @@ msgstr "d mmmm, yyyy"
 #: ../dx/datetime.py:62
 msgid "pickadate_time_format"
 msgstr "HH:i"
+
+#: ../utils.py:126
+msgid "Entire site"
+msgstr "Ganze Seite"
+
+
+#: ?
+msgid "Select folder"
+msgstr "Ordner auswählen"
+
+#: ?
+msgid "Select"
+msgstr "Auswählen"
+
+
+
+
