@@ -77,7 +77,7 @@ class MetadataExtender(object):
                     vocabulary="plone.app.vocabularies.Users",
                 )
 
-            richtexteditor=getAdapter(self.context, name='richtexteditor')
+            richtexteditor = getAdapter(self.context, name='richtexteditor')
             if richtexteditor.is_selected('TinyMCE'):
                 if field.__name__ in ['text']:
                     field.widget = at.TinyMCEWidget(
