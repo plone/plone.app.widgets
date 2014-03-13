@@ -381,8 +381,11 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
+                    'homeText': u'home',
                     'separator': ';',
                     'orderable': True,
+                    'searchAllText': u'entire site',
+                    'searchText': u'Search',
                     'maximumSelectionSize': 1,
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
@@ -410,8 +413,11 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
+                    'homeText': u'home',
                     'separator': ';',
                     'orderable': True,
+                    'searchAllText': u'entire site',
+                    'searchText': u'Search',
                     'maximumSelectionSize': 1,
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
@@ -456,8 +462,11 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
+                    'homeText': u'home',
                     'separator': ';',
                     'orderable': True,
+                    'searchAllText': u'entire site',
+                    'searchText': u'Search',
                     'maximumSelectionSize': 1,
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
@@ -483,8 +492,11 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
+                    'homeText': u'home',
                     'separator': ';',
                     'orderable': True,
+                    'searchAllText': u'entire site',
+                    'searchText': u'Search',
                     'maximumSelectionSize': -1,
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
