@@ -5,7 +5,7 @@ from plone.app.dexterity.behaviors.metadata import IPublication
 from plone.app.widgets.dx import AjaxSelectWidget
 from plone.app.widgets.dx import DatetimeWidget
 from plone.app.widgets.dx import QueryStringWidget
-from plone.app.widgets.dx import RelatedItemsFieldWidget
+from plone.app.widgets.dx import RelatedItemsWidget
 from plone.app.widgets.dx import RichTextWidget
 from plone.app.widgets.dx import SelectWidget
 from plone.app.widgets.interfaces import IWidgetsLayer
@@ -86,10 +86,12 @@ def CreatorsFieldWidget(field, request):
 
 
 if HAS_RF:
-    RelatedItemsFieldWidget = adapter(
-        getSpecification(IRelatedItems['relatedItems']),
-        IWidgetsLayer
-    )(RelatedItemsFieldWidget)
+    @adapter(getSpecification(IRelatedItems['relatedItems']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def RelatedItemsFieldWidget(field, request):
+        widget = FieldWidget(field, RelatedItemsWidget(request))
+        widget.vocabulary = 'plone.app.vocabularies.Catalog'
+        return widget
 
 if HAS_PAC:
     @adapter(getSpecification(ICollection['query']), IWidgetsLayer)

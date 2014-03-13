@@ -4,6 +4,9 @@ Changelog
 1.6.0 (unreleased)
 ------------------
 
+- fix related items widget using getSource when it should use getVocabulary
+  [davisagli]
+
 
 1.5.0 (2014-03-05)
 ------------------
