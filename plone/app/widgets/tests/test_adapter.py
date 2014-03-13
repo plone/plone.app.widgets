@@ -33,8 +33,6 @@ except ImportError:  # pragma: nocover
     assert unittest  # pragma: nocover
 
 
-
-
 class BrowserTest(unittest.TestCase):
 
     layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
@@ -55,5 +53,5 @@ class BrowserTest(unittest.TestCase):
     def testAdapter(self):
         """Test querying a class based vocabulary with a search string.
         """
-        richtexteditor=getAdapter(self.portal, name='richtexteditor')
-        self.assertEquals(richtexteditor.is_selected('TinyMCE'),True)
+        richtexteditor = getAdapter(self.portal, name='richtexteditor')
+        self.assertEquals(richtexteditor.is_selected('TinyMCE'), True)
