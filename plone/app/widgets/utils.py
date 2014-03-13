@@ -122,11 +122,16 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
 
-    options.setdefault('searchText', _(u'Search'))
-    options.setdefault('searchAllText', _(u'entire site'))
-    options.setdefault('homeText', _(u'home'))
-
+    msgstr = translate(_plone(u'Search'), context=context.REQUEST)
+    options.setdefault('searchText', msgstr)
+    msgstr = translate(_(u'Entire site'), context=context.REQUEST)
+    options.setdefault('searchAllText', msgstr)
+    msgstr = translate(_plone('tabs_home',
+                       default=u'Home'),
+                       context=context.REQUEST)
+    options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
+
     properties = getToolByName(context, 'portal_properties')
     if properties:
         options['folderTypes'] = properties.site_properties.getProperty(
