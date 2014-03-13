@@ -1,4 +1,5 @@
 from zope.component import adapts
+from zope.component import getAdapter
 from zope.interface import implements
 from zope.i18nmessageid import MessageFactory
 from Products.ATContentTypes.interface import IATContentType
@@ -75,6 +76,14 @@ class MetadataExtender(object):
                                        u"creators to this item."),
                     vocabulary="plone.app.vocabularies.Users",
                 )
+
+            richtexteditor=getAdapter(self.context, name='richtexteditor')
+            if richtexteditor.is_selected('TinyMCE'):
+                if field.__name__ in ['text']:
+                    field.widget = at.TinyMCEWidget(
+                        label=old.label,
+                        description=old.description,
+                    )
 
             if field.__name__ == 'query':
                 field.widget = at.QueryStringWidget(
