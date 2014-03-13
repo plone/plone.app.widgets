@@ -338,8 +338,8 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
-                    'homeText': u'home',
-                    'searchAllText': u'entire site',
+                    'homeText': u'Home',
+                    'searchAllText': u'Entire site',
                     'searchText': u'Search',
                     'separator': ';',
                     'orderable': True,
@@ -381,10 +381,10 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
-                    'homeText': u'home',
+                    'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
-                    'searchAllText': u'entire site',
+                    'searchAllText': u'Entire site',
                     'searchText': u'Search',
                     'maximumSelectionSize': 1,
                     'vocabularyUrl': '/@@getVocabulary?name='
@@ -413,10 +413,10 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
-                    'homeText': u'home',
+                    'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
-                    'searchAllText': u'entire site',
+                    'searchAllText': u'Entire site',
                     'searchText': u'Search',
                     'maximumSelectionSize': 1,
                     'vocabularyUrl': '/@@getVocabulary?name='
@@ -462,10 +462,10 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
-                    'homeText': u'home',
+                    'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
-                    'searchAllText': u'entire site',
+                    'searchAllText': u'Entire site',
                     'searchText': u'Search',
                     'maximumSelectionSize': 1,
                     'vocabularyUrl': '/@@getVocabulary?name='
@@ -492,10 +492,10 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
-                    'homeText': u'home',
+                    'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
-                    'searchAllText': u'entire site',
+                    'searchAllText': u'Entire site',
                     'searchText': u'Search',
                     'maximumSelectionSize': -1,
                     'vocabularyUrl': '/@@getVocabulary?name='

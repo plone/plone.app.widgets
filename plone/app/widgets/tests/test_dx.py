@@ -55,6 +55,7 @@ class BaseWidgetTests(unittest.TestCase):
     def setUp(self):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = TextLine(__name__='textlinefield')
+        self.maxDiff = 999999
 
     def test_widget_pattern_notimplemented(self):
         from plone.app.widgets.dx import BaseWidget
@@ -878,8 +879,8 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
-                    'homeText': u'home',
-                    'searchAllText': u'entire site',
+                    'homeText': u'Home',
+                    'searchAllText': u'Entire site',
                     'searchText': u'Search',
                     'separator': ';',
                     'vocabularyUrl': '/@@getVocabulary?name='
