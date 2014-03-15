@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from Acquisition import aq_inner
+from Acquisition import aq_inner, aq_parent
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
 from datetime import datetime
@@ -12,6 +12,7 @@ from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
 from z3c.form.interfaces import IAddForm
+from Products.CMFCore.interfaces._content import IFolderish
 
 _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')
@@ -155,34 +156,55 @@ def get_querystring_options(context, querystring_view):
 
 def get_tinymce_options(context, field, request):
     args = {'pattern_options': {}}
+
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
-    if not utility:
-        return args
-    config = utility.getConfiguration(context=context,
-                                      field=field,
-                                      request=request)
+    if utility:
+        config = utility.getConfiguration(context=context,
+                                          field=field,
+                                          request=request)
 
-    config['content_css'] = config['portal_url'] + '/base.css'
-    del config['customplugins']
-    del config['plugins']
-    del config['theme']
+        config['content_css'] = config['portal_url'] + '/base.css'
+        del config['customplugins']
+        del config['plugins']
+        del config['theme']
 
-    args['pattern_options'] = {
-        'relatedItems': {
-            'vocabularyUrl': config['portal_url'] +
-            '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
-        },
-        'rel_upload_path': '@@fileUpload',
-        'folder_url': config['document_base_url'],
-        'tiny': config,
-        'prependToUrl': 'resolveuid/',
-        'linkAttribute': 'UID',
-        'prependToScalePart': '/@@images/image/',
-        'folderTypes': utility.containsobjects.replace('\n', ','),
-        'imageTypes': utility.imageobjects.replace('\n', ','),
-        'anchorSelector': utility.anchor_selector,
-        'linkableTypes': utility.linkable.replace('\n', ',')
-    }
+        args['pattern_options'] = {
+            'relatedItems': {
+                'vocabularyUrl': config['portal_url'] +
+                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
+            },
+            'rel_upload_path': '@@fileUpload',
+            'folder_url': config['document_base_url'],
+            'tiny': config,
+            'prependToUrl': 'resolveuid/',
+            'linkAttribute': 'UID',
+            'prependToScalePart': '/@@images/image/',
+            'folderTypes': utility.containsobjects.replace('\n', ','),
+            'imageTypes': utility.imageobjects.replace('\n', ','),
+            'anchorSelector': utility.anchor_selector,
+            'linkableTypes': utility.linkable.replace('\n', ',')
+        }
+    else:
+        folder = context
+        if not IFolderish.providedBy(context):
+            folder = aq_parent(context)
+        args['pattern_options'].update({
+            'relatedItems': {
+                'vocabularyUrl': get_portal_url(context) +
+                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
+            },
+            'base_url': context.absolute_url(),
+            'rel_upload_path': '@@fileUpload',
+            'folder_url': folder.absolute_url(),
+            'prependToUrl': 'resolveuid/',
+            'linkAttribute': 'UID',
+            'prependToScalePart': '/@@images/image/',
+            # XXX need to get this from somewhere...
+            'folderTypes': ','.join(['Folder']),
+            'imageTypes': ','.join(['Image']),
+            #'anchorSelector': utility.anchor_selector,
+            #'linkableTypes': utility.linkable.replace('\n', ',')
+        })
     return args
 
 
