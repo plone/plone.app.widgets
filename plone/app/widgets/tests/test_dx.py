@@ -1083,13 +1083,12 @@ class RichTextWidgetTests(unittest.TestCase):
         self.assertEqual(base_args['value'], u'')
         self.assertEqual(base_args['pattern'], 'tinymce')
 
-        if PLONE50:
-            self.assertEqual(base_args['pattern_options'], {})
-        else:
-            self.assertEqual(base_args['pattern_options']['prependToUrl'],
-                             'resolveuid/')
-            self.assertEqual(base_args['pattern_options']['prependToUrl'],
-                             'resolveuid/')
+        self.assertEqual(base_args['pattern_options']['prependToUrl'],
+                         'resolveuid/')
+        self.assertEqual(base_args['pattern_options']['rel_upload_path'],
+                         '@@fileUpload')
+
+        if not PLONE50:
             self.assertEqual(base_args['pattern_options']['anchorSelector'],
                              self.portal.portal_tinymce.anchor_selector)
 
