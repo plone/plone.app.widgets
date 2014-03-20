@@ -34,6 +34,7 @@ from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.browser.text import TextWidget as z3cform_TextWidget
 from z3c.form.browser.widget import HTMLInputWidget
 from z3c.form.converter import BaseDataConverter
+from z3c.form.converter import SequenceDataConverter
 from z3c.form.converter import CollectionSequenceDataConverter
 from z3c.form.interfaces import IAddForm
 from z3c.form.interfaces import IFieldWidget
@@ -59,6 +60,7 @@ from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
 from zope.schema.interfaces import IDatetime
+from zope.schema.interfaces import IField
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import ISequence
 from zope.security.interfaces import IPermission
@@ -216,10 +218,7 @@ class DatetimeWidgetConverter(BaseDataConverter):
         return datetime(*map(int, value))
 
 
-class SelectWidgetConverter(CollectionSequenceDataConverter):
-    """Data converter for Select widget."""
-
-    adapts(ICollection, ISelectWidget)
+class SelectWidgetConverterBase(object):
 
     def toFieldValue(self, value):
         """Converts from widget value to field.
@@ -240,7 +239,17 @@ class SelectWidgetConverter(CollectionSequenceDataConverter):
                 return self.field.missing_value
         elif value == (u'',):
             return self.field.missing_value
-        return super(SelectWidgetConverter, self).toFieldValue(value)
+        return super(SelectWidgetConverterBase, self).toFieldValue(value)
+
+
+class SequenceSelectWidgetConverter(
+        SelectWidgetConverterBase, SequenceDataConverter):
+    adapts(IField, ISelectWidget)
+
+
+class SelectWidgetConverter(
+        SelectWidgetConverterBase, CollectionSequenceDataConverter):
+    adapts(ICollection, ISelectWidget)
 
 
 class AjaxSelectWidgetConverter(BaseDataConverter):
@@ -601,10 +610,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         if (self.name not in self.request and
                 self.name + '-empty-marker' in self.request):
             return []
-        value = self.request.get(self.name, default)
-        if not isinstance(value, (tuple, list)):
-            value = (value,)
-        return value
+        return self.request.get(self.name, default)
 
 
 class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
