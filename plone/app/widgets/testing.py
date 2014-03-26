@@ -100,6 +100,10 @@ class PloneAppWidgetsDXLayer(PloneAppWidgetsLayer):
                        plone.app.contenttypes,
                        context=configurationContext)
 
+        import plone.app.widgets.tests
+        xmlconfig.file('configure.zcml', plone.app.widgets.tests,
+                       context=configurationContext)
+
         try:
             import mockup
             self.loadZCML(package=mockup)
@@ -151,22 +155,3 @@ class TestSelectWidgetForm(AutoExtensibleForm, form.EditForm):
 
     schema = ITestSelectWidgetSchema
     ignoreContext = True
-
-
-class SelectWidgetLayer(PloneAppWidgetsLayer):
-
-    defaultBases = (PLONEAPPWIDGETS_FIXTURE_DX, )
-
-    def setUpZope(self, app, configurationContext):
-        super(SelectWidgetLayer, self).setUpZope(app, configurationContext)
-        import plone.app.widgets.tests
-        from zope.configuration import xmlconfig
-        xmlconfig.file('configure.zcml', plone.app.widgets.tests,
-                       context=configurationContext)
-
-
-SELECT_WIDGET_FIXTURE = SelectWidgetLayer()
-SELECT_WIDGET_ROBOT_TESTING = FunctionalTesting(
-    bases=(SELECT_WIDGET_FIXTURE,
-           z2.ZSERVER_FIXTURE),
-    name="SelectWidgetLayer:Robot")
