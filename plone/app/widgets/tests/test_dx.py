@@ -301,8 +301,8 @@ class DatetimeWidgetTests(unittest.TestCase):
         dt = datetime(2013, 11, 13, 10, 20)
         setattr(context, self.field.getName(), dt)
         self.widget.context = context
-        self.widget.default_timezone = 'Europe/Vienna'
-        tz = pytz.timezone('Europe/Vienna')
+        self.widget.default_timezone = 'Europe/Amsterdam'
+        tz = pytz.timezone('Europe/Amsterdam')
 
         converter = DatetimeWidgetConverter(self.field, self.widget)
         self.assertEqual(
@@ -324,8 +324,8 @@ class DatetimeWidgetTests(unittest.TestCase):
         dt = datetime(2013, 11, 13, 10, 20)
         setattr(context, self.field.getName(), dt)
         self.widget.context = context
-        self.widget.default_timezone = lambda: 'Europe/Vienna'
-        tz = pytz.timezone('Europe/Vienna')
+        self.widget.default_timezone = lambda: 'Europe/Amsterdam'
+        tz = pytz.timezone('Europe/Amsterdam')
 
         converter = DatetimeWidgetConverter(self.field, self.widget)
         self.assertEqual(
