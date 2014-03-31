@@ -4,6 +4,12 @@ Changelog
 1.6.0 (unreleased)
 ------------------
 
+- Add default_timezone widget attribute to DatetimeWidget. If used and set to a
+  valid Olson DB/pytz timezone identifier or to an callback returning such, the
+  datetime object returned by the widget will be localized to that timezone.
+  This changes the timezone related behavior from version 1.4.0.
+  [thet]
+
 - fix related items widget using getSource when it should use getVocabulary
   [davisagli]
 

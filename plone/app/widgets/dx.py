@@ -2,6 +2,7 @@
 
 from AccessControl import getSecurityManager
 from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone.utils import safe_callable
 from datetime import date
 from datetime import datetime
 
@@ -195,27 +196,15 @@ class DatetimeWidgetConverter(BaseDataConverter):
         else:
             value += ['00', '00']
 
-        # Eventually set timezone
-        old_val = getattr(self.widget.context, self.field.getName(), None)
-        if getattr(old_val, 'tzinfo', False):
-            # Only set when field was previously set and only if it's value
-            # is a timezone aware datetime object.
-            # effective date for example is timezone naive, at the moment.
-            #
-            # We only ask, if there is a timezone information at all but try to
-            # use the 'timezone' attribute on the widget's context, since it
-            # represents the timezone, the event and it's form input are
-            # related to.
-            timezone = getattr(self.widget.context, 'timezone', None)
-            if timezone:
-                # plone.app.event stores it's timezone on the context.
-                timezone = pytz.timezone(timezone)
-            else:
-                # This better should use the tzinfo object from old_val. But we
-                # have to find, how to correctly localize the value with it.
-                timezone = pytz.utc
-            return timezone.localize(datetime(*map(int, value)))
-        return datetime(*map(int, value))
+        # TODO: respect the selected zone from the widget and just fall back
+        # to default_zone
+        default_zone = self.widget.default_timezone
+        zone = default_zone() if safe_callable(default_zone) else default_zone
+        ret = datetime(*map(int, value))
+        if zone:
+            tzinfo = pytz.timezone(zone)
+            ret = tzinfo.localize(ret)
+        return ret
 
 
 class SelectWidgetConverterBase(object):
@@ -511,7 +500,13 @@ class DateWidget(BaseWidget, HTMLInputWidget):
 
 
 class DatetimeWidget(DateWidget, HTMLInputWidget):
-    """Datetime widget for z3c.form."""
+    """Datetime widget for z3c.form.
+
+    :param default_timezone: A Olson DB/pytz timezone identifier or a callback
+                             returning such an identifier.
+    :type default_timezone: String or callback
+
+    """
 
     _converter = DatetimeWidgetConverter
     _formater = 'dateTime'
@@ -519,6 +514,8 @@ class DatetimeWidget(DateWidget, HTMLInputWidget):
     implementsOnly(IDatetimeWidget)
 
     pattern_options = DateWidget.pattern_options.copy()
+
+    default_timezone = None
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
