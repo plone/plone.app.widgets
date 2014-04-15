@@ -199,7 +199,8 @@ class DatetimeWidgetConverter(BaseDataConverter):
         # TODO: respect the selected zone from the widget and just fall back
         # to default_zone
         default_zone = self.widget.default_timezone
-        zone = default_zone() if safe_callable(default_zone) else default_zone
+        zone = default_zone(self.widget.context)\
+            if safe_callable(default_zone) else default_zone
         ret = datetime(*map(int, value))
         if zone:
             tzinfo = pytz.timezone(zone)
