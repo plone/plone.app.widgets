@@ -324,7 +324,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         dt = datetime(2013, 11, 13, 10, 20)
         setattr(context, self.field.getName(), dt)
         self.widget.context = context
-        self.widget.default_timezone = lambda: 'Europe/Amsterdam'
+        self.widget.default_timezone = lambda(context): 'Europe/Amsterdam'
         tz = pytz.timezone('Europe/Amsterdam')
 
         converter = DatetimeWidgetConverter(self.field, self.widget)
