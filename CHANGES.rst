@@ -4,6 +4,13 @@ Changelog
 1.6.0 (unreleased)
 ------------------
 
+- Add default_timezone widget attribute to the Dexterity DatetimeWidget. If
+  used and set to a valid Olson DB/pytz timezone identifier or to an callback
+  returning such, the datetime object returned by the widget will be localized
+  to that timezone.  This changes the timezone related behavior from version
+  1.4.0.
+  [thet]
+
 - fix related items widget using getSource when it should use getVocabulary
   [davisagli]
 
@@ -107,9 +114,6 @@ Changelog
 
 - fix VocabularyView to accept 1-based batch pages as per doc
   [djay]
-
-- Fix the date/time value in pattern options for Archetypes DatetimeWidget.
-  [thet]
 
 - Change the start and end date fields of Products.ATContentTypes ATEvent
   types to use plone.app.widgets.
