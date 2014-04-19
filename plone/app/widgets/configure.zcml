@@ -75,28 +75,63 @@
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-icomoon.eot"
-      file="static/widgets-tinymce-icomoon.eot"
+      name="plone.app.widgets-tinymce-content.css"
+      file="static/widgets-tinymce-content.min.css"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-icomoon.svg"
-      file="static/widgets-tinymce-icomoon.svg"
+      name="plone.app.widgets-tinymce-font-tinymce-small.eot"
+      file="static/widgets-tinymce-font-tinymce-small.eot"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-icomoon.ttf"
-      file="static/widgets-tinymce-icomoon.ttf"
+      name="plone.app.widgets-tinymce-font-tinymce-small.svg"
+      file="static/widgets-tinymce-font-tinymce-small.svg"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-icomoon.woff"
-      file="static/widgets-tinymce-icomoon.woff"
+      name="plone.app.widgets-tinymce-font-tinymce-small.ttf"
+      file="static/widgets-tinymce-font-tinymce-small.ttf"
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-tinymce-loader.gif"
-      file="static/widgets-tinymce-loader.gif"
+      name="plone.app.widgets-tinymce-font-tinymce-small.woff"
+      file="static/widgets-tinymce-font-tinymce-small.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-font-tinymce.eot"
+      file="static/widgets-tinymce-font-tinymce.eot"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-font-tinymce.svg"
+      file="static/widgets-tinymce-font-tinymce.svg"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-font-tinymce.ttf"
+      file="static/widgets-tinymce-font-tinymce.ttf"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-font-tinymce.woff"
+      file="static/widgets-tinymce-font-tinymce.woff"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-img-anchor.gif"
+      file="static/widgets-tinymce-img-anchor.gif"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-img-loader.gif"
+      file="static/widgets-tinymce-img-loader.gif"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-tinymce-img-object.gif"
+      file="static/widgets-tinymce-img-object.gif"
       layer=".interfaces.IWidgetsLayer"
       />
 
