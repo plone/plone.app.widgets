@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.6.0 (unreleased)
+1.6.0 (2014-04-20)
 ------------------
 
 - Add default_timezone widget attribute to the Dexterity DatetimeWidget. If
