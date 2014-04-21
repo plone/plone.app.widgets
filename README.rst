@@ -109,5 +109,5 @@ or include ``plone.app.widgets:default`` profile in your ``metadata.xml``..
 .. _`Mockup`: http://plone.github.io/mockup
 .. _`issue tracker`: https://github.com/plone/mockup/issues?labels=widgets
 .. _`PLIP here`: https://dev.plone.org/ticket/13476
-.. _`plone.app.toolbar`: https:/github.com/plone/plone.app.toolbar
-.. _`plone.app.contenttypes`: https:/github.com/plone/plone.app.contenttypes
+.. _`plone.app.toolbar`: https://github.com/plone/plone.app.toolbar
+.. _`plone.app.contenttypes`: https://github.com/plone/plone.app.contenttypes
