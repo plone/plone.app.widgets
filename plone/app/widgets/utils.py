@@ -13,6 +13,8 @@ from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
 from z3c.form.interfaces import IAddForm
 from Products.CMFCore.interfaces._content import IFolderish
+from plone.uuid.interfaces import IUUID
+from Products.CMFPlone.interfaces import IPloneSiteRoot
 
 _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')
@@ -156,6 +158,15 @@ def get_querystring_options(context, querystring_view):
 
 def get_tinymce_options(context, field, request):
     args = {'pattern_options': {}}
+    folder = context
+    if not IFolderish.providedBy(context):
+        folder = aq_parent(context)
+    if IPloneSiteRoot.providedBy(folder):
+        initial = None
+    else:
+        initial = IUUID(folder)
+    portal_url = get_portal_url(context)
+    current_path = folder.absolute_url()[len(portal_url):]
 
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
     if utility:
@@ -173,8 +184,15 @@ def get_tinymce_options(context, field, request):
                 'vocabularyUrl': config['portal_url'] +
                 '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
             },
-            'rel_upload_path': '@@fileUpload',
-            'folder_url': config['document_base_url'],
+            'upload': {
+                'initialFolder': initial,
+                'currentPath': current_path,
+                'baseUrl': config['document_base_url'],
+                'relativePath': '@@fileUpload',
+                'uploadMultiple': False,
+                'maxFiles': 1,
+                'showTitle': False
+            },
             'tiny': config,
             'prependToUrl': 'resolveuid/',
             'linkAttribute': 'UID',
@@ -185,17 +203,21 @@ def get_tinymce_options(context, field, request):
             'linkableTypes': utility.linkable.replace('\n', ',')
         }
     else:
-        folder = context
-        if not IFolderish.providedBy(context):
-            folder = aq_parent(context)
         args['pattern_options'].update({
             'relatedItems': {
-                'vocabularyUrl': get_portal_url(context) +
+                'vocabularyUrl': portal_url +
                 '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
             },
+            'upload': {
+                'initialFolder': initial,
+                'currentPath': current_path,
+                'baseUrl': portal_url,
+                'relativePath': '@@fileUpload',
+                'uploadMultiple': False,
+                'maxFiles': 1,
+                'showTitle': False
+            },
             'base_url': context.absolute_url(),
-            'rel_upload_path': '@@fileUpload',
-            'folder_url': folder.absolute_url(),
             'prependToUrl': 'resolveuid/',
             'linkAttribute': 'UID',
             'prependToScalePart': '/@@images/image/',
