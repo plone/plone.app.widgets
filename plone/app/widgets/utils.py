@@ -164,7 +164,7 @@ def get_tinymce_options(context, field, request):
     if IPloneSiteRoot.providedBy(folder):
         initial = None
     else:
-        initial = IUUID(folder)
+        initial = IUUID(folder, None)
     portal_url = get_portal_url(context)
     current_path = folder.absolute_url()[len(portal_url):]
 
