@@ -357,8 +357,12 @@ class RelatedItemsDataConverter(BaseDataConverter):
             except AttributeError:
                 catalog = getToolByName(getSite(), 'portal_catalog')
 
-            return collectionType(item.getObject()
-                                  for item in catalog(UID=value) if item)
+            objects = {item.UID: item.getObject()
+                       for item in catalog(UID=value) if item}
+
+            return collectionType(objects[uid]
+                                  for uid in value
+                                  if uid in objects.keys())
         else:
             return collectionType(v for v in value)
 
