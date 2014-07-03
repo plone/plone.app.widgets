@@ -226,12 +226,6 @@
           <adapter factory=".dx_bbb.RichTextFieldWidget" />
       </configure>
 
-      <!-- override p.a.event specific widgets -->
-      <configure zcml:condition="installed plone.app.event">
-          <adapter factory=".dx_bbb.StartDateFieldWidget" />
-          <adapter factory=".dx_bbb.EndDateFieldWidget" />
-      </configure>
-
     </configure>
 
   </configure>

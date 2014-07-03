@@ -52,7 +52,7 @@ setup(
             'pytz',
             'plone.app.dexterity',
             'plone.app.contenttypes>=1.1b1',
-            'plone.app.event',
+            'plone.app.event>=1.2',
         ],
     },
     entry_points="""

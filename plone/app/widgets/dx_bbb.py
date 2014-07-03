@@ -29,12 +29,6 @@ try:
 except ImportError:
     HAS_PAC = False
 
-try:
-    from plone.app.event.dx.behaviors import IEventBasic
-    HAS_PAE = True
-except ImportError:
-    HAS_PAE = False
-
 
 @adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
 @implementer(IFieldWidget)
@@ -103,14 +97,3 @@ if HAS_PAC:
     @implementer(IFieldWidget)
     def RichTextFieldWidget(field, request):
         return FieldWidget(field, RichTextWidget(request))
-
-if HAS_PAE:
-    @adapter(getSpecification(IEventBasic['start']), IWidgetsLayer)
-    @implementer(IFieldWidget)
-    def StartDateFieldWidget(field, request):
-        return FieldWidget(field, DatetimeWidget(request))
-
-    @adapter(getSpecification(IEventBasic['end']), IWidgetsLayer)
-    @implementer(IFieldWidget)
-    def EndDateFieldWidget(field, request):
-        return FieldWidget(field, DatetimeWidget(request))

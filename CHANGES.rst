@@ -4,7 +4,11 @@ Changelog
 1.7.0 (unreleased)
 ------------------
 
-- 
+- Remove configuration of plone.app.event's ``start`` and ``end`` fields in the
+  ``dx_bbb`` module. Requires ``plone.app.event >= 1.2``, which does the widget
+  configuration by itself. There is no point in using a previous version of
+  plone.app.event together with plone.app.widgets.
+  [thet]
 
 
 1.6.0 (2014-04-20)
