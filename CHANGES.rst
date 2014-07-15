@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.7.0 (unreleased)
+1.7.0 (2014-07-15)
 ------------------
 
 - Remove configuration of plone.app.event's ``start`` and ``end`` fields in the
