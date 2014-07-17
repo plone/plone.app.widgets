@@ -976,8 +976,8 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         from plone.app.widgets.dx import IRelationList
         field = List()
         alsoProvides(field, IRelationList)
-        brain1 = Mock(getObject=Mock(return_value='obj1'))
-        brain2 = Mock(getObject=Mock(return_value='obj2'))
+        brain1 = Mock(getObject=Mock(return_value='obj1'), UID='id1')
+        brain2 = Mock(getObject=Mock(return_value='obj2'), UID='id2')
         portal_catalog = Mock(return_value=[brain1, brain2])
         widget = Mock(separator=';')
         converter = RelatedItemsDataConverter(field, widget)
