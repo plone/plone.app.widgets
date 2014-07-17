@@ -4,7 +4,8 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Test fixes.
+  [thet]
 
 
 1.7.0 (2014-07-15)
@@ -16,6 +17,8 @@ Changelog
   plone.app.event together with plone.app.widgets.
   [thet]
 
+- Store RelatedItems in correct order.
+  [garbas]
 
 1.6.0 (2014-04-20)
 ------------------
