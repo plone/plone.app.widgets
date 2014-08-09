@@ -29,6 +29,7 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.utils import resolveDottedName
 from plone.dexterity.interfaces import IDexterityContent
 from plone.dexterity.utils import iterSchemata, getAdditionalSchemata
+from plone.registry.interfaces import IRegistry
 from plone.supermodel.utils import mergedTaggedValueDict
 from plone.uuid.interfaces import IUUID
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
@@ -50,6 +51,7 @@ from zope.component import adapter
 from zope.component import adapts
 from zope.component import queryMultiAdapter
 from zope.component import queryUtility
+from zope.component import getUtility
 from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.interface import implementer
@@ -86,6 +88,11 @@ except ImportError:  # pragma: no cover
 
     class IRelationList(Interface):
         pass
+
+try:
+    from Products.CMFPlone.interfaces import IEditingSchema
+except ImportError:
+    IEditingSchema = Interface
 
 
 class IDateField(IDate):
@@ -792,8 +799,19 @@ class RichTextWidget(BaseWidget, patextfield_RichTextWidget):
 
     implementsOnly(IRichTextWidget)
 
-    pattern = 'tinymce'
     pattern_options = BaseWidget.pattern_options.copy()
+
+    @property
+    def pattern(self):
+        """dynamically grab the actual pattern name so it will
+           work with custom visual editors"""
+        registry = getUtility(IRegistry)
+        try:
+            records = registry.forInterface(IEditingSchema, check=False,
+                                            prefix='plone')
+            return records.default_editor.lower()
+        except AttributeError:
+            return 'tinymce'
 
     def _base_args(self):
         args = super(RichTextWidget, self)._base_args()
