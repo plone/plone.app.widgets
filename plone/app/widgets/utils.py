@@ -179,6 +179,7 @@ def get_tinymce_options(context, field, request):
         del config['plugins']
         del config['theme']
 
+        config['content_css'] = '++plone++static/components/tinymce/skins/lightgray/content.min.css'
         args['pattern_options'] = {
             'relatedItems': {
                 'vocabularyUrl': config['portal_url'] +
@@ -194,6 +195,8 @@ def get_tinymce_options(context, field, request):
                 'showTitle': False
             },
             'tiny': config,
+            # This is for loading the languages on tinymce
+            'loadingBaseUrl': '++plone++static/components/tinymce-builded/js/tinymce',
             'prependToUrl': 'resolveuid/',
             'linkAttribute': 'UID',
             'prependToScalePart': '/@@images/image/',
@@ -218,6 +221,11 @@ def get_tinymce_options(context, field, request):
                 'showTitle': False
             },
             'base_url': context.absolute_url(),
+            'tiny':{
+                'content_css': '++plone++static/components/tinymce/skins/lightgray/content.min.css',
+            },
+            # This is for loading the languages on tinymce
+            'loadingBaseUrl': '++plone++static/components/tinymce-builded/js/tinymce',
             'prependToUrl': 'resolveuid/',
             'linkAttribute': 'UID',
             'prependToScalePart': '/@@images/image/',
