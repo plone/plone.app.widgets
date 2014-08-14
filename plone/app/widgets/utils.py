@@ -170,6 +170,7 @@ def get_tinymce_options(context, field, request):
 
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
     if utility:
+        # Plone 4.3
         config = utility.getConfiguration(context=context,
                                           field=field,
                                           request=request)
@@ -179,7 +180,7 @@ def get_tinymce_options(context, field, request):
         del config['plugins']
         del config['theme']
 
-        config['content_css'] = '++plone++static/components/tinymce/skins/lightgray/content.min.css'
+        config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
         args['pattern_options'] = {
             'relatedItems': {
                 'vocabularyUrl': config['portal_url'] +
@@ -206,6 +207,7 @@ def get_tinymce_options(context, field, request):
             'linkableTypes': utility.linkable.replace('\n', ',')
         }
     else:
+        # Plone 5
         args['pattern_options'].update({
             'relatedItems': {
                 'vocabularyUrl': portal_url +
