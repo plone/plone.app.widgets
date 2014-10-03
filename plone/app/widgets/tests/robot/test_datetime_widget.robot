@@ -1,12 +1,16 @@
-*** Settings ***
+*** Settings *****************************************************************
 
+Resource  plone/app/robotframework/keywords.robot
+Resource  plone/app/robotframework/saucelabs.robot
 Resource  common.robot
+
+Library  Remote  ${PLONE_URL}/RobotRemote
 
 Test Setup  Open SauceLabs test browser
 Test Teardown  Run keywords  Report test status  Close all browsers
 
 
-*** Variables ***
+*** Variables ****************************************************************
 
 ${xpath_date_field}  //input[contains(concat(' ',normalize-space(@class),' '),'pattern-pickadate-date')]
 ${xpath_time_field}  //input[contains(concat(' ',normalize-space(@class),' '),'pattern-pickadate-time')]
@@ -17,20 +21,20 @@ ${xpath_time_list}  //li[contains(concat(' ',normalize-space(@class),' '),'picke
 ${xpath_date_input}  //div[contains(concat(' ',normalize-space(@class),' '),'pattern-pickadate-date-wrapper')]//input[@type='hidden']
 
 
-*** Test Cases ***
+*** Test Cases ***************************************************************
 
-DateTime Widget is working
-    Given I'm logged in as a 'Site Administrator'
-     And Given I create a folder  My Folder
-     And Given I open tab  Dates
-    When I fill datetime field  Publishing Date  2010  1  30  4:00 a.m.
-     And When I save
-     And When I edit
-     And When I open tab  Dates
-    Then Page should contain datetime  Publishing Date  2010  1  30  4:00 a.m.
+As a contributor I can enter the date and time
+  Given I'm logged in as a 'Site Administrator'
+    And Given I create a folder  My Folder
+    And Given I open tab  Dates
+   When I fill datetime field  Publishing Date  2010  1  30  4:00 a.m.
+    And When I save
+    And When I edit
+    And When I open tab  Dates
+   Then Page should contain datetime  Publishing Date  2010  1  30  4:00 a.m.
 
 
-*** Keywords ***
+*** Keywords *****************************************************************
 
 I fill datetime field
   [Arguments]  ${fieldlabel}  ${year}  ${month}  ${day}  ${time}
