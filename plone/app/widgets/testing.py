@@ -2,7 +2,7 @@
 
 from doctest import ELLIPSIS
 from doctest import NORMALIZE_WHITESPACE
-from plone.app.robotframework.testing import AUTOLOGIN_LIBRARY_FIXTURE
+from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
@@ -129,7 +129,7 @@ PLONEAPPWIDGETS_DX_INTEGRATION_TESTING = IntegrationTesting(
     name="PloneAppWidgetsLayer:DXIntegration")
 PLONEAPPWIDGETS_DX_ROBOT_TESTING = FunctionalTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE_DX,
-           AUTOLOGIN_LIBRARY_FIXTURE,
+           REMOTE_LIBRARY_BUNDLE_FIXTURE,
            z2.ZSERVER_FIXTURE),
     name="PloneAppWidgetsLayerDX:Robot")
 
