@@ -228,6 +228,12 @@
 
     </configure>
 
+    <!-- include tinymce resources -->
+    <browser:resourceDirectory
+      name="plone.app.widgets.tinymce"
+      directory="static/tinymce-builded/js/tinymce"
+      />
+
   </configure>
 
   <!-- plone 5 configuration -->
