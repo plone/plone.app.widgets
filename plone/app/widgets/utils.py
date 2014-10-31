@@ -15,6 +15,8 @@ from z3c.form.interfaces import IAddForm
 from Products.CMFCore.interfaces._content import IFolderish
 from plone.uuid.interfaces import IUUID
 from Products.CMFPlone.interfaces import IPloneSiteRoot
+from zope.component import getMultiAdapter
+import json
 
 _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')
@@ -208,35 +210,11 @@ def get_tinymce_options(context, field, request):
         }
     else:
         # Plone 5
-        args['pattern_options'].update({
-            'relatedItems': {
-                'vocabularyUrl': portal_url +
-                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
-            },
-            'upload': {
-                'initialFolder': initial,
-                'currentPath': current_path,
-                'baseUrl': portal_url,
-                'relativePath': '@@fileUpload',
-                'uploadMultiple': False,
-                'maxFiles': 1,
-                'showTitle': False
-            },
-            'base_url': context.absolute_url(),
-            'tiny':{
-                'content_css': '++plone++static/components/tinymce/skins/lightgray/content.min.css',
-            },
-            # This is for loading the languages on tinymce
-            'loadingBaseUrl': '++plone++static/components/tinymce-builded/js/tinymce',
-            'prependToUrl': 'resolveuid/',
-            'linkAttribute': 'UID',
-            'prependToScalePart': '/@@images/image/',
-            # XXX need to get this from somewhere...
-            'folderTypes': ','.join(['Folder']),
-            'imageTypes': ','.join(['Image']),
-            #'anchorSelector': utility.anchor_selector,
-            #'linkableTypes': utility.linkable.replace('\n', ',')
-        })
+        # They are setted on the body
+        pattern_options = getMultiAdapter(
+            (context, request, field),
+            name="tinymce_settings")()['data-pat-tinymce']
+        args['pattern_options'] = json.loads(pattern_options)
     return args
 
 
