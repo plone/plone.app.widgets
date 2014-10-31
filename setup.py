@@ -34,7 +34,8 @@ setup(
         # needed so it works with jquery >= 1.8
         'plone.app.search>=1.1.2',
         'plone.app.registry>=1.2.2',
-        'plone.app.querystring>=1.1.0'
+        'plone.app.querystring>=1.1.0',
+        'jarn.jsi18n',
     ],
     extras_require={
         'test': [
