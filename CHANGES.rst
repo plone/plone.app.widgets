@@ -4,6 +4,9 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- backport TinyMCE 4.1.6 Resources from CMFPlone 5.0
+  [petschki]
+
 - Test fixes.
   [thet]
 
