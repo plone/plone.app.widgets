@@ -231,7 +231,7 @@
     <!-- include tinymce resources -->
     <browser:resourceDirectory
       name="plone.app.widgets.tinymce"
-      directory="static/tinymce-builded/js/tinymce"
+      directory="static/tinymce"
       />
 
   </configure>
