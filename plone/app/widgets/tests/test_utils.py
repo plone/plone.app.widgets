@@ -14,7 +14,6 @@ class MockTool(Mock):
 
 class UtilsTests(unittest.TestCase):
 
-    @patch('Products.CMFCore.utils.getToolByName', new=MockTool)
     def test__first_weekday(self):
         # make sure, plone.app.event is available and mock it.
         mock = Mock()
@@ -24,7 +23,8 @@ class UtilsTests(unittest.TestCase):
             'plone.app.event': mock.module.module,
             'plone.app.event.base': mock.module.module.module,
         }
-        with patch.dict('sys.modules', modules):
+        with patch('Products.CMFCore.utils.getToolByName', new=MockTool), \
+             patch.dict('sys.modules', modules):
             # test for plone.app.event installed
             from plone.app.event import base
             base.first_weekday = lambda: 0
@@ -44,6 +44,6 @@ class UtilsTests(unittest.TestCase):
             utils.HAS_PAE = False
             self.assertEquals(utils.first_weekday(), 0)
 
-            # restore original state
-            utils.HAS_PAE = orig_HAS_PAE
-            reload(utils)
+        # restore original state
+        utils.HAS_PAE = orig_HAS_PAE
+        reload(utils)
