@@ -868,6 +868,11 @@ def DatetimeFieldWidget(field, request):
 
 
 @implementer(IFieldWidget)
+def SelectFieldWidget(field, request):
+    return FieldWidget(field, SelectWidget(request))
+
+
+@implementer(IFieldWidget)
 def AjaxSelectFieldWidget(field, request, extra=None):
     if extra is not None:
         request = extra
