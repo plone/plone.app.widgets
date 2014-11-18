@@ -370,14 +370,16 @@ class SelectWidgetTests(unittest.TestCase):
     def test_widget(self):
         from plone.app.widgets.dx import SelectWidget
         widget = SelectWidget(self.request)
+        widget.id = 'test-widget'
         widget.field = Choice(
             __name__='selectfield',
             values=['one', 'two', 'three']
         )
         widget.terms = widget.field.vocabulary
+        widget.field.required = True
         self.assertEqual(
             {
-                'multiple': False,
+                'multiple': None,
                 'name': None,
                 'pattern_options': {},
                 'pattern': 'select2',
@@ -391,6 +393,25 @@ class SelectWidgetTests(unittest.TestCase):
             widget._base_args(),
         )
 
+        widget.field.required = False
+        self.assertEqual(
+            {
+                'multiple': None,
+                'name': None,
+                'pattern_options': {'allowClear': True},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    (u'', u''),
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
+        widget.field.required = True
         widget.multiple = True
         self.assertEqual(
             {
@@ -408,12 +429,34 @@ class SelectWidgetTests(unittest.TestCase):
             widget._base_args(),
         )
 
+        widget.field.required = False
+        widget.multiple = True
+        self.assertEqual(
+            {
+                'multiple': True,
+                'name': None,
+                'pattern_options': {'allowClear': True,
+                                    'separator': ';',
+                                    'multiple': True},
+                'pattern': 'select2',
+                'value': (),
+                'items': [
+                    ('one', 'one'),
+                    ('two', 'two'),
+                    ('three', 'three')
+                ]
+            },
+            widget._base_args(),
+        )
+
         widget.value = 'one'
         self.assertEqual(
             {
                 'multiple': True,
                 'name': None,
-                'pattern_options': {'separator': ';', 'multiple': True},
+                'pattern_options': {'allowClear': True,
+                                    'separator': ';',
+                                    'multiple': True},
                 'pattern': 'select2',
                 'value': ('one'),
                 'items': [
@@ -428,6 +471,7 @@ class SelectWidgetTests(unittest.TestCase):
     def test_widget_list_orderable(self):
         from plone.app.widgets.dx import SelectWidget
         widget = SelectWidget(self.request)
+        widget.id = 'test-widget'
         widget.separator = '.'
         widget.field = List(
             __name__='selectfield',
@@ -454,6 +498,7 @@ class SelectWidgetTests(unittest.TestCase):
     def test_widget_tuple_orderable(self):
         from plone.app.widgets.dx import SelectWidget
         widget = SelectWidget(self.request)
+        widget.id = 'test-widget'
         widget.field = Tuple(
             __name__='selectfield',
             value_type=Choice(values=['one', 'two', 'three'])
@@ -479,6 +524,7 @@ class SelectWidgetTests(unittest.TestCase):
     def test_widget_set_not_orderable(self):
         from plone.app.widgets.dx import SelectWidget
         widget = SelectWidget(self.request)
+        widget.id = 'test-widget'
         # A set is not orderable
         widget.field = Set(
             __name__='selectfield',

@@ -4,6 +4,10 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Allow to remove a selected option in the ``select2`` widget if the field
+  is not required
+  [frapell]
+
 - Test fixes.
   [thet]
 

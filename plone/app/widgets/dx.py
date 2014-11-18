@@ -567,8 +567,11 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
     pattern_options = BaseWidget.pattern_options.copy()
 
     separator = ';'
-    multiple = False
+    noValueToken = u''
+    noValueMessage = u''
+    multiple = None
     orderable = False
+    required = True
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -589,16 +592,8 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         args['value'] = self.value
         args['multiple'] = self.multiple
 
-        items = []
-        for item in self.items():
-            if not isinstance(item['content'], basestring):
-                item['content'] = translate(
-                    item['content'],
-                    context=self.request,
-                    default=item['value'])
-            items.append((item['value'], item['content']))
-        args['items'] = items
-
+        self.required = self.field.required
+ 
         options = args.setdefault('pattern_options', {})
         if self.multiple or ICollection.providedBy(self.field):
             options['multiple'] = args['multiple'] = self.multiple = True
@@ -610,6 +605,20 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         if self.multiple:
             options['separator'] = self.separator
 
+        # Allow to clear field value if it is not required
+        if not self.required:
+            options['allowClear'] = True
+
+        items = []
+        for item in self.items():
+            if not isinstance(item['content'], basestring):
+                item['content'] = translate(
+                    item['content'],
+                    context=self.request,
+                    default=item['value'])
+            items.append((item['value'], item['content']))
+        args['items'] = items
+       
         return args
 
     def extract(self, default=NO_VALUE):
