@@ -1,5 +1,5 @@
 /** vim: et:ts=4:sw=4:sts=4
- * @license RequireJS 2.1.14 Copyright (c) 2010-2014, The Dojo Foundation All Rights Reserved.
+ * @license RequireJS 2.1.15 Copyright (c) 2010-2014, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/requirejs for details
  */
@@ -12,7 +12,7 @@ var requirejs, require, define;
 (function (global) {
     var req, s, head, baseElement, dataMain, src,
         interactiveScript, currentlyAddingScript, mainScript, subPath,
-        version = '2.1.14',
+        version = '2.1.15',
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
         jsSuffixRegExp = /\.js$/,
@@ -12386,8 +12386,6 @@ return jQuery;
 
 }));
 
-define("jquery", function(){});
-
 define('mockup-registry',[
   'jquery'
 ], function($, undefined) {
@@ -12481,6 +12479,9 @@ define('mockup-registry',[
           }
         });
       });
+      // Trigger event after pattern scan has completed and all patterns were
+      // initialized
+      $(document).trigger('scan-completed.registry.mockup-core');
     },
 
     register: function(Pattern) {
@@ -12530,32 +12531,8 @@ define('mockup-registry',[
   return Registry;
 });
 
-// Patterns
-//
-// Author: Rok Garbas
-// Contact: rok@garbas.si
-// Version: 1.0
-// Depends: jquery.js
-//
-// Description:
-//
-// License:
-//
-// Copyright (C) 2010 Plone Foundation
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the Free
-// Software Foundation; either version 2 of the License.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT
-// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-// more details.
-//
-// You should have received a copy of the GNU General Public License along with
-// this program; if not, write to the Free Software Foundation, Inc., 51
-// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//
+/* Base Pattern
+ */
 
 
 define('mockup-patterns-base',[
@@ -12590,7 +12567,7 @@ define('mockup-patterns-base',[
     if (NewPattern && NewPattern.hasOwnProperty('constructor')) {
       Constructor = NewPattern.constructor;
     } else {
-      Constructor = function() { Base.apply(this, arguments); };
+      Constructor = function() { Base.apply(this, arguments); };  // TODO: arguments from where
     }
 
     var Surrogate = function() { this.constructor = Constructor; };
@@ -12600,7 +12577,7 @@ define('mockup-patterns-base',[
 
     $.extend(true, Constructor.prototype, NewPattern);
 
-    Constructor.__super__ = Base.prototype;
+    Constructor.__super__ = Base.prototype;  // TODO: needed?
 
     Registry.register(Constructor);
 
@@ -16901,21 +16878,6 @@ return $.drop;
  *                             vocabularyUrl:select2-test.json;
  *                             width:20em" />
  *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -17142,6 +17104,110 @@ define('mockup-patterns-select2',[
 
   return Select2;
 
+});
+
+/* Password strength pattern
+ *
+ * Options:
+ *    zxcvbn(url): Location to load zxcvbn from. Defaults to cdnjs
+ *
+ * Documentation:
+ *
+ *    # Simple
+ *
+ *    {{ example-1 }}
+ *
+ *    # Custom zxcvbn location
+ *
+ *    {{ example-2 }}
+ *
+ * Example: example-1
+ *   <input type="password" class="pat-passwordstrength" />
+ *
+ * Example: example-2
+ *   <input type="password"
+ *          class="pat-passwordstrength"
+ *          data-pat-passwordstrength="zxcvbn: //moo.com/zxcvbn.js"
+ *          />
+ *
+ */
+
+/* global alert:true */
+
+define('mockup-patterns-passwordstrength',[
+  'jquery',
+  'mockup-patterns-base'
+], function($, Base) {
+  
+  function loadScript(src) {
+       var s, i,
+           scripts = document.getElementsByTagName('script');
+
+       // Check script element doesn't already exist
+       for (i = 0; i < scripts.length; i++) {
+           if (scripts[i].src.indexOf(src) !== -1) {
+               return;
+           }
+       }
+
+       // If not, add it to page
+       s = document.createElement('script');
+       s.type = 'text/javascript';
+       s.async = true;
+       s.src = src;
+       scripts[0].parentNode.insertBefore(s, scripts[0]);
+  }
+
+  function jsDiv() {
+      return $(document.createElement('div'));
+  }
+
+  var PasswordStrength = Base.extend({
+    name: 'passwordstrength',
+    defaults: {
+        zxcvbn: '//cdnjs.cloudflare.com/ajax/libs/zxcvbn/1.0/zxcvbn.js'
+    },
+    init: function () {
+      var self = this,
+          $pwfield = this.$el,
+          $pwmeter = jsDiv().append([jsDiv(), jsDiv(), jsDiv(), jsDiv()]);
+
+      function setLevel() {
+          var score = 0;
+
+          if (typeof window.zxcvbn !== 'function') {
+              // No zxcvbn yet, try and load it
+              loadScript(self.options.zxcvbn);
+          } else if ($pwfield[0].value.length > 0) {
+              // Run zxcvbn, supplying the value of any other widgets in the form
+              score = Math.max(1, window.zxcvbn(
+                  $pwfield[0].value,
+                  [].map.call(
+                      ($pwfield[0].form || { elements: [] }).elements,
+                      function (inp) {
+                          if (inp === $pwfield[0]) {
+                            return null;
+                          }
+                          return inp.value || null;
+                      }
+                  ).filter(function (x) { return x; })
+              ).score);
+          }
+          $pwmeter.attr('class', 'pat-passwordstrength-meter level-' + score);
+      }
+
+      $pwfield.after($pwmeter);
+      $pwfield.on('keyup', function(e) {
+          var timeoutId = 0;
+
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(setLevel, 500);
+      });
+      setLevel();
+    }
+  });
+
+  return PasswordStrength;
 });
 
 
@@ -20366,41 +20432,16 @@ Picker.extend( 'pickatime', TimePicker )
 
 
 
-/* global portal_url */
+/* i18n integration. This is forked from jarn.jsi18n
+ *
+ * This is a singleton.
+ * Configuration is done on the body tag data-i18ncatalogurl attribute
+ *     <body data-i18ncatalogurl="/jsi18n">
+ *
+ *  Or, it'll default to "/jsi18n"
+ */
 
-
-// i18n integration. This is forked from jarn.jsi18n
-//
-// This is a singleton. Configuration is done on the body tag data-i18ncatalogurl attribute
-// <body data-i18ncatalogurl="/jsi18n">
-//
-// Or, it'll default to "/jsi18n"
-//
-//
-// Author: Nathan Van Gheem
-// Contact: nathan@vangheem.us
-// Version: 1.0
-// Depends: jquery.js
-//
-// Description:
-//
-// License:
-//
-// Copyright (C) 2010 Plone Foundation
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the Free
-// Software Foundation; either version 2 of the License.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT
-// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-// more details.
-//
-// You should have received a copy of the GNU General Public License along with
-// this program; if not, write to the Free Software Foundation, Inc., 51
-// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//
+/* global portal_url:true */
 
 
 define('mockup-i18n',[
@@ -20415,7 +20456,7 @@ define('mockup-i18n',[
     if (!self.baseUrl) {
       self.baseUrl = '/jsi18n';
     }
-    self.currentLanguage = $('html').attr('lang');
+    self.currentLanguage = $('html').attr('lang') || 'en';
     self.storage = null;
     self.catalogs = {};
     self.ttl = 24 * 3600 * 1000;
@@ -20461,7 +20502,7 @@ define('mockup-i18n',[
     };
 
     self.loadCatalog = function (domain, language) {
-      if (typeof (language) === 'undefined') {
+      if (language === undefined) {
         language = self.currentLanguage;
       }
       if (self.storage !== null) {
@@ -20591,21 +20632,6 @@ define('mockup-i18n',[
  * Example: example-9
  *    <input class="pat-pickadate" data-pat-pickadate='{"timezone": {"data": [{"id":"Europe/Berlin","text":"Europe/Berlin"}]}}'/>
  *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -25819,32 +25845,8 @@ define('mockup-patterns-pickadate',[
   }
 }.call(this));
 
-// utils.
-//
-// Author: Nathan Van Gheem
-// Contact: nathan@vangheem.us
-// Version: 1.0
-// Depends: jquery.js
-//
-// Description:
-//
-// License:
-//
-// Copyright (C) 2010 Plone Foundation
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the Free
-// Software Foundation; either version 2 of the License.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT
-// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-// more details.
-//
-// You should have received a copy of the GNU General Public License along with
-// this program; if not, write to the Free Software Foundation, Inc., 51
-// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//
+/* Pattern utils
+ */
 
 
 define('mockup-utils',[
@@ -26123,28 +26125,30 @@ define('mockup-utils',[
 define("jqtree", ["jquery"], function() {
   return (function() {
 // Generated by CoffeeScript 1.7.1
-
-/*
-Copyright 2013 Marco Braak
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
- */
-
 (function() {
-  var $, BorderDropHint, DragAndDropHandler, DragElement, ElementsRenderer, FolderElement, GhostDropHint, HitAreasGenerator, JqTreeWidget, KeyHandler, MouseWidget, Node, NodeElement, Position, SaveStateHandler, ScrollHandler, SelectNodeHandler, SimpleWidget, VisibleNodeIterator, get_json_stringify_function, html_escape, indexOf, isInt, _indexOf,
+  var $, BorderDropHint, DragAndDropHandler, DragElement, ElementsRenderer, FolderElement, GhostDropHint, HitAreasGenerator, JqTreeWidget, KeyHandler, MouseWidget, Node, NodeElement, Position, SaveStateHandler, ScrollHandler, SelectNodeHandler, SimpleWidget, VisibleNodeIterator, get_json_stringify_function, html_escape, indexOf, isInt, __version__, _indexOf,
     __slice = [].slice,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  __version__ = '0.22.0';
+
+
+  /*
+  Copyright 2013 Marco Braak
+  
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+  
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+   */
 
   $ = this.jQuery;
 
@@ -27147,7 +27151,10 @@ limitations under the License.
 
     JqTreeWidget.prototype.toggle = function(node, slide) {
       if (slide == null) {
-        slide = true;
+        slide = null;
+      }
+      if (slide === null) {
+        slide = this.options.slide;
       }
       if (node.is_open) {
         return this.closeNode(node, slide);
@@ -27328,7 +27335,7 @@ limitations under the License.
         url_info = this._getDataUrlInfo(parent_node);
       }
       addLoadingClass();
-      if (url_info === false || url_info === null) {
+      if (!url_info) {
         removeLoadingClass();
       } else if ($.isArray(url_info)) {
         handeLoadData(url_info);
@@ -27372,7 +27379,10 @@ limitations under the License.
 
     JqTreeWidget.prototype.openNode = function(node, slide) {
       if (slide == null) {
-        slide = true;
+        slide = null;
+      }
+      if (slide === null) {
+        slide = this.options.slide;
       }
       return this._openNode(node, slide);
     };
@@ -27419,7 +27429,10 @@ limitations under the License.
 
     JqTreeWidget.prototype.closeNode = function(node, slide) {
       if (slide == null) {
-        slide = true;
+        slide = null;
+      }
+      if (slide === null) {
+        slide = this.options.slide;
       }
       if (node.isFolder()) {
         new FolderElement(node, this).close(slide);
@@ -27560,6 +27573,10 @@ limitations under the License.
 
     JqTreeWidget.prototype.setOption = function(option, value) {
       return this.options[option] = value;
+    };
+
+    JqTreeWidget.prototype.getVersion = function() {
+      return __version__;
     };
 
     JqTreeWidget.prototype._init = function() {
@@ -28146,7 +28163,7 @@ limitations under the License.
       var state;
       state = this.getStateFromStorage();
       if (state) {
-        this.setState($.parseJSON(state));
+        this.setState(state);
         return true;
       } else {
         return false;
@@ -28154,6 +28171,25 @@ limitations under the License.
     };
 
     SaveStateHandler.prototype.getStateFromStorage = function() {
+      var json_data;
+      json_data = this._loadFromStorage();
+      if (json_data) {
+        return this._parseState(json_data);
+      } else {
+        return null;
+      }
+    };
+
+    SaveStateHandler.prototype._parseState = function(json_data) {
+      var state;
+      state = $.parseJSON(json_data);
+      if (state && state.selected_node && isInt(state.selected_node)) {
+        state.selected_node = [state.selected_node];
+      }
+      return state;
+    };
+
+    SaveStateHandler.prototype._loadFromStorage = function() {
       if (this.tree_widget.options.onGetStateFromStorage) {
         return this.tree_widget.options.onGetStateFromStorage();
       } else if (this.supportsLocalStorage()) {
@@ -28207,9 +28243,6 @@ limitations under the License.
       if (state) {
         open_nodes = state.open_nodes;
         selected_node_ids = state.selected_node;
-        if (isInt(selected_node_ids)) {
-          selected_node_ids = [selected_node_ids];
-        }
         this.tree_widget.tree.iterate((function(_this) {
           return function(node) {
             node.is_open = node.id && node.hasChildren() && (indexOf(open_nodes, node.id) >= 0);
@@ -28266,11 +28299,10 @@ limitations under the License.
     };
 
     SaveStateHandler.prototype.getNodeIdToBeSelected = function() {
-      var state, state_json;
-      state_json = this.getStateFromStorage();
-      if (state_json) {
-        state = $.parseJSON(state_json);
-        return state.selected_node;
+      var state;
+      state = this.getStateFromStorage();
+      if (state && state.selected_node) {
+        return state.selected_node[0];
       } else {
         return null;
       }
@@ -28425,10 +28457,15 @@ limitations under the License.
       area = this.findHoveredArea(position_info.page_x, position_info.page_y);
       can_move_to = this.canMoveToArea(area);
       if (can_move_to && area) {
+        if (!area.node.isFolder()) {
+          this.stopOpenFolderTimer();
+        }
         if (this.hovered_area !== area) {
           this.hovered_area = area;
           if (this.mustOpenFolderTimer(area)) {
             this.startOpenFolderTimer(area.node);
+          } else {
+            this.stopOpenFolderTimer();
           }
           this.updateDropHint();
         }
@@ -28472,8 +28509,8 @@ limitations under the License.
 
     DragAndDropHandler.prototype.refresh = function() {
       this.removeHitAreas();
-      this.generateHitAreas();
       if (this.current_item) {
+        this.generateHitAreas();
         this.current_item = this.tree_widget._getNodeElementForNode(this.current_item.node);
         if (this.is_dragging) {
           return this.current_item.$element.addClass('jqtree-moving');
@@ -29223,20 +29260,6 @@ limitations under the License.
  *                        dragAndDrop: true;
  *                        autoOpen: true"></div>
  *
- * License: Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -29297,6 +29320,7 @@ define('mockup-patterns-tree',[
   return Tree;
 
 });
+
 /* Related items pattern.
  *
  * Options:
@@ -29366,21 +29390,6 @@ define('mockup-patterns-tree',[
  *    <input type="text" class="pat-relateditems"
              data-pat-relateditems='{"selectableTypes": ["Document"], "vocabularyUrl": "/relateditems-test.json", "maximumSelectionSize": 1}' />
  *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -29812,21 +29821,6 @@ define('mockup-patterns-relateditems',[
  *           data-pat-querystring="indexOptionsUrl: /tests/json/queryStringCriteria.json;
  *                                 showPreviews: false;" />
  *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -30514,6 +30508,4243 @@ define('mockup-patterns-querystring',[
 
 });
 
+/*!
+ * jQuery UI Widget @VERSION
+ * http://jqueryui.com
+ *
+ * Copyright 2014 jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ *
+ * http://api.jqueryui.com/jQuery.widget/
+ */
+(function( $, undefined ) {
+
+var uuid = 0,
+	slice = Array.prototype.slice,
+	_cleanData = $.cleanData;
+$.cleanData = function( elems ) {
+	for ( var i = 0, elem; (elem = elems[i]) != null; i++ ) {
+		try {
+			$( elem ).triggerHandler( "remove" );
+		// http://bugs.jquery.com/ticket/8235
+		} catch( e ) {}
+	}
+	_cleanData( elems );
+};
+
+$.widget = function( name, base, prototype ) {
+	var fullName, existingConstructor, constructor, basePrototype,
+		// proxiedPrototype allows the provided prototype to remain unmodified
+		// so that it can be used as a mixin for multiple widgets (#8876)
+		proxiedPrototype = {},
+		namespace = name.split( "." )[ 0 ];
+
+	name = name.split( "." )[ 1 ];
+	fullName = namespace + "-" + name;
+
+	if ( !prototype ) {
+		prototype = base;
+		base = $.Widget;
+	}
+
+	// create selector for plugin
+	$.expr[ ":" ][ fullName.toLowerCase() ] = function( elem ) {
+		return !!$.data( elem, fullName );
+	};
+
+	$[ namespace ] = $[ namespace ] || {};
+	existingConstructor = $[ namespace ][ name ];
+	constructor = $[ namespace ][ name ] = function( options, element ) {
+		// allow instantiation without "new" keyword
+		if ( !this._createWidget ) {
+			return new constructor( options, element );
+		}
+
+		// allow instantiation without initializing for simple inheritance
+		// must use "new" keyword (the code above always passes args)
+		if ( arguments.length ) {
+			this._createWidget( options, element );
+		}
+	};
+	// extend with the existing constructor to carry over any static properties
+	$.extend( constructor, existingConstructor, {
+		version: prototype.version,
+		// copy the object used to create the prototype in case we need to
+		// redefine the widget later
+		_proto: $.extend( {}, prototype ),
+		// track widgets that inherit from this widget in case this widget is
+		// redefined after a widget inherits from it
+		_childConstructors: []
+	});
+
+	basePrototype = new base();
+	// we need to make the options hash a property directly on the new instance
+	// otherwise we'll modify the options hash on the prototype that we're
+	// inheriting from
+	basePrototype.options = $.widget.extend( {}, basePrototype.options );
+	$.each( prototype, function( prop, value ) {
+		if ( !$.isFunction( value ) ) {
+			proxiedPrototype[ prop ] = value;
+			return;
+		}
+		proxiedPrototype[ prop ] = (function() {
+			var _super = function() {
+					return base.prototype[ prop ].apply( this, arguments );
+				},
+				_superApply = function( args ) {
+					return base.prototype[ prop ].apply( this, args );
+				};
+			return function() {
+				var __super = this._super,
+					__superApply = this._superApply,
+					returnValue;
+
+				this._super = _super;
+				this._superApply = _superApply;
+
+				returnValue = value.apply( this, arguments );
+
+				this._super = __super;
+				this._superApply = __superApply;
+
+				return returnValue;
+			};
+		})();
+	});
+	constructor.prototype = $.widget.extend( basePrototype, {
+		// TODO: remove support for widgetEventPrefix
+		// always use the name + a colon as the prefix, e.g., draggable:start
+		// don't prefix for widgets that aren't DOM-based
+		widgetEventPrefix: existingConstructor ? (basePrototype.widgetEventPrefix || name) : name
+	}, proxiedPrototype, {
+		constructor: constructor,
+		namespace: namespace,
+		widgetName: name,
+		widgetFullName: fullName
+	});
+
+	// If this widget is being redefined then we need to find all widgets that
+	// are inheriting from it and redefine all of them so that they inherit from
+	// the new version of this widget. We're essentially trying to replace one
+	// level in the prototype chain.
+	if ( existingConstructor ) {
+		$.each( existingConstructor._childConstructors, function( i, child ) {
+			var childPrototype = child.prototype;
+
+			// redefine the child widget using the same prototype that was
+			// originally used, but inherit from the new version of the base
+			$.widget( childPrototype.namespace + "." + childPrototype.widgetName, constructor, child._proto );
+		});
+		// remove the list of existing child constructors from the old constructor
+		// so the old child constructors can be garbage collected
+		delete existingConstructor._childConstructors;
+	} else {
+		base._childConstructors.push( constructor );
+	}
+
+	$.widget.bridge( name, constructor );
+};
+
+$.widget.extend = function( target ) {
+	var input = slice.call( arguments, 1 ),
+		inputIndex = 0,
+		inputLength = input.length,
+		key,
+		value;
+	for ( ; inputIndex < inputLength; inputIndex++ ) {
+		for ( key in input[ inputIndex ] ) {
+			value = input[ inputIndex ][ key ];
+			if ( input[ inputIndex ].hasOwnProperty( key ) && value !== undefined ) {
+				// Clone objects
+				if ( $.isPlainObject( value ) ) {
+					target[ key ] = $.isPlainObject( target[ key ] ) ?
+						$.widget.extend( {}, target[ key ], value ) :
+						// Don't extend strings, arrays, etc. with objects
+						$.widget.extend( {}, value );
+				// Copy everything else by reference
+				} else {
+					target[ key ] = value;
+				}
+			}
+		}
+	}
+	return target;
+};
+
+$.widget.bridge = function( name, object ) {
+	var fullName = object.prototype.widgetFullName || name;
+	$.fn[ name ] = function( options ) {
+		var isMethodCall = typeof options === "string",
+			args = slice.call( arguments, 1 ),
+			returnValue = this;
+
+		// allow multiple hashes to be passed on init
+		options = !isMethodCall && args.length ?
+			$.widget.extend.apply( null, [ options ].concat(args) ) :
+			options;
+
+		if ( isMethodCall ) {
+			this.each(function() {
+				var methodValue,
+					instance = $.data( this, fullName );
+				if ( !instance ) {
+					return $.error( "cannot call methods on " + name + " prior to initialization; " +
+						"attempted to call method '" + options + "'" );
+				}
+				if ( !$.isFunction( instance[options] ) || options.charAt( 0 ) === "_" ) {
+					return $.error( "no such method '" + options + "' for " + name + " widget instance" );
+				}
+				methodValue = instance[ options ].apply( instance, args );
+				if ( methodValue !== instance && methodValue !== undefined ) {
+					returnValue = methodValue && methodValue.jquery ?
+						returnValue.pushStack( methodValue.get() ) :
+						methodValue;
+					return false;
+				}
+			});
+		} else {
+			this.each(function() {
+				var instance = $.data( this, fullName );
+				if ( instance ) {
+					instance.option( options || {} )._init();
+				} else {
+					$.data( this, fullName, new object( options, this ) );
+				}
+			});
+		}
+
+		return returnValue;
+	};
+};
+
+$.Widget = function( /* options, element */ ) {};
+$.Widget._childConstructors = [];
+
+$.Widget.prototype = {
+	widgetName: "widget",
+	widgetEventPrefix: "",
+	defaultElement: "<div>",
+	options: {
+		disabled: false,
+
+		// callbacks
+		create: null
+	},
+	_createWidget: function( options, element ) {
+		element = $( element || this.defaultElement || this )[ 0 ];
+		this.element = $( element );
+		this.uuid = uuid++;
+		this.eventNamespace = "." + this.widgetName + this.uuid;
+		this.options = $.widget.extend( {},
+			this.options,
+			this._getCreateOptions(),
+			options );
+
+		this.bindings = $();
+		this.hoverable = $();
+		this.focusable = $();
+
+		if ( element !== this ) {
+			$.data( element, this.widgetFullName, this );
+			this._on( true, this.element, {
+				remove: function( event ) {
+					if ( event.target === element ) {
+						this.destroy();
+					}
+				}
+			});
+			this.document = $( element.style ?
+				// element within the document
+				element.ownerDocument :
+				// element is window or document
+				element.document || element );
+			this.window = $( this.document[0].defaultView || this.document[0].parentWindow );
+		}
+
+		this._create();
+		this._trigger( "create", null, this._getCreateEventData() );
+		this._init();
+	},
+	_getCreateOptions: $.noop,
+	_getCreateEventData: $.noop,
+	_create: $.noop,
+	_init: $.noop,
+
+	destroy: function() {
+		this._destroy();
+		// we can probably remove the unbind calls in 2.0
+		// all event bindings should go through this._on()
+		this.element
+			.unbind( this.eventNamespace )
+			// 1.9 BC for #7810
+			// TODO remove dual storage
+			.removeData( this.widgetName )
+			.removeData( this.widgetFullName )
+			// support: jquery <1.6.3
+			// http://bugs.jquery.com/ticket/9413
+			.removeData( $.camelCase( this.widgetFullName ) );
+		this.widget()
+			.unbind( this.eventNamespace )
+			.removeAttr( "aria-disabled" )
+			.removeClass(
+				this.widgetFullName + "-disabled " +
+				"ui-state-disabled" );
+
+		// clean up events and states
+		this.bindings.unbind( this.eventNamespace );
+		this.hoverable.removeClass( "ui-state-hover" );
+		this.focusable.removeClass( "ui-state-focus" );
+	},
+	_destroy: $.noop,
+
+	widget: function() {
+		return this.element;
+	},
+
+	option: function( key, value ) {
+		var options = key,
+			parts,
+			curOption,
+			i;
+
+		if ( arguments.length === 0 ) {
+			// don't return a reference to the internal hash
+			return $.widget.extend( {}, this.options );
+		}
+
+		if ( typeof key === "string" ) {
+			// handle nested keys, e.g., "foo.bar" => { foo: { bar: ___ } }
+			options = {};
+			parts = key.split( "." );
+			key = parts.shift();
+			if ( parts.length ) {
+				curOption = options[ key ] = $.widget.extend( {}, this.options[ key ] );
+				for ( i = 0; i < parts.length - 1; i++ ) {
+					curOption[ parts[ i ] ] = curOption[ parts[ i ] ] || {};
+					curOption = curOption[ parts[ i ] ];
+				}
+				key = parts.pop();
+				if ( arguments.length === 1 ) {
+					return curOption[ key ] === undefined ? null : curOption[ key ];
+				}
+				curOption[ key ] = value;
+			} else {
+				if ( arguments.length === 1 ) {
+					return this.options[ key ] === undefined ? null : this.options[ key ];
+				}
+				options[ key ] = value;
+			}
+		}
+
+		this._setOptions( options );
+
+		return this;
+	},
+	_setOptions: function( options ) {
+		var key;
+
+		for ( key in options ) {
+			this._setOption( key, options[ key ] );
+		}
+
+		return this;
+	},
+	_setOption: function( key, value ) {
+		this.options[ key ] = value;
+
+		if ( key === "disabled" ) {
+			this.widget()
+				.toggleClass( this.widgetFullName + "-disabled ui-state-disabled", !!value )
+				.attr( "aria-disabled", value );
+			this.hoverable.removeClass( "ui-state-hover" );
+			this.focusable.removeClass( "ui-state-focus" );
+		}
+
+		return this;
+	},
+
+	enable: function() {
+		return this._setOption( "disabled", false );
+	},
+	disable: function() {
+		return this._setOption( "disabled", true );
+	},
+
+	_on: function( suppressDisabledCheck, element, handlers ) {
+		var delegateElement,
+			instance = this;
+
+		// no suppressDisabledCheck flag, shuffle arguments
+		if ( typeof suppressDisabledCheck !== "boolean" ) {
+			handlers = element;
+			element = suppressDisabledCheck;
+			suppressDisabledCheck = false;
+		}
+
+		// no element argument, shuffle and use this.element
+		if ( !handlers ) {
+			handlers = element;
+			element = this.element;
+			delegateElement = this.widget();
+		} else {
+			// accept selectors, DOM elements
+			element = delegateElement = $( element );
+			this.bindings = this.bindings.add( element );
+		}
+
+		$.each( handlers, function( event, handler ) {
+			function handlerProxy() {
+				// allow widgets to customize the disabled handling
+				// - disabled as an array instead of boolean
+				// - disabled class as method for disabling individual parts
+				if ( !suppressDisabledCheck &&
+						( instance.options.disabled === true ||
+							$( this ).hasClass( "ui-state-disabled" ) ) ) {
+					return;
+				}
+				return ( typeof handler === "string" ? instance[ handler ] : handler )
+					.apply( instance, arguments );
+			}
+
+			// copy the guid so direct unbinding works
+			if ( typeof handler !== "string" ) {
+				handlerProxy.guid = handler.guid =
+					handler.guid || handlerProxy.guid || $.guid++;
+			}
+
+			var match = event.match( /^(\w+)\s*(.*)$/ ),
+				eventName = match[1] + instance.eventNamespace,
+				selector = match[2];
+			if ( selector ) {
+				delegateElement.delegate( selector, eventName, handlerProxy );
+			} else {
+				element.bind( eventName, handlerProxy );
+			}
+		});
+	},
+
+	_off: function( element, eventName ) {
+		eventName = (eventName || "").split( " " ).join( this.eventNamespace + " " ) + this.eventNamespace;
+		element.unbind( eventName ).undelegate( eventName );
+	},
+
+	_delay: function( handler, delay ) {
+		function handlerProxy() {
+			return ( typeof handler === "string" ? instance[ handler ] : handler )
+				.apply( instance, arguments );
+		}
+		var instance = this;
+		return setTimeout( handlerProxy, delay || 0 );
+	},
+
+	_hoverable: function( element ) {
+		this.hoverable = this.hoverable.add( element );
+		this._on( element, {
+			mouseenter: function( event ) {
+				$( event.currentTarget ).addClass( "ui-state-hover" );
+			},
+			mouseleave: function( event ) {
+				$( event.currentTarget ).removeClass( "ui-state-hover" );
+			}
+		});
+	},
+
+	_focusable: function( element ) {
+		this.focusable = this.focusable.add( element );
+		this._on( element, {
+			focusin: function( event ) {
+				$( event.currentTarget ).addClass( "ui-state-focus" );
+			},
+			focusout: function( event ) {
+				$( event.currentTarget ).removeClass( "ui-state-focus" );
+			}
+		});
+	},
+
+	_trigger: function( type, event, data ) {
+		var prop, orig,
+			callback = this.options[ type ];
+
+		data = data || {};
+		event = $.Event( event );
+		event.type = ( type === this.widgetEventPrefix ?
+			type :
+			this.widgetEventPrefix + type ).toLowerCase();
+		// the original event may come from any element
+		// so we need to reset the target on the new event
+		event.target = this.element[ 0 ];
+
+		// copy original event properties over to the new event
+		orig = event.originalEvent;
+		if ( orig ) {
+			for ( prop in orig ) {
+				if ( !( prop in event ) ) {
+					event[ prop ] = orig[ prop ];
+				}
+			}
+		}
+
+		this.element.trigger( event, data );
+		return !( $.isFunction( callback ) &&
+			callback.apply( this.element[0], [ event ].concat( data ) ) === false ||
+			event.isDefaultPrevented() );
+	}
+};
+
+$.each( { show: "fadeIn", hide: "fadeOut" }, function( method, defaultEffect ) {
+	$.Widget.prototype[ "_" + method ] = function( element, options, callback ) {
+		if ( typeof options === "string" ) {
+			options = { effect: options };
+		}
+		var hasOptions,
+			effectName = !options ?
+				method :
+				options === true || typeof options === "number" ?
+					defaultEffect :
+					options.effect || defaultEffect;
+		options = options || {};
+		if ( typeof options === "number" ) {
+			options = { duration: options };
+		}
+		hasOptions = !$.isEmptyObject( options );
+		options.complete = callback;
+		if ( options.delay ) {
+			element.delay( options.delay );
+		}
+		if ( hasOptions && $.effects && $.effects.effect[ effectName ] ) {
+			element[ method ]( options );
+		} else if ( effectName !== method && element[ effectName ] ) {
+			element[ effectName ]( options.duration, options.easing, callback );
+		} else {
+			element.queue(function( next ) {
+				$( this )[ method ]();
+				if ( callback ) {
+					callback.call( element[ 0 ] );
+				}
+				next();
+			});
+		}
+	};
+});
+
+})( jQuery );
+
+define("jquery.ui.widget", function(){});
+
+/*
+ * jQuery File Upload Plugin 5.39.1
+ * https://github.com/blueimp/jQuery-File-Upload
+ *
+ * Copyright 2010, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/* jshint nomen:false */
+/* global define, window, document, location, Blob, FormData */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('jquery.fileupload',[
+            'jquery',
+            'jquery.ui.widget'
+        ], factory);
+    } else {
+        // Browser globals:
+        factory(window.jQuery);
+    }
+}(function ($) {
+    
+
+    // Detect file input support, based on
+    // http://viljamis.com/blog/2012/file-upload-support-on-mobile/
+    $.support.fileInput = !(new RegExp(
+        // Handle devices which give false positives for the feature detection:
+        '(Android (1\\.[0156]|2\\.[01]))' +
+            '|(Windows Phone (OS 7|8\\.0))|(XBLWP)|(ZuneWP)|(WPDesktop)' +
+            '|(w(eb)?OSBrowser)|(webOS)' +
+            '|(Kindle/(1\\.0|2\\.[05]|3\\.0))'
+    ).test(window.navigator.userAgent) ||
+        // Feature detection for all other devices:
+        $('<input type="file">').prop('disabled'));
+
+    // The FileReader API is not actually used, but works as feature detection,
+    // as some Safari versions (5?) support XHR file uploads via the FormData API,
+    // but not non-multipart XHR file uploads.
+    // window.XMLHttpRequestUpload is not available on IE10, so we check for
+    // window.ProgressEvent instead to detect XHR2 file upload capability:
+    $.support.xhrFileUpload = !!(window.ProgressEvent && window.FileReader);
+    $.support.xhrFormDataFileUpload = !!window.FormData;
+
+    // Detect support for Blob slicing (required for chunked uploads):
+    $.support.blobSlice = window.Blob && (Blob.prototype.slice ||
+        Blob.prototype.webkitSlice || Blob.prototype.mozSlice);
+
+    // The fileupload widget listens for change events on file input fields defined
+    // via fileInput setting and paste or drop events of the given dropZone.
+    // In addition to the default jQuery Widget methods, the fileupload widget
+    // exposes the "add" and "send" methods, to add or directly send files using
+    // the fileupload API.
+    // By default, files added via file input selection, paste, drag & drop or
+    // "add" method are uploaded immediately, but it is possible to override
+    // the "add" callback option to queue file uploads.
+    $.widget('blueimp.fileupload', {
+
+        options: {
+            // The drop target element(s), by the default the complete document.
+            // Set to null to disable drag & drop support:
+            dropZone: $(document),
+            // The paste target element(s), by the default the complete document.
+            // Set to null to disable paste support:
+            pasteZone: $(document),
+            // The file input field(s), that are listened to for change events.
+            // If undefined, it is set to the file input fields inside
+            // of the widget element on plugin initialization.
+            // Set to null to disable the change listener.
+            fileInput: undefined,
+            // By default, the file input field is replaced with a clone after
+            // each input field change event. This is required for iframe transport
+            // queues and allows change events to be fired for the same file
+            // selection, but can be disabled by setting the following option to false:
+            replaceFileInput: true,
+            // The parameter name for the file form data (the request argument name).
+            // If undefined or empty, the name property of the file input field is
+            // used, or "files[]" if the file input name property is also empty,
+            // can be a string or an array of strings:
+            paramName: undefined,
+            // By default, each file of a selection is uploaded using an individual
+            // request for XHR type uploads. Set to false to upload file
+            // selections in one request each:
+            singleFileUploads: true,
+            // To limit the number of files uploaded with one XHR request,
+            // set the following option to an integer greater than 0:
+            limitMultiFileUploads: undefined,
+            // The following option limits the number of files uploaded with one
+            // XHR request to keep the request size under or equal to the defined
+            // limit in bytes:
+            limitMultiFileUploadSize: undefined,
+            // Multipart file uploads add a number of bytes to each uploaded file,
+            // therefore the following option adds an overhead for each file used
+            // in the limitMultiFileUploadSize configuration:
+            limitMultiFileUploadSizeOverhead: 512,
+            // Set the following option to true to issue all file upload requests
+            // in a sequential order:
+            sequentialUploads: false,
+            // To limit the number of concurrent uploads,
+            // set the following option to an integer greater than 0:
+            limitConcurrentUploads: undefined,
+            // Set the following option to true to force iframe transport uploads:
+            forceIframeTransport: false,
+            // Set the following option to the location of a redirect url on the
+            // origin server, for cross-domain iframe transport uploads:
+            redirect: undefined,
+            // The parameter name for the redirect url, sent as part of the form
+            // data and set to 'redirect' if this option is empty:
+            redirectParamName: undefined,
+            // Set the following option to the location of a postMessage window,
+            // to enable postMessage transport uploads:
+            postMessage: undefined,
+            // By default, XHR file uploads are sent as multipart/form-data.
+            // The iframe transport is always using multipart/form-data.
+            // Set to false to enable non-multipart XHR uploads:
+            multipart: true,
+            // To upload large files in smaller chunks, set the following option
+            // to a preferred maximum chunk size. If set to 0, null or undefined,
+            // or the browser does not support the required Blob API, files will
+            // be uploaded as a whole.
+            maxChunkSize: undefined,
+            // When a non-multipart upload or a chunked multipart upload has been
+            // aborted, this option can be used to resume the upload by setting
+            // it to the size of the already uploaded bytes. This option is most
+            // useful when modifying the options object inside of the "add" or
+            // "send" callbacks, as the options are cloned for each file upload.
+            uploadedBytes: undefined,
+            // By default, failed (abort or error) file uploads are removed from the
+            // global progress calculation. Set the following option to false to
+            // prevent recalculating the global progress data:
+            recalculateProgress: true,
+            // Interval in milliseconds to calculate and trigger progress events:
+            progressInterval: 100,
+            // Interval in milliseconds to calculate progress bitrate:
+            bitrateInterval: 500,
+            // By default, uploads are started automatically when adding files:
+            autoUpload: true,
+
+            // Error and info messages:
+            messages: {
+                uploadedBytes: 'Uploaded bytes exceed file size'
+            },
+
+            // Translation function, gets the message key to be translated
+            // and an object with context specific data as arguments:
+            i18n: function (message, context) {
+                message = this.messages[message] || message.toString();
+                if (context) {
+                    $.each(context, function (key, value) {
+                        message = message.replace('{' + key + '}', value);
+                    });
+                }
+                return message;
+            },
+
+            // Additional form data to be sent along with the file uploads can be set
+            // using this option, which accepts an array of objects with name and
+            // value properties, a function returning such an array, a FormData
+            // object (for XHR file uploads), or a simple object.
+            // The form of the first fileInput is given as parameter to the function:
+            formData: function (form) {
+                return form.serializeArray();
+            },
+
+            // The add callback is invoked as soon as files are added to the fileupload
+            // widget (via file input selection, drag & drop, paste or add API call).
+            // If the singleFileUploads option is enabled, this callback will be
+            // called once for each file in the selection for XHR file uploads, else
+            // once for each file selection.
+            //
+            // The upload starts when the submit method is invoked on the data parameter.
+            // The data object contains a files property holding the added files
+            // and allows you to override plugin options as well as define ajax settings.
+            //
+            // Listeners for this callback can also be bound the following way:
+            // .bind('fileuploadadd', func);
+            //
+            // data.submit() returns a Promise object and allows to attach additional
+            // handlers using jQuery's Deferred callbacks:
+            // data.submit().done(func).fail(func).always(func);
+            add: function (e, data) {
+                if (e.isDefaultPrevented()) {
+                    return false;
+                }
+                if (data.autoUpload || (data.autoUpload !== false &&
+                        $(this).fileupload('option', 'autoUpload'))) {
+                    data.process().done(function () {
+                        data.submit();
+                    });
+                }
+            },
+
+            // Other callbacks:
+
+            // Callback for the submit event of each file upload:
+            // submit: function (e, data) {}, // .bind('fileuploadsubmit', func);
+
+            // Callback for the start of each file upload request:
+            // send: function (e, data) {}, // .bind('fileuploadsend', func);
+
+            // Callback for successful uploads:
+            // done: function (e, data) {}, // .bind('fileuploaddone', func);
+
+            // Callback for failed (abort or error) uploads:
+            // fail: function (e, data) {}, // .bind('fileuploadfail', func);
+
+            // Callback for completed (success, abort or error) requests:
+            // always: function (e, data) {}, // .bind('fileuploadalways', func);
+
+            // Callback for upload progress events:
+            // progress: function (e, data) {}, // .bind('fileuploadprogress', func);
+
+            // Callback for global upload progress events:
+            // progressall: function (e, data) {}, // .bind('fileuploadprogressall', func);
+
+            // Callback for uploads start, equivalent to the global ajaxStart event:
+            // start: function (e) {}, // .bind('fileuploadstart', func);
+
+            // Callback for uploads stop, equivalent to the global ajaxStop event:
+            // stop: function (e) {}, // .bind('fileuploadstop', func);
+
+            // Callback for change events of the fileInput(s):
+            // change: function (e, data) {}, // .bind('fileuploadchange', func);
+
+            // Callback for paste events to the pasteZone(s):
+            // paste: function (e, data) {}, // .bind('fileuploadpaste', func);
+
+            // Callback for drop events of the dropZone(s):
+            // drop: function (e, data) {}, // .bind('fileuploaddrop', func);
+
+            // Callback for dragover events of the dropZone(s):
+            // dragover: function (e) {}, // .bind('fileuploaddragover', func);
+
+            // Callback for the start of each chunk upload request:
+            // chunksend: function (e, data) {}, // .bind('fileuploadchunksend', func);
+
+            // Callback for successful chunk uploads:
+            // chunkdone: function (e, data) {}, // .bind('fileuploadchunkdone', func);
+
+            // Callback for failed (abort or error) chunk uploads:
+            // chunkfail: function (e, data) {}, // .bind('fileuploadchunkfail', func);
+
+            // Callback for completed (success, abort or error) chunk upload requests:
+            // chunkalways: function (e, data) {}, // .bind('fileuploadchunkalways', func);
+
+            // The plugin options are used as settings object for the ajax calls.
+            // The following are jQuery ajax settings required for the file uploads:
+            processData: false,
+            contentType: false,
+            cache: false
+        },
+
+        // A list of options that require reinitializing event listeners and/or
+        // special initialization code:
+        _specialOptions: [
+            'fileInput',
+            'dropZone',
+            'pasteZone',
+            'multipart',
+            'forceIframeTransport'
+        ],
+
+        _blobSlice: $.support.blobSlice && function () {
+            var slice = this.slice || this.webkitSlice || this.mozSlice;
+            return slice.apply(this, arguments);
+        },
+
+        _BitrateTimer: function () {
+            this.timestamp = ((Date.now) ? Date.now() : (new Date()).getTime());
+            this.loaded = 0;
+            this.bitrate = 0;
+            this.getBitrate = function (now, loaded, interval) {
+                var timeDiff = now - this.timestamp;
+                if (!this.bitrate || !interval || timeDiff > interval) {
+                    this.bitrate = (loaded - this.loaded) * (1000 / timeDiff) * 8;
+                    this.loaded = loaded;
+                    this.timestamp = now;
+                }
+                return this.bitrate;
+            };
+        },
+
+        _isXHRUpload: function (options) {
+            return !options.forceIframeTransport &&
+                ((!options.multipart && $.support.xhrFileUpload) ||
+                $.support.xhrFormDataFileUpload);
+        },
+
+        _getFormData: function (options) {
+            var formData;
+            if ($.type(options.formData) === 'function') {
+                return options.formData(options.form);
+            }
+            if ($.isArray(options.formData)) {
+                return options.formData;
+            }
+            if ($.type(options.formData) === 'object') {
+                formData = [];
+                $.each(options.formData, function (name, value) {
+                    formData.push({name: name, value: value});
+                });
+                return formData;
+            }
+            return [];
+        },
+
+        _getTotal: function (files) {
+            var total = 0;
+            $.each(files, function (index, file) {
+                total += file.size || 1;
+            });
+            return total;
+        },
+
+        _initProgressObject: function (obj) {
+            var progress = {
+                loaded: 0,
+                total: 0,
+                bitrate: 0
+            };
+            if (obj._progress) {
+                $.extend(obj._progress, progress);
+            } else {
+                obj._progress = progress;
+            }
+        },
+
+        _initResponseObject: function (obj) {
+            var prop;
+            if (obj._response) {
+                for (prop in obj._response) {
+                    if (obj._response.hasOwnProperty(prop)) {
+                        delete obj._response[prop];
+                    }
+                }
+            } else {
+                obj._response = {};
+            }
+        },
+
+        _onProgress: function (e, data) {
+            if (e.lengthComputable) {
+                var now = ((Date.now) ? Date.now() : (new Date()).getTime()),
+                    loaded;
+                if (data._time && data.progressInterval &&
+                        (now - data._time < data.progressInterval) &&
+                        e.loaded !== e.total) {
+                    return;
+                }
+                data._time = now;
+                loaded = Math.floor(
+                    e.loaded / e.total * (data.chunkSize || data._progress.total)
+                ) + (data.uploadedBytes || 0);
+                // Add the difference from the previously loaded state
+                // to the global loaded counter:
+                this._progress.loaded += (loaded - data._progress.loaded);
+                this._progress.bitrate = this._bitrateTimer.getBitrate(
+                    now,
+                    this._progress.loaded,
+                    data.bitrateInterval
+                );
+                data._progress.loaded = data.loaded = loaded;
+                data._progress.bitrate = data.bitrate = data._bitrateTimer.getBitrate(
+                    now,
+                    loaded,
+                    data.bitrateInterval
+                );
+                // Trigger a custom progress event with a total data property set
+                // to the file size(s) of the current upload and a loaded data
+                // property calculated accordingly:
+                this._trigger(
+                    'progress',
+                    $.Event('progress', {delegatedEvent: e}),
+                    data
+                );
+                // Trigger a global progress event for all current file uploads,
+                // including ajax calls queued for sequential file uploads:
+                this._trigger(
+                    'progressall',
+                    $.Event('progressall', {delegatedEvent: e}),
+                    this._progress
+                );
+            }
+        },
+
+        _initProgressListener: function (options) {
+            var that = this,
+                xhr = options.xhr ? options.xhr() : $.ajaxSettings.xhr();
+            // Accesss to the native XHR object is required to add event listeners
+            // for the upload progress event:
+            if (xhr.upload) {
+                $(xhr.upload).bind('progress', function (e) {
+                    var oe = e.originalEvent;
+                    // Make sure the progress event properties get copied over:
+                    e.lengthComputable = oe.lengthComputable;
+                    e.loaded = oe.loaded;
+                    e.total = oe.total;
+                    that._onProgress(e, options);
+                });
+                options.xhr = function () {
+                    return xhr;
+                };
+            }
+        },
+
+        _isInstanceOf: function (type, obj) {
+            // Cross-frame instanceof check
+            return Object.prototype.toString.call(obj) === '[object ' + type + ']';
+        },
+
+        _initXHRData: function (options) {
+            var that = this,
+                formData,
+                file = options.files[0],
+                // Ignore non-multipart setting if not supported:
+                multipart = options.multipart || !$.support.xhrFileUpload,
+                paramName = options.paramName[0];
+            options.headers = $.extend({}, options.headers);
+            if (options.contentRange) {
+                options.headers['Content-Range'] = options.contentRange;
+            }
+            if (!multipart || options.blob || !this._isInstanceOf('File', file)) {
+                options.headers['Content-Disposition'] = 'attachment; filename="' +
+                    encodeURI(file.name) + '"';
+            }
+            if (!multipart) {
+                options.contentType = file.type || 'application/octet-stream';
+                options.data = options.blob || file;
+            } else if ($.support.xhrFormDataFileUpload) {
+                if (options.postMessage) {
+                    // window.postMessage does not allow sending FormData
+                    // objects, so we just add the File/Blob objects to
+                    // the formData array and let the postMessage window
+                    // create the FormData object out of this array:
+                    formData = this._getFormData(options);
+                    if (options.blob) {
+                        formData.push({
+                            name: paramName,
+                            value: options.blob
+                        });
+                    } else {
+                        $.each(options.files, function (index, file) {
+                            formData.push({
+                                name: options.paramName[index] || paramName,
+                                value: file
+                            });
+                        });
+                    }
+                } else {
+                    if (that._isInstanceOf('FormData', options.formData)) {
+                        formData = options.formData;
+                    } else {
+                        formData = new FormData();
+                        $.each(this._getFormData(options), function (index, field) {
+                            formData.append(field.name, field.value);
+                        });
+                    }
+                    if (options.blob) {
+                        formData.append(paramName, options.blob, file.name);
+                    } else {
+                        $.each(options.files, function (index, file) {
+                            // This check allows the tests to run with
+                            // dummy objects:
+                            if (that._isInstanceOf('File', file) ||
+                                    that._isInstanceOf('Blob', file)) {
+                                formData.append(
+                                    options.paramName[index] || paramName,
+                                    file,
+                                    file.uploadName || file.name
+                                );
+                            }
+                        });
+                    }
+                }
+                options.data = formData;
+            }
+            // Blob reference is not needed anymore, free memory:
+            options.blob = null;
+        },
+
+        _initIframeSettings: function (options) {
+            var targetHost = $('<a></a>').prop('href', options.url).prop('host');
+            // Setting the dataType to iframe enables the iframe transport:
+            options.dataType = 'iframe ' + (options.dataType || '');
+            // The iframe transport accepts a serialized array as form data:
+            options.formData = this._getFormData(options);
+            // Add redirect url to form data on cross-domain uploads:
+            if (options.redirect && targetHost && targetHost !== location.host) {
+                options.formData.push({
+                    name: options.redirectParamName || 'redirect',
+                    value: options.redirect
+                });
+            }
+        },
+
+        _initDataSettings: function (options) {
+            if (this._isXHRUpload(options)) {
+                if (!this._chunkedUpload(options, true)) {
+                    if (!options.data) {
+                        this._initXHRData(options);
+                    }
+                    this._initProgressListener(options);
+                }
+                if (options.postMessage) {
+                    // Setting the dataType to postmessage enables the
+                    // postMessage transport:
+                    options.dataType = 'postmessage ' + (options.dataType || '');
+                }
+            } else {
+                this._initIframeSettings(options);
+            }
+        },
+
+        _getParamName: function (options) {
+            var fileInput = $(options.fileInput),
+                paramName = options.paramName;
+            if (!paramName) {
+                paramName = [];
+                fileInput.each(function () {
+                    var input = $(this),
+                        name = input.prop('name') || 'files[]',
+                        i = (input.prop('files') || [1]).length;
+                    while (i) {
+                        paramName.push(name);
+                        i -= 1;
+                    }
+                });
+                if (!paramName.length) {
+                    paramName = [fileInput.prop('name') || 'files[]'];
+                }
+            } else if (!$.isArray(paramName)) {
+                paramName = [paramName];
+            }
+            return paramName;
+        },
+
+        _initFormSettings: function (options) {
+            // Retrieve missing options from the input field and the
+            // associated form, if available:
+            if (!options.form || !options.form.length) {
+                options.form = $(options.fileInput.prop('form'));
+                // If the given file input doesn't have an associated form,
+                // use the default widget file input's form:
+                if (!options.form.length) {
+                    options.form = $(this.options.fileInput.prop('form'));
+                }
+            }
+            options.paramName = this._getParamName(options);
+            if (!options.url) {
+                options.url = options.form.prop('action') || location.href;
+            }
+            // The HTTP request method must be "POST" or "PUT":
+            options.type = (options.type ||
+                ($.type(options.form.prop('method')) === 'string' &&
+                    options.form.prop('method')) || ''
+                ).toUpperCase();
+            if (options.type !== 'POST' && options.type !== 'PUT' &&
+                    options.type !== 'PATCH') {
+                options.type = 'POST';
+            }
+            if (!options.formAcceptCharset) {
+                options.formAcceptCharset = options.form.attr('accept-charset');
+            }
+        },
+
+        _getAJAXSettings: function (data) {
+            var options = $.extend({}, this.options, data);
+            this._initFormSettings(options);
+            this._initDataSettings(options);
+            return options;
+        },
+
+        // jQuery 1.6 doesn't provide .state(),
+        // while jQuery 1.8+ removed .isRejected() and .isResolved():
+        _getDeferredState: function (deferred) {
+            if (deferred.state) {
+                return deferred.state();
+            }
+            if (deferred.isResolved()) {
+                return 'resolved';
+            }
+            if (deferred.isRejected()) {
+                return 'rejected';
+            }
+            return 'pending';
+        },
+
+        // Maps jqXHR callbacks to the equivalent
+        // methods of the given Promise object:
+        _enhancePromise: function (promise) {
+            promise.success = promise.done;
+            promise.error = promise.fail;
+            promise.complete = promise.always;
+            return promise;
+        },
+
+        // Creates and returns a Promise object enhanced with
+        // the jqXHR methods abort, success, error and complete:
+        _getXHRPromise: function (resolveOrReject, context, args) {
+            var dfd = $.Deferred(),
+                promise = dfd.promise();
+            context = context || this.options.context || promise;
+            if (resolveOrReject === true) {
+                dfd.resolveWith(context, args);
+            } else if (resolveOrReject === false) {
+                dfd.rejectWith(context, args);
+            }
+            promise.abort = dfd.promise;
+            return this._enhancePromise(promise);
+        },
+
+        // Adds convenience methods to the data callback argument:
+        _addConvenienceMethods: function (e, data) {
+            var that = this,
+                getPromise = function (args) {
+                    return $.Deferred().resolveWith(that, args).promise();
+                };
+            data.process = function (resolveFunc, rejectFunc) {
+                if (resolveFunc || rejectFunc) {
+                    data._processQueue = this._processQueue =
+                        (this._processQueue || getPromise([this])).pipe(
+                            function () {
+                                if (data.errorThrown) {
+                                    return $.Deferred()
+                                        .rejectWith(that, [data]).promise();
+                                }
+                                return getPromise(arguments);
+                            }
+                        ).pipe(resolveFunc, rejectFunc);
+                }
+                return this._processQueue || getPromise([this]);
+            };
+            data.submit = function () {
+                if (this.state() !== 'pending') {
+                    data.jqXHR = this.jqXHR =
+                        (that._trigger(
+                            'submit',
+                            $.Event('submit', {delegatedEvent: e}),
+                            this
+                        ) !== false) && that._onSend(e, this);
+                }
+                return this.jqXHR || that._getXHRPromise();
+            };
+            data.abort = function () {
+                if (this.jqXHR) {
+                    return this.jqXHR.abort();
+                }
+                this.errorThrown = 'abort';
+                that._trigger('fail', null, this);
+                return that._getXHRPromise(false);
+            };
+            data.state = function () {
+                if (this.jqXHR) {
+                    return that._getDeferredState(this.jqXHR);
+                }
+                if (this._processQueue) {
+                    return that._getDeferredState(this._processQueue);
+                }
+            };
+            data.processing = function () {
+                return !this.jqXHR && this._processQueue && that
+                    ._getDeferredState(this._processQueue) === 'pending';
+            };
+            data.progress = function () {
+                return this._progress;
+            };
+            data.response = function () {
+                return this._response;
+            };
+        },
+
+        // Parses the Range header from the server response
+        // and returns the uploaded bytes:
+        _getUploadedBytes: function (jqXHR) {
+            var range = jqXHR.getResponseHeader('Range'),
+                parts = range && range.split('-'),
+                upperBytesPos = parts && parts.length > 1 &&
+                    parseInt(parts[1], 10);
+            return upperBytesPos && upperBytesPos + 1;
+        },
+
+        // Uploads a file in multiple, sequential requests
+        // by splitting the file up in multiple blob chunks.
+        // If the second parameter is true, only tests if the file
+        // should be uploaded in chunks, but does not invoke any
+        // upload requests:
+        _chunkedUpload: function (options, testOnly) {
+            options.uploadedBytes = options.uploadedBytes || 0;
+            var that = this,
+                file = options.files[0],
+                fs = file.size,
+                ub = options.uploadedBytes,
+                mcs = options.maxChunkSize || fs,
+                slice = this._blobSlice,
+                dfd = $.Deferred(),
+                promise = dfd.promise(),
+                jqXHR,
+                upload;
+            if (!(this._isXHRUpload(options) && slice && (ub || mcs < fs)) ||
+                    options.data) {
+                return false;
+            }
+            if (testOnly) {
+                return true;
+            }
+            if (ub >= fs) {
+                file.error = options.i18n('uploadedBytes');
+                return this._getXHRPromise(
+                    false,
+                    options.context,
+                    [null, 'error', file.error]
+                );
+            }
+            // The chunk upload method:
+            upload = function () {
+                // Clone the options object for each chunk upload:
+                var o = $.extend({}, options),
+                    currentLoaded = o._progress.loaded;
+                o.blob = slice.call(
+                    file,
+                    ub,
+                    ub + mcs,
+                    file.type
+                );
+                // Store the current chunk size, as the blob itself
+                // will be dereferenced after data processing:
+                o.chunkSize = o.blob.size;
+                // Expose the chunk bytes position range:
+                o.contentRange = 'bytes ' + ub + '-' +
+                    (ub + o.chunkSize - 1) + '/' + fs;
+                // Process the upload data (the blob and potential form data):
+                that._initXHRData(o);
+                // Add progress listeners for this chunk upload:
+                that._initProgressListener(o);
+                jqXHR = ((that._trigger('chunksend', null, o) !== false && $.ajax(o)) ||
+                        that._getXHRPromise(false, o.context))
+                    .done(function (result, textStatus, jqXHR) {
+                        ub = that._getUploadedBytes(jqXHR) ||
+                            (ub + o.chunkSize);
+                        // Create a progress event if no final progress event
+                        // with loaded equaling total has been triggered
+                        // for this chunk:
+                        if (currentLoaded + o.chunkSize - o._progress.loaded) {
+                            that._onProgress($.Event('progress', {
+                                lengthComputable: true,
+                                loaded: ub - o.uploadedBytes,
+                                total: ub - o.uploadedBytes
+                            }), o);
+                        }
+                        options.uploadedBytes = o.uploadedBytes = ub;
+                        o.result = result;
+                        o.textStatus = textStatus;
+                        o.jqXHR = jqXHR;
+                        that._trigger('chunkdone', null, o);
+                        that._trigger('chunkalways', null, o);
+                        if (ub < fs) {
+                            // File upload not yet complete,
+                            // continue with the next chunk:
+                            upload();
+                        } else {
+                            dfd.resolveWith(
+                                o.context,
+                                [result, textStatus, jqXHR]
+                            );
+                        }
+                    })
+                    .fail(function (jqXHR, textStatus, errorThrown) {
+                        o.jqXHR = jqXHR;
+                        o.textStatus = textStatus;
+                        o.errorThrown = errorThrown;
+                        that._trigger('chunkfail', null, o);
+                        that._trigger('chunkalways', null, o);
+                        dfd.rejectWith(
+                            o.context,
+                            [jqXHR, textStatus, errorThrown]
+                        );
+                    });
+            };
+            this._enhancePromise(promise);
+            promise.abort = function () {
+                return jqXHR.abort();
+            };
+            upload();
+            return promise;
+        },
+
+        _beforeSend: function (e, data) {
+            if (this._active === 0) {
+                // the start callback is triggered when an upload starts
+                // and no other uploads are currently running,
+                // equivalent to the global ajaxStart event:
+                this._trigger('start');
+                // Set timer for global bitrate progress calculation:
+                this._bitrateTimer = new this._BitrateTimer();
+                // Reset the global progress values:
+                this._progress.loaded = this._progress.total = 0;
+                this._progress.bitrate = 0;
+            }
+            // Make sure the container objects for the .response() and
+            // .progress() methods on the data object are available
+            // and reset to their initial state:
+            this._initResponseObject(data);
+            this._initProgressObject(data);
+            data._progress.loaded = data.loaded = data.uploadedBytes || 0;
+            data._progress.total = data.total = this._getTotal(data.files) || 1;
+            data._progress.bitrate = data.bitrate = 0;
+            this._active += 1;
+            // Initialize the global progress values:
+            this._progress.loaded += data.loaded;
+            this._progress.total += data.total;
+        },
+
+        _onDone: function (result, textStatus, jqXHR, options) {
+            var total = options._progress.total,
+                response = options._response;
+            if (options._progress.loaded < total) {
+                // Create a progress event if no final progress event
+                // with loaded equaling total has been triggered:
+                this._onProgress($.Event('progress', {
+                    lengthComputable: true,
+                    loaded: total,
+                    total: total
+                }), options);
+            }
+            response.result = options.result = result;
+            response.textStatus = options.textStatus = textStatus;
+            response.jqXHR = options.jqXHR = jqXHR;
+            this._trigger('done', null, options);
+        },
+
+        _onFail: function (jqXHR, textStatus, errorThrown, options) {
+            var response = options._response;
+            if (options.recalculateProgress) {
+                // Remove the failed (error or abort) file upload from
+                // the global progress calculation:
+                this._progress.loaded -= options._progress.loaded;
+                this._progress.total -= options._progress.total;
+            }
+            response.jqXHR = options.jqXHR = jqXHR;
+            response.textStatus = options.textStatus = textStatus;
+            response.errorThrown = options.errorThrown = errorThrown;
+            this._trigger('fail', null, options);
+        },
+
+        _onAlways: function (jqXHRorResult, textStatus, jqXHRorError, options) {
+            // jqXHRorResult, textStatus and jqXHRorError are added to the
+            // options object via done and fail callbacks
+            this._trigger('always', null, options);
+        },
+
+        _onSend: function (e, data) {
+            if (!data.submit) {
+                this._addConvenienceMethods(e, data);
+            }
+            var that = this,
+                jqXHR,
+                aborted,
+                slot,
+                pipe,
+                options = that._getAJAXSettings(data),
+                send = function () {
+                    that._sending += 1;
+                    // Set timer for bitrate progress calculation:
+                    options._bitrateTimer = new that._BitrateTimer();
+                    jqXHR = jqXHR || (
+                        ((aborted || that._trigger(
+                            'send',
+                            $.Event('send', {delegatedEvent: e}),
+                            options
+                        ) === false) &&
+                        that._getXHRPromise(false, options.context, aborted)) ||
+                        that._chunkedUpload(options) || $.ajax(options)
+                    ).done(function (result, textStatus, jqXHR) {
+                        that._onDone(result, textStatus, jqXHR, options);
+                    }).fail(function (jqXHR, textStatus, errorThrown) {
+                        that._onFail(jqXHR, textStatus, errorThrown, options);
+                    }).always(function (jqXHRorResult, textStatus, jqXHRorError) {
+                        that._onAlways(
+                            jqXHRorResult,
+                            textStatus,
+                            jqXHRorError,
+                            options
+                        );
+                        that._sending -= 1;
+                        that._active -= 1;
+                        if (options.limitConcurrentUploads &&
+                                options.limitConcurrentUploads > that._sending) {
+                            // Start the next queued upload,
+                            // that has not been aborted:
+                            var nextSlot = that._slots.shift();
+                            while (nextSlot) {
+                                if (that._getDeferredState(nextSlot) === 'pending') {
+                                    nextSlot.resolve();
+                                    break;
+                                }
+                                nextSlot = that._slots.shift();
+                            }
+                        }
+                        if (that._active === 0) {
+                            // The stop callback is triggered when all uploads have
+                            // been completed, equivalent to the global ajaxStop event:
+                            that._trigger('stop');
+                        }
+                    });
+                    return jqXHR;
+                };
+            this._beforeSend(e, options);
+            if (this.options.sequentialUploads ||
+                    (this.options.limitConcurrentUploads &&
+                    this.options.limitConcurrentUploads <= this._sending)) {
+                if (this.options.limitConcurrentUploads > 1) {
+                    slot = $.Deferred();
+                    this._slots.push(slot);
+                    pipe = slot.pipe(send);
+                } else {
+                    this._sequence = this._sequence.pipe(send, send);
+                    pipe = this._sequence;
+                }
+                // Return the piped Promise object, enhanced with an abort method,
+                // which is delegated to the jqXHR object of the current upload,
+                // and jqXHR callbacks mapped to the equivalent Promise methods:
+                pipe.abort = function () {
+                    aborted = [undefined, 'abort', 'abort'];
+                    if (!jqXHR) {
+                        if (slot) {
+                            slot.rejectWith(options.context, aborted);
+                        }
+                        return send();
+                    }
+                    return jqXHR.abort();
+                };
+                return this._enhancePromise(pipe);
+            }
+            return send();
+        },
+
+        _onAdd: function (e, data) {
+            var that = this,
+                result = true,
+                options = $.extend({}, this.options, data),
+                files = data.files,
+                filesLength = files.length,
+                limit = options.limitMultiFileUploads,
+                limitSize = options.limitMultiFileUploadSize,
+                overhead = options.limitMultiFileUploadSizeOverhead,
+                batchSize = 0,
+                paramName = this._getParamName(options),
+                paramNameSet,
+                paramNameSlice,
+                fileSet,
+                i,
+                j = 0;
+            if (limitSize && (!filesLength || files[0].size === undefined)) {
+                limitSize = undefined;
+            }
+            if (!(options.singleFileUploads || limit || limitSize) ||
+                    !this._isXHRUpload(options)) {
+                fileSet = [files];
+                paramNameSet = [paramName];
+            } else if (!(options.singleFileUploads || limitSize) && limit) {
+                fileSet = [];
+                paramNameSet = [];
+                for (i = 0; i < filesLength; i += limit) {
+                    fileSet.push(files.slice(i, i + limit));
+                    paramNameSlice = paramName.slice(i, i + limit);
+                    if (!paramNameSlice.length) {
+                        paramNameSlice = paramName;
+                    }
+                    paramNameSet.push(paramNameSlice);
+                }
+            } else if (!options.singleFileUploads && limitSize) {
+                fileSet = [];
+                paramNameSet = [];
+                for (i = 0; i < filesLength; i = i + 1) {
+                    batchSize += files[i].size + overhead;
+                    if (i + 1 === filesLength ||
+                            (batchSize + files[i + 1].size + overhead) >
+                            limitSize) {
+                        fileSet.push(files.slice(j, i + 1));
+                        paramNameSlice = paramName.slice(j, i + 1);
+                        if (!paramNameSlice.length) {
+                            paramNameSlice = paramName;
+                        }
+                        paramNameSet.push(paramNameSlice);
+                        j = i + 1;
+                        batchSize = 0;
+                    }
+                }
+            } else {
+                paramNameSet = paramName;
+            }
+            data.originalFiles = files;
+            $.each(fileSet || files, function (index, element) {
+                var newData = $.extend({}, data);
+                newData.files = fileSet ? element : [element];
+                newData.paramName = paramNameSet[index];
+                that._initResponseObject(newData);
+                that._initProgressObject(newData);
+                that._addConvenienceMethods(e, newData);
+                result = that._trigger(
+                    'add',
+                    $.Event('add', {delegatedEvent: e}),
+                    newData
+                );
+                return result;
+            });
+            return result;
+        },
+
+        _replaceFileInput: function (input) {
+            var inputClone = input.clone(true);
+            $('<form></form>').append(inputClone)[0].reset();
+            // Detaching allows to insert the fileInput on another form
+            // without loosing the file input value:
+            input.after(inputClone).detach();
+            // Avoid memory leaks with the detached file input:
+            $.cleanData(input.unbind('remove'));
+            // Replace the original file input element in the fileInput
+            // elements set with the clone, which has been copied including
+            // event handlers:
+            this.options.fileInput = this.options.fileInput.map(function (i, el) {
+                if (el === input[0]) {
+                    return inputClone[0];
+                }
+                return el;
+            });
+            // If the widget has been initialized on the file input itself,
+            // override this.element with the file input clone:
+            if (input[0] === this.element[0]) {
+                this.element = inputClone;
+            }
+        },
+
+        _handleFileTreeEntry: function (entry, path) {
+            var that = this,
+                dfd = $.Deferred(),
+                errorHandler = function (e) {
+                    if (e && !e.entry) {
+                        e.entry = entry;
+                    }
+                    // Since $.when returns immediately if one
+                    // Deferred is rejected, we use resolve instead.
+                    // This allows valid files and invalid items
+                    // to be returned together in one set:
+                    dfd.resolve([e]);
+                },
+                dirReader;
+            path = path || '';
+            if (entry.isFile) {
+                if (entry._file) {
+                    // Workaround for Chrome bug #149735
+                    entry._file.relativePath = path;
+                    dfd.resolve(entry._file);
+                } else {
+                    entry.file(function (file) {
+                        file.relativePath = path;
+                        dfd.resolve(file);
+                    }, errorHandler);
+                }
+            } else if (entry.isDirectory) {
+                dirReader = entry.createReader();
+                dirReader.readEntries(function (entries) {
+                    that._handleFileTreeEntries(
+                        entries,
+                        path + entry.name + '/'
+                    ).done(function (files) {
+                        dfd.resolve(files);
+                    }).fail(errorHandler);
+                }, errorHandler);
+            } else {
+                // Return an empy list for file system items
+                // other than files or directories:
+                dfd.resolve([]);
+            }
+            return dfd.promise();
+        },
+
+        _handleFileTreeEntries: function (entries, path) {
+            var that = this;
+            return $.when.apply(
+                $,
+                $.map(entries, function (entry) {
+                    return that._handleFileTreeEntry(entry, path);
+                })
+            ).pipe(function () {
+                return Array.prototype.concat.apply(
+                    [],
+                    arguments
+                );
+            });
+        },
+
+        _getDroppedFiles: function (dataTransfer) {
+            dataTransfer = dataTransfer || {};
+            var items = dataTransfer.items;
+            if (items && items.length && (items[0].webkitGetAsEntry ||
+                    items[0].getAsEntry)) {
+                return this._handleFileTreeEntries(
+                    $.map(items, function (item) {
+                        var entry;
+                        if (item.webkitGetAsEntry) {
+                            entry = item.webkitGetAsEntry();
+                            if (entry) {
+                                // Workaround for Chrome bug #149735:
+                                entry._file = item.getAsFile();
+                            }
+                            return entry;
+                        }
+                        return item.getAsEntry();
+                    })
+                );
+            }
+            return $.Deferred().resolve(
+                $.makeArray(dataTransfer.files)
+            ).promise();
+        },
+
+        _getSingleFileInputFiles: function (fileInput) {
+            fileInput = $(fileInput);
+            var entries = fileInput.prop('webkitEntries') ||
+                    fileInput.prop('entries'),
+                files,
+                value;
+            if (entries && entries.length) {
+                return this._handleFileTreeEntries(entries);
+            }
+            files = $.makeArray(fileInput.prop('files'));
+            if (!files.length) {
+                value = fileInput.prop('value');
+                if (!value) {
+                    return $.Deferred().resolve([]).promise();
+                }
+                // If the files property is not available, the browser does not
+                // support the File API and we add a pseudo File object with
+                // the input value as name with path information removed:
+                files = [{name: value.replace(/^.*\\/, '')}];
+            } else if (files[0].name === undefined && files[0].fileName) {
+                // File normalization for Safari 4 and Firefox 3:
+                $.each(files, function (index, file) {
+                    file.name = file.fileName;
+                    file.size = file.fileSize;
+                });
+            }
+            return $.Deferred().resolve(files).promise();
+        },
+
+        _getFileInputFiles: function (fileInput) {
+            if (!(fileInput instanceof $) || fileInput.length === 1) {
+                return this._getSingleFileInputFiles(fileInput);
+            }
+            return $.when.apply(
+                $,
+                $.map(fileInput, this._getSingleFileInputFiles)
+            ).pipe(function () {
+                return Array.prototype.concat.apply(
+                    [],
+                    arguments
+                );
+            });
+        },
+
+        _onChange: function (e) {
+            var that = this,
+                data = {
+                    fileInput: $(e.target),
+                    form: $(e.target.form)
+                };
+            this._getFileInputFiles(data.fileInput).always(function (files) {
+                data.files = files;
+                if (that.options.replaceFileInput) {
+                    that._replaceFileInput(data.fileInput);
+                }
+                if (that._trigger(
+                        'change',
+                        $.Event('change', {delegatedEvent: e}),
+                        data
+                    ) !== false) {
+                    that._onAdd(e, data);
+                }
+            });
+        },
+
+        _onPaste: function (e) {
+            var items = e.originalEvent && e.originalEvent.clipboardData &&
+                    e.originalEvent.clipboardData.items,
+                data = {files: []};
+            if (items && items.length) {
+                $.each(items, function (index, item) {
+                    var file = item.getAsFile && item.getAsFile();
+                    if (file) {
+                        data.files.push(file);
+                    }
+                });
+                if (this._trigger(
+                        'paste',
+                        $.Event('paste', {delegatedEvent: e}),
+                        data
+                    ) !== false) {
+                    this._onAdd(e, data);
+                }
+            }
+        },
+
+        _onDrop: function (e) {
+            e.dataTransfer = e.originalEvent && e.originalEvent.dataTransfer;
+            var that = this,
+                dataTransfer = e.dataTransfer,
+                data = {};
+            if (dataTransfer && dataTransfer.files && dataTransfer.files.length) {
+                e.preventDefault();
+                this._getDroppedFiles(dataTransfer).always(function (files) {
+                    data.files = files;
+                    if (that._trigger(
+                            'drop',
+                            $.Event('drop', {delegatedEvent: e}),
+                            data
+                        ) !== false) {
+                        that._onAdd(e, data);
+                    }
+                });
+            }
+        },
+
+        _onDragOver: function (e) {
+            e.dataTransfer = e.originalEvent && e.originalEvent.dataTransfer;
+            var dataTransfer = e.dataTransfer;
+            if (dataTransfer && $.inArray('Files', dataTransfer.types) !== -1 &&
+                    this._trigger(
+                        'dragover',
+                        $.Event('dragover', {delegatedEvent: e})
+                    ) !== false) {
+                e.preventDefault();
+                dataTransfer.dropEffect = 'copy';
+            }
+        },
+
+        _initEventHandlers: function () {
+            if (this._isXHRUpload(this.options)) {
+                this._on(this.options.dropZone, {
+                    dragover: this._onDragOver,
+                    drop: this._onDrop
+                });
+                this._on(this.options.pasteZone, {
+                    paste: this._onPaste
+                });
+            }
+            if ($.support.fileInput) {
+                this._on(this.options.fileInput, {
+                    change: this._onChange
+                });
+            }
+        },
+
+        _destroyEventHandlers: function () {
+            this._off(this.options.dropZone, 'dragover drop');
+            this._off(this.options.pasteZone, 'paste');
+            this._off(this.options.fileInput, 'change');
+        },
+
+        _setOption: function (key, value) {
+            var reinit = $.inArray(key, this._specialOptions) !== -1;
+            if (reinit) {
+                this._destroyEventHandlers();
+            }
+            this._super(key, value);
+            if (reinit) {
+                this._initSpecialOptions();
+                this._initEventHandlers();
+            }
+        },
+
+        _initSpecialOptions: function () {
+            var options = this.options;
+            if (options.fileInput === undefined) {
+                options.fileInput = this.element.is('input[type="file"]') ?
+                        this.element : this.element.find('input[type="file"]');
+            } else if (!(options.fileInput instanceof $)) {
+                options.fileInput = $(options.fileInput);
+            }
+            if (!(options.dropZone instanceof $)) {
+                options.dropZone = $(options.dropZone);
+            }
+            if (!(options.pasteZone instanceof $)) {
+                options.pasteZone = $(options.pasteZone);
+            }
+        },
+
+        _getRegExp: function (str) {
+            var parts = str.split('/'),
+                modifiers = parts.pop();
+            parts.shift();
+            return new RegExp(parts.join('/'), modifiers);
+        },
+
+        _isRegExpOption: function (key, value) {
+            return key !== 'url' && $.type(value) === 'string' &&
+                /^\/.*\/[igm]{0,3}$/.test(value);
+        },
+
+        _initDataAttributes: function () {
+            var that = this,
+                options = this.options;
+            // Initialize options set via HTML5 data-attributes:
+            $.each(
+                $(this.element[0].cloneNode(false)).data(),
+                function (key, value) {
+                    if (that._isRegExpOption(key, value)) {
+                        value = that._getRegExp(value);
+                    }
+                    options[key] = value;
+                }
+            );
+        },
+
+        _create: function () {
+            this._initDataAttributes();
+            this._initSpecialOptions();
+            this._slots = [];
+            this._sequence = this._getXHRPromise(true);
+            this._sending = this._active = 0;
+            this._initProgressObject(this);
+            this._initEventHandlers();
+        },
+
+        // This method is exposed to the widget API and allows to query
+        // the number of active uploads:
+        active: function () {
+            return this._active;
+        },
+
+        // This method is exposed to the widget API and allows to query
+        // the widget upload progress.
+        // It returns an object with loaded, total and bitrate properties
+        // for the running uploads:
+        progress: function () {
+            return this._progress;
+        },
+
+        // This method is exposed to the widget API and allows adding files
+        // using the fileupload API. The data parameter accepts an object which
+        // must have a files property and can contain additional options:
+        // .fileupload('add', {files: filesList});
+        add: function (data) {
+            var that = this;
+            if (!data || this.options.disabled) {
+                return;
+            }
+            if (data.fileInput && !data.files) {
+                this._getFileInputFiles(data.fileInput).always(function (files) {
+                    data.files = files;
+                    that._onAdd(null, data);
+                });
+            } else {
+                data.files = $.makeArray(data.files);
+                this._onAdd(null, data);
+            }
+        },
+
+        // This method is exposed to the widget API and allows sending files
+        // using the fileupload API. The data parameter accepts an object which
+        // must have a files or fileInput property and can contain additional options:
+        // .fileupload('send', {files: filesList});
+        // The method returns a Promise object for the file upload call.
+        send: function (data) {
+            if (data && !this.options.disabled) {
+                if (data.fileInput && !data.files) {
+                    var that = this,
+                        dfd = $.Deferred(),
+                        promise = dfd.promise(),
+                        jqXHR,
+                        aborted;
+                    promise.abort = function () {
+                        aborted = true;
+                        if (jqXHR) {
+                            return jqXHR.abort();
+                        }
+                        dfd.reject(null, 'abort', 'abort');
+                        return promise;
+                    };
+                    this._getFileInputFiles(data.fileInput).always(
+                        function (files) {
+                            if (aborted) {
+                                return;
+                            }
+                            if (!files.length) {
+                                dfd.reject();
+                                return;
+                            }
+                            data.files = files;
+                            jqXHR = that._onSend(null, data).then(
+                                function (result, textStatus, jqXHR) {
+                                    dfd.resolve(result, textStatus, jqXHR);
+                                },
+                                function (jqXHR, textStatus, errorThrown) {
+                                    dfd.reject(jqXHR, textStatus, errorThrown);
+                                }
+                            );
+                        }
+                    );
+                    return this._enhancePromise(promise);
+                }
+                data.files = $.makeArray(data.files);
+                if (data.files.length) {
+                    return this._onSend(null, data);
+                }
+            }
+            return this._getXHRPromise(false, data && data.context);
+        }
+
+    });
+
+}));
+
+/*
+ * jQuery File Upload Processing Plugin 1.3.0
+ * https://github.com/blueimp/jQuery-File-Upload
+ *
+ * Copyright 2012, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/* jshint nomen:false */
+/* global define, window */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('jquery.fileupload-process',[
+            'jquery',
+            './jquery.fileupload'
+        ], factory);
+    } else {
+        // Browser globals:
+        factory(
+            window.jQuery
+        );
+    }
+}(function ($) {
+    
+
+    var originalAdd = $.blueimp.fileupload.prototype.options.add;
+
+    // The File Upload Processing plugin extends the fileupload widget
+    // with file processing functionality:
+    $.widget('blueimp.fileupload', $.blueimp.fileupload, {
+
+        options: {
+            // The list of processing actions:
+            processQueue: [
+                /*
+                {
+                    action: 'log',
+                    type: 'debug'
+                }
+                */
+            ],
+            add: function (e, data) {
+                var $this = $(this);
+                data.process(function () {
+                    return $this.fileupload('process', data);
+                });
+                originalAdd.call(this, e, data);
+            }
+        },
+
+        processActions: {
+            /*
+            log: function (data, options) {
+                console[options.type](
+                    'Processing "' + data.files[data.index].name + '"'
+                );
+            }
+            */
+        },
+
+        _processFile: function (data, originalData) {
+            var that = this,
+                dfd = $.Deferred().resolveWith(that, [data]),
+                chain = dfd.promise();
+            this._trigger('process', null, data);
+            $.each(data.processQueue, function (i, settings) {
+                var func = function (data) {
+                    if (originalData.errorThrown) {
+                        return $.Deferred()
+                                .rejectWith(that, [originalData]).promise();
+                    }
+                    return that.processActions[settings.action].call(
+                        that,
+                        data,
+                        settings
+                    );
+                };
+                chain = chain.pipe(func, settings.always && func);
+            });
+            chain
+                .done(function () {
+                    that._trigger('processdone', null, data);
+                    that._trigger('processalways', null, data);
+                })
+                .fail(function () {
+                    that._trigger('processfail', null, data);
+                    that._trigger('processalways', null, data);
+                });
+            return chain;
+        },
+
+        // Replaces the settings of each processQueue item that
+        // are strings starting with an "@", using the remaining
+        // substring as key for the option map,
+        // e.g. "@autoUpload" is replaced with options.autoUpload:
+        _transformProcessQueue: function (options) {
+            var processQueue = [];
+            $.each(options.processQueue, function () {
+                var settings = {},
+                    action = this.action,
+                    prefix = this.prefix === true ? action : this.prefix;
+                $.each(this, function (key, value) {
+                    if ($.type(value) === 'string' &&
+                            value.charAt(0) === '@') {
+                        settings[key] = options[
+                            value.slice(1) || (prefix ? prefix +
+                                key.charAt(0).toUpperCase() + key.slice(1) : key)
+                        ];
+                    } else {
+                        settings[key] = value;
+                    }
+
+                });
+                processQueue.push(settings);
+            });
+            options.processQueue = processQueue;
+        },
+
+        // Returns the number of files currently in the processsing queue:
+        processing: function () {
+            return this._processing;
+        },
+
+        // Processes the files given as files property of the data parameter,
+        // returns a Promise object that allows to bind callbacks:
+        process: function (data) {
+            var that = this,
+                options = $.extend({}, this.options, data);
+            if (options.processQueue && options.processQueue.length) {
+                this._transformProcessQueue(options);
+                if (this._processing === 0) {
+                    this._trigger('processstart');
+                }
+                $.each(data.files, function (index) {
+                    var opts = index ? $.extend({}, options) : options,
+                        func = function () {
+                            if (data.errorThrown) {
+                                return $.Deferred()
+                                        .rejectWith(that, [data]).promise();
+                            }
+                            return that._processFile(opts, data);
+                        };
+                    opts.index = index;
+                    that._processing += 1;
+                    that._processingQueue = that._processingQueue.pipe(func, func)
+                        .always(function () {
+                            that._processing -= 1;
+                            if (that._processing === 0) {
+                                that._trigger('processstop');
+                            }
+                        });
+                });
+            }
+            return this._processingQueue;
+        },
+
+        _create: function () {
+            this._super();
+            this._processing = 0;
+            this._processingQueue = $.Deferred().resolveWith(this)
+                .promise();
+        }
+
+    });
+
+}));
+
+/*
+ * jQuery File Upload Validation Plugin 1.1.2
+ * https://github.com/blueimp/jQuery-File-Upload
+ *
+ * Copyright 2013, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/* global define, window */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('jquery.fileupload-validate',[
+            'jquery',
+            './jquery.fileupload-process'
+        ], factory);
+    } else {
+        // Browser globals:
+        factory(
+            window.jQuery
+        );
+    }
+}(function ($) {
+    
+
+    // Append to the default processQueue:
+    $.blueimp.fileupload.prototype.options.processQueue.push(
+        {
+            action: 'validate',
+            // Always trigger this action,
+            // even if the previous action was rejected: 
+            always: true,
+            // Options taken from the global options map:
+            acceptFileTypes: '@',
+            maxFileSize: '@',
+            minFileSize: '@',
+            maxNumberOfFiles: '@',
+            disabled: '@disableValidation'
+        }
+    );
+
+    // The File Upload Validation plugin extends the fileupload widget
+    // with file validation functionality:
+    $.widget('blueimp.fileupload', $.blueimp.fileupload, {
+
+        options: {
+            /*
+            // The regular expression for allowed file types, matches
+            // against either file type or file name:
+            acceptFileTypes: /(\.|\/)(gif|jpe?g|png)$/i,
+            // The maximum allowed file size in bytes:
+            maxFileSize: 10000000, // 10 MB
+            // The minimum allowed file size in bytes:
+            minFileSize: undefined, // No minimal file size
+            // The limit of files to be uploaded:
+            maxNumberOfFiles: 10,
+            */
+
+            // Function returning the current number of files,
+            // has to be overriden for maxNumberOfFiles validation:
+            getNumberOfFiles: $.noop,
+
+            // Error and info messages:
+            messages: {
+                maxNumberOfFiles: 'Maximum number of files exceeded',
+                acceptFileTypes: 'File type not allowed',
+                maxFileSize: 'File is too large',
+                minFileSize: 'File is too small'
+            }
+        },
+
+        processActions: {
+
+            validate: function (data, options) {
+                if (options.disabled) {
+                    return data;
+                }
+                var dfd = $.Deferred(),
+                    settings = this.options,
+                    file = data.files[data.index],
+                    fileSize;
+                if (options.minFileSize || options.maxFileSize) {
+                    fileSize = file.size;
+                }
+                if ($.type(options.maxNumberOfFiles) === 'number' &&
+                        (settings.getNumberOfFiles() || 0) + data.files.length >
+                            options.maxNumberOfFiles) {
+                    file.error = settings.i18n('maxNumberOfFiles');
+                } else if (options.acceptFileTypes &&
+                        !(options.acceptFileTypes.test(file.type) ||
+                        options.acceptFileTypes.test(file.name))) {
+                    file.error = settings.i18n('acceptFileTypes');
+                } else if (fileSize > options.maxFileSize) {
+                    file.error = settings.i18n('maxFileSize');
+                } else if ($.type(fileSize) === 'number' &&
+                        fileSize < options.minFileSize) {
+                    file.error = settings.i18n('minFileSize');
+                } else {
+                    delete file.error;
+                }
+                if (file.error || data.files.error) {
+                    data.files.error = true;
+                    dfd.rejectWith(this, [data]);
+                } else {
+                    dfd.resolveWith(this, [data]);
+                }
+                return dfd.promise();
+            }
+
+        }
+
+    });
+
+}));
+
+/*
+ * JavaScript Load Image 1.10.0
+ * https://github.com/blueimp/JavaScript-Load-Image
+ *
+ * Copyright 2011, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/*jslint nomen: true */
+/*global define, window, document, URL, webkitURL, Blob, File, FileReader */
+
+(function ($) {
+    
+
+    // Loads an image for a given File object.
+    // Invokes the callback with an img or optional canvas
+    // element (if supported by the browser) as parameter:
+    var loadImage = function (file, callback, options) {
+            var img = document.createElement('img'),
+                url,
+                oUrl;
+            img.onerror = callback;
+            img.onload = function () {
+                if (oUrl && !(options && options.noRevoke)) {
+                    loadImage.revokeObjectURL(oUrl);
+                }
+                if (callback) {
+                    callback(loadImage.scale(img, options));
+                }
+            };
+            if (loadImage.isInstanceOf('Blob', file) ||
+                    // Files are also Blob instances, but some browsers
+                    // (Firefox 3.6) support the File API but not Blobs:
+                    loadImage.isInstanceOf('File', file)) {
+                url = oUrl = loadImage.createObjectURL(file);
+                // Store the file type for resize processing:
+                img._type = file.type;
+            } else if (typeof file === 'string') {
+                url = file;
+                if (options && options.crossOrigin) {
+                    img.crossOrigin = options.crossOrigin;
+                }
+            } else {
+                return false;
+            }
+            if (url) {
+                img.src = url;
+                return img;
+            }
+            return loadImage.readFile(file, function (e) {
+                var target = e.target;
+                if (target && target.result) {
+                    img.src = target.result;
+                } else {
+                    if (callback) {
+                        callback(e);
+                    }
+                }
+            });
+        },
+        // The check for URL.revokeObjectURL fixes an issue with Opera 12,
+        // which provides URL.createObjectURL but doesn't properly implement it:
+        urlAPI = (window.createObjectURL && window) ||
+            (window.URL && URL.revokeObjectURL && URL) ||
+            (window.webkitURL && webkitURL);
+
+    loadImage.isInstanceOf = function (type, obj) {
+        // Cross-frame instanceof check
+        return Object.prototype.toString.call(obj) === '[object ' + type + ']';
+    };
+
+    // Transform image coordinates, allows to override e.g.
+    // the canvas orientation based on the orientation option,
+    // gets canvas, options passed as arguments:
+    loadImage.transformCoordinates = function () {
+        return;
+    };
+
+    // Returns transformed options, allows to override e.g.
+    // maxWidth, maxHeight and crop options based on the aspectRatio.
+    // gets img, options passed as arguments:
+    loadImage.getTransformedOptions = function (img, options) {
+        var aspectRatio = options.aspectRatio,
+            newOptions,
+            i,
+            width,
+            height;
+        if (!aspectRatio) {
+            return options;
+        }
+        newOptions = {};
+        for (i in options) {
+            if (options.hasOwnProperty(i)) {
+                newOptions[i] = options[i];
+            }
+        }
+        newOptions.crop = true;
+        width = img.naturalWidth || img.width;
+        height = img.naturalHeight || img.height;
+        if (width / height > aspectRatio) {
+            newOptions.maxWidth = height * aspectRatio;
+            newOptions.maxHeight = height;
+        } else {
+            newOptions.maxWidth = width;
+            newOptions.maxHeight = width / aspectRatio;
+        }
+        return newOptions;
+    };
+
+    // Canvas render method, allows to override the
+    // rendering e.g. to work around issues on iOS:
+    loadImage.renderImageToCanvas = function (
+        canvas,
+        img,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        destX,
+        destY,
+        destWidth,
+        destHeight
+    ) {
+        canvas.getContext('2d').drawImage(
+            img,
+            sourceX,
+            sourceY,
+            sourceWidth,
+            sourceHeight,
+            destX,
+            destY,
+            destWidth,
+            destHeight
+        );
+        return canvas;
+    };
+
+    // This method is used to determine if the target image
+    // should be a canvas element:
+    loadImage.hasCanvasOption = function (options) {
+        return options.canvas || options.crop || options.aspectRatio;
+    };
+
+    // Scales and/or crops the given image (img or canvas HTML element)
+    // using the given options.
+    // Returns a canvas object if the browser supports canvas
+    // and the hasCanvasOption method returns true or a canvas
+    // object is passed as image, else the scaled image:
+    loadImage.scale = function (img, options) {
+        options = options || {};
+        var canvas = document.createElement('canvas'),
+            useCanvas = img.getContext ||
+                (loadImage.hasCanvasOption(options) && canvas.getContext),
+            width = img.naturalWidth || img.width,
+            height = img.naturalHeight || img.height,
+            destWidth = width,
+            destHeight = height,
+            maxWidth,
+            maxHeight,
+            minWidth,
+            minHeight,
+            sourceWidth,
+            sourceHeight,
+            sourceX,
+            sourceY,
+            tmp,
+            scaleUp = function () {
+                var scale = Math.max(
+                    (minWidth || destWidth) / destWidth,
+                    (minHeight || destHeight) / destHeight
+                );
+                if (scale > 1) {
+                    destWidth = destWidth * scale;
+                    destHeight = destHeight * scale;
+                }
+            },
+            scaleDown = function () {
+                var scale = Math.min(
+                    (maxWidth || destWidth) / destWidth,
+                    (maxHeight || destHeight) / destHeight
+                );
+                if (scale < 1) {
+                    destWidth = destWidth * scale;
+                    destHeight = destHeight * scale;
+                }
+            };
+        if (useCanvas) {
+            options = loadImage.getTransformedOptions(img, options);
+            sourceX = options.left || 0;
+            sourceY = options.top || 0;
+            if (options.sourceWidth) {
+                sourceWidth = options.sourceWidth;
+                if (options.right !== undefined && options.left === undefined) {
+                    sourceX = width - sourceWidth - options.right;
+                }
+            } else {
+                sourceWidth = width - sourceX - (options.right || 0);
+            }
+            if (options.sourceHeight) {
+                sourceHeight = options.sourceHeight;
+                if (options.bottom !== undefined && options.top === undefined) {
+                    sourceY = height - sourceHeight - options.bottom;
+                }
+            } else {
+                sourceHeight = height - sourceY - (options.bottom || 0);
+            }
+            destWidth = sourceWidth;
+            destHeight = sourceHeight;
+        }
+        maxWidth = options.maxWidth;
+        maxHeight = options.maxHeight;
+        minWidth = options.minWidth;
+        minHeight = options.minHeight;
+        if (useCanvas && maxWidth && maxHeight && options.crop) {
+            destWidth = maxWidth;
+            destHeight = maxHeight;
+            tmp = sourceWidth / sourceHeight - maxWidth / maxHeight;
+            if (tmp < 0) {
+                sourceHeight = maxHeight * sourceWidth / maxWidth;
+                if (options.top === undefined && options.bottom === undefined) {
+                    sourceY = (height - sourceHeight) / 2;
+                }
+            } else if (tmp > 0) {
+                sourceWidth = maxWidth * sourceHeight / maxHeight;
+                if (options.left === undefined && options.right === undefined) {
+                    sourceX = (width - sourceWidth) / 2;
+                }
+            }
+        } else {
+            if (options.contain || options.cover) {
+                minWidth = maxWidth = maxWidth || minWidth;
+                minHeight = maxHeight = maxHeight || minHeight;
+            }
+            if (options.cover) {
+                scaleDown();
+                scaleUp();
+            } else {
+                scaleUp();
+                scaleDown();
+            }
+        }
+        if (useCanvas) {
+            canvas.width = destWidth;
+            canvas.height = destHeight;
+            loadImage.transformCoordinates(
+                canvas,
+                options
+            );
+            return loadImage.renderImageToCanvas(
+                canvas,
+                img,
+                sourceX,
+                sourceY,
+                sourceWidth,
+                sourceHeight,
+                0,
+                0,
+                destWidth,
+                destHeight
+            );
+        }
+        img.width = destWidth;
+        img.height = destHeight;
+        return img;
+    };
+
+    loadImage.createObjectURL = function (file) {
+        return urlAPI ? urlAPI.createObjectURL(file) : false;
+    };
+
+    loadImage.revokeObjectURL = function (url) {
+        return urlAPI ? urlAPI.revokeObjectURL(url) : false;
+    };
+
+    // Loads a given File object via FileReader interface,
+    // invokes the callback with the event object (load or error).
+    // The result can be read via event.target.result:
+    loadImage.readFile = function (file, callback, method) {
+        if (window.FileReader) {
+            var fileReader = new FileReader();
+            fileReader.onload = fileReader.onerror = callback;
+            method = method || 'readAsDataURL';
+            if (fileReader[method]) {
+                fileReader[method](file);
+                return fileReader;
+            }
+        }
+        return false;
+    };
+
+    if (typeof define === 'function' && define.amd) {
+        define('load-image',[],function () {
+            return loadImage;
+        });
+    } else {
+        $.loadImage = loadImage;
+    }
+}(this));
+
+/*
+ * JavaScript Load Image Meta 1.0.2
+ * https://github.com/blueimp/JavaScript-Load-Image
+ *
+ * Copyright 2013, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Image meta data handling implementation
+ * based on the help and contribution of
+ * Achim Stöhr.
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/*jslint continue:true */
+/*global define, window, DataView, Blob, Uint8Array, console */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('load-image-meta',['load-image'], factory);
+    } else {
+        // Browser globals:
+        factory(window.loadImage);
+    }
+}(function (loadImage) {
+    
+
+    var hasblobSlice = window.Blob && (Blob.prototype.slice ||
+            Blob.prototype.webkitSlice || Blob.prototype.mozSlice);
+
+    loadImage.blobSlice = hasblobSlice && function () {
+        var slice = this.slice || this.webkitSlice || this.mozSlice;
+        return slice.apply(this, arguments);
+    };
+
+    loadImage.metaDataParsers = {
+        jpeg: {
+            0xffe1: [] // APP1 marker
+        }
+    };
+
+    // Parses image meta data and calls the callback with an object argument
+    // with the following properties:
+    // * imageHead: The complete image head as ArrayBuffer (Uint8Array for IE10)
+    // The options arguments accepts an object and supports the following properties:
+    // * maxMetaDataSize: Defines the maximum number of bytes to parse.
+    // * disableImageHead: Disables creating the imageHead property.
+    loadImage.parseMetaData = function (file, callback, options) {
+        options = options || {};
+        var that = this,
+            // 256 KiB should contain all EXIF/ICC/IPTC segments:
+            maxMetaDataSize = options.maxMetaDataSize || 262144,
+            data = {},
+            noMetaData = !(window.DataView  && file && file.size >= 12 &&
+                file.type === 'image/jpeg' && loadImage.blobSlice);
+        if (noMetaData || !loadImage.readFile(
+                loadImage.blobSlice.call(file, 0, maxMetaDataSize),
+                function (e) {
+                    if (e.target.error) {
+                        // FileReader error
+                        console.log(e.target.error);
+                        callback(data);
+                        return;
+                    }
+                    // Note on endianness:
+                    // Since the marker and length bytes in JPEG files are always
+                    // stored in big endian order, we can leave the endian parameter
+                    // of the DataView methods undefined, defaulting to big endian.
+                    var buffer = e.target.result,
+                        dataView = new DataView(buffer),
+                        offset = 2,
+                        maxOffset = dataView.byteLength - 4,
+                        headLength = offset,
+                        markerBytes,
+                        markerLength,
+                        parsers,
+                        i;
+                    // Check for the JPEG marker (0xffd8):
+                    if (dataView.getUint16(0) === 0xffd8) {
+                        while (offset < maxOffset) {
+                            markerBytes = dataView.getUint16(offset);
+                            // Search for APPn (0xffeN) and COM (0xfffe) markers,
+                            // which contain application-specific meta-data like
+                            // Exif, ICC and IPTC data and text comments:
+                            if ((markerBytes >= 0xffe0 && markerBytes <= 0xffef) ||
+                                    markerBytes === 0xfffe) {
+                                // The marker bytes (2) are always followed by
+                                // the length bytes (2), indicating the length of the
+                                // marker segment, which includes the length bytes,
+                                // but not the marker bytes, so we add 2:
+                                markerLength = dataView.getUint16(offset + 2) + 2;
+                                if (offset + markerLength > dataView.byteLength) {
+                                    console.log('Invalid meta data: Invalid segment size.');
+                                    break;
+                                }
+                                parsers = loadImage.metaDataParsers.jpeg[markerBytes];
+                                if (parsers) {
+                                    for (i = 0; i < parsers.length; i += 1) {
+                                        parsers[i].call(
+                                            that,
+                                            dataView,
+                                            offset,
+                                            markerLength,
+                                            data,
+                                            options
+                                        );
+                                    }
+                                }
+                                offset += markerLength;
+                                headLength = offset;
+                            } else {
+                                // Not an APPn or COM marker, probably safe to
+                                // assume that this is the end of the meta data
+                                break;
+                            }
+                        }
+                        // Meta length must be longer than JPEG marker (2)
+                        // plus APPn marker (2), followed by length bytes (2):
+                        if (!options.disableImageHead && headLength > 6) {
+                            if (buffer.slice) {
+                                data.imageHead = buffer.slice(0, headLength);
+                            } else {
+                                // Workaround for IE10, which does not yet
+                                // support ArrayBuffer.slice:
+                                data.imageHead = new Uint8Array(buffer)
+                                    .subarray(0, headLength);
+                            }
+                        }
+                    } else {
+                        console.log('Invalid JPEG file: Missing JPEG marker.');
+                    }
+                    callback(data);
+                },
+                'readAsArrayBuffer'
+            )) {
+            callback(data);
+        }
+    };
+
+}));
+
+/*
+ * JavaScript Load Image Exif Parser 1.0.0
+ * https://github.com/blueimp/JavaScript-Load-Image
+ *
+ * Copyright 2013, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/*jslint unparam: true */
+/*global define, window, console */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('load-image-exif',['load-image', 'load-image-meta'], factory);
+    } else {
+        // Browser globals:
+        factory(window.loadImage);
+    }
+}(function (loadImage) {
+    
+
+    loadImage.ExifMap = function () {
+        return this;
+    };
+
+    loadImage.ExifMap.prototype.map = {
+        'Orientation': 0x0112
+    };
+
+    loadImage.ExifMap.prototype.get = function (id) {
+        return this[id] || this[this.map[id]];
+    };
+
+    loadImage.getExifThumbnail = function (dataView, offset, length) {
+        var hexData,
+            i,
+            b;
+        if (!length || offset + length > dataView.byteLength) {
+            console.log('Invalid Exif data: Invalid thumbnail data.');
+            return;
+        }
+        hexData = [];
+        for (i = 0; i < length; i += 1) {
+            b = dataView.getUint8(offset + i);
+            hexData.push((b < 16 ? '0' : '') + b.toString(16));
+        }
+        return 'data:image/jpeg,%' + hexData.join('%');
+    };
+
+    loadImage.exifTagTypes = {
+        // byte, 8-bit unsigned int:
+        1: {
+            getValue: function (dataView, dataOffset) {
+                return dataView.getUint8(dataOffset);
+            },
+            size: 1
+        },
+        // ascii, 8-bit byte:
+        2: {
+            getValue: function (dataView, dataOffset) {
+                return String.fromCharCode(dataView.getUint8(dataOffset));
+            },
+            size: 1,
+            ascii: true
+        },
+        // short, 16 bit int:
+        3: {
+            getValue: function (dataView, dataOffset, littleEndian) {
+                return dataView.getUint16(dataOffset, littleEndian);
+            },
+            size: 2
+        },
+        // long, 32 bit int:
+        4: {
+            getValue: function (dataView, dataOffset, littleEndian) {
+                return dataView.getUint32(dataOffset, littleEndian);
+            },
+            size: 4
+        },
+        // rational = two long values, first is numerator, second is denominator:
+        5: {
+            getValue: function (dataView, dataOffset, littleEndian) {
+                return dataView.getUint32(dataOffset, littleEndian) /
+                    dataView.getUint32(dataOffset + 4, littleEndian);
+            },
+            size: 8
+        },
+        // slong, 32 bit signed int:
+        9: {
+            getValue: function (dataView, dataOffset, littleEndian) {
+                return dataView.getInt32(dataOffset, littleEndian);
+            },
+            size: 4
+        },
+        // srational, two slongs, first is numerator, second is denominator:
+        10: {
+            getValue: function (dataView, dataOffset, littleEndian) {
+                return dataView.getInt32(dataOffset, littleEndian) /
+                    dataView.getInt32(dataOffset + 4, littleEndian);
+            },
+            size: 8
+        }
+    };
+    // undefined, 8-bit byte, value depending on field:
+    loadImage.exifTagTypes[7] = loadImage.exifTagTypes[1];
+
+    loadImage.getExifValue = function (dataView, tiffOffset, offset, type, length, littleEndian) {
+        var tagType = loadImage.exifTagTypes[type],
+            tagSize,
+            dataOffset,
+            values,
+            i,
+            str,
+            c;
+        if (!tagType) {
+            console.log('Invalid Exif data: Invalid tag type.');
+            return;
+        }
+        tagSize = tagType.size * length;
+        // Determine if the value is contained in the dataOffset bytes,
+        // or if the value at the dataOffset is a pointer to the actual data:
+        dataOffset = tagSize > 4 ?
+                tiffOffset + dataView.getUint32(offset + 8, littleEndian) : (offset + 8);
+        if (dataOffset + tagSize > dataView.byteLength) {
+            console.log('Invalid Exif data: Invalid data offset.');
+            return;
+        }
+        if (length === 1) {
+            return tagType.getValue(dataView, dataOffset, littleEndian);
+        }
+        values = [];
+        for (i = 0; i < length; i += 1) {
+            values[i] = tagType.getValue(dataView, dataOffset + i * tagType.size, littleEndian);
+        }
+        if (tagType.ascii) {
+            str = '';
+            // Concatenate the chars:
+            for (i = 0; i < values.length; i += 1) {
+                c = values[i];
+                // Ignore the terminating NULL byte(s):
+                if (c === '\u0000') {
+                    break;
+                }
+                str += c;
+            }
+            return str;
+        }
+        return values;
+    };
+
+    loadImage.parseExifTag = function (dataView, tiffOffset, offset, littleEndian, data) {
+        var tag = dataView.getUint16(offset, littleEndian);
+        data.exif[tag] = loadImage.getExifValue(
+            dataView,
+            tiffOffset,
+            offset,
+            dataView.getUint16(offset + 2, littleEndian), // tag type
+            dataView.getUint32(offset + 4, littleEndian), // tag length
+            littleEndian
+        );
+    };
+
+    loadImage.parseExifTags = function (dataView, tiffOffset, dirOffset, littleEndian, data) {
+        var tagsNumber,
+            dirEndOffset,
+            i;
+        if (dirOffset + 6 > dataView.byteLength) {
+            console.log('Invalid Exif data: Invalid directory offset.');
+            return;
+        }
+        tagsNumber = dataView.getUint16(dirOffset, littleEndian);
+        dirEndOffset = dirOffset + 2 + 12 * tagsNumber;
+        if (dirEndOffset + 4 > dataView.byteLength) {
+            console.log('Invalid Exif data: Invalid directory size.');
+            return;
+        }
+        for (i = 0; i < tagsNumber; i += 1) {
+            this.parseExifTag(
+                dataView,
+                tiffOffset,
+                dirOffset + 2 + 12 * i, // tag offset
+                littleEndian,
+                data
+            );
+        }
+        // Return the offset to the next directory:
+        return dataView.getUint32(dirEndOffset, littleEndian);
+    };
+
+    loadImage.parseExifData = function (dataView, offset, length, data, options) {
+        if (options.disableExif) {
+            return;
+        }
+        var tiffOffset = offset + 10,
+            littleEndian,
+            dirOffset,
+            thumbnailData;
+        // Check for the ASCII code for "Exif" (0x45786966):
+        if (dataView.getUint32(offset + 4) !== 0x45786966) {
+            // No Exif data, might be XMP data instead
+            return;
+        }
+        if (tiffOffset + 8 > dataView.byteLength) {
+            console.log('Invalid Exif data: Invalid segment size.');
+            return;
+        }
+        // Check for the two null bytes:
+        if (dataView.getUint16(offset + 8) !== 0x0000) {
+            console.log('Invalid Exif data: Missing byte alignment offset.');
+            return;
+        }
+        // Check the byte alignment:
+        switch (dataView.getUint16(tiffOffset)) {
+        case 0x4949:
+            littleEndian = true;
+            break;
+        case 0x4D4D:
+            littleEndian = false;
+            break;
+        default:
+            console.log('Invalid Exif data: Invalid byte alignment marker.');
+            return;
+        }
+        // Check for the TIFF tag marker (0x002A):
+        if (dataView.getUint16(tiffOffset + 2, littleEndian) !== 0x002A) {
+            console.log('Invalid Exif data: Missing TIFF marker.');
+            return;
+        }
+        // Retrieve the directory offset bytes, usually 0x00000008 or 8 decimal:
+        dirOffset = dataView.getUint32(tiffOffset + 4, littleEndian);
+        // Create the exif object to store the tags:
+        data.exif = new loadImage.ExifMap();
+        // Parse the tags of the main image directory and retrieve the
+        // offset to the next directory, usually the thumbnail directory:
+        dirOffset = loadImage.parseExifTags(
+            dataView,
+            tiffOffset,
+            tiffOffset + dirOffset,
+            littleEndian,
+            data
+        );
+        if (dirOffset && !options.disableExifThumbnail) {
+            thumbnailData = {exif: {}};
+            dirOffset = loadImage.parseExifTags(
+                dataView,
+                tiffOffset,
+                tiffOffset + dirOffset,
+                littleEndian,
+                thumbnailData
+            );
+            // Check for JPEG Thumbnail offset:
+            if (thumbnailData.exif[0x0201]) {
+                data.exif.Thumbnail = loadImage.getExifThumbnail(
+                    dataView,
+                    tiffOffset + thumbnailData.exif[0x0201],
+                    thumbnailData.exif[0x0202] // Thumbnail data length
+                );
+            }
+        }
+        // Check for Exif Sub IFD Pointer:
+        if (data.exif[0x8769] && !options.disableExifSub) {
+            loadImage.parseExifTags(
+                dataView,
+                tiffOffset,
+                tiffOffset + data.exif[0x8769], // directory offset
+                littleEndian,
+                data
+            );
+        }
+        // Check for GPS Info IFD Pointer:
+        if (data.exif[0x8825] && !options.disableExifGps) {
+            loadImage.parseExifTags(
+                dataView,
+                tiffOffset,
+                tiffOffset + data.exif[0x8825], // directory offset
+                littleEndian,
+                data
+            );
+        }
+    };
+
+    // Registers the Exif parser for the APP1 JPEG meta data segment:
+    loadImage.metaDataParsers.jpeg[0xffe1].push(loadImage.parseExifData);
+
+    // Adds the following properties to the parseMetaData callback data:
+    // * exif: The exif tags, parsed by the parseExifData method
+
+    // Adds the following options to the parseMetaData method:
+    // * disableExif: Disables Exif parsing.
+    // * disableExifThumbnail: Disables parsing of the Exif Thumbnail.
+    // * disableExifSub: Disables parsing of the Exif Sub IFD.
+    // * disableExifGps: Disables parsing of the Exif GPS Info IFD.
+
+}));
+
+/*
+ * JavaScript Load Image iOS scaling fixes 1.0.3
+ * https://github.com/blueimp/JavaScript-Load-Image
+ *
+ * Copyright 2013, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * iOS image scaling fixes based on
+ * https://github.com/stomita/ios-imagefile-megapixel
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/*jslint nomen: true, bitwise: true */
+/*global define, window, document */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('load-image-ios',['load-image'], factory);
+    } else {
+        // Browser globals:
+        factory(window.loadImage);
+    }
+}(function (loadImage) {
+    
+
+    // Only apply fixes on the iOS platform:
+    if (!window.navigator || !window.navigator.platform ||
+             !(/iP(hone|od|ad)/).test(window.navigator.platform)) {
+        return;
+    }
+
+    var originalRenderMethod = loadImage.renderImageToCanvas;
+
+    // Detects subsampling in JPEG images:
+    loadImage.detectSubsampling = function (img) {
+        var canvas,
+            context;
+        if (img.width * img.height > 1024 * 1024) { // only consider mexapixel images
+            canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 1;
+            context = canvas.getContext('2d');
+            context.drawImage(img, -img.width + 1, 0);
+            // subsampled image becomes half smaller in rendering size.
+            // check alpha channel value to confirm image is covering edge pixel or not.
+            // if alpha value is 0 image is not covering, hence subsampled.
+            return context.getImageData(0, 0, 1, 1).data[3] === 0;
+        }
+        return false;
+    };
+
+    // Detects vertical squash in JPEG images:
+    loadImage.detectVerticalSquash = function (img, subsampled) {
+        var naturalHeight = img.naturalHeight || img.height,
+            canvas = document.createElement('canvas'),
+            context = canvas.getContext('2d'),
+            data,
+            sy,
+            ey,
+            py,
+            alpha;
+        if (subsampled) {
+            naturalHeight /= 2;
+        }
+        canvas.width = 1;
+        canvas.height = naturalHeight;
+        context.drawImage(img, 0, 0);
+        data = context.getImageData(0, 0, 1, naturalHeight).data;
+        // search image edge pixel position in case it is squashed vertically:
+        sy = 0;
+        ey = naturalHeight;
+        py = naturalHeight;
+        while (py > sy) {
+            alpha = data[(py - 1) * 4 + 3];
+            if (alpha === 0) {
+                ey = py;
+            } else {
+                sy = py;
+            }
+            py = (ey + sy) >> 1;
+        }
+        return (py / naturalHeight) || 1;
+    };
+
+    // Renders image to canvas while working around iOS image scaling bugs:
+    // https://github.com/blueimp/JavaScript-Load-Image/issues/13
+    loadImage.renderImageToCanvas = function (
+        canvas,
+        img,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        destX,
+        destY,
+        destWidth,
+        destHeight
+    ) {
+        if (img._type === 'image/jpeg') {
+            var context = canvas.getContext('2d'),
+                tmpCanvas = document.createElement('canvas'),
+                tileSize = 1024,
+                tmpContext = tmpCanvas.getContext('2d'),
+                subsampled,
+                vertSquashRatio,
+                tileX,
+                tileY;
+            tmpCanvas.width = tileSize;
+            tmpCanvas.height = tileSize;
+            context.save();
+            subsampled = loadImage.detectSubsampling(img);
+            if (subsampled) {
+                sourceX /= 2;
+                sourceY /= 2;
+                sourceWidth /= 2;
+                sourceHeight /= 2;
+            }
+            vertSquashRatio = loadImage.detectVerticalSquash(img, subsampled);
+            if (subsampled || vertSquashRatio !== 1) {
+                sourceY *= vertSquashRatio;
+                destWidth = Math.ceil(tileSize * destWidth / sourceWidth);
+                destHeight = Math.ceil(
+                    tileSize * destHeight / sourceHeight / vertSquashRatio
+                );
+                destY = 0;
+                tileY = 0;
+                while (tileY < sourceHeight) {
+                    destX = 0;
+                    tileX = 0;
+                    while (tileX < sourceWidth) {
+                        tmpContext.clearRect(0, 0, tileSize, tileSize);
+                        tmpContext.drawImage(
+                            img,
+                            sourceX,
+                            sourceY,
+                            sourceWidth,
+                            sourceHeight,
+                            -tileX,
+                            -tileY,
+                            sourceWidth,
+                            sourceHeight
+                        );
+                        context.drawImage(
+                            tmpCanvas,
+                            0,
+                            0,
+                            tileSize,
+                            tileSize,
+                            destX,
+                            destY,
+                            destWidth,
+                            destHeight
+                        );
+                        tileX += tileSize;
+                        destX += destWidth;
+                    }
+                    tileY += tileSize;
+                    destY += destHeight;
+                }
+                context.restore();
+                return canvas;
+            }
+        }
+        return originalRenderMethod(
+            canvas,
+            img,
+            sourceX,
+            sourceY,
+            sourceWidth,
+            sourceHeight,
+            destX,
+            destY,
+            destWidth,
+            destHeight
+        );
+    };
+
+}));
+
+/*
+ * JavaScript Canvas to Blob 2.0.5
+ * https://github.com/blueimp/JavaScript-Canvas-to-Blob
+ *
+ * Copyright 2012, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ *
+ * Based on stackoverflow user Stoive's code snippet:
+ * http://stackoverflow.com/q/4998908
+ */
+
+/*jslint nomen: true, regexp: true */
+/*global window, atob, Blob, ArrayBuffer, Uint8Array, define */
+
+(function (window) {
+    
+    var CanvasPrototype = window.HTMLCanvasElement &&
+            window.HTMLCanvasElement.prototype,
+        hasBlobConstructor = window.Blob && (function () {
+            try {
+                return Boolean(new Blob());
+            } catch (e) {
+                return false;
+            }
+        }()),
+        hasArrayBufferViewSupport = hasBlobConstructor && window.Uint8Array &&
+            (function () {
+                try {
+                    return new Blob([new Uint8Array(100)]).size === 100;
+                } catch (e) {
+                    return false;
+                }
+            }()),
+        BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder ||
+            window.MozBlobBuilder || window.MSBlobBuilder,
+        dataURLtoBlob = (hasBlobConstructor || BlobBuilder) && window.atob &&
+            window.ArrayBuffer && window.Uint8Array && function (dataURI) {
+                var byteString,
+                    arrayBuffer,
+                    intArray,
+                    i,
+                    mimeString,
+                    bb;
+                if (dataURI.split(',')[0].indexOf('base64') >= 0) {
+                    // Convert base64 to raw binary data held in a string:
+                    byteString = atob(dataURI.split(',')[1]);
+                } else {
+                    // Convert base64/URLEncoded data component to raw binary data:
+                    byteString = decodeURIComponent(dataURI.split(',')[1]);
+                }
+                // Write the bytes of the string to an ArrayBuffer:
+                arrayBuffer = new ArrayBuffer(byteString.length);
+                intArray = new Uint8Array(arrayBuffer);
+                for (i = 0; i < byteString.length; i += 1) {
+                    intArray[i] = byteString.charCodeAt(i);
+                }
+                // Separate out the mime component:
+                mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+                // Write the ArrayBuffer (or ArrayBufferView) to a blob:
+                if (hasBlobConstructor) {
+                    return new Blob(
+                        [hasArrayBufferViewSupport ? intArray : arrayBuffer],
+                        {type: mimeString}
+                    );
+                }
+                bb = new BlobBuilder();
+                bb.append(arrayBuffer);
+                return bb.getBlob(mimeString);
+            };
+    if (window.HTMLCanvasElement && !CanvasPrototype.toBlob) {
+        if (CanvasPrototype.mozGetAsFile) {
+            CanvasPrototype.toBlob = function (callback, type, quality) {
+                if (quality && CanvasPrototype.toDataURL && dataURLtoBlob) {
+                    callback(dataURLtoBlob(this.toDataURL(type, quality)));
+                } else {
+                    callback(this.mozGetAsFile('blob', type));
+                }
+            };
+        } else if (CanvasPrototype.toDataURL && dataURLtoBlob) {
+            CanvasPrototype.toBlob = function (callback, type, quality) {
+                callback(dataURLtoBlob(this.toDataURL(type, quality)));
+            };
+        }
+    }
+    if (typeof define === 'function' && define.amd) {
+        define('canvas-to-blob',[],function () {
+            return dataURLtoBlob;
+        });
+    } else {
+        window.dataURLtoBlob = dataURLtoBlob;
+    }
+}(this));
+
+/*
+ * jQuery File Upload Image Preview & Resize Plugin 1.7.0
+ * https://github.com/blueimp/jQuery-File-Upload
+ *
+ * Copyright 2013, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/* jshint nomen:false */
+/* global define, window, Blob */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('jquery.fileupload-image',[
+            'jquery',
+            'load-image',
+            'load-image-meta',
+            'load-image-exif',
+            'load-image-ios',
+            'canvas-to-blob',
+            './jquery.fileupload-process'
+        ], factory);
+    } else {
+        // Browser globals:
+        factory(
+            window.jQuery,
+            window.loadImage
+        );
+    }
+}(function ($, loadImage) {
+    
+
+    // Prepend to the default processQueue:
+    $.blueimp.fileupload.prototype.options.processQueue.unshift(
+        {
+            action: 'loadImageMetaData',
+            disableImageHead: '@',
+            disableExif: '@',
+            disableExifThumbnail: '@',
+            disableExifSub: '@',
+            disableExifGps: '@',
+            disabled: '@disableImageMetaDataLoad'
+        },
+        {
+            action: 'loadImage',
+            // Use the action as prefix for the "@" options:
+            prefix: true,
+            fileTypes: '@',
+            maxFileSize: '@',
+            noRevoke: '@',
+            disabled: '@disableImageLoad'
+        },
+        {
+            action: 'resizeImage',
+            // Use "image" as prefix for the "@" options:
+            prefix: 'image',
+            maxWidth: '@',
+            maxHeight: '@',
+            minWidth: '@',
+            minHeight: '@',
+            crop: '@',
+            orientation: '@',
+            forceResize: '@',
+            disabled: '@disableImageResize'
+        },
+        {
+            action: 'saveImage',
+            quality: '@imageQuality',
+            type: '@imageType',
+            disabled: '@disableImageResize'
+        },
+        {
+            action: 'saveImageMetaData',
+            disabled: '@disableImageMetaDataSave'
+        },
+        {
+            action: 'resizeImage',
+            // Use "preview" as prefix for the "@" options:
+            prefix: 'preview',
+            maxWidth: '@',
+            maxHeight: '@',
+            minWidth: '@',
+            minHeight: '@',
+            crop: '@',
+            orientation: '@',
+            thumbnail: '@',
+            canvas: '@',
+            disabled: '@disableImagePreview'
+        },
+        {
+            action: 'setImage',
+            name: '@imagePreviewName',
+            disabled: '@disableImagePreview'
+        },
+        {
+            action: 'deleteImageReferences',
+            disabled: '@disableImageReferencesDeletion'
+        }
+    );
+
+    // The File Upload Resize plugin extends the fileupload widget
+    // with image resize functionality:
+    $.widget('blueimp.fileupload', $.blueimp.fileupload, {
+
+        options: {
+            // The regular expression for the types of images to load:
+            // matched against the file type:
+            loadImageFileTypes: /^image\/(gif|jpeg|png)$/,
+            // The maximum file size of images to load:
+            loadImageMaxFileSize: 10000000, // 10MB
+            // The maximum width of resized images:
+            imageMaxWidth: 1920,
+            // The maximum height of resized images:
+            imageMaxHeight: 1080,
+            // Defines the image orientation (1-8) or takes the orientation
+            // value from Exif data if set to true:
+            imageOrientation: false,
+            // Define if resized images should be cropped or only scaled:
+            imageCrop: false,
+            // Disable the resize image functionality by default:
+            disableImageResize: true,
+            // The maximum width of the preview images:
+            previewMaxWidth: 80,
+            // The maximum height of the preview images:
+            previewMaxHeight: 80,
+            // Defines the preview orientation (1-8) or takes the orientation
+            // value from Exif data if set to true:
+            previewOrientation: true,
+            // Create the preview using the Exif data thumbnail:
+            previewThumbnail: true,
+            // Define if preview images should be cropped or only scaled:
+            previewCrop: false,
+            // Define if preview images should be resized as canvas elements:
+            previewCanvas: true
+        },
+
+        processActions: {
+
+            // Loads the image given via data.files and data.index
+            // as img element, if the browser supports the File API.
+            // Accepts the options fileTypes (regular expression)
+            // and maxFileSize (integer) to limit the files to load:
+            loadImage: function (data, options) {
+                if (options.disabled) {
+                    return data;
+                }
+                var that = this,
+                    file = data.files[data.index],
+                    dfd = $.Deferred();
+                if (($.type(options.maxFileSize) === 'number' &&
+                            file.size > options.maxFileSize) ||
+                        (options.fileTypes &&
+                            !options.fileTypes.test(file.type)) ||
+                        !loadImage(
+                            file,
+                            function (img) {
+                                if (img.src) {
+                                    data.img = img;
+                                }
+                                dfd.resolveWith(that, [data]);
+                            },
+                            options
+                        )) {
+                    return data;
+                }
+                return dfd.promise();
+            },
+
+            // Resizes the image given as data.canvas or data.img
+            // and updates data.canvas or data.img with the resized image.
+            // Also stores the resized image as preview property.
+            // Accepts the options maxWidth, maxHeight, minWidth,
+            // minHeight, canvas and crop:
+            resizeImage: function (data, options) {
+                if (options.disabled || !(data.canvas || data.img)) {
+                    return data;
+                }
+                options = $.extend({canvas: true}, options);
+                var that = this,
+                    dfd = $.Deferred(),
+                    img = (options.canvas && data.canvas) || data.img,
+                    resolve = function (newImg) {
+                        if (newImg && (newImg.width !== img.width ||
+                                newImg.height !== img.height ||
+                                options.forceResize)) {
+                            data[newImg.getContext ? 'canvas' : 'img'] = newImg;
+                        }
+                        data.preview = newImg;
+                        dfd.resolveWith(that, [data]);
+                    },
+                    thumbnail;
+                if (data.exif) {
+                    if (options.orientation === true) {
+                        options.orientation = data.exif.get('Orientation');
+                    }
+                    if (options.thumbnail) {
+                        thumbnail = data.exif.get('Thumbnail');
+                        if (thumbnail) {
+                            loadImage(thumbnail, resolve, options);
+                            return dfd.promise();
+                        }
+                    }
+                }
+                if (img) {
+                    resolve(loadImage.scale(img, options));
+                    return dfd.promise();
+                }
+                return data;
+            },
+
+            // Saves the processed image given as data.canvas
+            // inplace at data.index of data.files:
+            saveImage: function (data, options) {
+                if (!data.canvas || options.disabled) {
+                    return data;
+                }
+                var that = this,
+                    file = data.files[data.index],
+                    dfd = $.Deferred();
+                if (data.canvas.toBlob) {
+                    data.canvas.toBlob(
+                        function (blob) {
+                            if (!blob.name) {
+                                if (file.type === blob.type) {
+                                    blob.name = file.name;
+                                } else if (file.name) {
+                                    blob.name = file.name.replace(
+                                        /\..+$/,
+                                        '.' + blob.type.substr(6)
+                                    );
+                                }
+                            }
+                            // Don't restore invalid meta data:
+                            if (file.type !== blob.type) {
+                                delete data.imageHead;
+                            }
+                            // Store the created blob at the position
+                            // of the original file in the files list:
+                            data.files[data.index] = blob;
+                            dfd.resolveWith(that, [data]);
+                        },
+                        options.type || file.type,
+                        options.quality
+                    );
+                } else {
+                    return data;
+                }
+                return dfd.promise();
+            },
+
+            loadImageMetaData: function (data, options) {
+                if (options.disabled) {
+                    return data;
+                }
+                var that = this,
+                    dfd = $.Deferred();
+                loadImage.parseMetaData(data.files[data.index], function (result) {
+                    $.extend(data, result);
+                    dfd.resolveWith(that, [data]);
+                }, options);
+                return dfd.promise();
+            },
+
+            saveImageMetaData: function (data, options) {
+                if (!(data.imageHead && data.canvas &&
+                        data.canvas.toBlob && !options.disabled)) {
+                    return data;
+                }
+                var file = data.files[data.index],
+                    blob = new Blob([
+                        data.imageHead,
+                        // Resized images always have a head size of 20 bytes,
+                        // including the JPEG marker and a minimal JFIF header:
+                        this._blobSlice.call(file, 20)
+                    ], {type: file.type});
+                blob.name = file.name;
+                data.files[data.index] = blob;
+                return data;
+            },
+
+            // Sets the resized version of the image as a property of the
+            // file object, must be called after "saveImage":
+            setImage: function (data, options) {
+                if (data.preview && !options.disabled) {
+                    data.files[data.index][options.name || 'preview'] = data.preview;
+                }
+                return data;
+            },
+
+            deleteImageReferences: function (data, options) {
+                if (!options.disabled) {
+                    delete data.img;
+                    delete data.canvas;
+                    delete data.preview;
+                    delete data.imageHead;
+                }
+                return data;
+            }
+
+        }
+
+    });
+
+}));
+
+/*
+ * jQuery File Upload Audio Preview Plugin 1.0.3
+ * https://github.com/blueimp/jQuery-File-Upload
+ *
+ * Copyright 2013, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/* jshint nomen:false */
+/* global define, window, document */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('jquery.fileupload-audio',[
+            'jquery',
+            'load-image',
+            './jquery.fileupload-process'
+        ], factory);
+    } else {
+        // Browser globals:
+        factory(
+            window.jQuery,
+            window.loadImage
+        );
+    }
+}(function ($, loadImage) {
+    
+
+    // Prepend to the default processQueue:
+    $.blueimp.fileupload.prototype.options.processQueue.unshift(
+        {
+            action: 'loadAudio',
+            // Use the action as prefix for the "@" options:
+            prefix: true,
+            fileTypes: '@',
+            maxFileSize: '@',
+            disabled: '@disableAudioPreview'
+        },
+        {
+            action: 'setAudio',
+            name: '@audioPreviewName',
+            disabled: '@disableAudioPreview'
+        }
+    );
+
+    // The File Upload Audio Preview plugin extends the fileupload widget
+    // with audio preview functionality:
+    $.widget('blueimp.fileupload', $.blueimp.fileupload, {
+
+        options: {
+            // The regular expression for the types of audio files to load,
+            // matched against the file type:
+            loadAudioFileTypes: /^audio\/.*$/
+        },
+
+        _audioElement: document.createElement('audio'),
+
+        processActions: {
+
+            // Loads the audio file given via data.files and data.index
+            // as audio element if the browser supports playing it.
+            // Accepts the options fileTypes (regular expression)
+            // and maxFileSize (integer) to limit the files to load:
+            loadAudio: function (data, options) {
+                if (options.disabled) {
+                    return data;
+                }
+                var file = data.files[data.index],
+                    url,
+                    audio;
+                if (this._audioElement.canPlayType &&
+                        this._audioElement.canPlayType(file.type) &&
+                        ($.type(options.maxFileSize) !== 'number' ||
+                            file.size <= options.maxFileSize) &&
+                        (!options.fileTypes ||
+                            options.fileTypes.test(file.type))) {
+                    url = loadImage.createObjectURL(file);
+                    if (url) {
+                        audio = this._audioElement.cloneNode(false);
+                        audio.src = url;
+                        audio.controls = true;
+                        data.audio = audio;
+                        return data;
+                    }
+                }
+                return data;
+            },
+
+            // Sets the audio element as a property of the file object:
+            setAudio: function (data, options) {
+                if (data.audio && !options.disabled) {
+                    data.files[data.index][options.name || 'preview'] = data.audio;
+                }
+                return data;
+            }
+
+        }
+
+    });
+
+}));
+
+/*
+ * jQuery File Upload Video Preview Plugin 1.0.3
+ * https://github.com/blueimp/jQuery-File-Upload
+ *
+ * Copyright 2013, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/* jshint nomen:false */
+/* global define, window, document */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('jquery.fileupload-video',[
+            'jquery',
+            'load-image',
+            './jquery.fileupload-process'
+        ], factory);
+    } else {
+        // Browser globals:
+        factory(
+            window.jQuery,
+            window.loadImage
+        );
+    }
+}(function ($, loadImage) {
+    
+
+    // Prepend to the default processQueue:
+    $.blueimp.fileupload.prototype.options.processQueue.unshift(
+        {
+            action: 'loadVideo',
+            // Use the action as prefix for the "@" options:
+            prefix: true,
+            fileTypes: '@',
+            maxFileSize: '@',
+            disabled: '@disableVideoPreview'
+        },
+        {
+            action: 'setVideo',
+            name: '@videoPreviewName',
+            disabled: '@disableVideoPreview'
+        }
+    );
+
+    // The File Upload Video Preview plugin extends the fileupload widget
+    // with video preview functionality:
+    $.widget('blueimp.fileupload', $.blueimp.fileupload, {
+
+        options: {
+            // The regular expression for the types of video files to load,
+            // matched against the file type:
+            loadVideoFileTypes: /^video\/.*$/
+        },
+
+        _videoElement: document.createElement('video'),
+
+        processActions: {
+
+            // Loads the video file given via data.files and data.index
+            // as video element if the browser supports playing it.
+            // Accepts the options fileTypes (regular expression)
+            // and maxFileSize (integer) to limit the files to load:
+            loadVideo: function (data, options) {
+                if (options.disabled) {
+                    return data;
+                }
+                var file = data.files[data.index],
+                    url,
+                    video;
+                if (this._videoElement.canPlayType &&
+                        this._videoElement.canPlayType(file.type) &&
+                        ($.type(options.maxFileSize) !== 'number' ||
+                            file.size <= options.maxFileSize) &&
+                        (!options.fileTypes ||
+                            options.fileTypes.test(file.type))) {
+                    url = loadImage.createObjectURL(file);
+                    if (url) {
+                        video = this._videoElement.cloneNode(false);
+                        video.src = url;
+                        video.controls = true;
+                        data.video = video;
+                        return data;
+                    }
+                }
+                return data;
+            },
+
+            // Sets the video element as a property of the file object:
+            setVideo: function (data, options) {
+                if (data.video && !options.disabled) {
+                    data.files[data.index][options.name || 'preview'] = data.video;
+                }
+                return data;
+            }
+
+        }
+
+    });
+
+}));
+
+/*
+ * jQuery Iframe Transport Plugin 1.8.1
+ * https://github.com/blueimp/jQuery-File-Upload
+ *
+ * Copyright 2011, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
+
+/* global define, window, document */
+
+(function (factory) {
+    
+    if (typeof define === 'function' && define.amd) {
+        // Register as an anonymous AMD module:
+        define('jquery.iframe-transport',['jquery'], factory);
+    } else {
+        // Browser globals:
+        factory(window.jQuery);
+    }
+}(function ($) {
+    
+
+    // Helper variable to create unique names for the transport iframes:
+    var counter = 0;
+
+    // The iframe transport accepts four additional options:
+    // options.fileInput: a jQuery collection of file input fields
+    // options.paramName: the parameter name for the file form data,
+    //  overrides the name property of the file input field(s),
+    //  can be a string or an array of strings.
+    // options.formData: an array of objects with name and value properties,
+    //  equivalent to the return data of .serializeArray(), e.g.:
+    //  [{name: 'a', value: 1}, {name: 'b', value: 2}]
+    // options.initialIframeSrc: the URL of the initial iframe src,
+    //  by default set to "javascript:false;"
+    $.ajaxTransport('iframe', function (options) {
+        if (options.async) {
+            // javascript:false as initial iframe src
+            // prevents warning popups on HTTPS in IE6:
+            /*jshint scripturl: true */
+            var initialIframeSrc = options.initialIframeSrc || 'javascript:false;',
+            /*jshint scripturl: false */
+                form,
+                iframe,
+                addParamChar;
+            return {
+                send: function (_, completeCallback) {
+                    form = $('<form style="display:none;"></form>');
+                    form.attr('accept-charset', options.formAcceptCharset);
+                    addParamChar = /\?/.test(options.url) ? '&' : '?';
+                    // XDomainRequest only supports GET and POST:
+                    if (options.type === 'DELETE') {
+                        options.url = options.url + addParamChar + '_method=DELETE';
+                        options.type = 'POST';
+                    } else if (options.type === 'PUT') {
+                        options.url = options.url + addParamChar + '_method=PUT';
+                        options.type = 'POST';
+                    } else if (options.type === 'PATCH') {
+                        options.url = options.url + addParamChar + '_method=PATCH';
+                        options.type = 'POST';
+                    }
+                    // IE versions below IE8 cannot set the name property of
+                    // elements that have already been added to the DOM,
+                    // so we set the name along with the iframe HTML markup:
+                    counter += 1;
+                    iframe = $(
+                        '<iframe src="' + initialIframeSrc +
+                            '" name="iframe-transport-' + counter + '"></iframe>'
+                    ).bind('load', function () {
+                        var fileInputClones,
+                            paramNames = $.isArray(options.paramName) ?
+                                    options.paramName : [options.paramName];
+                        iframe
+                            .unbind('load')
+                            .bind('load', function () {
+                                var response;
+                                // Wrap in a try/catch block to catch exceptions thrown
+                                // when trying to access cross-domain iframe contents:
+                                try {
+                                    response = iframe.contents();
+                                    // Google Chrome and Firefox do not throw an
+                                    // exception when calling iframe.contents() on
+                                    // cross-domain requests, so we unify the response:
+                                    if (!response.length || !response[0].firstChild) {
+                                        throw new Error();
+                                    }
+                                } catch (e) {
+                                    response = undefined;
+                                }
+                                // The complete callback returns the
+                                // iframe content document as response object:
+                                completeCallback(
+                                    200,
+                                    'success',
+                                    {'iframe': response}
+                                );
+                                // Fix for IE endless progress bar activity bug
+                                // (happens on form submits to iframe targets):
+                                $('<iframe src="' + initialIframeSrc + '"></iframe>')
+                                    .appendTo(form);
+                                window.setTimeout(function () {
+                                    // Removing the form in a setTimeout call
+                                    // allows Chrome's developer tools to display
+                                    // the response result
+                                    form.remove();
+                                }, 0);
+                            });
+                        form
+                            .prop('target', iframe.prop('name'))
+                            .prop('action', options.url)
+                            .prop('method', options.type);
+                        if (options.formData) {
+                            $.each(options.formData, function (index, field) {
+                                $('<input type="hidden"/>')
+                                    .prop('name', field.name)
+                                    .val(field.value)
+                                    .appendTo(form);
+                            });
+                        }
+                        if (options.fileInput && options.fileInput.length &&
+                                options.type === 'POST') {
+                            fileInputClones = options.fileInput.clone();
+                            // Insert a clone for each file input field:
+                            options.fileInput.after(function (index) {
+                                return fileInputClones[index];
+                            });
+                            if (options.paramName) {
+                                options.fileInput.each(function (index) {
+                                    $(this).prop(
+                                        'name',
+                                        paramNames[index] || options.paramName
+                                    );
+                                });
+                            }
+                            // Appending the file input fields to the hidden form
+                            // removes them from their original location:
+                            form
+                                .append(options.fileInput)
+                                .prop('enctype', 'multipart/form-data')
+                                // enctype must be set as encoding for IE:
+                                .prop('encoding', 'multipart/form-data');
+                        }
+                        form.submit();
+                        // Insert the file input fields at their original location
+                        // by replacing the clones with the originals:
+                        if (fileInputClones && fileInputClones.length) {
+                            options.fileInput.each(function (index, input) {
+                                var clone = $(fileInputClones[index]);
+                                $(input).prop('name', clone.prop('name'));
+                                clone.replaceWith(input);
+                            });
+                        }
+                    });
+                    form.append(iframe).appendTo(document.body);
+                },
+                abort: function () {
+                    if (iframe) {
+                        // javascript:false as iframe src aborts the request
+                        // and prevents warning popups on HTTPS in IE6.
+                        // concat is used to avoid the "Script URL" JSLint error:
+                        iframe
+                            .unbind('load')
+                            .prop('src', initialIframeSrc);
+                    }
+                    if (form) {
+                        form.remove();
+                    }
+                }
+            };
+        }
+    });
+
+    // The iframe transport returns the iframe content document as response.
+    // The following adds converters from iframe to text, json, html, xml
+    // and script.
+    // Please note that the Content-Type for JSON responses has to be text/plain
+    // or text/html, if the browser doesn't include application/json in the
+    // Accept header, else IE will show a download dialog.
+    // The Content-Type for XML responses on the other hand has to be always
+    // application/xml or text/xml, so IE properly parses the XML response.
+    // See also
+    // https://github.com/blueimp/jQuery-File-Upload/wiki/Setup#content-type-negotiation
+    $.ajaxSetup({
+        converters: {
+            'iframe text': function (iframe) {
+                return iframe && $(iframe[0].body).text();
+            },
+            'iframe json': function (iframe) {
+                return iframe && $.parseJSON($(iframe[0].body).text());
+            },
+            'iframe html': function (iframe) {
+                return iframe && $(iframe[0].body).html();
+            },
+            'iframe xml': function (iframe) {
+                var xmlDoc = iframe && iframe[0];
+                return xmlDoc && $.isXMLDoc(xmlDoc) ? xmlDoc :
+                        $.parseXML((xmlDoc.XMLDocument && xmlDoc.XMLDocument.xml) ||
+                            $(xmlDoc.body).html());
+            },
+            'iframe script': function (iframe) {
+                return iframe && $.globalEval($(iframe[0].body).text());
+            }
+        }
+    });
+
+}));
+
+
+define('mockup-patterns-fileupload',[
+  'jquery',
+  'mockup-patterns-base',
+  'jquery.fileupload',
+  'jquery.fileupload-process',
+  'jquery.fileupload-validate',
+  'jquery.fileupload-image',
+  'jquery.fileupload-audio',
+  'jquery.fileupload-video',
+  'jquery.iframe-transport'
+], function($, Base) {
+  
+
+  var files = [];
+
+  var fileupload = Base.extend({
+    // The name for this pattern
+    name: 'fileupload',
+
+    defaults: {
+      // Default values for attributes
+      dataType: 'json',
+      url: '',
+      maxFileSize: 500000000,
+      resizeMaxWidth: 1920,
+      disableValidation: false,
+      resizeMaxHeight: 1200
+    },
+    getNumberOfFiles: function (elem) {
+        var numFiles = elem.find('div.remove').css(
+                                  "visibility", "visible").length;
+        return numFiles;
+    },
+    generateRandomId: function() {
+        var charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        var charSetSize = charSet.length;
+        var randPos = 0;
+        var id = 'f';
+        var i = 2;
+        for (i = 2; i <= 6; i += 1) {
+            randPos = Math.floor(Math.random() * charSetSize);
+            id += charSet[randPos];
+        }
+        return id;
+    },
+    formatFileSize: function (bytes) {
+       if (typeof bytes !== 'number') {
+           return '';
+       }
+       if (bytes >= 1000000000) {
+           return (bytes / 1000000000).toFixed(2) + ' GB';
+       }
+       if (bytes >= 1000000) {
+           return (bytes / 1000000).toFixed(2) + ' MB';
+       }
+       return (bytes / 1000).toFixed(2) + ' KB';
+    },
+    uploadExisting: function () {
+      // Load existing files:
+      var self = this;
+      var existing = self.options.existing;
+      var $parent = this.$el.parent();
+      var $files = $parent.next();
+      var widgetname = 'widget';
+      if (typeof self.$el.attr('name') !== 'undefined') {
+          widgetname = self.$el.attr('name');
+      }
+      var $hidden = $parent.find('input[name="'+widgetname+'uploaded"]');
+      existing.forEach( function (file) {
+        var $fpdiv1 = $('<div>');
+        $fpdiv1.addClass('existfileupload');
+        var fileid = self.generateRandomId();
+        $fpdiv1.attr('id', fileid);
+        var $fpa1 = $('<a>');
+        $fpa1.attr('href', file.url);
+        $fpdiv1.append($fpa1);
+        var $fpspan1 = $('<span>');
+        $fpspan1.addClass('filename');
+        $fpspan1.text(file.title);
+        $fpa1.append($fpspan1);
+        var $fpspan2 = $('<span>');
+        $fpspan2.append('  size: '+ self.formatFileSize(file.size) );
+        $fpspan2.addClass('filesize');
+        $fpa1.after($fpspan2);
+        var $fpspan3 = $('<span>');
+        $fpspan3.addClass('loadingIndicator');
+        $fpspan3.hide();
+        $fpspan2.after($fpspan3);
+        var $fpdiv2 = $('<div class="remove" role="button">');
+        $fpdiv2.text("X");
+        var newfile = {'name':file.name, 'title':file.title};
+        $fpdiv2.on( "click", function() {
+                   files = $.grep(files, function(value) {
+                                 return value !== newfile;
+                    });
+                    $hidden.val(JSON.stringify(files));
+                    $fpdiv1.remove();
+                    });
+        $fpspan3.after($fpdiv2);
+        files.push(newfile);
+        $hidden.val(JSON.stringify(files));
+        $files.append($fpdiv1);
+      });
+    },
+    init: function() {
+      // The init code for your pattern goes here
+      var self = this;
+      // self.$el contains the html element
+      self.$el.addClass('fileupload');
+      var widgetname = 'widget';
+      if (typeof self.$el.attr('name') !== 'undefined') {
+          widgetname = self.$el.attr('name');
+      }
+//      console.log(widgetname);
+      var $hid1 = $('<input type="hidden" value="">');
+      $hid1.attr('name', widgetname + 'uploaded');
+      var $hid2 = $('<input type="hidden" value="">');
+      $hid2.attr('name', widgetname + 'fileids');
+      var $d1 = $('<div class="files"></div>');
+      var $s1 = $('<span class="btn btn-success fileinput-button"></span>');
+      var $s2 = $('<span></span');
+      if (self.options.maxNumberOfFiles === 1) {
+          $s2.text("Add file...");
+      } else {
+          $s2.text("Add files...");
+      }
+      self.$el.wrap($s1);
+      self.$el.before($s2);
+      self.$el.parent().after($d1);
+      $d1.append($hid2);
+      self.$el.after($hid1);
+      var $parent = self.$el.parent();
+      var maxFiles = self.options.maxNumberOfFiles;
+      self.$el.fileupload(self.options)
+      .on('fileuploadfail', function (e, data) {
+          var $errmsg =$('<div>');
+          $errmsg.addClass('errmsg');
+          $errmsg.text('An error has occurred uploading the file');
+          $d1.append($errmsg);})
+      .on('fileuploadsubmit', function (e, data) {
+          var submitdata = data.files[0];
+//          console.log(submitdata);
+          if (submitdata.notSubmit) {
+              return false;
+          } else {
+              var $files = $parent.next();
+              var $fileids = $files.find('input[name="'+widgetname+'fileids"]');
+              $fileids.val(submitdata.fileid);
+          }
+          })
+      .on('fileuploadadd', function (e, data) {
+          $.each(data.files, function (index, file) {
+            var currNumFiles = self.getNumberOfFiles($d1);
+            if (currNumFiles >= maxFiles) {
+                var submitObj = {'notSubmit': true};
+                $.extend(file, submitObj);
+                var $errmsg =$('<div>');
+                $errmsg.addClass('errmsg');
+                $errmsg.css('color', 'red').text(
+                            'Maximum number of files exceeded');
+                $d1.append($errmsg);
+                $errmsg.fadeIn('slow');
+                $errmsg.delay(5000).fadeOut();
+            } else {
+                var $fpdiv1 = $('<div>');
+                var randID = self.generateRandomId();
+                var newobj = {'fileid': randID};
+                $.extend(file, newobj);
+                $fpdiv1.addClass('newfileupload');
+                var newid = file.fileid;
+                $fpdiv1.attr('id', newid);
+                var $fpa1 = $('<a>');
+                $fpdiv1.append($fpa1);
+                var $fpspan1 = $('<span>');
+                $fpspan1.addClass('filename');
+                $fpspan1.text(file.name);
+                $fpa1.append($fpspan1);
+                var $fpspan2 = $('<span>');
+                $fpspan2.append('  size: '+ self.formatFileSize(file.size) );
+                $fpspan2.addClass('filesize');
+                $fpa1.after($fpspan2);
+                var $fpspan3 = $('<span>');
+                $fpspan3.addClass('loadingIndicator');
+                $fpspan2.after($fpspan3);
+                var $fpdiv2 = $('<div class="remove" role="button">');
+                $fpdiv2.text("X");
+                $fpdiv2.css('visibility', 'hidden');
+                $fpspan3.after($fpdiv2);
+                $d1.append($fpdiv1);
+                }
+            });
+          })
+      .on('fileuploadprogress', function (e, data) {
+          var filedata = data.files[0];
+          var $files = $parent.next();
+          var $fileids = $files.find('input[name="'+widgetname+'fileids"]');
+          var fileid = filedata.fileid;
+          var $div = $d1.find('div[id="'+fileid+'"]');
+          var $loader = $div.find('span.loadingIndicator');
+          var progress = parseInt(data.loaded / data.total * 50, 10);
+          $loader.css('width', progress + "%");
+          })
+      .on('fileuploaddone', function (e, data) {
+          var $files = $parent.next();
+          var currNumFiles = self.getNumberOfFiles($files);
+//          console.log(maxFiles);
+//          console.log(currNumFiles);
+          var $hidden = $parent.find('input[name="'+widgetname+'uploaded"]');
+          var results = data.result;
+          var fileInfo = results.files[0];
+          var $div = $files.find('div[id="'+ fileInfo.fileid +'"]');
+          var $a = $div.find('a');
+          $a.attr('href', fileInfo.url);
+          var $UploadMessage = $div.find('span.loadingIndicator');
+          var $DeleteFile = $div.find('div');
+          if (fileInfo.error) {
+                $UploadMessage.css('color', 'red').text(
+                                   "Ajax error encountered: '" +
+                                   fileInfo.error + "'");
+          } else {
+                var newfile = {'name':fileInfo.name,
+                               'title':fileInfo.title};
+                files.push(newfile);
+                $hidden.val(JSON.stringify(files));
+                $DeleteFile.on( "click", function() {
+                               files = $.grep(files, function(value) {
+                                       return value !== newfile;
+                                       });
+                               $hidden.val(JSON.stringify(files));
+                               $div.remove();
+                               });
+                $UploadMessage.hide();
+                $DeleteFile.css("visibility", "visible");
+                }
+          });
+     self.uploadExisting();
+    }
+  });
+
+  return fileupload;
+
+});
+
 /* Backdrop pattern.
  *
  * Options:
@@ -30529,21 +34760,6 @@ define('mockup-patterns-querystring',[
  *
  * Example: example-1
  *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -30558,8 +34774,8 @@ define('mockup-patterns-backdrop',[
     defaults: {
       zIndex: null,
       opacity: 0.8,
-      className: 'backdrop',
-      classActiveName: 'backdrop-active',
+      className: 'plone-backdrop',
+      classActiveName: 'plone-backdrop-active',
       closeOnEsc: true,
       closeOnClick: true
     },
@@ -32226,32 +36442,8 @@ define('mockup-patterns-backdrop',[
 
 }));
 
-// pattern router.
-//
-// Author: Ryan Foster
-// Contact: ryan@rynamic.com
-// Version: 1.0
-// Depends: jquery.js
-//
-// Description:
-//
-// License:
-//
-// Copyright (C) 2010 Plone Foundation
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the Free
-// Software Foundation; either version 2 of the License.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT
-// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-// more details.
-//
-// You should have received a copy of the GNU General Public License along with
-// this program; if not, write to the Free Software Foundation, Inc., 51
-// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//
+/* Pattern router
+ */
 
 
 define('mockup-router',[
@@ -33589,7 +37781,7 @@ function log() {
  *
  *
  * Example: example-basic
- *    <a href="#modal1" class="btn btn-large btn-primary pat-modal"
+ *    <a href="#modal1" class="plone-btn plone-btn-large plone-btn-primary pat-modal"
  *                      data-pat-modal="width: 400">Modal basic</a>
  *    <div id="modal1" style="display: none">
  *      <h1>Basic modal!</h1>
@@ -33597,7 +37789,7 @@ function log() {
  *    </div>
  *
  * Example: example-long
- *    <a href="#modal2" class="btn btn-large btn-primary pat-modal"
+ *    <a href="#modal2" class="plone-btn plone-btn-lg plone-btn-primary pat-modal"
  *                      data-pat-modal="width: 500">Modal long scrolling</a>
  *    <div id="modal2" style="display: none">
  *      <h1>Basic with scrolling</h1>
@@ -33616,7 +37808,7 @@ function log() {
  *
  *
  * Example: example-tinymce
- *    <a href="#modaltinymce" class="btn btn-large btn-primary pat-modal"
+ *    <a href="#modaltinymce" class="btn btn-lg btn-primary pat-modal"
  *       data-pat-modal="height: 600px;
  *                       width: 80%">
  *       Modal with TinyMCE</a>
@@ -33624,25 +37816,10 @@ function log() {
  *      <textarea class="pat-tinymce"></textarea>
  *    </div>
  *
- *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
- /* globals confirm:true */
+ /* global confirm:true */
+
 
 define('mockup-patterns-modal',[
   'jquery',
@@ -33669,9 +37846,9 @@ define('mockup-patterns-modal',[
       backdrop: 'body', // Element to initiate the Backdrop on.
       backdropOptions: {
         zIndex: '1040',
-        opacity: '0.8',
-        className: 'backdrop',
-        classActiveName: 'backdrop-active',
+        opacity: '0.85',
+        className: 'plone-modal-backdrop',
+        classActiveName: 'plone-backdrop-active',
         closeOnEsc: true,
         closeOnClick: true
       },
@@ -33683,13 +37860,13 @@ define('mockup-patterns-modal',[
       loadLinksWithinModal: true,
       prependContent: '.portalMessage',
       templateOptions: {
-        className: 'modal fade',
-        classDialog: 'modal-dialog',
-        classModal: 'modal-content',
-        classHeaderName: 'modal-header',
-        classBodyName: 'modal-body',
-        classFooterName: 'modal-footer',
-        classWrapperName: 'modal-wrapper',
+        className: 'plone-modal fade',
+        classDialog: 'plone-modal-dialog',
+        classModal: 'plone-modal-content',
+        classHeaderName: 'plone-modal-header',
+        classBodyName: 'plone-modal-body',
+        classFooterName: 'plone-modal-footer',
+        classWrapperName: 'plone-modal-wrapper',
         classWrapperInnerName: 'modal-wrapper-inner',
         classActiveName: 'in',
         classPrependName: '', // String, css class to be applied to the wrapper of the prepended content
@@ -33699,16 +37876,15 @@ define('mockup-patterns-modal',[
           '  <div class="<%= options.classDialog %>">' +
           '    <div class="<%= options.classModal %>">' +
           '      <div class="<%= options.classHeaderName %>">' +
-          '        <a class="close">&times;</a>' +
-          '        <% if (title) { %><h4 class="modal-title"><%= title %></h4><% } %>' +
+          '        <a class="plone-modal-close">&times;</a>' +
+          '        <% if (title) { %><h2 class="plone-modal-title"><%= title %></h2><% } %>' +
           '      </div>' +
           '      <div class="<%= options.classBodyName %>">' +
           '        <div class="<%= options.classPrependName %>"><%= prepend %></div> ' +
           '        <div class="<%= options.classContentName %>"><%= content %></div>' +
           '      </div>' +
           '      <div class="<%= options.classFooterName %>"> ' +
-          '        <%= buttons %> ' +
-          '        <a class="close hiddenStructure">&times;</a>' +
+          '        <% if (buttons) { %><%= buttons %><% } %>' +
           '      </div>' +
           '    </div>' +
           '  </div>' +
@@ -33968,6 +38144,7 @@ define('mockup-patterns-modal',[
         // Render html
         self.$modal = $(_.template(self.options.templateOptions.template, tplObject));
         self.$modalDialog = $('> .' + self.options.templateOptions.classDialog, self.$modal);
+        self.$modalContent = $('> .' + self.options.templateOptions.classModal, self.$modalDialog);
 
         // In most browsers, when you hit the enter key while a form element is focused
         // the browser will trigger the form 'submit' event.  Google Chrome also does this,
@@ -34003,7 +38180,7 @@ define('mockup-patterns-modal',[
         self.trigger('before-events-setup');
 
         // Wire up events
-        $('.modal-header > a.close, .modal-footer > a.close', self.$modal)
+        $('.plone-modal-header > a.plone-modal-close, .plone-modal-footer > a.plone-modal-close', self.$modal)
           .off('click')
           .on('click', function(e) {
             e.stopPropagation();
@@ -34322,6 +38499,9 @@ define('mockup-patterns-modal',[
         width: self.options.width, // defaults to "", which doesn't override other css
         height: self.options.height // defaults to "", which doesn't override other css
       });
+      self.$modalContent.css({
+        width: self.options.width, // defaults to "", which doesn't override other css
+      });
 
       var posopt = self.options.position.split(' '),
           horpos = posopt[0],
@@ -34368,7 +38548,7 @@ define('mockup-patterns-modal',[
         self.positionModal();
       });
       self.trigger('shown');
-      $('body').addClass('modal-open');
+      $('body').addClass('plone-modal-open');
     },
     hide: function() {
       var self = this;
@@ -34381,7 +38561,7 @@ define('mockup-patterns-modal',[
           return;
         }
       }
-      if ($('.modal', self.$wrapper).size() < 2) {
+      if ($('.plone-modal', self.$wrapper).size() < 2) {
         self.backdrop.hide();
         self.$wrapper.hide();
         self.$wrapper.parent().css('overflow', 'visible');
@@ -34394,7 +38574,7 @@ define('mockup-patterns-modal',[
       }
       $(window.parent).off('resize.modal.patterns');
       self.trigger('hidden');
-      $('body').removeClass('modal-open');
+      $('body').removeClass('plone-modal-open');
     },
     redraw: function(response, options) {
       var self = this;
@@ -34416,7 +38596,7 @@ define('mockup-patterns-modal',[
 (function(root) {
 define("tinymce", [], function() {
   return (function() {
-// 4.1.0 (2014-06-18)
+// 4.1.6 (2014-10-08)
 
 /**
  * Compiled inline version. (Library mode)
@@ -34584,11 +38764,11 @@ define("tinymce/dom/EventUtils", [], function() {
 			var doc = eventDoc.documentElement;
 			var body = eventDoc.body;
 
-			event.pageX = originalEvent.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0 ) -
-				( doc && doc.clientLeft || body && body.clientLeft || 0);
+			event.pageX = originalEvent.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+				(doc && doc.clientLeft || body && body.clientLeft || 0);
 
-			event.pageY = originalEvent.clientY + (doc && doc.scrollTop  || body && body.scrollTop  || 0 ) -
-				( doc && doc.clientTop  || body && body.clientTop  || 0);
+			event.pageY = originalEvent.clientY + (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
+				(doc && doc.clientTop  || body && body.clientTop  || 0);
 		}
 
 		// Add preventDefault method
@@ -34846,6 +39026,7 @@ define("tinymce/dom/EventUtils", [], function() {
 					events[id][name] = callbackList = [{func: callback, scope: scope}];
 					callbackList.fakeName = fakeName;
 					callbackList.capture = capture;
+					//callbackList.callback = callback;
 
 					// Add the nativeHandler to the callback list so that we can later unbind it
 					callbackList.nativeHandler = nativeHandler;
@@ -35080,24 +39261,31 @@ define("tinymce/dom/EventUtils", [], function() {
  */
 
 /*jshint bitwise:false, expr:true, noempty:false, sub:true, eqnull:true, latedef:false, maxlen:255 */
-/*eslint dot-notation:0, no-empty:0, no-cond-assign:0, no-unused-expressions:0, new-cap:0, no-nested-ternary:0, func-style:0, no-bitwise:0, max-len:0, brace-style:0 */
+/*eslint dot-notation:0, no-empty:0, no-cond-assign:0, no-unused-expressions:0, new-cap:0 */
+/*eslint no-nested-ternary:0, func-style:0, no-bitwise:0, max-len:0, brace-style:0, no-return-assign:0 */
 
-/*
- * Sizzle CSS Selector Engine
- *  Copyright, The Dojo Foundation
- *  Released under the MIT, BSD, and GPL Licenses.
- *  More information: http://sizzlejs.com/
+/**
+ * Sizzle CSS Selector Engine v@VERSION
+ * http://sizzlejs.com/
+ *
+ * Copyright 2008, 2014 jQuery Foundation, Inc. and other contributors
+ * Released under the MIT license
+ * http://jquery.org/license
+ *
+ * Date: @DATE
  */
 define("tinymce/dom/Sizzle", [], function() {
 var i,
-	cachedruns,
+	support,
 	Expr,
 	getText,
 	isXML,
+	tokenize,
 	compile,
+	select,
 	outermostContext,
-	recompare,
 	sortInput,
+	hasDuplicate,
 
 	// Local document vars
 	setDocument,
@@ -35112,20 +39300,24 @@ var i,
 	// Instance-specific data
 	expando = "sizzle" + -(new Date()),
 	preferredDoc = window.document,
-	support = {},
 	dirruns = 0,
 	done = 0,
 	classCache = createCache(),
 	tokenCache = createCache(),
 	compilerCache = createCache(),
-	hasDuplicate = false,
-	sortOrder = function() { return 0; },
+	sortOrder = function( a, b ) {
+		if ( a === b ) {
+			hasDuplicate = true;
+		}
+		return 0;
+	},
 
 	// General-purpose constants
 	strundefined = typeof undefined,
 	MAX_NEGATIVE = 1 << 31,
 
-	// Array methods
+	// Instance methods
+	hasOwn = ({}).hasOwnProperty,
 	arr = [],
 	pop = arr.pop,
 	push_native = arr.push,
@@ -35143,78 +39335,83 @@ var i,
 		return -1;
 	},
 
+	booleans = "checked|selected|async|autofocus|autoplay|controls|defer|disabled|hidden|ismap|loop|multiple|open|readonly|required|scoped",
 
 	// Regular expressions
 
-	// Whitespace characters http://www.w3.org/TR/css3-selectors/#whitespace
+	// http://www.w3.org/TR/css3-selectors/#whitespace
 	whitespace = "[\\x20\\t\\r\\n\\f]",
-	// http://www.w3.org/TR/css3-syntax/#characters
-	characterEncoding = "(?:\\\\.|[\\w-]|[^\\x00-\\xa0])+",
 
-	// Loosely modeled on CSS identifier characters
-	// An unquoted value should be a CSS identifier http://www.w3.org/TR/css3-selectors/#attribute-selectors
-	// Proper syntax: http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier
-	identifier = characterEncoding.replace( "w", "w#" ),
+	// http://www.w3.org/TR/CSS21/syndata.html#value-def-identifier
+	identifier = "(?:\\\\.|[\\w-]|[^\\x00-\\xa0])+",
 
-	// Acceptable operators http://www.w3.org/TR/selectors/#attribute-selectors
-	operators = "([*^$|!~]?=)",
-	attributes = "\\[" + whitespace + "*(" + characterEncoding + ")" + whitespace +
-		"*(?:" + operators + whitespace + "*(?:(['\"])((?:\\\\.|[^\\\\])*?)\\3|(" + identifier + ")|)|)" + whitespace + "*\\]",
+	// Attribute selectors: http://www.w3.org/TR/selectors/#attribute-selectors
+	attributes = "\\[" + whitespace + "*(" + identifier + ")(?:" + whitespace +
+		// Operator (capture 2)
+		"*([*^$|!~]?=)" + whitespace +
+		// "Attribute values must be CSS identifiers [capture 5] or strings [capture 3 or capture 4]"
+		"*(?:'((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\"|(" + identifier + "))|)" + whitespace +
+		"*\\]",
 
-	// Prefer arguments quoted,
-	//   then not containing pseudos/brackets,
-	//   then attribute selectors/non-parenthetical expressions,
-	//   then anything else
-	// These preferences are here to reduce the number of selectors
-	//   needing tokenize in the PSEUDO preFilter
-	pseudos = ":(" + characterEncoding + ")(?:\\(((['\"])((?:\\\\.|[^\\\\])*?)\\3|((?:\\\\.|[^\\\\()[\\]]|" + attributes.replace( 3, 8 ) + ")*)|.*)\\)|)",
+	pseudos = ":(" + identifier + ")(?:\\((" +
+		// To reduce the number of selectors needing tokenize in the preFilter, prefer arguments:
+		// 1. quoted (capture 3; capture 4 or capture 5)
+		"('((?:\\\\.|[^\\\\'])*)'|\"((?:\\\\.|[^\\\\\"])*)\")|" +
+		// 2. simple (capture 6)
+		"((?:\\\\.|[^\\\\()[\\]]|" + attributes + ")*)|" +
+		// 3. anything else (capture 2)
+		".*" +
+		")\\)|)",
 
 	// Leading and non-escaped trailing whitespace, capturing some non-whitespace characters preceding the latter
 	rtrim = new RegExp( "^" + whitespace + "+|((?:^|[^\\\\])(?:\\\\.)*)" + whitespace + "+$", "g" ),
 
 	rcomma = new RegExp( "^" + whitespace + "*," + whitespace + "*" ),
-	rcombinators = new RegExp( "^" + whitespace + "*([\\x20\\t\\r\\n\\f>+~])" + whitespace + "*" ),
+	rcombinators = new RegExp( "^" + whitespace + "*([>+~]|" + whitespace + ")" + whitespace + "*" ),
+
+	rattributeQuotes = new RegExp( "=" + whitespace + "*([^\\]'\"]*?)" + whitespace + "*\\]", "g" ),
+
 	rpseudo = new RegExp( pseudos ),
 	ridentifier = new RegExp( "^" + identifier + "$" ),
 
 	matchExpr = {
-		"ID": new RegExp( "^#(" + characterEncoding + ")" ),
-		"CLASS": new RegExp( "^\\.(" + characterEncoding + ")" ),
-		"NAME": new RegExp( "^\\[name=['\"]?(" + characterEncoding + ")['\"]?\\]" ),
-		"TAG": new RegExp( "^(" + characterEncoding.replace( "w", "w*" ) + ")" ),
+		"ID": new RegExp( "^#(" + identifier + ")" ),
+		"CLASS": new RegExp( "^\\.(" + identifier + ")" ),
+		"TAG": new RegExp( "^(" + identifier + "|[*])" ),
 		"ATTR": new RegExp( "^" + attributes ),
 		"PSEUDO": new RegExp( "^" + pseudos ),
 		"CHILD": new RegExp( "^:(only|first|last|nth|nth-last)-(child|of-type)(?:\\(" + whitespace +
 			"*(even|odd|(([+-]|)(\\d*)n|)" + whitespace + "*(?:([+-]|)" + whitespace +
 			"*(\\d+)|))" + whitespace + "*\\)|)", "i" ),
+		"bool": new RegExp( "^(?:" + booleans + ")$", "i" ),
 		// For use in libraries implementing .is()
 		// We use this for POS matching in `select`
 		"needsContext": new RegExp( "^" + whitespace + "*[>+~]|:(even|odd|eq|gt|lt|nth|first|last)(?:\\(" +
 			whitespace + "*((?:-\\d)?\\d*)" + whitespace + "*\\)|)(?=[^-]|$)", "i" )
 	},
 
-	rsibling = /[\x20\t\r\n\f]*[+~]/,
-
-	rnative = /^[^{]+\{\s*\[native code/,
-
-	// Easily-parseable/retrievable ID or TAG or CLASS selectors
-	rquickExpr = /^(?:#([\w\-]+)|(\w+)|\.([\w\-]+))$/,
-
 	rinputs = /^(?:input|select|textarea|button)$/i,
 	rheader = /^h\d$/i,
 
+	rnative = /^[^{]+\{\s*\[native \w/,
+
+	// Easily-parseable/retrievable ID or TAG or CLASS selectors
+	rquickExpr = /^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/,
+
+	rsibling = /[+~]/,
 	rescape = /'|\\/g,
-	rattributeQuotes = /\=[\x20\t\r\n\f]*([^'"\]]*)[\x20\t\r\n\f]*\]/g,
 
 	// CSS escapes http://www.w3.org/TR/CSS21/syndata.html#escaped-characters
-	runescape = /\\([\da-fA-F]{1,6}[\x20\t\r\n\f]?|.)/g,
-	funescape = function( _, escaped ) {
+	runescape = new RegExp( "\\\\([\\da-f]{1,6}" + whitespace + "?|(" + whitespace + ")|.)", "ig" ),
+	funescape = function( _, escaped, escapedWhitespace ) {
 		var high = "0x" + escaped - 0x10000;
 		// NaN means non-codepoint
-		return high !== high ?
+		// Support: Firefox<24
+		// Workaround erroneous numeric interpretation of +"0x"
+		return high !== high || escapedWhitespace ?
 			escaped :
-			// BMP codepoint
 			high < 0 ?
+				// BMP codepoint
 				String.fromCharCode( high + 0x10000 ) :
 				// Supplemental Plane codepoint (surrogate pair)
 				String.fromCharCode( high >> 10 | 0xD800, high & 0x3FF | 0xDC00 );
@@ -35249,63 +39446,6 @@ try {
 	};
 }
 
-/**
- * For feature detection
- * @param {Function} fn The function to test for native support
- */
-function isNative( fn ) {
-	return rnative.test( fn + "" );
-}
-
-/**
- * Create key-value caches of limited size
- * @returns {Function(string, Object)} Returns the Object data after storing it on itself with
- *	property name the (space-suffixed) string and (if the cache is larger than Expr.cacheLength)
- *	deleting the oldest entry
- */
-function createCache() {
-	var cache,
-		keys = [];
-
-	cache = function( key, value ) {
-		// Use (key + " ") to avoid collision with native prototype properties (see Issue #157)
-		if ( keys.push( key += " " ) > Expr.cacheLength ) {
-			// Only keep the most recent entries
-			delete cache[ keys.shift() ];
-		}
-		cache[ key ] = value;
-		return value;
-	};
-
-	return cache;
-}
-
-/**
- * Mark a function for special use by Sizzle
- * @param {Function} fn The function to mark
- */
-function markFunction( fn ) {
-	fn[ expando ] = true;
-	return fn;
-}
-
-/**
- * Support testing using an element
- * @param {Function} fn Passed the created div and expects a boolean result
- */
-function assert( fn ) {
-	var div = document.createElement("div");
-
-	try {
-		return !!fn( div );
-	} catch (e) {
-		return false;
-	} finally {
-		// release memory in IE
-		div = null;
-	}
-}
-
 function Sizzle( selector, context, results, seed ) {
 	var match, elem, m, nodeType,
 		// QSA vars
@@ -35335,7 +39475,7 @@ function Sizzle( selector, context, results, seed ) {
 				if ( nodeType === 9 ) {
 					elem = context.getElementById( m );
 					// Check parentNode to catch when Blackberry 4.6 returns
-					// nodes that are no longer in the document #6963
+					// nodes that are no longer in the document (jQuery #6963)
 					if ( elem && elem.parentNode ) {
 						// Handle the case where IE, Opera, and Webkit return items
 						// by name instead of ID
@@ -35361,16 +39501,15 @@ function Sizzle( selector, context, results, seed ) {
 				return results;
 
 			// Speed-up: Sizzle(".CLASS")
-			} else if ( (m = match[3]) && support.getElementsByClassName && context.getElementsByClassName ) {
+			} else if ( (m = match[3]) && support.getElementsByClassName ) {
 				push.apply( results, context.getElementsByClassName( m ) );
 				return results;
 			}
 		}
 
 		// QSA path
-		if ( support.qsa && !rbuggyQSA.test(selector) ) {
-			old = true;
-			nid = expando;
+		if ( support.qsa && (!rbuggyQSA || !rbuggyQSA.test( selector )) ) {
+			nid = old = expando;
 			newContext = context;
 			newSelector = nodeType === 9 && selector;
 
@@ -35392,7 +39531,7 @@ function Sizzle( selector, context, results, seed ) {
 				while ( i-- ) {
 					groups[i] = nid + toSelector( groups[i] );
 				}
-				newContext = rsibling.test( selector ) && context.parentNode || context;
+				newContext = rsibling.test( selector ) && testContext( context.parentNode ) || context;
 				newSelector = groups.join(",");
 			}
 
@@ -35417,8 +39556,158 @@ function Sizzle( selector, context, results, seed ) {
 }
 
 /**
- * Detect xml
+ * Create key-value caches of limited size
+ * @returns {Function(string, Object)} Returns the Object data after storing it on itself with
+ *	property name the (space-suffixed) string and (if the cache is larger than Expr.cacheLength)
+ *	deleting the oldest entry
+ */
+function createCache() {
+	var keys = [];
+
+	function cache( key, value ) {
+		// Use (key + " ") to avoid collision with native prototype properties (see Issue #157)
+		if ( keys.push( key + " " ) > Expr.cacheLength ) {
+			// Only keep the most recent entries
+			delete cache[ keys.shift() ];
+		}
+		return (cache[ key + " " ] = value);
+	}
+	return cache;
+}
+
+/**
+ * Mark a function for special use by Sizzle
+ * @param {Function} fn The function to mark
+ */
+function markFunction( fn ) {
+	fn[ expando ] = true;
+	return fn;
+}
+
+/**
+ * Support testing using an element
+ * @param {Function} fn Passed the created div and expects a boolean result
+ */
+function assert( fn ) {
+	var div = document.createElement("div");
+
+	try {
+		return !!fn( div );
+	} catch (e) {
+		return false;
+	} finally {
+		// Remove from its parent by default
+		if ( div.parentNode ) {
+			div.parentNode.removeChild( div );
+		}
+		// release memory in IE
+		div = null;
+	}
+}
+
+/**
+ * Adds the same handler for all of the specified attrs
+ * @param {String} attrs Pipe-separated list of attributes
+ * @param {Function} handler The method that will be applied
+ */
+function addHandle( attrs, handler ) {
+	var arr = attrs.split("|"),
+		i = attrs.length;
+
+	while ( i-- ) {
+		Expr.attrHandle[ arr[i] ] = handler;
+	}
+}
+
+/**
+ * Checks document order of two siblings
+ * @param {Element} a
+ * @param {Element} b
+ * @returns {Number} Returns less than 0 if a precedes b, greater than 0 if a follows b
+ */
+function siblingCheck( a, b ) {
+	var cur = b && a,
+		diff = cur && a.nodeType === 1 && b.nodeType === 1 &&
+			( ~b.sourceIndex || MAX_NEGATIVE ) -
+			( ~a.sourceIndex || MAX_NEGATIVE );
+
+	// Use IE sourceIndex if available on both nodes
+	if ( diff ) {
+		return diff;
+	}
+
+	// Check if b follows a
+	if ( cur ) {
+		while ( (cur = cur.nextSibling) ) {
+			if ( cur === b ) {
+				return -1;
+			}
+		}
+	}
+
+	return a ? 1 : -1;
+}
+
+/**
+ * Returns a function to use in pseudos for input types
+ * @param {String} type
+ */
+function createInputPseudo( type ) {
+	return function( elem ) {
+		var name = elem.nodeName.toLowerCase();
+		return name === "input" && elem.type === type;
+	};
+}
+
+/**
+ * Returns a function to use in pseudos for buttons
+ * @param {String} type
+ */
+function createButtonPseudo( type ) {
+	return function( elem ) {
+		var name = elem.nodeName.toLowerCase();
+		return (name === "input" || name === "button") && elem.type === type;
+	};
+}
+
+/**
+ * Returns a function to use in pseudos for positionals
+ * @param {Function} fn
+ */
+function createPositionalPseudo( fn ) {
+	return markFunction(function( argument ) {
+		argument = +argument;
+		return markFunction(function( seed, matches ) {
+			var j,
+				matchIndexes = fn( [], seed.length, argument ),
+				i = matchIndexes.length;
+
+			// Match elements found at the specified indexes
+			while ( i-- ) {
+				if ( seed[ (j = matchIndexes[i]) ] ) {
+					seed[j] = !(matches[j] = seed[j]);
+				}
+			}
+		});
+	});
+}
+
+/**
+ * Checks a node for validity as a Sizzle context
+ * @param {Element|Object=} context
+ * @returns {Element|Object|Boolean} The input node if acceptable, otherwise a falsy value
+ */
+function testContext( context ) {
+	return context && typeof context.getElementsByTagName !== strundefined && context;
+}
+
+// Expose support vars for convenience
+support = Sizzle.support = {};
+
+/**
+ * Detects XML nodes
  * @param {Element|Object} elem An element or a document
+ * @returns {Boolean} True iff elem is a non-HTML XML node
  */
 isXML = Sizzle.isXML = function( elem ) {
 	// documentElement is verified for cases where it doesn't yet exist
@@ -35433,7 +39722,9 @@ isXML = Sizzle.isXML = function( elem ) {
  * @returns {Object} Returns the current document
  */
 setDocument = Sizzle.setDocument = function( node ) {
-	var doc = node ? node.ownerDocument || node : preferredDoc;
+	var hasCompare,
+		doc = node ? node.ownerDocument || node : preferredDoc,
+		parent = doc.defaultView;
 
 	// If no document and documentElement is available, return
 	if ( doc === document || doc.nodeType !== 9 || !doc.documentElement ) {
@@ -35447,90 +39738,62 @@ setDocument = Sizzle.setDocument = function( node ) {
 	// Support tests
 	documentIsHTML = !isXML( doc );
 
+	// Support: IE>8
+	// If iframe document is assigned to "document" variable and if iframe has been reloaded,
+	// IE will throw "permission denied" error when accessing "document" variable, see jQuery #13936
+	// IE6-8 do not support the defaultView property so parent will be undefined
+	if ( parent && parent !== parent.top ) {
+		// IE11 does not have attachEvent, so all must suffer
+		if ( parent.addEventListener ) {
+			parent.addEventListener( "unload", function() {
+				setDocument();
+			}, false );
+		} else if ( parent.attachEvent ) {
+			parent.attachEvent( "onunload", function() {
+				setDocument();
+			});
+		}
+	}
+
+	/* Attributes
+	---------------------------------------------------------------------- */
+
+	// Support: IE<8
+	// Verify that getAttribute really returns attributes and not properties (excepting IE8 booleans)
+	support.attributes = assert(function( div ) {
+		div.className = "i";
+		return !div.getAttribute("className");
+	});
+
+	/* getElement(s)By*
+	---------------------------------------------------------------------- */
+
 	// Check if getElementsByTagName("*") returns only elements
 	support.getElementsByTagName = assert(function( div ) {
 		div.appendChild( doc.createComment("") );
 		return !div.getElementsByTagName("*").length;
 	});
 
-	// Check if attributes should be retrieved by attribute nodes
-	support.attributes = assert(function( div ) {
-		div.innerHTML = "<select></select>";
-		var type = typeof div.lastChild.getAttribute("multiple");
-		// IE8 returns a string for some attributes even when not present
-		return type !== "boolean" && type !== "string";
+	// Support: IE<9
+	support.getElementsByClassName = rnative.test( doc.getElementsByClassName );
+
+	// Support: IE<10
+	// Check if getElementById returns elements by name
+	// The broken getElementById methods don't pick up programatically-set names,
+	// so use a roundabout getElementsByName test
+	support.getById = assert(function( div ) {
+		docElem.appendChild( div ).id = expando;
+		return !doc.getElementsByName || !doc.getElementsByName( expando ).length;
 	});
-
-	// Check if getElementsByClassName can be trusted
-	support.getElementsByClassName = assert(function( div ) {
-		// Opera can't find a second classname (in 9.6)
-		div.innerHTML = "<div class='hidden e'></div><div class='hidden'></div>";
-		if ( !div.getElementsByClassName || !div.getElementsByClassName("e").length ) {
-			return false;
-		}
-
-		// Safari 3.2 caches class attributes and doesn't catch changes
-		div.lastChild.className = "e";
-		return div.getElementsByClassName("e").length === 2;
-	});
-
-	// Check if getElementsByName privileges form controls or returns elements by ID
-	// If so, assume (for broader support) that getElementById returns elements by name
-	support.getByName = assert(function( div ) {
-		// Inject content
-		div.id = expando + 0;
-		// Support: Windows 8 Native Apps
-		// Assigning innerHTML with "name" attributes throws uncatchable exceptions
-		// http://msdn.microsoft.com/en-us/library/ie/hh465388.aspx
-		div.appendChild( document.createElement("a") ).setAttribute( "name", expando );
-		div.appendChild( document.createElement("i") ).setAttribute( "name", expando );
-		docElem.appendChild( div );
-
-		// Test
-		var pass = doc.getElementsByName &&
-			// buggy browsers will return fewer than the correct 2
-			doc.getElementsByName( expando ).length === 2 +
-			// buggy browsers will return more than the correct 0
-			doc.getElementsByName( expando + 0 ).length;
-
-		// Cleanup
-		docElem.removeChild( div );
-
-		return pass;
-	});
-
-	// Support: Webkit<537.32
-	// Detached nodes confoundingly follow *each other*
-	support.sortDetached = assert(function( div1 ) {
-		return div1.compareDocumentPosition &&
-			// Should return 1, but Webkit returns 4 (following)
-			(div1.compareDocumentPosition( document.createElement("div") ) & 1);
-	});
-
-	// IE6/7 return modified attributes
-	Expr.attrHandle = assert(function( div ) {
-		div.innerHTML = "<a href='#'></a>";
-		return div.firstChild && typeof div.firstChild.getAttribute !== strundefined &&
-			div.firstChild.getAttribute("href") === "#";
-	}) ?
-		{} :
-		{
-			"href": function( elem ) {
-				return elem.getAttribute( "href", 2 );
-			},
-			"type": function( elem ) {
-				return elem.getAttribute("type");
-			}
-		};
 
 	// ID find and filter
-	if ( support.getByName ) {
+	if ( support.getById ) {
 		Expr.find["ID"] = function( id, context ) {
 			if ( typeof context.getElementById !== strundefined && documentIsHTML ) {
 				var m = context.getElementById( id );
 				// Check parentNode to catch when Blackberry 4.6 returns
 				// nodes that are no longer in the document #6963
-				return m && m.parentNode ? [m] : [];
+				return m && m.parentNode ? [ m ] : [];
 			}
 		};
 		Expr.filter["ID"] = function( id ) {
@@ -35540,17 +39803,10 @@ setDocument = Sizzle.setDocument = function( node ) {
 			};
 		};
 	} else {
-		Expr.find["ID"] = function( id, context ) {
-			if ( typeof context.getElementById !== strundefined && documentIsHTML ) {
-				var m = context.getElementById( id );
+		// Support: IE6/7
+		// getElementById is not reliable as a find shortcut
+		delete Expr.find["ID"];
 
-				return m ?
-					m.id === id || typeof m.getAttributeNode !== strundefined && m.getAttributeNode("id").value === id ?
-						[m] :
-						undefined :
-					[];
-			}
-		};
 		Expr.filter["ID"] =  function( id ) {
 			var attrId = id.replace( runescape, funescape );
 			return function( elem ) {
@@ -35586,31 +39842,29 @@ setDocument = Sizzle.setDocument = function( node ) {
 			return results;
 		};
 
-	// Name
-	Expr.find["NAME"] = support.getByName && function( tag, context ) {
-		if ( typeof context.getElementsByName !== strundefined ) {
-			return context.getElementsByName( name );
-		}
-	};
-
 	// Class
 	Expr.find["CLASS"] = support.getElementsByClassName && function( className, context ) {
-		if ( typeof context.getElementsByClassName !== strundefined && documentIsHTML ) {
+		if ( documentIsHTML ) {
 			return context.getElementsByClassName( className );
 		}
 	};
+
+	/* QSA/matchesSelector
+	---------------------------------------------------------------------- */
 
 	// QSA and matchesSelector support
 
 	// matchesSelector(:active) reports false when true (IE9/Opera 11.5)
 	rbuggyMatches = [];
 
-	// qSa(:focus) reports false when true (Chrome 21),
-	// no need to also add to buggyMatches since matches checks buggyQSA
-	// A support test would require too much code (would include document ready)
-	rbuggyQSA = [ ":focus" ];
+	// qSa(:focus) reports false when true (Chrome 21)
+	// We allow this because of a bug in IE8/9 that throws an error
+	// whenever `document.activeElement` is accessed on an iframe
+	// So, we allow :focus to pass through QSA all the time to avoid the IE error
+	// See http://bugs.jquery.com/ticket/13378
+	rbuggyQSA = [];
 
-	if ( (support.qsa = isNative(doc.querySelectorAll)) ) {
+	if ( (support.qsa = rnative.test( doc.querySelectorAll )) ) {
 		// Build QSA regex
 		// Regex strategy adopted from Diego Perini
 		assert(function( div ) {
@@ -35619,11 +39873,20 @@ setDocument = Sizzle.setDocument = function( node ) {
 			// setting a boolean content attribute,
 			// since its presence should be enough
 			// http://bugs.jquery.com/ticket/12359
-			div.innerHTML = "<select><option selected=''></option></select>";
+			div.innerHTML = "<select msallowcapture=''><option selected=''></option></select>";
 
-			// IE8 - Some boolean attributes are not treated correctly
+			// Support: IE8, Opera 11-12.16
+			// Nothing should be selected when empty strings follow ^= or $= or *=
+			// The test attribute must be unknown in Opera but "safe" for WinRT
+			// http://msdn.microsoft.com/en-us/library/ie/hh465388.aspx#attribute_section
+			if ( div.querySelectorAll("[msallowcapture^='']").length ) {
+				rbuggyQSA.push( "[*^$]=" + whitespace + "*(?:''|\"\")" );
+			}
+
+			// Support: IE8
+			// Boolean attributes and "value" are not treated correctly
 			if ( !div.querySelectorAll("[selected]").length ) {
-				rbuggyQSA.push( "\\[" + whitespace + "*(?:checked|disabled|ismap|multiple|readonly|selected|value)" );
+				rbuggyQSA.push( "\\[" + whitespace + "*(?:value|" + booleans + ")" );
 			}
 
 			// Webkit/Opera - :checked should return selected option elements
@@ -35635,12 +39898,16 @@ setDocument = Sizzle.setDocument = function( node ) {
 		});
 
 		assert(function( div ) {
+			// Support: Windows 8 Native Apps
+			// The type and name attributes are restricted during .innerHTML assignment
+			var input = doc.createElement("input");
+			input.setAttribute( "type", "hidden" );
+			div.appendChild( input ).setAttribute( "name", "D" );
 
-			// Opera 10-12/IE8 - ^= $= *= and empty values
-			// Should not select anything
-			div.innerHTML = "<input type='hidden' i=''/>";
-			if ( div.querySelectorAll("[i^='']").length ) {
-				rbuggyQSA.push( "[*^$]=" + whitespace + "*(?:\"\"|'')" );
+			// Support: IE8
+			// Enforce case-sensitivity of name attribute
+			if ( div.querySelectorAll("[name=d]").length ) {
+				rbuggyQSA.push( "name" + whitespace + "*[*^$|!~]?=" );
 			}
 
 			// FF 3.5 - :enabled/:disabled and hidden elements (hidden elements are still enabled)
@@ -35655,9 +39922,9 @@ setDocument = Sizzle.setDocument = function( node ) {
 		});
 	}
 
-	if ( (support.matchesSelector = isNative( (matches = docElem.matchesSelector ||
-		docElem.mozMatchesSelector ||
+	if ( (support.matchesSelector = rnative.test( (matches = docElem.matches ||
 		docElem.webkitMatchesSelector ||
+		docElem.mozMatchesSelector ||
 		docElem.oMatchesSelector ||
 		docElem.msMatchesSelector) )) ) {
 
@@ -35673,13 +39940,17 @@ setDocument = Sizzle.setDocument = function( node ) {
 		});
 	}
 
-	rbuggyQSA = new RegExp( rbuggyQSA.join("|") );
+	rbuggyQSA = rbuggyQSA.length && new RegExp( rbuggyQSA.join("|") );
 	rbuggyMatches = rbuggyMatches.length && new RegExp( rbuggyMatches.join("|") );
 
+	/* Contains
+	---------------------------------------------------------------------- */
+	hasCompare = rnative.test( docElem.compareDocumentPosition );
+
 	// Element contains another
-	// Purposefully does not implement inclusive descendant
+	// Purposefully does not implement inclusive descendent
 	// As in, an element does not contain itself
-	contains = isNative(docElem.contains) || docElem.compareDocumentPosition ?
+	contains = hasCompare || rnative.test( docElem.contains ) ?
 		function( a, b ) {
 			var adown = a.nodeType === 9 ? a.documentElement : a,
 				bup = b && b.parentNode;
@@ -35700,8 +39971,11 @@ setDocument = Sizzle.setDocument = function( node ) {
 			return false;
 		};
 
+	/* Sorting
+	---------------------------------------------------------------------- */
+
 	// Document order sorting
-	sortOrder = docElem.compareDocumentPosition ?
+	sortOrder = hasCompare ?
 	function( a, b ) {
 
 		// Flag for duplicate removal
@@ -35710,34 +39984,46 @@ setDocument = Sizzle.setDocument = function( node ) {
 			return 0;
 		}
 
-		var compare = b.compareDocumentPosition && a.compareDocumentPosition && a.compareDocumentPosition( b );
-
+		// Sort on method existence if only one input has compareDocumentPosition
+		var compare = !a.compareDocumentPosition - !b.compareDocumentPosition;
 		if ( compare ) {
-			// Disconnected nodes
-			if ( compare & 1 ||
-				(recompare && b.compareDocumentPosition( a ) === compare) ) {
-
-				// Choose the first element that is related to our preferred document
-				if ( a === doc || contains(preferredDoc, a) ) {
-					return -1;
-				}
-				if ( b === doc || contains(preferredDoc, b) ) {
-					return 1;
-				}
-
-				// Maintain original order
-				return sortInput ?
-					( indexOf.call( sortInput, a ) - indexOf.call( sortInput, b ) ) :
-					0;
-			}
-
-			return compare & 4 ? -1 : 1;
+			return compare;
 		}
 
-		// Not directly comparable, sort on existence of method
-		return a.compareDocumentPosition ? -1 : 1;
+		// Calculate position if both inputs belong to the same document
+		compare = ( a.ownerDocument || a ) === ( b.ownerDocument || b ) ?
+			a.compareDocumentPosition( b ) :
+
+			// Otherwise we know they are disconnected
+			1;
+
+		// Disconnected nodes
+		if ( compare & 1 ||
+			(!support.sortDetached && b.compareDocumentPosition( a ) === compare) ) {
+
+			// Choose the first element that is related to our preferred document
+			if ( a === doc || a.ownerDocument === preferredDoc && contains(preferredDoc, a) ) {
+				return -1;
+			}
+			if ( b === doc || b.ownerDocument === preferredDoc && contains(preferredDoc, b) ) {
+				return 1;
+			}
+
+			// Maintain original order
+			return sortInput ?
+				( indexOf.call( sortInput, a ) - indexOf.call( sortInput, b ) ) :
+				0;
+		}
+
+		return compare & 4 ? -1 : 1;
 	} :
 	function( a, b ) {
+		// Exit early if the nodes are identical
+		if ( a === b ) {
+			hasDuplicate = true;
+			return 0;
+		}
+
 		var cur,
 			i = 0,
 			aup = a.parentNode,
@@ -35745,17 +40031,14 @@ setDocument = Sizzle.setDocument = function( node ) {
 			ap = [ a ],
 			bp = [ b ];
 
-		// Exit early if the nodes are identical
-		if ( a === b ) {
-			hasDuplicate = true;
-			return 0;
-
 		// Parentless nodes are either documents or disconnected
-		} else if ( !aup || !bup ) {
+		if ( !aup || !bup ) {
 			return a === doc ? -1 :
 				b === doc ? 1 :
 				aup ? -1 :
 				bup ? 1 :
+				sortInput ?
+				( indexOf.call( sortInput, a ) - indexOf.call( sortInput, b ) ) :
 				0;
 
 		// If the nodes are siblings, we can do a quick check
@@ -35788,7 +40071,7 @@ setDocument = Sizzle.setDocument = function( node ) {
 			0;
 	};
 
-	return document;
+	return doc;
 };
 
 Sizzle.matches = function( expr, elements ) {
@@ -35804,8 +40087,10 @@ Sizzle.matchesSelector = function( elem, expr ) {
 	// Make sure that attribute selectors are quoted
 	expr = expr.replace( rattributeQuotes, "='$1']" );
 
-	// rbuggyQSA always contains :focus, so no need for an existence check
-	if ( support.matchesSelector && documentIsHTML && (!rbuggyMatches || !rbuggyMatches.test(expr)) && !rbuggyQSA.test(expr) ) {
+	if ( support.matchesSelector && documentIsHTML &&
+		( !rbuggyMatches || !rbuggyMatches.test( expr ) ) &&
+		( !rbuggyQSA     || !rbuggyQSA.test( expr ) ) ) {
+
 		try {
 			var ret = matches.call( elem, expr );
 
@@ -35819,7 +40104,7 @@ Sizzle.matchesSelector = function( elem, expr ) {
 		} catch(e) {}
 	}
 
-	return Sizzle( expr, document, null, [elem] ).length > 0;
+	return Sizzle( expr, document, null, [ elem ] ).length > 0;
 };
 
 Sizzle.contains = function( context, elem ) {
@@ -35831,32 +40116,34 @@ Sizzle.contains = function( context, elem ) {
 };
 
 Sizzle.attr = function( elem, name ) {
-	var val;
-
 	// Set document vars if needed
 	if ( ( elem.ownerDocument || elem ) !== document ) {
 		setDocument( elem );
 	}
 
-	if ( documentIsHTML ) {
-		name = name.toLowerCase();
-	}
-	if ( (val = Expr.attrHandle[ name ]) ) {
-		return val( elem );
-	}
-	if ( !documentIsHTML || support.attributes ) {
-		return elem.getAttribute( name );
-	}
-	return ( (val = elem.getAttributeNode( name )) || elem.getAttribute( name ) ) && elem[ name ] === true ?
-		name :
-		val && val.specified ? val.value : null;
+	var fn = Expr.attrHandle[ name.toLowerCase() ],
+		// Don't get fooled by Object.prototype properties (jQuery #13807)
+		val = fn && hasOwn.call( Expr.attrHandle, name.toLowerCase() ) ?
+			fn( elem, name, !documentIsHTML ) :
+			undefined;
+
+	return val !== undefined ?
+		val :
+		support.attributes || !documentIsHTML ?
+			elem.getAttribute( name ) :
+			(val = elem.getAttributeNode(name)) && val.specified ?
+				val.value :
+				null;
 };
 
 Sizzle.error = function( msg ) {
 	throw new Error( "Syntax error, unrecognized expression: " + msg );
 };
 
-// Document sorting and removing duplicates
+/**
+ * Document sorting and removing duplicates
+ * @param {ArrayLike} results
+ */
 Sizzle.uniqueSort = function( results ) {
 	var elem,
 		duplicates = [],
@@ -35865,8 +40152,6 @@ Sizzle.uniqueSort = function( results ) {
 
 	// Unless we *know* we can detect duplicates, assume their presence
 	hasDuplicate = !support.detectDuplicates;
-	// Compensate for sort limitations
-	recompare = !support.sortDetached;
 	sortInput = !support.sortStable && results.slice( 0 );
 	results.sort( sortOrder );
 
@@ -35881,70 +40166,12 @@ Sizzle.uniqueSort = function( results ) {
 		}
 	}
 
+	// Clear input after sorting to release objects
+	// See https://github.com/jquery/sizzle/pull/225
+	sortInput = null;
+
 	return results;
 };
-
-/**
- * Checks document order of two siblings
- * @param {Element} a
- * @param {Element} b
- * @returns Returns -1 if a precedes b, 1 if a follows b
- */
-function siblingCheck( a, b ) {
-	var cur = b && a,
-		diff = cur && ( ~b.sourceIndex || MAX_NEGATIVE ) - ( ~a.sourceIndex || MAX_NEGATIVE );
-
-	// Use IE sourceIndex if available on both nodes
-	if ( diff ) {
-		return diff;
-	}
-
-	// Check if b follows a
-	if ( cur ) {
-		while ( (cur = cur.nextSibling) ) {
-			if ( cur === b ) {
-				return -1;
-			}
-		}
-	}
-
-	return a ? 1 : -1;
-}
-
-// Returns a function to use in pseudos for input types
-function createInputPseudo( type ) {
-	return function( elem ) {
-		var name = elem.nodeName.toLowerCase();
-		return name === "input" && elem.type === type;
-	};
-}
-
-// Returns a function to use in pseudos for buttons
-function createButtonPseudo( type ) {
-	return function( elem ) {
-		var name = elem.nodeName.toLowerCase();
-		return (name === "input" || name === "button") && elem.type === type;
-	};
-}
-
-// Returns a function to use in pseudos for positionals
-function createPositionalPseudo( fn ) {
-	return markFunction(function( argument ) {
-		argument = +argument;
-		return markFunction(function( seed, matches ) {
-			var j,
-				matchIndexes = fn( [], seed.length, argument ),
-				i = matchIndexes.length;
-
-			// Match elements found at the specified indexes
-			while ( i-- ) {
-				if ( seed[ (j = matchIndexes[i]) ] ) {
-					seed[j] = !(matches[j] = seed[j]);
-				}
-			}
-		});
-	});
-}
 
 /**
  * Utility function for retrieving the text value of an array of DOM nodes
@@ -35958,13 +40185,13 @@ getText = Sizzle.getText = function( elem ) {
 
 	if ( !nodeType ) {
 		// If no nodeType, this is expected to be an array
-		for ( ; (node = elem[i]); i++ ) {
+		while ( (node = elem[i++]) ) {
 			// Do not traverse comment nodes
 			ret += getText( node );
 		}
 	} else if ( nodeType === 1 || nodeType === 9 || nodeType === 11 ) {
 		// Use textContent for elements
-		// innerText usage removed for consistency of new lines (see #11153)
+		// innerText usage removed for consistency of new lines (jQuery #11153)
 		if ( typeof elem.textContent === "string" ) {
 			return elem.textContent;
 		} else {
@@ -35990,6 +40217,8 @@ Expr = Sizzle.selectors = {
 
 	match: matchExpr,
 
+	attrHandle: {},
+
 	find: {},
 
 	relative: {
@@ -36004,7 +40233,7 @@ Expr = Sizzle.selectors = {
 			match[1] = match[1].replace( runescape, funescape );
 
 			// Move the given value to match[3] whether quoted or unquoted
-			match[3] = ( match[4] || match[5] || "" ).replace( runescape, funescape );
+			match[3] = ( match[3] || match[4] || match[5] || "" ).replace( runescape, funescape );
 
 			if ( match[2] === "~=" ) {
 				match[3] = " " + match[3] + " ";
@@ -36047,15 +40276,15 @@ Expr = Sizzle.selectors = {
 
 		"PSEUDO": function( match ) {
 			var excess,
-				unquoted = !match[5] && match[2];
+				unquoted = !match[6] && match[2];
 
 			if ( matchExpr["CHILD"].test( match[0] ) ) {
 				return null;
 			}
 
 			// Accept quoted arguments as-is
-			if ( match[4] ) {
-				match[2] = match[4];
+			if ( match[3] ) {
+				match[2] = match[4] || match[5] || "";
 
 			// Strip excess characters from unquoted arguments
 			} else if ( unquoted && rpseudo.test( unquoted ) &&
@@ -36076,15 +40305,13 @@ Expr = Sizzle.selectors = {
 
 	filter: {
 
-		"TAG": function( nodeName ) {
-			if ( nodeName === "*" ) {
-				return function() { return true; };
-			}
-
-			nodeName = nodeName.replace( runescape, funescape ).toLowerCase();
-			return function( elem ) {
-				return elem.nodeName && elem.nodeName.toLowerCase() === nodeName;
-			};
+		"TAG": function( nodeNameSelector ) {
+			var nodeName = nodeNameSelector.replace( runescape, funescape ).toLowerCase();
+			return nodeNameSelector === "*" ?
+				function() { return true; } :
+				function( elem ) {
+					return elem.nodeName && elem.nodeName.toLowerCase() === nodeName;
+				};
 		},
 
 		"CLASS": function( className ) {
@@ -36093,7 +40320,7 @@ Expr = Sizzle.selectors = {
 			return pattern ||
 				(pattern = new RegExp( "(^|" + whitespace + ")" + className + "(" + whitespace + "|$)" )) &&
 				classCache( className, function( elem ) {
-					return pattern.test( elem.className || (typeof elem.getAttribute !== strundefined && elem.getAttribute("class")) || "" );
+					return pattern.test( typeof elem.className === "string" && elem.className || typeof elem.getAttribute !== strundefined && elem.getAttribute("class") || "" );
 				});
 		},
 
@@ -36285,6 +40512,7 @@ Expr = Sizzle.selectors = {
 		}),
 
 		"contains": markFunction(function( text ) {
+			text = text.replace( runescape, funescape );
 			return function( elem ) {
 				return ( elem.textContent || elem.innerText || getText( elem ) ).indexOf( text ) > -1;
 			};
@@ -36361,12 +40589,11 @@ Expr = Sizzle.selectors = {
 		// Contents
 		"empty": function( elem ) {
 			// http://www.w3.org/TR/selectors/#empty-pseudo
-			// :empty is only affected by element nodes and content nodes(including text(3), cdata(4)),
-			//   not comment, processing instructions, or others
-			// Thanks to Diego Perini for the nodeName shortcut
-			//   Greater than "@" means alpha characters (specifically not starting with "#" or "?")
+			// :empty is negated by element (1) or content nodes (text: 3; cdata: 4; entity ref: 5),
+			//   but not by others (comment: 8; processing instruction: 7; etc.)
+			// nodeType < 6 works because attributes (2) do not appear as children
 			for ( elem = elem.firstChild; elem; elem = elem.nextSibling ) {
-				if ( elem.nodeName > "@" || elem.nodeType === 3 || elem.nodeType === 4 ) {
+				if ( elem.nodeType < 6 ) {
 					return false;
 				}
 			}
@@ -36393,11 +40620,12 @@ Expr = Sizzle.selectors = {
 
 		"text": function( elem ) {
 			var attr;
-			// IE6 and 7 will map elem.type to 'text' for new HTML5 types (search, etc)
-			// use getAttribute instead to test this case
 			return elem.nodeName.toLowerCase() === "input" &&
 				elem.type === "text" &&
-				( (attr = elem.getAttribute("type")) == null || attr.toLowerCase() === elem.type );
+
+				// Support: IE<8
+				// New HTML5 attribute values (e.g., "search") appear with elem.type === "text"
+				( (attr = elem.getAttribute("type")) == null || attr.toLowerCase() === "text" );
 		},
 
 		// Position-in-collection
@@ -36447,6 +40675,8 @@ Expr = Sizzle.selectors = {
 	}
 };
 
+Expr.pseudos["nth"] = Expr.pseudos["eq"];
+
 // Add button/input type pseudos
 for ( i in { radio: true, checkbox: true, file: true, password: true, image: true } ) {
 	Expr.pseudos[ i ] = createInputPseudo( i );
@@ -36455,7 +40685,12 @@ for ( i in { submit: true, reset: true } ) {
 	Expr.pseudos[ i ] = createButtonPseudo( i );
 }
 
-function tokenize( selector, parseOnly ) {
+// Easy API for creating new setFilters
+function setFilters() {}
+setFilters.prototype = Expr.filters = Expr.pseudos;
+Expr.setFilters = new setFilters();
+
+tokenize = Sizzle.tokenize = function( selector, parseOnly ) {
 	var matched, match, tokens, type,
 		soFar, groups, preFilters,
 		cached = tokenCache[ selector + " " ];
@@ -36476,7 +40711,7 @@ function tokenize( selector, parseOnly ) {
 				// Don't consume trailing commas as valid
 				soFar = soFar.slice( match[0].length ) || soFar;
 			}
-			groups.push( tokens = [] );
+			groups.push( (tokens = []) );
 		}
 
 		matched = false;
@@ -36484,11 +40719,11 @@ function tokenize( selector, parseOnly ) {
 		// Combinators
 		if ( (match = rcombinators.exec( soFar )) ) {
 			matched = match.shift();
-			tokens.push( {
+			tokens.push({
 				value: matched,
 				// Cast descendant combinators to space
 				type: match[0].replace( rtrim, " " )
-			} );
+			});
 			soFar = soFar.slice( matched.length );
 		}
 
@@ -36497,11 +40732,11 @@ function tokenize( selector, parseOnly ) {
 			if ( (match = matchExpr[ type ].exec( soFar )) && (!preFilters[ type ] ||
 				(match = preFilters[ type ]( match ))) ) {
 				matched = match.shift();
-				tokens.push( {
+				tokens.push({
 					value: matched,
 					type: type,
 					matches: match
-				} );
+				});
 				soFar = soFar.slice( matched.length );
 			}
 		}
@@ -36520,7 +40755,7 @@ function tokenize( selector, parseOnly ) {
 			Sizzle.error( selector ) :
 			// Cache the tokens
 			tokenCache( selector, groups ).slice( 0 );
-}
+};
 
 function toSelector( tokens ) {
 	var i = 0,
@@ -36549,8 +40784,8 @@ function addCombinator( matcher, combinator, base ) {
 
 		// Check against all ancestor/preceding elements
 		function( elem, context, xml ) {
-			var data, cache, outerCache,
-				dirkey = dirruns + " " + doneName;
+			var oldCache, outerCache,
+				newCache = [ dirruns, doneName ];
 
 			// We can't set arbitrary data on XML nodes, so they don't benefit from dir caching
 			if ( xml ) {
@@ -36565,14 +40800,17 @@ function addCombinator( matcher, combinator, base ) {
 				while ( (elem = elem[ dir ]) ) {
 					if ( elem.nodeType === 1 || checkNonElements ) {
 						outerCache = elem[ expando ] || (elem[ expando ] = {});
-						if ( (cache = outerCache[ dir ]) && cache[0] === dirkey ) {
-							if ( (data = cache[1]) === true || data === cachedruns ) {
-								return data === true;
-							}
+						if ( (oldCache = outerCache[ dir ]) &&
+							oldCache[ 0 ] === dirruns && oldCache[ 1 ] === doneName ) {
+
+							// Assign to newCache so results back-propagate to previous elements
+							return (newCache[ 2 ] = oldCache[ 2 ]);
 						} else {
-							cache = outerCache[ dir ] = [ dirkey ];
-							cache[1] = matcher( elem, context, xml ) || cachedruns;
-							if ( cache[1] === true ) {
+							// Reuse newcache so results back-propagate to previous elements
+							outerCache[ dir ] = newCache;
+
+							// A match means we're done; a fail means we have to keep checking
+							if ( (newCache[ 2 ] = matcher( elem, context, xml )) ) {
 								return true;
 							}
 						}
@@ -36594,6 +40832,15 @@ function elementMatcher( matchers ) {
 			return true;
 		} :
 		matchers[0];
+}
+
+function multipleContexts( selector, contexts, results ) {
+	var i = 0,
+		len = contexts.length;
+	for ( ; i < len; i++ ) {
+		Sizzle( selector, contexts[i], results );
+	}
+	return results;
 }
 
 function condense( unmatched, map, filter, context, xml ) {
@@ -36748,7 +40995,10 @@ function matcherFromTokens( tokens ) {
 				}
 				return setMatcher(
 					i > 1 && elementMatcher( matchers ),
-					i > 1 && toSelector( tokens.slice( 0, i - 1 ) ).replace( rtrim, "$1" ),
+					i > 1 && toSelector(
+						// If the preceding token was a descendant combinator, insert an implicit any-element `*`
+						tokens.slice( 0, i - 1 ).concat({ value: tokens[ i - 2 ].type === " " ? "*" : "" })
+					).replace( rtrim, "$1" ),
 					matcher,
 					i < j && matcherFromTokens( tokens.slice( i, j ) ),
 					j < len && matcherFromTokens( (tokens = tokens.slice( j )) ),
@@ -36763,31 +41013,30 @@ function matcherFromTokens( tokens ) {
 }
 
 function matcherFromGroupMatchers( elementMatchers, setMatchers ) {
-	// A counter to specify which element is currently being matched
-	var matcherCachedRuns = 0,
-		bySet = setMatchers.length > 0,
+	var bySet = setMatchers.length > 0,
 		byElement = elementMatchers.length > 0,
-		superMatcher = function( seed, context, xml, results, expandContext ) {
+		superMatcher = function( seed, context, xml, results, outermost ) {
 			var elem, j, matcher,
-				setMatched = [],
 				matchedCount = 0,
 				i = "0",
 				unmatched = seed && [],
-				outermost = expandContext != null,
+				setMatched = [],
 				contextBackup = outermostContext,
-				// We must always have either seed elements or context
-				elems = seed || byElement && Expr.find["TAG"]( "*", expandContext && context.parentNode || context ),
+				// We must always have either seed elements or outermost context
+				elems = seed || byElement && Expr.find["TAG"]( "*", outermost ),
 				// Use integer dirruns iff this is the outermost matcher
-				dirrunsUnique = (dirruns += contextBackup == null ? 1 : Math.random() || 0.1);
+				dirrunsUnique = (dirruns += contextBackup == null ? 1 : Math.random() || 0.1),
+				len = elems.length;
 
 			if ( outermost ) {
 				outermostContext = context !== document && context;
-				cachedruns = matcherCachedRuns;
 			}
 
 			// Add elements passing elementMatchers directly to results
 			// Keep `i` a string if there are no elements so `matchedCount` will be "00" below
-			for ( ; (elem = elems[i]) != null; i++ ) {
+			// Support: IE<9, Safari
+			// Tolerate NodeList properties (IE: "length"; Safari: <number>) matching elements by id
+			for ( ; i !== len && (elem = elems[i]) != null; i++ ) {
 				if ( byElement && elem ) {
 					j = 0;
 					while ( (matcher = elementMatchers[j++]) ) {
@@ -36798,7 +41047,6 @@ function matcherFromGroupMatchers( elementMatchers, setMatchers ) {
 					}
 					if ( outermost ) {
 						dirruns = dirrunsUnique;
-						cachedruns = ++matcherCachedRuns;
 					}
 				}
 
@@ -36863,7 +41111,7 @@ function matcherFromGroupMatchers( elementMatchers, setMatchers ) {
 		superMatcher;
 }
 
-compile = Sizzle.compile = function( selector, group /* Internal Use Only */ ) {
+compile = Sizzle.compile = function( selector, match /* Internal Use Only */ ) {
 	var i,
 		setMatchers = [],
 		elementMatchers = [],
@@ -36871,12 +41119,12 @@ compile = Sizzle.compile = function( selector, group /* Internal Use Only */ ) {
 
 	if ( !cached ) {
 		// Generate a function of recursive functions that can be used to check each element
-		if ( !group ) {
-			group = tokenize( selector );
+		if ( !match ) {
+			match = tokenize( selector );
 		}
-		i = group.length;
+		i = match.length;
 		while ( i-- ) {
-			cached = matcherFromTokens( group[i] );
+			cached = matcherFromTokens( match[i] );
 			if ( cached[ expando ] ) {
 				setMatchers.push( cached );
 			} else {
@@ -36886,111 +41134,154 @@ compile = Sizzle.compile = function( selector, group /* Internal Use Only */ ) {
 
 		// Cache the compiled function
 		cached = compilerCache( selector, matcherFromGroupMatchers( elementMatchers, setMatchers ) );
+
+		// Save selector and tokenization
+		cached.selector = selector;
 	}
 	return cached;
 };
 
-function multipleContexts( selector, contexts, results ) {
-	var i = 0,
-		len = contexts.length;
-	for ( ; i < len; i++ ) {
-		Sizzle( selector, contexts[i], results );
-	}
-	return results;
-}
-
-function select( selector, context, results, seed ) {
+/**
+ * A low-level selection function that works with Sizzle's compiled
+ *  selector functions
+ * @param {String|Function} selector A selector or a pre-compiled
+ *  selector function built with Sizzle.compile
+ * @param {Element} context
+ * @param {Array} [results]
+ * @param {Array} [seed] A set of elements to match against
+ */
+select = Sizzle.select = function( selector, context, results, seed ) {
 	var i, tokens, token, type, find,
-		match = tokenize( selector );
+		compiled = typeof selector === "function" && selector,
+		match = !seed && tokenize( (selector = compiled.selector || selector) );
 
-	if ( !seed ) {
-		// Try to minimize operations if there is only one group
-		if ( match.length === 1 ) {
+	results = results || [];
 
-			// Take a shortcut and set the context if the root selector is an ID
-			tokens = match[0] = match[0].slice( 0 );
-			if ( tokens.length > 2 && (token = tokens[0]).type === "ID" &&
-					context.nodeType === 9 && documentIsHTML &&
-					Expr.relative[ tokens[1].type ] ) {
+	// Try to minimize operations if there is no seed and only one group
+	if ( match.length === 1 ) {
 
-				context = ( Expr.find["ID"]( token.matches[0].replace(runescape, funescape), context ) || [] )[0];
-				if ( !context ) {
-					return results;
-				}
+		// Take a shortcut and set the context if the root selector is an ID
+		tokens = match[0] = match[0].slice( 0 );
+		if ( tokens.length > 2 && (token = tokens[0]).type === "ID" &&
+				support.getById && context.nodeType === 9 && documentIsHTML &&
+				Expr.relative[ tokens[1].type ] ) {
 
-				selector = selector.slice( tokens.shift().value.length );
+			context = ( Expr.find["ID"]( token.matches[0].replace(runescape, funescape), context ) || [] )[0];
+			if ( !context ) {
+				return results;
+
+			// Precompiled matchers will still verify ancestry, so step up a level
+			} else if ( compiled ) {
+				context = context.parentNode;
 			}
 
-			// Fetch a seed set for right-to-left matching
-			i = matchExpr["needsContext"].test( selector ) ? 0 : tokens.length;
-			while ( i-- ) {
-				token = tokens[i];
+			selector = selector.slice( tokens.shift().value.length );
+		}
 
-				// Abort if we hit a combinator
-				if ( Expr.relative[ (type = token.type) ] ) {
-					break;
-				}
-				if ( (find = Expr.find[ type ]) ) {
-					// Search, expanding context for leading sibling combinators
-					if ( (seed = find(
-						token.matches[0].replace( runescape, funescape ),
-						rsibling.test( tokens[0].type ) && context.parentNode || context
-					)) ) {
+		// Fetch a seed set for right-to-left matching
+		i = matchExpr["needsContext"].test( selector ) ? 0 : tokens.length;
+		while ( i-- ) {
+			token = tokens[i];
 
-						// If seed is empty or no tokens remain, we can return early
-						tokens.splice( i, 1 );
-						selector = seed.length && toSelector( tokens );
-						if ( !selector ) {
-							push.apply( results, seed );
-							return results;
-						}
+			// Abort if we hit a combinator
+			if ( Expr.relative[ (type = token.type) ] ) {
+				break;
+			}
+			if ( (find = Expr.find[ type ]) ) {
+				// Search, expanding context for leading sibling combinators
+				if ( (seed = find(
+					token.matches[0].replace( runescape, funescape ),
+					rsibling.test( tokens[0].type ) && testContext( context.parentNode ) || context
+				)) ) {
 
-						break;
+					// If seed is empty or no tokens remain, we can return early
+					tokens.splice( i, 1 );
+					selector = seed.length && toSelector( tokens );
+					if ( !selector ) {
+						push.apply( results, seed );
+						return results;
 					}
+
+					break;
 				}
 			}
 		}
 	}
 
-	// Compile and execute a filtering function
+	// Compile and execute a filtering function if one is not provided
 	// Provide `match` to avoid retokenization if we modified the selector above
-	compile( selector, match )(
+	( compiled || compile( selector, match ) )(
 		seed,
 		context,
 		!documentIsHTML,
 		results,
-		rsibling.test( selector )
+		rsibling.test( selector ) && testContext( context.parentNode ) || context
 	);
 	return results;
-}
+};
 
-// Deprecated
-Expr.pseudos["nth"] = Expr.pseudos["eq"];
+// One-time assignments
 
-// Easy API for creating new setFilters
-function setFilters() {}
-setFilters.prototype = Expr.filters = Expr.pseudos;
-Expr.setFilters = new setFilters();
-
-// Check sort stability
+// Sort stability
 support.sortStable = expando.split("").sort( sortOrder ).join("") === expando;
 
-// Initialize with the default document
+// Support: Chrome 14-35+
+// Always assume duplicates if they aren't passed to the comparison function
+support.detectDuplicates = !!hasDuplicate;
+
+// Initialize against the default document
 setDocument();
 
-// Always assume the presence of duplicates if sort doesn't
-// pass them to our comparison function (as in Google Chrome).
-[0, 0].sort( sortOrder );
-support.detectDuplicates = hasDuplicate;
+// Support: Webkit<537.32 - Safari 6.0.3/Chrome 25 (fixed in Chrome 27)
+// Detached nodes confoundingly follow *each other*
+support.sortDetached = assert(function( div1 ) {
+	// Should return 1, but returns 4 (following)
+	return div1.compareDocumentPosition( document.createElement("div") ) & 1;
+});
 
-/*
-// EXPOSE
-if ( typeof define === "function" && define.amd ) {
-	define(function() { return Sizzle; });
-} else {
-	window.Sizzle = Sizzle;
+// Support: IE<8
+// Prevent attribute/property "interpolation"
+// http://msdn.microsoft.com/en-us/library/ms536429%28VS.85%29.aspx
+if ( !assert(function( div ) {
+	div.innerHTML = "<a href='#'></a>";
+	return div.firstChild.getAttribute("href") === "#" ;
+}) ) {
+	addHandle( "type|href|height|width", function( elem, name, isXML ) {
+		if ( !isXML ) {
+			return elem.getAttribute( name, name.toLowerCase() === "type" ? 1 : 2 );
+		}
+	});
 }
-*/
+
+// Support: IE<9
+// Use defaultValue in place of getAttribute("value")
+if ( !support.attributes || !assert(function( div ) {
+	div.innerHTML = "<input/>";
+	div.firstChild.setAttribute( "value", "" );
+	return div.firstChild.getAttribute( "value" ) === "";
+}) ) {
+	addHandle( "value", function( elem, name, isXML ) {
+		if ( !isXML && elem.nodeName.toLowerCase() === "input" ) {
+			return elem.defaultValue;
+		}
+	});
+}
+
+// Support: IE<9
+// Use getAttributeNode to fetch booleans when getAttribute lies
+if ( !assert(function( div ) {
+	return div.getAttribute("disabled") == null;
+}) ) {
+	addHandle( booleans, function( elem, name, isXML ) {
+		var val;
+		if ( !isXML ) {
+			return elem[ name ] === true ? name.toLowerCase() :
+					(val = elem.getAttributeNode( name )) && val.specified ?
+					val.value :
+				null;
+		}
+	});
+}
 
 // EXPOSE
 return Sizzle;
@@ -37067,10 +41358,13 @@ define("tinymce/util/Tools", [], function() {
 	 * @return {Array} Array object based in input.
 	 */
 	function toArray(obj) {
-		var array = [], i, l;
+		var array = obj, i, l;
 
-		for (i = 0, l = obj.length; i < l; i++) {
-			array[i] = obj[i];
+		if (!isArray(obj)) {
+			array = [];
+			for (i = 0, l = obj.length; i < l; i++) {
+				array[i] = obj[i];
+			}
 		}
 
 		return array;
@@ -37650,9 +41944,6 @@ define("tinymce/Env", [], function() {
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
- *
- * Some of this logic is based on jQuery code that is released under
- * MIT license that grants us to sublicense it under LGPL.
  */
 
 /**
@@ -37665,7 +41956,6 @@ define("tinymce/Env", [], function() {
  * - Event binding
  *
  * This is not currently implemented:
- * - Offset
  * - Dimension
  * - Ajax
  * - Animation
@@ -37714,8 +42004,10 @@ define("tinymce/dom/DomQuery", [
 		var i;
 
 		if (isString(sourceItem)) {
-			sourceItem = createFragment(sourceItem);
+			sourceItem = createFragment(sourceItem, getElementDocument(targetNodes[0]));
 		} else if (sourceItem.length && !sourceItem.nodeType) {
+			sourceItem = DomQuery.makeArray(sourceItem);
+
 			if (reverse) {
 				for (i = sourceItem.length - 1; i >= 0; i--) {
 					domManipulate(targetNodes, sourceItem[i], callback, reverse);
@@ -37729,9 +42021,11 @@ define("tinymce/dom/DomQuery", [
 			return targetNodes;
 		}
 
-		i = targetNodes.length;
-		while (i--) {
-			callback.call(targetNodes[i], sourceItem.parentNode ? sourceItem : sourceItem);
+		if (sourceItem.nodeType) {
+			i = targetNodes.length;
+			while (i--) {
+				callback.call(targetNodes[i], sourceItem);
+			}
 		}
 
 		return targetNodes;
@@ -37769,62 +42063,11 @@ define("tinymce/dom/DomQuery", [
 		'class': 'className',
 		'readonly': 'readOnly'
 	};
+	var cssFix = {
+		'float': 'cssFloat'
+	};
 
-	var attrGetHooks = {}, attrSetHooks = {};
-
-	function appendHooks(target, hooks) {
-		each(hooks, function(key, value) {
-			each(key.split(' '), function() {
-				target[this] = value;
-			});
-		});
-	}
-
-	if (Env.ie && Env.ie <= 7) {
-		appendHooks(attrGetHooks, {
-			maxlength: function(elm, value) {
-				value = elm.maxLength;
-
-				if (value === 0x7fffffff) {
-					return undef;
-				}
-
-				return value;
-			},
-
-			size: function(elm, value) {
-				value = elm.size;
-
-				if (value === 20) {
-					return undef;
-				}
-
-				return value;
-			},
-
-			'class': function(elm) {
-				return elm.className;
-			},
-
-			style: function(elm) {
-				if (elm.style.cssText.length === 0) {
-					return undef;
-				}
-
-				return elm.style.cssText;
-			}
-		});
-
-		appendHooks(attrSetHooks, {
-			'class': function(elm, value) {
-				elm.className = value;
-			},
-
-			style: function(elm, value) {
-				elm.style.cssText = value;
-			}
-		});
-	}
+	var attrHooks = {}, cssHooks = {};
 
 	function DomQuery(selector, context) {
 		/*eslint new-cap:0 */
@@ -37882,6 +42125,30 @@ define("tinymce/dom/DomQuery", [
 		}
 
 		return obj;
+	}
+
+	function grep(array, callback) {
+		var out = [];
+
+		each(array, function(i, item) {
+			if (callback(item, i)) {
+				out.push(item);
+			}
+		});
+
+		return out;
+	}
+
+	function getElementDocument(element) {
+		if (!element) {
+			return doc;
+		}
+
+		if (element.nodeType == 9) {
+			return element;
+		}
+
+		return element.ownerDocument;
 	}
 
 	DomQuery.fn = DomQuery.prototype = {
@@ -37954,14 +42221,18 @@ define("tinymce/dom/DomQuery", [
 
 				if (match) {
 					if (match[1]) {
-						node = createFragment(selector, context).firstChild;
+						node = createFragment(selector, getElementDocument(context)).firstChild;
 
 						while (node) {
 							push.call(self, node);
 							node = node.nextSibling;
 						}
 					} else {
-						node = doc.getElementById(match[2]);
+						node = getElementDocument(context).getElementById(match[2]);
+
+						if (!node) {
+							return self;
+						}
 
 						if (node.id !== match[2]) {
 							return self.find(selector);
@@ -38041,9 +42312,10 @@ define("tinymce/dom/DomQuery", [
 					var hook;
 
 					if (this.nodeType === 1) {
-						hook = attrSetHooks[name];
-						if (hook) {
-							hook(this, value, name);
+						hook = attrHooks[name];
+						if (hook && hook.set) {
+							hook.set(this, value);
+							return;
 						}
 
 						if (value === null) {
@@ -38055,16 +42327,16 @@ define("tinymce/dom/DomQuery", [
 				});
 			} else {
 				if (self[0] && self[0].nodeType === 1) {
+					hook = attrHooks[name];
+					if (hook && hook.get) {
+						return hook.get(self[0], name);
+					}
+
 					if (booleanMap[name]) {
 						return self.prop(name) ? name : undef;
 					}
 
 					value = self[0].getAttribute(name, 2);
-
-					hook = attrGetHooks[name];
-					if (hook) {
-						return hook(self[0], value, name);
-					}
 
 					if (value === null) {
 						value = undef;
@@ -38131,19 +42403,28 @@ define("tinymce/dom/DomQuery", [
 		 * @return {tinymce.dom.DomQuery/String} Current set or the specified style when only the name is specified.
 		 */
 		css: function(name, value) {
-			var self = this;
+			var self = this, elm, hook;
+
+			function camel(name) {
+				return name.replace(/-(\D)/g, function(a, b) {
+					return b.toUpperCase();
+				});
+			}
+
+			function dashed(name) {
+				return name.replace(/[A-Z]/g, function(a) {
+					return '-' + a;
+				});
+			}
 
 			if (typeof name === "object") {
 				each(name, function(name, value) {
 					self.css(name, value);
 				});
 			} else {
-				// Camelcase it, if needed
-				name = name.replace(/-(\D)/g, function(a, b) {
-					return b.toUpperCase();
-				});
-
 				if (isDefined(value)) {
+					name = camel(name);
+
 					// Default px suffix on these
 					if (typeof(value) === 'number' && !numericCssMap[name]) {
 						value += 'px';
@@ -38152,31 +42433,42 @@ define("tinymce/dom/DomQuery", [
 					self.each(function() {
 						var style = this.style;
 
-						// IE specific opacity
-						if (name === "opacity" && this.runtimeStyle && typeof(this.runtimeStyle.opacity) === "undefined") {
-							style.filter = value === '' ? '' : "alpha(opacity=" + (value * 100) + ")";
+						hook = cssHooks[name];
+						if (hook && hook.set) {
+							hook.set(this, value);
+							return;
 						}
 
 						try {
-							style[name] = value;
+							this.style[cssFix[name] || name] = value;
 						} catch (ex) {
 							// Ignore
 						}
+
+						if (value === null || value === '') {
+							if (style.removeProperty) {
+								style.removeProperty(dashed(name));
+							} else {
+								style.removeAttribute(name);
+							}
+						}
 					});
 				} else {
-					if (self.context.defaultView) {
-						// Remove camelcase
-						name = name.replace(/[A-Z]/g, function(a) {
-							return '-' + a;
-						});
+					elm = self[0];
 
+					hook = cssHooks[name];
+					if (hook && hook.get) {
+						return hook.get(elm);
+					}
+
+					if (elm.ownerDocument.defaultView) {
 						try {
-							return self.context.defaultView.getComputedStyle(self[0], null).getPropertyValue(name);
+							return elm.ownerDocument.defaultView.getComputedStyle(elm, null).getPropertyValue(dashed(name));
 						} catch (ex) {
 							return undef;
 						}
-					} else if (self[0].currentStyle) {
-						return self[0].currentStyle[name];
+					} else if (elm.currentStyle) {
+						return elm.currentStyle[camel(name)];
 					}
 				}
 			}
@@ -38242,7 +42534,7 @@ define("tinymce/dom/DomQuery", [
 						self[i].innerHTML = value;
 					}
 				} catch (ex) {
-					// Workaround for "Unkown runtime error" when DIV is added to P on IE
+					// Workaround for "Unknown runtime error" when DIV is added to P on IE
 					DomQuery(self[i]).empty().append(value);
 				}
 
@@ -38428,10 +42720,8 @@ define("tinymce/dom/DomQuery", [
 		 * @return {tinymce.dom.DomQuery} Set with unwrapped nodes.
 		 */
 		unwrap: function() {
-			return this.each(function() {
-				var parentNode = DomQuery(this.parentNode);
-				parentNode.before(parentNode.contents());
-				parentNode.remove();
+			return this.parent().each(function() {
+				DomQuery(this).replaceWith(this.childNodes);
 			});
 		},
 
@@ -38665,10 +42955,16 @@ define("tinymce/dom/DomQuery", [
 		 * Filters the current set with the specified selector.
 		 *
 		 * @method filter
-		 * @param {String} selector Selector to filter elements by.
+		 * @param {String/function} selector Selector to filter elements by.
 		 * @return {tinymce.dom.DomQuery} Set with filtered elements.
 		 */
 		filter: function(selector) {
+			if (typeof selector == 'function') {
+				return DomQuery(grep(this.toArray(), function(item, i) {
+					return selector(i, item);
+				}));
+			}
+
 			return DomQuery(DomQuery.filter(selector, this.toArray()));
 		},
 
@@ -38676,15 +42972,22 @@ define("tinymce/dom/DomQuery", [
 		 * Gets the current node or any partent matching the specified selector.
 		 *
 		 * @method closest
-		 * @param {String} selector Selector to get element by.
+		 * @param {String/Element/tinymce.dom.DomQuery} selector Selector or element to find.
 		 * @return {tinymce.dom.DomQuery} Set with closest elements.
 		 */
 		closest: function(selector) {
 			var result = [];
 
+			if (selector instanceof DomQuery) {
+				selector = selector[0];
+			}
+
 			this.each(function(i, node) {
 				while (node) {
-					if (selector.nodeType && node == selector || DomQuery(node).is(selector)) {
+					if (typeof selector == 'string' && DomQuery(node).is(selector)) {
+						result.push(node);
+						break;
+					} else if (node == selector) {
 						result.push(node);
 						break;
 					}
@@ -38694,6 +42997,40 @@ define("tinymce/dom/DomQuery", [
 			});
 
 			return DomQuery(result);
+		},
+
+		/**
+		 * Returns the offset of the first element in set or sets the top/left css properties of all elements in set.
+		 *
+		 * @method offset
+		 * @param {Object} offset Optional offset object to set on each item.
+		 * @return {Object/tinymce.dom.DomQuery} Returns the first element offset or the current set if you specified an offset.
+		 */
+		offset: function(offset) {
+			var elm, doc, docElm;
+			var x = 0, y = 0, pos;
+
+			if (!offset) {
+				elm = this[0];
+
+				if (elm) {
+					doc = elm.ownerDocument;
+					docElm = doc.documentElement;
+
+					if (elm.getBoundingClientRect) {
+						pos = elm.getBoundingClientRect();
+						x = pos.left + (docElm.scrollLeft || doc.body.scrollLeft) - docElm.clientLeft;
+						y = pos.top + (docElm.scrollTop || doc.body.scrollTop) - docElm.clientTop;
+					}
+				}
+
+				return {
+					left: x,
+					top: y
+				};
+			}
+
+			return this.css(offset);
 		},
 
 		push: push,
@@ -38766,6 +43103,21 @@ define("tinymce/dom/DomQuery", [
 		 */
 		trim: trim,
 
+		/**
+		 * Filters out items from the input array by calling the specified function for each item.
+		 * If the function returns false the item will be excluded if it returns true it will be included.
+		 *
+		 * @static
+		 * @method grep
+		 * @param {Array} array Array of items to loop though.
+		 * @param {function} callback Function to call for each item. Include/exclude depends on it's return value.
+		 * @return {Array} New array with values imported and filtered based in input.
+		 * @example
+		 * // Filter out some items, this will return an array with 4 and 5
+		 * var items = DomQuery.grep([1, 2, 3, 4, 5], function(v) {return v > 3;});
+		 */
+		grep: grep,
+
 		// Sizzle
 		find: Sizzle,
 		expr: Sizzle.selectors,
@@ -38773,8 +43125,16 @@ define("tinymce/dom/DomQuery", [
 		text: Sizzle.getText,
 		contains: Sizzle.contains,
 		filter: function(expr, elems, not) {
+			var i = elems.length;
+
 			if (not) {
 				expr = ":not(" + expr + ")";
+			}
+
+			while (i--) {
+				if (elems[i].nodeType != 1) {
+					elems.splice(i, 1);
+				}
 			}
 
 			if (elems.length === 1) {
@@ -38790,7 +43150,21 @@ define("tinymce/dom/DomQuery", [
 	function dir(el, prop, until) {
 		var matched = [], cur = el[prop];
 
-		while (cur && cur.nodeType !== 9 && (until === undefined || cur.nodeType !== 1 || !DomQuery(cur).is(until))) {
+		if (typeof until != 'string' && until instanceof DomQuery) {
+			until = until[0];
+		}
+
+		while (cur && cur.nodeType !== 9) {
+			if (until !== undefined) {
+				if (cur === until) {
+					break;
+				}
+
+				if (typeof until == 'string' && DomQuery(cur).is(until)) {
+					break;
+				}
+			}
+
 			if (cur.nodeType === 1) {
 				matched.push(cur);
 			}
@@ -38804,13 +43178,23 @@ define("tinymce/dom/DomQuery", [
 	function sibling(node, siblingName, nodeType, until) {
 		var result = [];
 
+		if (until instanceof DomQuery) {
+			until = until[0];
+		}
+
 		for (; node; node = node[siblingName]) {
 			if (nodeType && node.nodeType !== nodeType) {
 				continue;
 			}
 
-			if (until && ((until.nodeType && node === until) || (DomQuery(node).is(until)))) {
-				break;
+			if (until !== undefined) {
+				if (node === until) {
+					break;
+				}
+
+				if (typeof until == 'string' && DomQuery(node).is(until)) {
+					break;
+				}
 			}
 
 			result.push(node);
@@ -38855,18 +43239,6 @@ define("tinymce/dom/DomQuery", [
 		},
 
 		/**
-		 * Returns a new collection with the all the parents until the matching selector/element
-		 * of each item in current collection matching the optional selector.
-		 *
-		 * @method parentsUntil
-		 * @param {String/Element} until Until the matching selector or element.
-		 * @return {tinymce.dom.DomQuery} New DomQuery instance with all matching parents.
-		 */
-		parentsUntil: function(node, until) {
-			return dir(node, "parentNode", until);
-		},
-
-		/**
 		 * Returns a new collection with next sibling of each item in current collection matching the optional selector.
 		 *
 		 * @method next
@@ -38886,28 +43258,6 @@ define("tinymce/dom/DomQuery", [
 		 */
 		prev: function(node) {
 			return firstSibling(node, 'previousSibling', 1);
-		},
-
-		/**
-		 * Returns a new collection with all next siblings of each item in current collection matching the optional selector.
-		 *
-		 * @method nextUntil
-		 * @param {String/Element} until Until the matching selector or element.
-		 * @return {tinymce.dom.DomQuery} New DomQuery instance with all matching elements.
-		 */
-		nextUntil: function(node, selector) {
-			return sibling(node, 'nextSibling', 1, selector).slice(1);
-		},
-
-		/**
-		 * Returns a new collection with all previous siblings of each item in current collection matching the optional selector.
-		 *
-		 * @method prevUntil
-		 * @param {String/Element} until Until the matching selector or element.
-		 * @return {tinymce.dom.DomQuery} New DomQuery instance with all matching elements.
-		 */
-		prevUntil: function(node, selector) {
-			return sibling(node, 'previousSibling', 1, selector).slice(1);
 		},
 
 		/**
@@ -38946,16 +43296,88 @@ define("tinymce/dom/DomQuery", [
 				}
 			});
 
-			result = DomQuery.unique(result);
+			// If traversing on multiple elements we might get the same elements twice
+			if (this.length > 1) {
+				result = DomQuery.unique(result);
 
-			if (name.indexOf('parents') === 0 || name === 'prevUntil') {
-				result = result.reverse();
+				if (name.indexOf('parents') === 0) {
+					result = result.reverse();
+				}
 			}
 
 			result = DomQuery(result);
 
-			if (selector && name.indexOf("Until") == -1) {
+			if (selector) {
 				return result.filter(selector);
+			}
+
+			return result;
+		};
+	});
+
+	each({
+		/**
+		 * Returns a new collection with the all the parents until the matching selector/element
+		 * of each item in current collection matching the optional selector.
+		 *
+		 * @method parentsUntil
+		 * @param {String/Element/tinymce.dom.DomQuery} until Until the matching selector or element.
+		 * @return {tinymce.dom.DomQuery} New DomQuery instance with all matching parents.
+		 */
+		parentsUntil: function(node, until) {
+			return dir(node, "parentNode", until);
+		},
+
+		/**
+		 * Returns a new collection with all next siblings of each item in current collection matching the optional selector.
+		 *
+		 * @method nextUntil
+		 * @param {String/Element/tinymce.dom.DomQuery} until Until the matching selector or element.
+		 * @return {tinymce.dom.DomQuery} New DomQuery instance with all matching elements.
+		 */
+		nextUntil: function(node, until) {
+			return sibling(node, 'nextSibling', 1, until).slice(1);
+		},
+
+		/**
+		 * Returns a new collection with all previous siblings of each item in current collection matching the optional selector.
+		 *
+		 * @method prevUntil
+		 * @param {String/Element/tinymce.dom.DomQuery} until Until the matching selector or element.
+		 * @return {tinymce.dom.DomQuery} New DomQuery instance with all matching elements.
+		 */
+		prevUntil: function(node, until) {
+			return sibling(node, 'previousSibling', 1, until).slice(1);
+		}
+	}, function(name, fn) {
+		DomQuery.fn[name] = function(selector, filter) {
+			var self = this, result = [];
+
+			self.each(function() {
+				var nodes = fn.call(result, this, selector, result);
+
+				if (nodes) {
+					if (DomQuery.isArray(nodes)) {
+						result.push.apply(result, nodes);
+					} else {
+						result.push(nodes);
+					}
+				}
+			});
+
+			// If traversing on multiple elements we might get the same elements twice
+			if (this.length > 1) {
+				result = DomQuery.unique(result);
+
+				if (name.indexOf('parents') === 0 || name === 'prevUntil') {
+					result = result.reverse();
+				}
+			}
+
+			result = DomQuery(result);
+
+			if (filter) {
+				return result.filter(filter);
 			}
 
 			return result;
@@ -38978,15 +43400,101 @@ define("tinymce/dom/DomQuery", [
 	DomQuery.overrideDefaults = function(callback) {
 		var defaults;
 
-		function jQuerySub(selector, context) {
+		function sub(selector, context) {
 			defaults = defaults || callback();
-			return new jQuerySub.fn.init(selector || defaults.element, context || defaults.context);
+
+			if (arguments.length === 0) {
+				selector = defaults.element;
+			}
+
+			if (!context) {
+				context = defaults.context;
+			}
+
+			return new sub.fn.init(selector, context);
 		}
 
-		DomQuery.extend(jQuerySub, this);
+		DomQuery.extend(sub, this);
 
-		return jQuerySub;
+		return sub;
 	};
+
+	function appendHooks(targetHooks, prop, hooks) {
+		each(hooks, function(name, func) {
+			targetHooks[name] = targetHooks[name] || {};
+			targetHooks[name][prop] = func;
+		});
+	}
+
+	if (Env.ie && Env.ie < 8) {
+		appendHooks(attrHooks, 'get', {
+			maxlength: function(elm) {
+				var value = elm.maxLength;
+
+				if (value === 0x7fffffff) {
+					return undef;
+				}
+
+				return value;
+			},
+
+			size: function(elm) {
+				var value = elm.size;
+
+				if (value === 20) {
+					return undef;
+				}
+
+				return value;
+			},
+
+			'class': function(elm) {
+				return elm.className;
+			},
+
+			style: function(elm) {
+				var value = elm.style.cssText;
+
+				if (value.length === 0) {
+					return undef;
+				}
+
+				return value;
+			}
+		});
+
+		appendHooks(attrHooks, 'set', {
+			'class': function(elm, value) {
+				elm.className = value;
+			},
+
+			style: function(elm, value) {
+				elm.style.cssText = value;
+			}
+		});
+	}
+
+	if (Env.ie && Env.ie < 9) {
+		/*jshint sub:true */
+		/*eslint dot-notation: 0*/
+		cssFix['float'] = 'styleFloat';
+
+		appendHooks(cssHooks, 'set', {
+			opacity: function(elm, value) {
+				var style = elm.style;
+
+				if (value === null || value === '') {
+					style.removeAttribute('filter');
+				} else {
+					style.zoom = 1;
+					style.filter = 'alpha(opacity=' + (value * 100) + ')';
+				}
+			}
+		});
+	}
+
+	DomQuery.attrHooks = attrHooks;
+	DomQuery.cssHooks = cssHooks;
 
 	return DomQuery;
 });
@@ -39373,30 +43881,44 @@ define("tinymce/html/Styles", [], function() {
  * TreeWalker class enables you to walk the DOM in a linear manner.
  *
  * @class tinymce.dom.TreeWalker
+ * @example
+ * var walker = new tinymce.dom.TreeWalker(startNode);
+ *
+ * do {
+ *     console.log(walker.current());
+ * } while (walker.next());
  */
 define("tinymce/dom/TreeWalker", [], function() {
-	return function(start_node, root_node) {
-		var node = start_node;
+	/**
+	 * Constructs a new TreeWalker instance.
+	 *
+	 * @constructor
+	 * @method TreeWalker
+	 * @param {Node} startNode Node to start walking from.
+	 * @param {node} rootNode Optional root node to never walk out of.
+	 */
+	return function(startNode, rootNode) {
+		var node = startNode;
 
-		function findSibling(node, start_name, sibling_name, shallow) {
+		function findSibling(node, startName, siblingName, shallow) {
 			var sibling, parent;
 
 			if (node) {
 				// Walk into nodes if it has a start
-				if (!shallow && node[start_name]) {
-					return node[start_name];
+				if (!shallow && node[startName]) {
+					return node[startName];
 				}
 
 				// Return the sibling if it has one
-				if (node != root_node) {
-					sibling = node[sibling_name];
+				if (node != rootNode) {
+					sibling = node[siblingName];
 					if (sibling) {
 						return sibling;
 					}
 
 					// Walk up the parents to look for siblings
-					for (parent = node.parentNode; parent && parent != root_node; parent = parent.parentNode) {
-						sibling = parent[sibling_name];
+					for (parent = node.parentNode; parent && parent != rootNode; parent = parent.parentNode) {
+						sibling = parent[siblingName];
 						if (sibling) {
 							return sibling;
 						}
@@ -40708,13 +45230,61 @@ define("tinymce/dom/DOMUtils", [
 	"tinymce/Env",
 	"tinymce/util/Tools",
 	"tinymce/dom/StyleSheetLoader"
-], function(Sizzle, DomQuery, Styles, EventUtils, TreeWalker, Range, Entities, Env, Tools, StyleSheetLoader) {
+], function(Sizzle, $, Styles, EventUtils, TreeWalker, Range, Entities, Env, Tools, StyleSheetLoader) {
 	// Shorten names
-	var each = Tools.each, is = Tools.is, grep = Tools.grep, trim = Tools.trim, extend = Tools.extend;
-	var isWebKit = Env.webkit, isIE = Env.ie;
+	var each = Tools.each, is = Tools.is, grep = Tools.grep, trim = Tools.trim;
+	var isIE = Env.ie;
 	var simpleSelectorRe = /^([a-z0-9],?)+$/i;
 	var whiteSpaceRegExp = /^[ \t\r\n]*$/;
-	var numericCssMap = Tools.makeMap('fillOpacity fontWeight lineHeight opacity orphans widows zIndex zoom', ' ');
+
+	function setupAttrHooks(domUtils, settings) {
+		var attrHooks = {}, keepValues = settings.keep_values, keepUrlHook;
+
+		keepUrlHook = {
+			set: function($elm, value, name) {
+				if (settings.url_converter) {
+					value = settings.url_converter.call(settings.url_converter_scope || domUtils, value, name, $elm[0]);
+				}
+
+				$elm.attr('data-mce-' + name, value).attr(name, value);
+			},
+
+			get: function($elm, name) {
+				return $elm.attr('data-mce-' + name) || $elm.attr(name);
+			}
+		};
+
+		attrHooks = {
+			style: {
+				set: function($elm, value) {
+					if (value !== null && typeof value === 'object') {
+						$elm.css(value);
+						return;
+					}
+
+					if (keepValues) {
+						$elm.attr('data-mce-style', value);
+					}
+
+					$elm.attr('style', value);
+				},
+
+				get: function($elm) {
+					var value = $elm.attr('data-mce-style') || $elm.attr('style');
+
+					value = domUtils.serializeStyle(domUtils.parseStyle(value), $elm[0].nodeName);
+
+					return value;
+				}
+			}
+		};
+
+		if (keepValues) {
+			attrHooks.href = attrHooks.src = keepUrlHook;
+		}
+
+		return attrHooks;
+	}
 
 	/**
 	 * Constructs a new DOMUtils instance. Consult the Wiki for more details on settings etc for this class.
@@ -40733,15 +45303,9 @@ define("tinymce/dom/DOMUtils", [
 		self.counter = 0;
 		self.stdMode = !isIE || doc.documentMode >= 8;
 		self.boxModel = !isIE || doc.compatMode == "CSS1Compat" || self.stdMode;
-		self.hasOuterHTML = "outerHTML" in doc.createElement("a");
 		self.styleSheetLoader = new StyleSheetLoader(doc);
-		this.boundEvents = [];
-
-		self.settings = settings = extend({
-			keep_values: false,
-			hex_colors: 1
-		}, settings);
-
+		self.boundEvents = [];
+		self.settings = settings = settings || {};
 		self.schema = settings.schema;
 		self.styles = new Styles({
 			url_converter: settings.url_converter,
@@ -40750,8 +45314,9 @@ define("tinymce/dom/DOMUtils", [
 
 		self.fixDoc(doc);
 		self.events = settings.ownEvents ? new EventUtils(settings.proxy) : EventUtils.Event;
+		self.attrHooks = setupAttrHooks(self, settings);
 		blockElementsMap = settings.schema ? settings.schema.getBlockElements() : {};
-		self.$ = DomQuery.overrideDefaults(function() {
+		self.$ = $.overrideDefaults(function() {
 			return {
 				context: doc,
 				element: self.getRoot()
@@ -40784,21 +45349,15 @@ define("tinymce/dom/DOMUtils", [
 	}
 
 	DOMUtils.prototype = {
-		root: null,
-		props: {
-			"for": "htmlFor",
-			"class": "className",
-			className: "className",
-			checked: "checked",
-			disabled: "disabled",
-			maxlength: "maxLength",
-			readonly: "readOnly",
-			selected: "selected",
-			value: "value",
-			id: "id",
-			name: "name",
-			type: "type"
+		$$: function(elm) {
+			if (typeof elm == 'string') {
+				elm = this.get(elm);
+			}
+
+			return this.$(elm);
 		},
+
+		root: null,
 
 		fixDoc: function(doc) {
 			var settings = this.settings, name;
@@ -40841,19 +45400,7 @@ define("tinymce/dom/DOMUtils", [
 
 				return clone;
 			}
-/*
-			// Setup HTML5 patched document fragment
-			if (!self.frag) {
-				self.frag = doc.createDocumentFragment();
-				self.fixDoc(self.frag);
-			}
 
-			// Make a deep copy by adding it to the document fragment then removing it this removed the :section
-			clone = doc.createElement('div');
-			self.frag.appendChild(clone);
-			clone.innerHTML = node.outerHTML;
-			self.frag.removeChild(clone);
-*/
 			return clone.firstChild;
 		},
 
@@ -40867,7 +45414,7 @@ define("tinymce/dom/DOMUtils", [
 		getRoot: function() {
 			var self = this;
 
-			return self.get(self.settings.root_element) || self.doc.body;
+			return self.settings.root_element || self.doc.body;
 		},
 
 		/**
@@ -41080,8 +45627,8 @@ define("tinymce/dom/DOMUtils", [
 		select: function(selector, scope) {
 			var self = this;
 
-			//Sizzle.selectors.cacheLength = 0;
-			return Sizzle(selector, self.get(scope) || self.get(self.settings.root_element) || self.doc, []);
+			/*eslint new-cap:0 */
+			return Sizzle(selector, self.get(scope) || self.settings.root_element || self.doc, []);
 		},
 
 		/**
@@ -41122,6 +45669,8 @@ define("tinymce/dom/DOMUtils", [
 			}
 
 			var elms = elm.nodeType ? [elm] : elm;
+
+			/*eslint new-cap:0 */
 			return Sizzle(selector, elms[0].ownerDocument || elms[0], null, elms).length > 0;
 		},
 
@@ -41239,7 +45788,7 @@ define("tinymce/dom/DOMUtils", [
 		 *
 		 * @method remove
 		 * @param {String/Element/Array} node ID of element or DOM element object or array containing multiple elements/ids.
-		 * @param {Boolean} keep_children Optional state to keep children or not. If set to true all children will be
+		 * @param {Boolean} keepChildren Optional state to keep children or not. If set to true all children will be
 		 * placed at the location of the removed element.
 		 * @return {Element/Array} HTML DOM element that got removed, or an array of removed elements if multiple input elements
 		 * were passed in.
@@ -41250,27 +45799,26 @@ define("tinymce/dom/DOMUtils", [
 		 * // Removes an element by id in the document
 		 * tinymce.DOM.remove('mydiv');
 		 */
-		remove: function(node, keep_children) {
-			return this.run(node, function(node) {
-				var child, parent = node.parentNode;
+		remove: function(node, keepChildren) {
+			node = this.$$(node);
 
-				if (!parent) {
-					return null;
-				}
+			if (keepChildren) {
+				node.each(function() {
+					var child;
 
-				if (keep_children) {
-					while ((child = node.firstChild)) {
-						// IE 8 will crash if you don't remove completely empty text nodes
-						if (!isIE || child.nodeType !== 3 || child.nodeValue) {
-							parent.insertBefore(child, node);
+					while ((child = this.firstChild)) {
+						if (child.nodeType == 3 && child.data.length === 0) {
+							this.removeChild(child);
 						} else {
-							node.removeChild(child);
+							this.parentNode.insertBefore(child, this);
 						}
 					}
-				}
+				}).remove();
+			} else {
+				node.remove();
+			}
 
-				return parent.removeChild(node);
-			});
+			return node.length > 1 ? node.toArray() : node[0];
 		},
 
 		/**
@@ -41289,50 +45837,11 @@ define("tinymce/dom/DOMUtils", [
 		 * tinymce.DOM.setStyle('mydiv', 'background-color', 'red');
 		 */
 		setStyle: function(elm, name, value) {
-			return this.run(elm, function(elm) {
-				var self = this, style, key;
+			elm = this.$$(elm).css(name, value);
 
-				if (name) {
-					if (typeof(name) === 'string') {
-						style = elm.style;
-
-						// Camelcase it, if needed
-						name = name.replace(/-(\D)/g, function(a, b) {
-							return b.toUpperCase();
-						});
-
-						// Default px suffix on these
-						if (((typeof(value) === 'number') || /^[\-0-9\.]+$/.test(value)) && !numericCssMap[name]) {
-							value += 'px';
-						}
-
-						// IE specific opacity
-						if (name === "opacity" && elm.runtimeStyle && typeof(elm.runtimeStyle.opacity) === "undefined") {
-							style.filter = value === '' ? '' : "alpha(opacity=" + (value * 100) + ")";
-						}
-
-						if (name == "float") {
-							// Old IE vs modern browsers
-							name = "cssFloat" in elm.style ? "cssFloat" : "styleFloat";
-						}
-
-						try {
-							style[name] = value;
-						} catch (ex) {
-							// Ignore IE errors
-						}
-
-						// Force update of the style data
-						if (self.settings.update_styles) {
-							elm.removeAttribute('data-mce-style');
-						}
-					} else {
-						for (key in name) {
-							self.setStyle(elm, key, name[key]);
-						}
-					}
-				}
-			});
+			if (this.settings.update_styles) {
+				elm.attr('data-mce-style', null);
+			}
 		},
 
 		/**
@@ -41345,25 +45854,10 @@ define("tinymce/dom/DOMUtils", [
 		 * @return {String} Current style or computed style value of an element.
 		 */
 		getStyle: function(elm, name, computed) {
-			elm = this.get(elm);
+			elm = this.$$(elm);
 
-			if (!elm) {
-				return;
-			}
-
-			// W3C
-			if (this.doc.defaultView && computed) {
-				// Remove camelcase
-				name = name.replace(/[A-Z]/g, function(a) {
-					return '-' + a;
-				});
-
-				try {
-					return this.doc.defaultView.getComputedStyle(elm, null).getPropertyValue(name);
-				} catch (ex) {
-					// Old safari might fail
-					return null;
-				}
+			if (computed) {
+				return elm.css(name);
 			}
 
 			// Camelcase it, if needed
@@ -41375,12 +45869,7 @@ define("tinymce/dom/DOMUtils", [
 				name = isIE ? 'styleFloat' : 'cssFloat';
 			}
 
-			// IE & Opera
-			if (elm.currentStyle && computed) {
-				return elm.currentStyle[name];
-			}
-
-			return elm.style ? elm.style[name] : undefined;
+			return elm[0] && elm[0].style ? elm[0].style[name] : undefined;
 		},
 
 		/**
@@ -41397,11 +45886,11 @@ define("tinymce/dom/DOMUtils", [
 		 * tinymce.DOM.setStyles('mydiv', {'background-color': 'red', 'color': 'green'});
 		 */
 		setStyles: function(elm, styles) {
-			this.setStyle(elm, styles);
-		},
+			elm = this.$$(elm).css(styles);
 
-		css: function(elm, name, value) {
-			this.setStyle(elm, name, value);
+			if (this.settings.update_styles) {
+				elm.attr('data-mce-style', null);
+			}
 		},
 
 		/**
@@ -41434,73 +45923,33 @@ define("tinymce/dom/DOMUtils", [
 		 * tinymce.dom.setAttrib('mydiv', 'class', 'myclass');
 		 */
 		setAttrib: function(elm, name, value) {
-			var self = this;
+			var self = this, originalValue, hook, settings = self.settings;
 
-			// What's the point
-			if (!elm || !name) {
+			if (value === '') {
+				value = null;
+			}
+
+			elm = self.$$(elm);
+			originalValue = elm.attr(name);
+
+			if (!elm.length) {
 				return;
 			}
 
-			return this.run(elm, function(elm) {
-				var settings = self.settings;
-				var originalValue = elm.getAttribute(name);
+			hook = self.attrHooks[name];
+			if (hook && hook.set) {
+				hook.set(elm, value, name);
+			} else {
+				elm.attr(name, value);
+			}
 
-				if (value !== null) {
-					switch (name) {
-						case "style":
-							if (!is(value, 'string')) {
-								each(value, function(value, name) {
-									self.setStyle(elm, name, value);
-								});
-
-								return;
-							}
-
-							// No mce_style for elements with these since they might get resized by the user
-							if (settings.keep_values) {
-								if (value) {
-									elm.setAttribute('data-mce-style', value, 2);
-								} else {
-									elm.removeAttribute('data-mce-style', 2);
-								}
-							}
-
-							elm.style.cssText = value;
-							break;
-
-						case "class":
-							elm.className = value || ''; // Fix IE null bug
-							break;
-
-						case "src":
-						case "href":
-							if (settings.keep_values) {
-								if (settings.url_converter) {
-									value = settings.url_converter.call(settings.url_converter_scope || self, value, name, elm);
-								}
-
-								self.setAttrib(elm, 'data-mce-' + name, value, 2);
-							}
-
-							break;
-
-						case "shape":
-							elm.setAttribute('data-mce-style', value);
-							break;
-					}
-				}
-
-				if (is(value) && value !== null && value.length !== 0) {
-					elm.setAttribute(name, '' + value, 2);
-				} else {
-					elm.removeAttribute(name, 2);
-				}
-
-				// fire onChangeAttrib event for attributes that have changed
-				if (originalValue != value && settings.onSetAttrib) {
-					settings.onSetAttrib({attrElm: elm, attrName: name, attrValue: value});
-				}
-			});
+			if (originalValue != value && settings.onSetAttrib) {
+				settings.onSetAttrib({
+					attrElm: elm,
+					attrName: name,
+					attrValue: value
+				});
+			}
 		},
 
 		/**
@@ -41519,9 +45968,9 @@ define("tinymce/dom/DOMUtils", [
 		setAttribs: function(elm, attrs) {
 			var self = this;
 
-			return this.run(elm, function(elm) {
+			self.$$(elm).each(function(i, node) {
 				each(attrs, function(value, name) {
-					self.setAttrib(elm, name, value);
+					self.setAttrib(node, name, value);
 				});
 			});
 		},
@@ -41536,139 +45985,25 @@ define("tinymce/dom/DOMUtils", [
 		 * @return {String} Attribute value string, default value or null if the attribute wasn't found.
 		 */
 		getAttrib: function(elm, name, defaultVal) {
-			var value, self = this, undef;
+			var self = this, hook, value;
 
-			elm = self.get(elm);
+			elm = self.$$(elm);
 
-			if (!elm || elm.nodeType !== 1) {
-				return defaultVal === undef ? false : defaultVal;
-			}
+			if (elm.length) {
+				hook = self.attrHooks[name];
 
-			if (!is(defaultVal)) {
-				defaultVal = '';
-			}
-
-			// Try the mce variant for these
-			if (/^(src|href|style|coords|shape)$/.test(name)) {
-				value = elm.getAttribute("data-mce-" + name);
-
-				if (value) {
-					return value;
+				if (hook && hook.get) {
+					value = hook.get(elm, name);
+				} else {
+					value = elm.attr(name);
 				}
 			}
 
-			if (isIE && self.props[name]) {
-				value = elm[self.props[name]];
-				value = value && value.nodeValue ? value.nodeValue : value;
+			if (typeof value == 'undefined') {
+				value = defaultVal || '';
 			}
 
-			if (!value) {
-				value = elm.getAttribute(name, 2);
-			}
-
-			// Check boolean attribs
-			if (/^(checked|compact|declare|defer|disabled|ismap|multiple|nohref|noshade|nowrap|readonly|selected)$/.test(name)) {
-				if (elm[self.props[name]] === true && value === '') {
-					return name;
-				}
-
-				return value ? name : '';
-			}
-
-			// Inner input elements will override attributes on form elements
-			if (elm.nodeName === "FORM" && elm.getAttributeNode(name)) {
-				return elm.getAttributeNode(name).nodeValue;
-			}
-
-			if (name === 'style') {
-				value = value || elm.style.cssText;
-
-				if (value) {
-					value = self.serializeStyle(self.parseStyle(value), elm.nodeName);
-
-					if (self.settings.keep_values) {
-						elm.setAttribute('data-mce-style', value);
-					}
-				}
-			}
-
-			// Remove Apple and WebKit stuff
-			if (isWebKit && name === "class" && value) {
-				value = value.replace(/(apple|webkit)\-[a-z\-]+/gi, '');
-			}
-
-			// Handle IE issues
-			if (isIE) {
-				switch (name) {
-					case 'rowspan':
-					case 'colspan':
-						// IE returns 1 as default value
-						if (value === 1) {
-							value = '';
-						}
-
-						break;
-
-					case 'size':
-						// IE returns +0 as default value for size
-						if (value === '+0' || value === 20 || value === 0) {
-							value = '';
-						}
-
-						break;
-
-					case 'width':
-					case 'height':
-					case 'vspace':
-					case 'checked':
-					case 'disabled':
-					case 'readonly':
-						if (value === 0) {
-							value = '';
-						}
-
-						break;
-
-					case 'hspace':
-						// IE returns -1 as default value
-						if (value === -1) {
-							value = '';
-						}
-
-						break;
-
-					case 'maxlength':
-					case 'tabindex':
-						// IE returns default value
-						if (value === 32768 || value === 2147483647 || value === '32768') {
-							value = '';
-						}
-
-						break;
-
-					case 'multiple':
-					case 'compact':
-					case 'noshade':
-					case 'nowrap':
-						if (value === 65535) {
-							return name;
-						}
-
-						return defaultVal;
-
-					case 'shape':
-						value = value.toLowerCase();
-						break;
-
-					default:
-						// IE has odd anonymous function for event attributes
-						if (name.indexOf('on') === 0 && value) {
-							value = ('' + value).replace(/^function\s+\w+\(\)\s+\{\s+(.*)\s+\}$/, '$1');
-						}
-				}
-			}
-
-			return (value !== undef && value !== null && value !== '') ? '' + value : defaultVal;
+			return value;
 		},
 
 		/**
@@ -41680,21 +46015,22 @@ define("tinymce/dom/DOMUtils", [
 		 * @return {object} Absolute position of the specified element object with x, y fields.
 		 */
 		getPos: function(elm, rootElm) {
-			var self = this, x = 0, y = 0, offsetParent, doc = self.doc, pos;
+			var self = this, x = 0, y = 0, offsetParent, doc = self.doc, body = doc.body, pos;
 
 			elm = self.get(elm);
-			rootElm = rootElm || doc.body;
+			rootElm = rootElm || body;
 
 			if (elm) {
 				// Use getBoundingClientRect if it exists since it's faster than looping offset nodes
-				if (rootElm === doc.body && elm.getBoundingClientRect) {
+				// Fallback to offsetParent calculations if the body isn't static better since it stops at the body root
+				if (rootElm === body && elm.getBoundingClientRect && $(body).css('position') === 'static') {
 					pos = elm.getBoundingClientRect();
-					rootElm = self.boxModel ? doc.documentElement : doc.body;
+					rootElm = self.boxModel ? doc.documentElement : body;
 
 					// Add scroll offsets from documentElement or body since IE with the wrong box model will use d.body and so do WebKit
 					// Also remove the body/documentelement clientTop/clientLeft on IE 6, 7 since they offset the position
-					x = pos.left + (doc.documentElement.scrollLeft || doc.body.scrollLeft) - rootElm.clientLeft;
-					y = pos.top + (doc.documentElement.scrollTop || doc.body.scrollTop) - rootElm.clientTop;
+					x = pos.left + (doc.documentElement.scrollLeft || body.scrollLeft) - rootElm.clientLeft;
+					y = pos.top + (doc.documentElement.scrollTop || body.scrollTop) - rootElm.clientTop;
 
 					return {x: x, y: y};
 				}
@@ -41862,22 +46198,7 @@ define("tinymce/dom/DOMUtils", [
 		 * tinymce.DOM.addClass('mydiv', 'myclass');
 		 */
 		addClass: function(elm, cls) {
-			return this.run(elm, function(elm) {
-				var clsVal;
-
-				if (!cls) {
-					return 0;
-				}
-
-				if (this.hasClass(elm, cls)) {
-					return elm.className;
-				}
-
-				clsVal = this.removeClass(elm, cls);
-				elm.className = clsVal = (clsVal !== '' ? (clsVal + ' ') : '') + cls;
-
-				return clsVal;
-			});
+			this.$$(elm).addClass(cls);
 		},
 
 		/**
@@ -41896,32 +46217,7 @@ define("tinymce/dom/DOMUtils", [
 		 * tinymce.DOM.removeClass('mydiv', 'myclass');
 		 */
 		removeClass: function(elm, cls) {
-			var self = this, re;
-
-			return self.run(elm, function(elm) {
-				var val;
-
-				if (self.hasClass(elm, cls)) {
-					if (!re) {
-						re = new RegExp("(^|\\s+)" + cls + "(\\s+|$)", "g");
-					}
-
-					val = elm.className.replace(re, ' ');
-					val = trim(val != ' ' ? val : '');
-
-					elm.className = val;
-
-					// Empty class attr
-					if (!val) {
-						elm.removeAttribute('class');
-						elm.removeAttribute('className');
-					}
-
-					return val;
-				}
-
-				return elm.className;
-			});
+			this.toggleClass(elm, cls, false);
 		},
 
 		/**
@@ -41933,13 +46229,7 @@ define("tinymce/dom/DOMUtils", [
 		 * @return {Boolean} true/false if the specified element has the specified class.
 		 */
 		hasClass: function(elm, cls) {
-			elm = this.get(elm);
-
-			if (!elm || !cls) {
-				return false;
-			}
-
-			return (' ' + elm.className + ' ').indexOf(' ' + cls + ' ') !== -1;
+			return this.$$(elm).hasClass(cls);
 		},
 
 		/**
@@ -41951,15 +46241,11 @@ define("tinymce/dom/DOMUtils", [
 		 * @param {[type]} state Optional state to set.
 		 */
 		toggleClass: function(elm, cls, state) {
-			state = state === undefined ? !this.hasClass(elm, cls) : state;
-
-			if (this.hasClass(elm, cls) !== state) {
-				if (state) {
-					this.addClass(elm, cls);
-				} else {
-					this.removeClass(elm, cls);
+			this.$$(elm).toggleClass(cls, state).each(function() {
+				if (this.className === '') {
+					$(this).attr('class', null);
 				}
-			}
+			});
 		},
 
 		/**
@@ -41969,7 +46255,7 @@ define("tinymce/dom/DOMUtils", [
 		 * @param {String/Element/Array} elm ID of DOM element or DOM element or array with elements or IDs to show.
 		 */
 		show: function(elm) {
-			return this.setStyle(elm, 'display', 'block');
+			this.$$(elm).show();
 		},
 
 		/**
@@ -41982,7 +46268,7 @@ define("tinymce/dom/DOMUtils", [
 		 * tinymce.DOM.hide('myid');
 		 */
 		hide: function(elm) {
-			return this.setStyle(elm, 'display', 'none');
+			this.$$(elm).hide();
 		},
 
 		/**
@@ -41993,9 +46279,7 @@ define("tinymce/dom/DOMUtils", [
 		 * @return {Boolean} true/false if the element is hidden or not.
 		 */
 		isHidden: function(elm) {
-			elm = this.get(elm);
-
-			return !elm || elm.style.display == 'none' || this.getStyle(elm, 'display') == 'none';
+			return this.$$(elm).css('display') == 'none';
 		},
 
 		/**
@@ -42015,7 +46299,7 @@ define("tinymce/dom/DOMUtils", [
 		 * URLs will get converted, hex color values fixed etc. Check processHTML for details.
 		 *
 		 * @method setHTML
-		 * @param {Element/String/Array} e DOM element, element id string or array of elements/ids to set HTML inside of.
+		 * @param {Element/String/Array} elm DOM element, element id string or array of elements/ids to set HTML inside of.
 		 * @param {String} h HTML content to set as inner HTML of the element.
 		 * @example
 		 * // Sets the inner HTML of all paragraphs in the active editor
@@ -42024,44 +46308,35 @@ define("tinymce/dom/DOMUtils", [
 		 * // Sets the inner HTML of an element by id in the document
 		 * tinymce.DOM.setHTML('mydiv', 'some inner html');
 		 */
-		setHTML: function(element, html) {
-			var self = this;
+		setHTML: function(elm, html) {
+			elm = this.$$(elm);
 
-			return self.run(element, function(element) {
-				if (isIE) {
+			if (isIE) {
+				elm.each(function(i, target) {
+					if (target.canHaveHTML === false) {
+						return;
+					}
+
 					// Remove all child nodes, IE keeps empty text nodes in DOM
-					while (element.firstChild) {
-						element.removeChild(element.firstChild);
+					while (target.firstChild) {
+						target.removeChild(target.firstChild);
 					}
 
 					try {
 						// IE will remove comments from the beginning
 						// unless you padd the contents with something
-						element.innerHTML = '<br />' + html;
-						element.removeChild(element.firstChild);
+						target.innerHTML = '<br>' + html;
+						target.removeChild(target.firstChild);
 					} catch (ex) {
-						// IE sometimes produces an unknown runtime error on innerHTML if it's a block element
-						// within a block element for example a div inside a p
-						// This seems to fix this problem
-
-						// Create new div with HTML contents and a BR in front to keep comments
-						var newElement = self.create('div');
-						newElement.innerHTML = '<br />' + html;
-
-						// Add all children from div to target
-						each(grep(newElement.childNodes), function(node, i) {
-							// Skip br element
-							if (i && element.canHaveHTML) {
-								element.appendChild(node);
-							}
-						});
+						// IE sometimes produces an unknown runtime error on innerHTML if it's a div inside a p
+						$('<div>').html('<br>' + html).contents().slice(1).appendTo(target);
 					}
-				} else {
-					element.innerHTML = html;
-				}
 
-				return html;
-			});
+					return html;
+				});
+			} else {
+				elm.html(html);
+			}
 		},
 
 		/**
@@ -42075,22 +46350,8 @@ define("tinymce/dom/DOMUtils", [
 		 * tinymce.activeEditor.getOuterHTML(tinymce.activeEditor.getBody());
 		 */
 		getOuterHTML: function(elm) {
-			var doc, self = this;
-
-			elm = self.get(elm);
-
-			if (!elm) {
-				return null;
-			}
-
-			if (elm.nodeType === 1 && self.hasOuterHTML) {
-				return elm.outerHTML;
-			}
-
-			doc = (elm.ownerDocument || self.doc).createElement("body");
-			doc.appendChild(elm.cloneNode(true));
-
-			return doc.innerHTML;
+			elm = this.get(elm);
+			return elm.nodeType == 1 ? elm.outerHTML : $('<div>').append($(elm).clone()).html();
 		},
 
 		/**
@@ -42107,44 +46368,15 @@ define("tinymce/dom/DOMUtils", [
 		 * // Sets the outer HTML of an element by id in the document
 		 * tinymce.DOM.setOuterHTML('mydiv', '<div>some html</div>');
 		 */
-		setOuterHTML: function(elm, html, doc) {
+		setOuterHTML: function(elm, html) {
 			var self = this;
 
-			return self.run(elm, function(elm) {
-				function set() {
-					var node, tempElm;
-
-					tempElm = doc.createElement("body");
-					tempElm.innerHTML = html;
-
-					node = tempElm.lastChild;
-					while (node) {
-						self.insertAfter(node.cloneNode(true), elm);
-						node = node.previousSibling;
-					}
-
-					self.remove(elm);
-				}
-
-				// Only set HTML on elements
-				if (elm.nodeType == 1) {
-					doc = doc || elm.ownerDocument || self.doc;
-
-					if (isIE) {
-						try {
-							// Try outerHTML for IE it sometimes produces an unknown runtime error
-							if (elm.nodeType == 1 && self.hasOuterHTML) {
-								elm.outerHTML = html;
-							} else {
-								set();
-							}
-						} catch (ex) {
-							// Fix for unknown runtime error
-							set();
-						}
-					} else {
-						set();
-					}
+			self.$$(elm).each(function() {
+				try {
+					this.outerHTML = html;
+				} catch (ex) {
+					// OuterHTML for IE it sometimes produces an "unknown runtime error"
+					self.remove($(this).html(html), true);
 				}
 			});
 		},
@@ -42175,14 +46407,14 @@ define("tinymce/dom/DOMUtils", [
 		 * @param {Element/String/Array} reference_node Reference element, element id or array of elements to insert after.
 		 * @return {Element/Array} Element that got added or an array with elements.
 		 */
-		insertAfter: function(node, reference_node) {
-			reference_node = this.get(reference_node);
+		insertAfter: function(node, referenceNode) {
+			referenceNode = this.get(referenceNode);
 
 			return this.run(node, function(node) {
 				var parent, nextSibling;
 
-				parent = reference_node.parentNode;
-				nextSibling = reference_node.nextSibling;
+				parent = referenceNode.parentNode;
+				nextSibling = referenceNode.nextSibling;
 
 				if (nextSibling) {
 					parent.insertBefore(node, nextSibling);
@@ -42237,8 +46469,8 @@ define("tinymce/dom/DOMUtils", [
 				newElm = self.create(name);
 
 				// Copy attribs to new block
-				each(self.getAttribs(elm), function(attr_node) {
-					self.setAttrib(newElm, attr_node.nodeName, self.getAttrib(elm, attr_node.nodeName));
+				each(self.getAttribs(elm), function(attrNode) {
+					self.setAttrib(newElm, attrNode.nodeName, self.getAttrib(elm, attrNode.nodeName));
 				});
 
 				// Replace block
@@ -42387,7 +46619,7 @@ define("tinymce/dom/DOMUtils", [
 			node = node.firstChild;
 			if (node) {
 				walker = new TreeWalker(node, node.parentNode);
-				elements = elements || self.schema ? self.schema.getNonEmptyElements() : null;
+				elements = elements || (self.schema ? self.schema.getNonEmptyElements() : null);
 
 				do {
 					type = node.nodeType;
@@ -43318,6 +47550,648 @@ define("tinymce/AddOnManager", [
  * });
  */
 
+// Included from: js/tinymce/classes/dom/RangeUtils.js
+
+/**
+ * RangeUtils.js
+ *
+ * Copyright, Moxiecode Systems AB
+ * Released under LGPL License.
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * This class contains a few utility methods for ranges.
+ *
+ * @class tinymce.dom.RangeUtils
+ * @private
+ */
+define("tinymce/dom/RangeUtils", [
+	"tinymce/util/Tools",
+	"tinymce/dom/TreeWalker"
+], function(Tools, TreeWalker) {
+	var each = Tools.each;
+
+	function getEndChild(container, index) {
+		var childNodes = container.childNodes;
+
+		index--;
+
+		if (index > childNodes.length - 1) {
+			index = childNodes.length - 1;
+		} else if (index < 0) {
+			index = 0;
+		}
+
+		return childNodes[index] || container;
+	}
+
+	function RangeUtils(dom) {
+		/**
+		 * Walks the specified range like object and executes the callback for each sibling collection it finds.
+		 *
+		 * @method walk
+		 * @param {Object} rng Range like object.
+		 * @param {function} callback Callback function to execute for each sibling collection.
+		 */
+		this.walk = function(rng, callback) {
+			var startContainer = rng.startContainer,
+				startOffset = rng.startOffset,
+				endContainer = rng.endContainer,
+				endOffset = rng.endOffset,
+				ancestor, startPoint,
+				endPoint, node, parent, siblings, nodes;
+
+			// Handle table cell selection the table plugin enables
+			// you to fake select table cells and perform formatting actions on them
+			nodes = dom.select('td.mce-item-selected,th.mce-item-selected');
+			if (nodes.length > 0) {
+				each(nodes, function(node) {
+					callback([node]);
+				});
+
+				return;
+			}
+
+			/**
+			 * Excludes start/end text node if they are out side the range
+			 *
+			 * @private
+			 * @param {Array} nodes Nodes to exclude items from.
+			 * @return {Array} Array with nodes excluding the start/end container if needed.
+			 */
+			function exclude(nodes) {
+				var node;
+
+				// First node is excluded
+				node = nodes[0];
+				if (node.nodeType === 3 && node === startContainer && startOffset >= node.nodeValue.length) {
+					nodes.splice(0, 1);
+				}
+
+				// Last node is excluded
+				node = nodes[nodes.length - 1];
+				if (endOffset === 0 && nodes.length > 0 && node === endContainer && node.nodeType === 3) {
+					nodes.splice(nodes.length - 1, 1);
+				}
+
+				return nodes;
+			}
+
+			/**
+			 * Collects siblings
+			 *
+			 * @private
+			 * @param {Node} node Node to collect siblings from.
+			 * @param {String} name Name of the sibling to check for.
+			 * @return {Array} Array of collected siblings.
+			 */
+			function collectSiblings(node, name, end_node) {
+				var siblings = [];
+
+				for (; node && node != end_node; node = node[name]) {
+					siblings.push(node);
+				}
+
+				return siblings;
+			}
+
+			/**
+			 * Find an end point this is the node just before the common ancestor root.
+			 *
+			 * @private
+			 * @param {Node} node Node to start at.
+			 * @param {Node} root Root/ancestor element to stop just before.
+			 * @return {Node} Node just before the root element.
+			 */
+			function findEndPoint(node, root) {
+				do {
+					if (node.parentNode == root) {
+						return node;
+					}
+
+					node = node.parentNode;
+				} while (node);
+			}
+
+			function walkBoundary(start_node, end_node, next) {
+				var siblingName = next ? 'nextSibling' : 'previousSibling';
+
+				for (node = start_node, parent = node.parentNode; node && node != end_node; node = parent) {
+					parent = node.parentNode;
+					siblings = collectSiblings(node == start_node ? node : node[siblingName], siblingName);
+
+					if (siblings.length) {
+						if (!next) {
+							siblings.reverse();
+						}
+
+						callback(exclude(siblings));
+					}
+				}
+			}
+
+			// If index based start position then resolve it
+			if (startContainer.nodeType == 1 && startContainer.hasChildNodes()) {
+				startContainer = startContainer.childNodes[startOffset];
+			}
+
+			// If index based end position then resolve it
+			if (endContainer.nodeType == 1 && endContainer.hasChildNodes()) {
+				endContainer = getEndChild(endContainer, endOffset);
+			}
+
+			// Same container
+			if (startContainer == endContainer) {
+				return callback(exclude([startContainer]));
+			}
+
+			// Find common ancestor and end points
+			ancestor = dom.findCommonAncestor(startContainer, endContainer);
+
+			// Process left side
+			for (node = startContainer; node; node = node.parentNode) {
+				if (node === endContainer) {
+					return walkBoundary(startContainer, ancestor, true);
+				}
+
+				if (node === ancestor) {
+					break;
+				}
+			}
+
+			// Process right side
+			for (node = endContainer; node; node = node.parentNode) {
+				if (node === startContainer) {
+					return walkBoundary(endContainer, ancestor);
+				}
+
+				if (node === ancestor) {
+					break;
+				}
+			}
+
+			// Find start/end point
+			startPoint = findEndPoint(startContainer, ancestor) || startContainer;
+			endPoint = findEndPoint(endContainer, ancestor) || endContainer;
+
+			// Walk left leaf
+			walkBoundary(startContainer, startPoint, true);
+
+			// Walk the middle from start to end point
+			siblings = collectSiblings(
+				startPoint == startContainer ? startPoint : startPoint.nextSibling,
+				'nextSibling',
+				endPoint == endContainer ? endPoint.nextSibling : endPoint
+			);
+
+			if (siblings.length) {
+				callback(exclude(siblings));
+			}
+
+			// Walk right leaf
+			walkBoundary(endContainer, endPoint);
+		};
+
+		/**
+		 * Splits the specified range at it's start/end points.
+		 *
+		 * @private
+		 * @param {Range/RangeObject} rng Range to split.
+		 * @return {Object} Range position object.
+		 */
+		this.split = function(rng) {
+			var startContainer = rng.startContainer,
+				startOffset = rng.startOffset,
+				endContainer = rng.endContainer,
+				endOffset = rng.endOffset;
+
+			function splitText(node, offset) {
+				return node.splitText(offset);
+			}
+
+			// Handle single text node
+			if (startContainer == endContainer && startContainer.nodeType == 3) {
+				if (startOffset > 0 && startOffset < startContainer.nodeValue.length) {
+					endContainer = splitText(startContainer, startOffset);
+					startContainer = endContainer.previousSibling;
+
+					if (endOffset > startOffset) {
+						endOffset = endOffset - startOffset;
+						startContainer = endContainer = splitText(endContainer, endOffset).previousSibling;
+						endOffset = endContainer.nodeValue.length;
+						startOffset = 0;
+					} else {
+						endOffset = 0;
+					}
+				}
+			} else {
+				// Split startContainer text node if needed
+				if (startContainer.nodeType == 3 && startOffset > 0 && startOffset < startContainer.nodeValue.length) {
+					startContainer = splitText(startContainer, startOffset);
+					startOffset = 0;
+				}
+
+				// Split endContainer text node if needed
+				if (endContainer.nodeType == 3 && endOffset > 0 && endOffset < endContainer.nodeValue.length) {
+					endContainer = splitText(endContainer, endOffset).previousSibling;
+					endOffset = endContainer.nodeValue.length;
+				}
+			}
+
+			return {
+				startContainer: startContainer,
+				startOffset: startOffset,
+				endContainer: endContainer,
+				endOffset: endOffset
+			};
+		};
+
+		/**
+		 * Normalizes the specified range by finding the closest best suitable caret location.
+		 *
+		 * @private
+		 * @param {Range} rng Range to normalize.
+		 * @return {Boolean} True/false if the specified range was normalized or not.
+		 */
+		this.normalize = function(rng) {
+			var normalized, collapsed;
+
+			function normalizeEndPoint(start) {
+				var container, offset, walker, body = dom.getRoot(), node, nonEmptyElementsMap;
+				var directionLeft, isAfterNode;
+
+				function hasBrBeforeAfter(node, left) {
+					var walker = new TreeWalker(node, dom.getParent(node.parentNode, dom.isBlock) || body);
+
+					while ((node = walker[left ? 'prev' : 'next']())) {
+						if (node.nodeName === "BR") {
+							return true;
+						}
+					}
+				}
+
+				function isPrevNode(node, name) {
+					return node.previousSibling && node.previousSibling.nodeName == name;
+				}
+
+				// Walks the dom left/right to find a suitable text node to move the endpoint into
+				// It will only walk within the current parent block or body and will stop if it hits a block or a BR/IMG
+				function findTextNodeRelative(left, startNode) {
+					var walker, lastInlineElement, parentBlockContainer;
+
+					startNode = startNode || container;
+					parentBlockContainer = dom.getParent(startNode.parentNode, dom.isBlock) || body;
+
+					// Lean left before the BR element if it's the only BR within a block element. Gecko bug: #6680
+					// This: <p><br>|</p> becomes <p>|<br></p>
+					if (left && startNode.nodeName == 'BR' && isAfterNode && dom.isEmpty(parentBlockContainer)) {
+						container = startNode.parentNode;
+						offset = dom.nodeIndex(startNode);
+						normalized = true;
+						return;
+					}
+
+					// Walk left until we hit a text node we can move to or a block/br/img
+					walker = new TreeWalker(startNode, parentBlockContainer);
+					while ((node = walker[left ? 'prev' : 'next']())) {
+						// Break if we hit a non content editable node
+						if (dom.getContentEditableParent(node) === "false") {
+							return;
+						}
+
+						// Found text node that has a length
+						if (node.nodeType === 3 && node.nodeValue.length > 0) {
+							container = node;
+							offset = left ? node.nodeValue.length : 0;
+							normalized = true;
+							return;
+						}
+
+						// Break if we find a block or a BR/IMG/INPUT etc
+						if (dom.isBlock(node) || nonEmptyElementsMap[node.nodeName.toLowerCase()]) {
+							return;
+						}
+
+						lastInlineElement = node;
+					}
+
+					// Only fetch the last inline element when in caret mode for now
+					if (collapsed && lastInlineElement) {
+						container = lastInlineElement;
+						normalized = true;
+						offset = 0;
+					}
+				}
+
+				container = rng[(start ? 'start' : 'end') + 'Container'];
+				offset = rng[(start ? 'start' : 'end') + 'Offset'];
+				isAfterNode = container.nodeType == 1 && offset === container.childNodes.length;
+				nonEmptyElementsMap = dom.schema.getNonEmptyElements();
+				directionLeft = start;
+
+				if (container.nodeType == 1 && offset > container.childNodes.length - 1) {
+					directionLeft = false;
+				}
+
+				// If the container is a document move it to the body element
+				if (container.nodeType === 9) {
+					container = dom.getRoot();
+					offset = 0;
+				}
+
+				// If the container is body try move it into the closest text node or position
+				if (container === body) {
+					// If start is before/after a image, table etc
+					if (directionLeft) {
+						node = container.childNodes[offset > 0 ? offset - 1 : 0];
+						if (node) {
+							if (nonEmptyElementsMap[node.nodeName] || node.nodeName == "TABLE") {
+								return;
+							}
+						}
+					}
+
+					// Resolve the index
+					if (container.hasChildNodes()) {
+						offset = Math.min(!directionLeft && offset > 0 ? offset - 1 : offset, container.childNodes.length - 1);
+						container = container.childNodes[offset];
+						offset = 0;
+
+						// Don't walk into elements that doesn't have any child nodes like a IMG
+						if (container.hasChildNodes() && !/TABLE/.test(container.nodeName)) {
+							// Walk the DOM to find a text node to place the caret at or a BR
+							node = container;
+							walker = new TreeWalker(container, body);
+
+							do {
+								// Found a text node use that position
+								if (node.nodeType === 3 && node.nodeValue.length > 0) {
+									offset = directionLeft ? 0 : node.nodeValue.length;
+									container = node;
+									normalized = true;
+									break;
+								}
+
+								// Found a BR/IMG element that we can place the caret before
+								if (nonEmptyElementsMap[node.nodeName.toLowerCase()]) {
+									offset = dom.nodeIndex(node);
+									container = node.parentNode;
+
+									// Put caret after image when moving the end point
+									if (node.nodeName ==  "IMG" && !directionLeft) {
+										offset++;
+									}
+
+									normalized = true;
+									break;
+								}
+							} while ((node = (directionLeft ? walker.next() : walker.prev())));
+						}
+					}
+				}
+
+				// Lean the caret to the left if possible
+				if (collapsed) {
+					// So this: <b>x</b><i>|x</i>
+					// Becomes: <b>x|</b><i>x</i>
+					// Seems that only gecko has issues with this
+					if (container.nodeType === 3 && offset === 0) {
+						findTextNodeRelative(true);
+					}
+
+					// Lean left into empty inline elements when the caret is before a BR
+					// So this: <i><b></b><i>|<br></i>
+					// Becomes: <i><b>|</b><i><br></i>
+					// Seems that only gecko has issues with this.
+					// Special edge case for <p><a>x</a>|<br></p> since we don't want <p><a>x|</a><br></p>
+					if (container.nodeType === 1) {
+						node = container.childNodes[offset];
+
+						// Offset is after the containers last child
+						// then use the previous child for normalization
+						if (!node) {
+							node = container.childNodes[offset - 1];
+						}
+
+						if (node && node.nodeName === 'BR' && !isPrevNode(node, 'A') &&
+							!hasBrBeforeAfter(node) && !hasBrBeforeAfter(node, true)) {
+							findTextNodeRelative(true, node);
+						}
+					}
+				}
+
+				// Lean the start of the selection right if possible
+				// So this: x[<b>x]</b>
+				// Becomes: x<b>[x]</b>
+				if (directionLeft && !collapsed && container.nodeType === 3 && offset === container.nodeValue.length) {
+					findTextNodeRelative(false);
+				}
+
+				// Set endpoint if it was normalized
+				if (normalized) {
+					rng['set' + (start ? 'Start' : 'End')](container, offset);
+				}
+			}
+
+			collapsed = rng.collapsed;
+
+			normalizeEndPoint(true);
+
+			if (!collapsed) {
+				normalizeEndPoint();
+			}
+
+			// If it was collapsed then make sure it still is
+			if (normalized && collapsed) {
+				rng.collapse(true);
+			}
+
+			return normalized;
+		};
+	}
+
+	/**
+	 * Compares two ranges and checks if they are equal.
+	 *
+	 * @static
+	 * @method compareRanges
+	 * @param {DOMRange} rng1 First range to compare.
+	 * @param {DOMRange} rng2 First range to compare.
+	 * @return {Boolean} true/false if the ranges are equal.
+	 */
+	RangeUtils.compareRanges = function(rng1, rng2) {
+		if (rng1 && rng2) {
+			// Compare native IE ranges
+			if (rng1.item || rng1.duplicate) {
+				// Both are control ranges and the selected element matches
+				if (rng1.item && rng2.item && rng1.item(0) === rng2.item(0)) {
+					return true;
+				}
+
+				// Both are text ranges and the range matches
+				if (rng1.isEqual && rng2.isEqual && rng2.isEqual(rng1)) {
+					return true;
+				}
+			} else {
+				// Compare w3c ranges
+				return rng1.startContainer == rng2.startContainer && rng1.startOffset == rng2.startOffset;
+			}
+		}
+
+		return false;
+	};
+
+	return RangeUtils;
+});
+
+// Included from: js/tinymce/classes/NodeChange.js
+
+/**
+ * NodeChange.js
+ *
+ * Copyright, Moxiecode Systems AB
+ * Released under LGPL License.
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * This class handles the nodechange event dispatching both manual and though selection change events.
+ *
+ * @class tinymce.NodeChange
+ * @private
+ */
+define("tinymce/NodeChange", [
+	"tinymce/dom/RangeUtils"
+], function(RangeUtils) {
+	return function(editor) {
+		var lastRng, lastPath = [];
+
+		/**
+		 * Returns true/false if the current element path has been changed or not.
+		 *
+		 * @private
+		 * @return {Boolean} True if the element path is the same false if it's not.
+		 */
+		function isSameElementPath(startElm) {
+			var i, currentPath;
+
+			currentPath = editor.$(startElm).parentsUntil(editor.getBody()).add(startElm);
+			if (currentPath.length === lastPath.length) {
+				for (i = currentPath.length; i >= 0; i--) {
+					if (currentPath[i] !== lastPath[i]) {
+						break;
+					}
+				}
+
+				if (i === -1) {
+					lastPath = currentPath;
+					return true;
+				}
+			}
+
+			lastPath = currentPath;
+
+			return false;
+		}
+
+		// Gecko doesn't support the "selectionchange" event
+		if (!('onselectionchange' in editor.getDoc())) {
+			editor.on('NodeChange Click MouseUp KeyUp Focus', function(e) {
+				var nativeRng, fakeRng;
+
+				// Since DOM Ranges mutate on modification
+				// of the DOM we need to clone it's contents
+				nativeRng = editor.selection.getRng();
+				fakeRng = {
+					startContainer: nativeRng.startContainer,
+					startOffset: nativeRng.startOffset,
+					endContainer: nativeRng.endContainer,
+					endOffset: nativeRng.endOffset
+				};
+
+				// Always treat nodechange as a selectionchange since applying
+				// formatting to the current range wouldn't update the range but it's parent
+				if (e.type == 'nodechange' || !RangeUtils.compareRanges(fakeRng, lastRng)) {
+					editor.fire('SelectionChange');
+				}
+
+				lastRng = fakeRng;
+			});
+		}
+
+		// IE has a bug where it fires a selectionchange on right click that has a range at the start of the body
+		// When the contextmenu event fires the selection is located at the right location
+		editor.on('contextmenu', function() {
+			editor.fire('SelectionChange');
+		});
+
+		editor.on('SelectionChange', function() {
+			var startElm = editor.selection.getStart(true);
+
+			// Fire a nodechange only when the selection isn't collapsed since focusout will collapse and remove the selection
+			if (!editor.selection.isCollapsed() && !isSameElementPath(startElm) && editor.dom.isChildOf(startElm, editor.getBody())) {
+				editor.nodeChanged({selectionChange: true});
+			}
+		});
+
+		// Fire an extra nodeChange on mouseup for compatibility reasons
+		editor.on('MouseUp', function(e) {
+			if (!e.isDefaultPrevented()) {
+				// Delay nodeChanged call for WebKit edge case issue where the range
+				// isn't updated until after you click outside a selected image
+				setTimeout(function() {
+					editor.nodeChanged();
+				}, 0);
+			}
+		});
+
+		/**
+		 * Distpaches out a onNodeChange event to all observers. This method should be called when you
+		 * need to update the UI states or element path etc.
+		 *
+		 * @method nodeChanged
+		 * @param {Object} args Optional args to pass to NodeChange event handlers.
+		 */
+		this.nodeChanged = function(args) {
+			var selection = editor.selection, node, parents, root;
+
+			// Fix for bug #1896577 it seems that this can not be fired while the editor is loading
+			if (editor.initialized && selection && !editor.settings.disable_nodechange && !editor.settings.readonly) {
+				// Get start node
+				root = editor.getBody();
+				node = selection.getStart() || root;
+				node = node.ownerDocument != editor.getDoc() ? editor.getBody() : node;
+
+				// Edge case for <p>|<img></p>
+				if (node.nodeName == 'IMG' && selection.isCollapsed()) {
+					node = node.parentNode;
+				}
+
+				// Get parents and add them to object
+				parents = [];
+				editor.dom.getParent(node, function(node) {
+					if (node === root) {
+						return true;
+					}
+
+					parents.push(node);
+				});
+
+				args = args || {};
+				args.element = node;
+				args.parents = parents;
+
+				editor.fire('NodeChange', args);
+			}
+		};
+	};
+});
+
 // Included from: js/tinymce/classes/html/Node.js
 
 /**
@@ -43551,7 +48425,7 @@ define("tinymce/html/Node", [], function() {
 		unwrap: function() {
 			var self = this, node, next;
 
-			for (node = self.firstChild; node; ) {
+			for (node = self.firstChild; node;) {
 				next = node.next;
 				self.insert(node, self, true);
 				node = next;
@@ -43753,11 +48627,11 @@ define("tinymce/html/Node", [], function() {
 							return false;
 						}
 
-						// Keep elements with data attributes or name attribute like <a name="1"></a>
+						// Keep bookmark nodes and name attribute like <a name="1"></a>
 						i = node.attributes.length;
 						while (i--) {
 							name = node.attributes[i].name;
-							if (name === "name" || name.indexOf('data-mce-') === 0) {
+							if (name === "name" || name.indexOf('data-mce-bookmark') === 0) {
 								return false;
 							}
 						}
@@ -43846,7 +48720,7 @@ define("tinymce/html/Node", [], function() {
 define("tinymce/html/Schema", [
 	"tinymce/util/Tools"
 ], function(Tools) {
-	var mapCache = {};
+	var mapCache = {}, dummyObj = {};
 	var makeMap = Tools.makeMap, each = Tools.each, extend = Tools.extend, explode = Tools.explode, inArray = Tools.inArray;
 
 	function split(items, delim) {
@@ -43867,11 +48741,11 @@ define("tinymce/html/Schema", [
 		function add(name, attributes, children) {
 			var ni, i, attributesOrder, args = arguments;
 
-			function arrayToMap(array) {
+			function arrayToMap(array, obj) {
 				var map = {}, i, l;
 
 				for (i = 0, l = array.length; i < l; i++) {
-					map[array[i]] = {};
+					map[array[i]] = obj || {};
 				}
 
 				return map;
@@ -43900,7 +48774,7 @@ define("tinymce/html/Schema", [
 				schema[name[ni]] = {
 					attributes: arrayToMap(attributesOrder),
 					attributesOrder: attributesOrder,
-					children: arrayToMap(children)
+					children: arrayToMap(children, dummyObj)
 				};
 			}
 		}
@@ -44230,16 +49104,16 @@ define("tinymce/html/Schema", [
 
 		// Parses the specified valid_elements string and adds to the current rules
 		// This function is a bit hard to read since it's heavily optimized for speed
-		function addValidElements(valid_elements) {
+		function addValidElements(validElements) {
 			var ei, el, ai, al, matches, element, attr, attrData, elementName, attrName, attrType, attributes, attributesOrder,
 				prefix, outputName, globalAttributes, globalAttributesOrder, key, value,
 				elementRuleRegExp = /^([#+\-])?([^\[!\/]+)(?:\/([^\[!]+))?(?:(!?)\[([^\]]+)\])?$/,
 				attrRuleRegExp = /^([!\-])?(\w+::\w+|[^=:<]+)?(?:([=:<])(.*))?$/,
 				hasPatternsRegExp = /[*?+]/;
 
-			if (valid_elements) {
+			if (validElements) {
 				// Split valid elements into an array with rules
-				valid_elements = split(valid_elements, ',');
+				validElements = split(validElements, ',');
 
 				if (elements['@']) {
 					globalAttributes = elements['@'].attributes;
@@ -44247,9 +49121,9 @@ define("tinymce/html/Schema", [
 				}
 
 				// Loop all rules
-				for (ei = 0, el = valid_elements.length; ei < el; ei++) {
+				for (ei = 0, el = validElements.length; ei < el; ei++) {
 					// Parse element rule
-					matches = elementRuleRegExp.exec(valid_elements[ei]);
+					matches = elementRuleRegExp.exec(validElements[ei]);
 					if (matches) {
 						// Setup local names for matches
 						prefix = matches[1];
@@ -44379,11 +49253,11 @@ define("tinymce/html/Schema", [
 			}
 		}
 
-		function setValidElements(valid_elements) {
+		function setValidElements(validElements) {
 			elements = {};
 			patternElements = [];
 
-			addValidElements(valid_elements);
+			addValidElements(validElements);
 
 			each(schemaItems, function(element, name) {
 				children[name] = element.children;
@@ -44391,14 +49265,14 @@ define("tinymce/html/Schema", [
 		}
 
 		// Adds custom non HTML elements to the schema
-		function addCustomElements(custom_elements) {
+		function addCustomElements(customElements) {
 			var customElementRegExp = /^(~)?(.+)$/;
 
-			if (custom_elements) {
+			if (customElements) {
 				// Flush cached items since we are altering the default maps
 				mapCache.text_block_elements = mapCache.block_elements = null;
 
-				each(split(custom_elements, ','), function(rule) {
+				each(split(customElements, ','), function(rule) {
 					var matches = customElementRegExp.exec(rule),
 						inline = matches[1] === '~',
 						cloneName = inline ? 'span' : 'div',
@@ -44436,11 +49310,11 @@ define("tinymce/html/Schema", [
 		}
 
 		// Adds valid children to the schema object
-		function addValidChildren(valid_children) {
+		function addValidChildren(validChildren) {
 			var childRuleRegExp = /^([+\-]?)(\w+)\[([^\]]+)\]$/;
 
-			if (valid_children) {
-				each(split(valid_children, ','), function(rule) {
+			if (validChildren) {
+				each(split(validChildren, ','), function(rule) {
 					var matches = childRuleRegExp.exec(rule), parent, prefix;
 
 					if (matches) {
@@ -44885,7 +49759,7 @@ define("tinymce/html/SaxParser", [
 		var count = 1, index, matches, tokenRegExp, shortEndedElements;
 
 		shortEndedElements = schema.getShortEndedElements();
-		tokenRegExp = /<([!?\/])?([A-Za-z0-9\-\:\.]+)((?:\s+[^"\'>]+(?:(?:"[^"]*")|(?:\'[^\']*\')|[^>]*))*|\/|\s+)>/g;
+		tokenRegExp = /<([!?\/])?([A-Za-z0-9\-_\:\.]+)((?:\s+[^"\'>]+(?:(?:"[^"]*")|(?:\'[^\']*\')|[^>]*))*|\/|\s+)>/g;
 		tokenRegExp.lastIndex = index = startIndex;
 
 		while ((matches = tokenRegExp.exec(html))) {
@@ -45053,7 +49927,7 @@ define("tinymce/html/SaxParser", [
 				'(?:!DOCTYPE([\\w\\W]*?)>)|' + // DOCTYPE
 				'(?:\\?([^\\s\\/<>]+) ?([\\w\\W]*?)[?/]>)|' + // PI
 				'(?:\\/([^>]+)>)|' + // End element
-				'(?:([A-Za-z0-9\\-\\:\\.]+)((?:\\s+[^"\'>]+(?:(?:"[^"]*")|(?:\'[^\']*\')|[^>]*))*|\\/|\\s+)>)' + // Start element
+				'(?:([A-Za-z0-9\\-_\\:\\.]+)((?:\\s+[^"\'>]+(?:(?:"[^"]*")|(?:\'[^\']*\')|[^>]*))*|\\/|\\s+)>)' + // Start element
 			')', 'g');
 
 			attrRegExp = /([\w:\-]+)(?:\s*=\s*(?:(?:\"((?:[^\"])*)\")|(?:\'((?:[^\'])*)\')|([^>\s]+)))?/g;
@@ -45396,7 +50270,7 @@ define("tinymce/html/DomParser", [
 							tempNode = currentNode;
 						}
 
-						for (childNode = parents[i].firstChild; childNode && childNode != parents[i + 1]; ) {
+						for (childNode = parents[i].firstChild; childNode && childNode != parents[i + 1];) {
 							nextNode = childNode.next;
 							tempNode.append(childNode);
 							childNode = nextNode;
@@ -45645,7 +50519,7 @@ define("tinymce/html/DomParser", [
 			function removeWhitespaceBefore(node) {
 				var textNode, textVal, sibling;
 
-				for (textNode = node.prev; textNode && textNode.type === 3; ) {
+				for (textNode = node.prev; textNode && textNode.type === 3;) {
 					textVal = textNode.value.replace(endWhiteSpaceRegExp, '');
 
 					if (textVal.length > 0) {
@@ -45863,7 +50737,13 @@ define("tinymce/html/DomParser", [
 									// Leave nodes that have a name like <a name="name">
 									if (!node.attributes.map.name && !node.attributes.map.id) {
 										tempNode = node.parent;
-										node.unwrap();
+
+										if (blockElements[node.name]) {
+											node.empty().remove();
+										} else {
+											node.unwrap();
+										}
+
 										node = tempNode;
 										return;
 									}
@@ -47472,8 +52352,8 @@ define("tinymce/dom/ControlSelection", [
 				'z-index: 10000' +
 			'}' +
 			rootClass + ' .mce-resize-helper {' +
-				'background-color: #555;' +
-				'background-color: rgba(0,0,0,0.75);' +
+				'background: #555;' +
+				'background: rgba(0,0,0,0.75);' +
 				'border-radius: 3px;' +
 				'border: 1px;' +
 				'color: white;' +
@@ -47623,6 +52503,7 @@ define("tinymce/dom/ControlSelection", [
 			}
 
 			editor.fire('ObjectResized', {target: selectedElm, width: width, height: height});
+			dom.setAttrib(selectedElm, 'style', dom.getAttrib(selectedElm, 'style'));
 			editor.nodeChanged();
 		}
 
@@ -47661,7 +52542,11 @@ define("tinymce/dom/ControlSelection", [
 						ratio = startH / startW;
 						selectedHandle = handle;
 
-						handle.startPos = dom.getPos(handle.elm, rootElement);
+						handle.startPos = {
+							x: targetWidth * handle[0] + selectedElmX,
+							y: targetHeight * handle[1] + selectedElmY
+						};
+
 						startScrollWidth = rootElement.scrollWidth;
 						startScrollHeight = rootElement.scrollHeight;
 
@@ -47766,7 +52651,7 @@ define("tinymce/dom/ControlSelection", [
 		}
 
 		function updateResizeRect(e) {
-			var controlElm;
+			var startElm, controlElm;
 
 			function isChildOrEqual(node, parent) {
 				if (node) {
@@ -47778,19 +52663,25 @@ define("tinymce/dom/ControlSelection", [
 				}
 			}
 
+			// Ignore all events while resizing
+			if (resizeStarted) {
+				return;
+			}
+
 			// Remove data-mce-selected from all elements since they might have been copied using Ctrl+c/v
 			each(dom.select('img[data-mce-selected],hr[data-mce-selected]'), function(img) {
 				img.removeAttribute('data-mce-selected');
 			});
 
 			controlElm = e.type == 'mousedown' ? e.target : selection.getNode();
-			controlElm = dom.getParent(controlElm, isIE ? 'table' : 'table,img,hr');
+			controlElm = dom.$(controlElm).closest(isIE ? 'table' : 'table,img,hr')[0];
 
 			if (isChildOrEqual(controlElm, rootElement)) {
 				disableGeckoResize();
+				startElm = selection.getStart(true);
 
-				if (isChildOrEqual(selection.getStart(), controlElm) && isChildOrEqual(selection.getEnd(), controlElm)) {
-					if (!isIE || (controlElm != selection.getStart() && selection.getStart().nodeName !== 'IMG')) {
+				if (isChildOrEqual(startElm, controlElm) && isChildOrEqual(selection.getEnd(true), controlElm)) {
+					if (!isIE || (controlElm != startElm && startElm.nodeName !== 'IMG')) {
 						showResizeRect(controlElm);
 						return;
 					}
@@ -47834,6 +52725,11 @@ define("tinymce/dom/ControlSelection", [
 
 			// Remove native selection and let the magic begin
 			resizeStarted = true;
+			editor.fire('ObjectResizeStart', {
+				target: selectedElm,
+				width: selectedElm.clientWidth,
+				height: selectedElm.clientHeight
+			});
 			editor.getDoc().selection.empty();
 			showResizeRect(target, name, lastMouseDownEvent);
 		}
@@ -47842,6 +52738,7 @@ define("tinymce/dom/ControlSelection", [
 			var target = e.srcElement;
 
 			if (target != selectedElm) {
+				editor.fire('ObjectSelected', {target: target});
 				detachResizeStartListener();
 
 				if (target.id.indexOf('mceResizeHandle') === 0) {
@@ -47922,7 +52819,7 @@ define("tinymce/dom/ControlSelection", [
 					editor.on('mouseup', function(e) {
 						var nodeName = e.target.nodeName;
 
-						if (/^(TABLE|IMG|HR)$/.test(nodeName)) {
+						if (!resizeStarted && /^(TABLE|IMG|HR)$/.test(nodeName)) {
 							editor.selection.select(e.target, nodeName == 'TABLE');
 							editor.nodeChanged();
 						}
@@ -47944,7 +52841,7 @@ define("tinymce/dom/ControlSelection", [
 				}
 			}
 
-			editor.on('nodechange mousedown mouseup ResizeEditor', updateResizeRect);
+			editor.on('nodechange ResizeEditor', updateResizeRect);
 
 			// Update resize rect while typing in a table
 			editor.on('keydown keyup', function(e) {
@@ -47979,503 +52876,6 @@ define("tinymce/dom/ControlSelection", [
 			destroy: destroy
 		};
 	};
-});
-
-// Included from: js/tinymce/classes/dom/RangeUtils.js
-
-/**
- * RangeUtils.js
- *
- * Copyright, Moxiecode Systems AB
- * Released under LGPL License.
- *
- * License: http://www.tinymce.com/license
- * Contributing: http://www.tinymce.com/contributing
- */
-
-/**
- * This class contains a few utility methods for ranges.
- *
- * @class tinymce.dom.RangeUtils
- * @private
- */
-define("tinymce/dom/RangeUtils", [
-	"tinymce/util/Tools",
-	"tinymce/dom/TreeWalker"
-], function(Tools, TreeWalker) {
-	var each = Tools.each;
-
-	function getEndChild(container, index) {
-		var childNodes = container.childNodes;
-
-		index--;
-
-		if (index > childNodes.length - 1) {
-			index = childNodes.length - 1;
-		} else if (index < 0) {
-			index = 0;
-		}
-
-		return childNodes[index] || container;
-	}
-
-	function RangeUtils(dom) {
-		/**
-		 * Walks the specified range like object and executes the callback for each sibling collection it finds.
-		 *
-		 * @method walk
-		 * @param {Object} rng Range like object.
-		 * @param {function} callback Callback function to execute for each sibling collection.
-		 */
-		this.walk = function(rng, callback) {
-			var startContainer = rng.startContainer,
-				startOffset = rng.startOffset,
-				endContainer = rng.endContainer,
-				endOffset = rng.endOffset,
-				ancestor, startPoint,
-				endPoint, node, parent, siblings, nodes;
-
-			// Handle table cell selection the table plugin enables
-			// you to fake select table cells and perform formatting actions on them
-			nodes = dom.select('td.mce-item-selected,th.mce-item-selected');
-			if (nodes.length > 0) {
-				each(nodes, function(node) {
-					callback([node]);
-				});
-
-				return;
-			}
-
-			/**
-			 * Excludes start/end text node if they are out side the range
-			 *
-			 * @private
-			 * @param {Array} nodes Nodes to exclude items from.
-			 * @return {Array} Array with nodes excluding the start/end container if needed.
-			 */
-			function exclude(nodes) {
-				var node;
-
-				// First node is excluded
-				node = nodes[0];
-				if (node.nodeType === 3 && node === startContainer && startOffset >= node.nodeValue.length) {
-					nodes.splice(0, 1);
-				}
-
-				// Last node is excluded
-				node = nodes[nodes.length - 1];
-				if (endOffset === 0 && nodes.length > 0 && node === endContainer && node.nodeType === 3) {
-					nodes.splice(nodes.length - 1, 1);
-				}
-
-				return nodes;
-			}
-
-			/**
-			 * Collects siblings
-			 *
-			 * @private
-			 * @param {Node} node Node to collect siblings from.
-			 * @param {String} name Name of the sibling to check for.
-			 * @return {Array} Array of collected siblings.
-			 */
-			function collectSiblings(node, name, end_node) {
-				var siblings = [];
-
-				for (; node && node != end_node; node = node[name]) {
-					siblings.push(node);
-				}
-
-				return siblings;
-			}
-
-			/**
-			 * Find an end point this is the node just before the common ancestor root.
-			 *
-			 * @private
-			 * @param {Node} node Node to start at.
-			 * @param {Node} root Root/ancestor element to stop just before.
-			 * @return {Node} Node just before the root element.
-			 */
-			function findEndPoint(node, root) {
-				do {
-					if (node.parentNode == root) {
-						return node;
-					}
-
-					node = node.parentNode;
-				} while (node);
-			}
-
-			function walkBoundary(start_node, end_node, next) {
-				var siblingName = next ? 'nextSibling' : 'previousSibling';
-
-				for (node = start_node, parent = node.parentNode; node && node != end_node; node = parent) {
-					parent = node.parentNode;
-					siblings = collectSiblings(node == start_node ? node : node[siblingName], siblingName);
-
-					if (siblings.length) {
-						if (!next) {
-							siblings.reverse();
-						}
-
-						callback(exclude(siblings));
-					}
-				}
-			}
-
-			// If index based start position then resolve it
-			if (startContainer.nodeType == 1 && startContainer.hasChildNodes()) {
-				startContainer = startContainer.childNodes[startOffset];
-			}
-
-			// If index based end position then resolve it
-			if (endContainer.nodeType == 1 && endContainer.hasChildNodes()) {
-				endContainer = getEndChild(endContainer, endOffset);
-			}
-
-			// Same container
-			if (startContainer == endContainer) {
-				return callback(exclude([startContainer]));
-			}
-
-			// Find common ancestor and end points
-			ancestor = dom.findCommonAncestor(startContainer, endContainer);
-
-			// Process left side
-			for (node = startContainer; node; node = node.parentNode) {
-				if (node === endContainer) {
-					return walkBoundary(startContainer, ancestor, true);
-				}
-
-				if (node === ancestor) {
-					break;
-				}
-			}
-
-			// Process right side
-			for (node = endContainer; node; node = node.parentNode) {
-				if (node === startContainer) {
-					return walkBoundary(endContainer, ancestor);
-				}
-
-				if (node === ancestor) {
-					break;
-				}
-			}
-
-			// Find start/end point
-			startPoint = findEndPoint(startContainer, ancestor) || startContainer;
-			endPoint = findEndPoint(endContainer, ancestor) || endContainer;
-
-			// Walk left leaf
-			walkBoundary(startContainer, startPoint, true);
-
-			// Walk the middle from start to end point
-			siblings = collectSiblings(
-				startPoint == startContainer ? startPoint : startPoint.nextSibling,
-				'nextSibling',
-				endPoint == endContainer ? endPoint.nextSibling : endPoint
-			);
-
-			if (siblings.length) {
-				callback(exclude(siblings));
-			}
-
-			// Walk right leaf
-			walkBoundary(endContainer, endPoint);
-		};
-
-		/**
-		 * Splits the specified range at it's start/end points.
-		 *
-		 * @private
-		 * @param {Range/RangeObject} rng Range to split.
-		 * @return {Object} Range position object.
-		 */
-		this.split = function(rng) {
-			var startContainer = rng.startContainer,
-				startOffset = rng.startOffset,
-				endContainer = rng.endContainer,
-				endOffset = rng.endOffset;
-
-			function splitText(node, offset) {
-				return node.splitText(offset);
-			}
-
-			// Handle single text node
-			if (startContainer == endContainer && startContainer.nodeType == 3) {
-				if (startOffset > 0 && startOffset < startContainer.nodeValue.length) {
-					endContainer = splitText(startContainer, startOffset);
-					startContainer = endContainer.previousSibling;
-
-					if (endOffset > startOffset) {
-						endOffset = endOffset - startOffset;
-						startContainer = endContainer = splitText(endContainer, endOffset).previousSibling;
-						endOffset = endContainer.nodeValue.length;
-						startOffset = 0;
-					} else {
-						endOffset = 0;
-					}
-				}
-			} else {
-				// Split startContainer text node if needed
-				if (startContainer.nodeType == 3 && startOffset > 0 && startOffset < startContainer.nodeValue.length) {
-					startContainer = splitText(startContainer, startOffset);
-					startOffset = 0;
-				}
-
-				// Split endContainer text node if needed
-				if (endContainer.nodeType == 3 && endOffset > 0 && endOffset < endContainer.nodeValue.length) {
-					endContainer = splitText(endContainer, endOffset).previousSibling;
-					endOffset = endContainer.nodeValue.length;
-				}
-			}
-
-			return {
-				startContainer: startContainer,
-				startOffset: startOffset,
-				endContainer: endContainer,
-				endOffset: endOffset
-			};
-		};
-
-		/**
-		 * Normalizes the specified range by finding the closest best suitable caret location.
-		 *
-		 * @private
-		 * @param {Range} rng Range to normalize.
-		 * @return {Boolean} True/false if the specified range was normalized or not.
-		 */
-		this.normalize = function(rng) {
-			var normalized, collapsed;
-
-			function normalizeEndPoint(start) {
-				var container, offset, walker, body = dom.getRoot(), node, nonEmptyElementsMap;
-				var directionLeft, isAfterNode;
-
-				function hasBrBeforeAfter(node, left) {
-					var walker = new TreeWalker(node, dom.getParent(node.parentNode, dom.isBlock) || body);
-
-					while ((node = walker[left ? 'prev' : 'next']())) {
-						if (node.nodeName === "BR") {
-							return true;
-						}
-					}
-				}
-
-				function isPrevNode(node, name) {
-					return node.previousSibling && node.previousSibling.nodeName == name;
-				}
-
-				// Walks the dom left/right to find a suitable text node to move the endpoint into
-				// It will only walk within the current parent block or body and will stop if it hits a block or a BR/IMG
-				function findTextNodeRelative(left, startNode) {
-					var walker, lastInlineElement, parentBlockContainer;
-
-					startNode = startNode || container;
-					parentBlockContainer = dom.getParent(startNode.parentNode, dom.isBlock) || body;
-
-					// Lean left before the BR element if it's the only BR within a block element. Gecko bug: #6680
-					// This: <p><br>|</p> becomes <p>|<br></p>
-					if (left && startNode.nodeName == 'BR' && isAfterNode && dom.isEmpty(parentBlockContainer)) {
-						container = startNode.parentNode;
-						offset = dom.nodeIndex(startNode);
-						normalized = true;
-						return;
-					}
-
-					// Walk left until we hit a text node we can move to or a block/br/img
-					walker = new TreeWalker(startNode, parentBlockContainer);
-					while ((node = walker[left ? 'prev' : 'next']())) {
-						// Break if we hit a non content editable node
-						if (dom.getContentEditableParent(node) === "false") {
-							return;
-						}
-
-						// Found text node that has a length
-						if (node.nodeType === 3 && node.nodeValue.length > 0) {
-							container = node;
-							offset = left ? node.nodeValue.length : 0;
-							normalized = true;
-							return;
-						}
-
-						// Break if we find a block or a BR/IMG/INPUT etc
-						if (dom.isBlock(node) || nonEmptyElementsMap[node.nodeName.toLowerCase()]) {
-							return;
-						}
-
-						lastInlineElement = node;
-					}
-
-					// Only fetch the last inline element when in caret mode for now
-					if (collapsed && lastInlineElement) {
-						container = lastInlineElement;
-						normalized = true;
-						offset = 0;
-					}
-				}
-
-				container = rng[(start ? 'start' : 'end') + 'Container'];
-				offset = rng[(start ? 'start' : 'end') + 'Offset'];
-				isAfterNode = container.nodeType == 1 && offset === container.childNodes.length;
-				nonEmptyElementsMap = dom.schema.getNonEmptyElements();
-				directionLeft = start;
-
-				if (container.nodeType == 1 && offset > container.childNodes.length - 1) {
-					directionLeft = false;
-				}
-
-				// If the container is a document move it to the body element
-				if (container.nodeType === 9) {
-					container = dom.getRoot();
-					offset = 0;
-				}
-
-				// If the container is body try move it into the closest text node or position
-				if (container === body) {
-					// If start is before/after a image, table etc
-					if (directionLeft) {
-						node = container.childNodes[offset > 0 ? offset - 1 : 0];
-						if (node) {
-							if (nonEmptyElementsMap[node.nodeName] || node.nodeName == "TABLE") {
-								return;
-							}
-						}
-					}
-
-					// Resolve the index
-					if (container.hasChildNodes()) {
-						offset = Math.min(!directionLeft && offset > 0 ? offset - 1 : offset, container.childNodes.length - 1);
-						container = container.childNodes[offset];
-						offset = 0;
-
-						// Don't walk into elements that doesn't have any child nodes like a IMG
-						if (container.hasChildNodes() && !/TABLE/.test(container.nodeName)) {
-							// Walk the DOM to find a text node to place the caret at or a BR
-							node = container;
-							walker = new TreeWalker(container, body);
-
-							do {
-								// Found a text node use that position
-								if (node.nodeType === 3 && node.nodeValue.length > 0) {
-									offset = directionLeft ? 0 : node.nodeValue.length;
-									container = node;
-									normalized = true;
-									break;
-								}
-
-								// Found a BR/IMG element that we can place the caret before
-								if (nonEmptyElementsMap[node.nodeName.toLowerCase()]) {
-									offset = dom.nodeIndex(node);
-									container = node.parentNode;
-
-									// Put caret after image when moving the end point
-									if (node.nodeName ==  "IMG" && !directionLeft) {
-										offset++;
-									}
-
-									normalized = true;
-									break;
-								}
-							} while ((node = (directionLeft ? walker.next() : walker.prev())));
-						}
-					}
-				}
-
-				// Lean the caret to the left if possible
-				if (collapsed) {
-					// So this: <b>x</b><i>|x</i>
-					// Becomes: <b>x|</b><i>x</i>
-					// Seems that only gecko has issues with this
-					if (container.nodeType === 3 && offset === 0) {
-						findTextNodeRelative(true);
-					}
-
-					// Lean left into empty inline elements when the caret is before a BR
-					// So this: <i><b></b><i>|<br></i>
-					// Becomes: <i><b>|</b><i><br></i>
-					// Seems that only gecko has issues with this.
-					// Special edge case for <p><a>x</a>|<br></p> since we don't want <p><a>x|</a><br></p>
-					if (container.nodeType === 1) {
-						node = container.childNodes[offset];
-
-						// Offset is after the containers last child
-						// then use the previous child for normalization
-						if (!node) {
-							node = container.childNodes[offset - 1];
-						}
-
-						if (node && node.nodeName === 'BR' && !isPrevNode(node, 'A') &&
-							!hasBrBeforeAfter(node) && !hasBrBeforeAfter(node, true)) {
-							findTextNodeRelative(true, node);
-						}
-					}
-				}
-
-				// Lean the start of the selection right if possible
-				// So this: x[<b>x]</b>
-				// Becomes: x<b>[x]</b>
-				if (directionLeft && !collapsed && container.nodeType === 3 && offset === container.nodeValue.length) {
-					findTextNodeRelative(false);
-				}
-
-				// Set endpoint if it was normalized
-				if (normalized) {
-					rng['set' + (start ? 'Start' : 'End')](container, offset);
-				}
-			}
-
-			collapsed = rng.collapsed;
-
-			normalizeEndPoint(true);
-
-			if (!collapsed) {
-				normalizeEndPoint();
-			}
-
-			// If it was collapsed then make sure it still is
-			if (normalized && collapsed) {
-				rng.collapse(true);
-			}
-
-			return normalized;
-		};
-	}
-
-	/**
-	 * Compares two ranges and checks if they are equal.
-	 *
-	 * @static
-	 * @method compareRanges
-	 * @param {DOMRange} rng1 First range to compare.
-	 * @param {DOMRange} rng2 First range to compare.
-	 * @return {Boolean} true/false if the ranges are equal.
-	 */
-	RangeUtils.compareRanges = function(rng1, rng2) {
-		if (rng1 && rng2) {
-			// Compare native IE ranges
-			if (rng1.item || rng1.duplicate) {
-				// Both are control ranges and the selected element matches
-				if (rng1.item && rng2.item && rng1.item(0) === rng2.item(0)) {
-					return true;
-				}
-
-				// Both are text ranges and the range matches
-				if (rng1.isEqual && rng2.isEqual && rng2.isEqual(rng1)) {
-					return true;
-				}
-			} else {
-				// Compare w3c ranges
-				return rng1.startContainer == rng2.startContainer && rng1.startOffset == rng2.startOffset;
-			}
-		}
-
-		return false;
-	};
-
-	return RangeUtils;
 });
 
 // Included from: js/tinymce/classes/dom/BookmarkManager.js
@@ -49113,9 +53513,10 @@ define("tinymce/dom/Selection", [
 		 * node the parent element will be returned.
 		 *
 		 * @method getStart
+		 * @param {Boolean} real Optional state to get the real parent when the selection is collapsed not the closest element.
 		 * @return {Element} Start element of selection range.
 		 */
-		getStart: function() {
+		getStart: function(real) {
 			var self = this, rng = self.getRng(), startElement, parentElement, checkRng, node;
 
 			if (rng.duplicate || rng.item) {
@@ -49147,7 +53548,9 @@ define("tinymce/dom/Selection", [
 				startElement = rng.startContainer;
 
 				if (startElement.nodeType == 1 && startElement.hasChildNodes()) {
-					startElement = startElement.childNodes[Math.min(startElement.childNodes.length - 1, rng.startOffset)];
+					if (!real || !rng.collapsed) {
+						startElement = startElement.childNodes[Math.min(startElement.childNodes.length - 1, rng.startOffset)];
+					}
 				}
 
 				if (startElement && startElement.nodeType == 3) {
@@ -49163,9 +53566,10 @@ define("tinymce/dom/Selection", [
 		 * node the parent element will be returned.
 		 *
 		 * @method getEnd
+		 * @param {Boolean} real Optional state to get the real parent when the selection is collapsed not the closest element.
 		 * @return {Element} End element of selection range.
 		 */
-		getEnd: function() {
+		getEnd: function(real) {
 			var self = this, rng = self.getRng(), endElement, endOffset;
 
 			if (rng.duplicate || rng.item) {
@@ -49190,7 +53594,9 @@ define("tinymce/dom/Selection", [
 				endOffset = rng.endOffset;
 
 				if (endElement.nodeType == 1 && endElement.hasChildNodes()) {
-					endElement = endElement.childNodes[endOffset > 0 ? endOffset - 1 : endOffset];
+					if (!real || !rng.collapsed) {
+						endElement = endElement.childNodes[endOffset > 0 ? endOffset - 1 : endOffset];
+					}
 				}
 
 				if (endElement && endElement.nodeType == 3) {
@@ -49304,9 +53710,9 @@ define("tinymce/dom/Selection", [
 		 * Collapse the selection to start or end of range.
 		 *
 		 * @method collapse
-		 * @param {Boolean} to_start Optional boolean state if to collapse to end or not. Defaults to start.
+		 * @param {Boolean} toStart Optional boolean state if to collapse to end or not. Defaults to start.
 		 */
-		collapse: function(to_start) {
+		collapse: function(toStart) {
 			var self = this, rng = self.getRng(), node;
 
 			// Control range on IE
@@ -49316,7 +53722,7 @@ define("tinymce/dom/Selection", [
 				rng.moveToElementText(node);
 			}
 
-			rng.collapse(!!to_start);
+			rng.collapse(!!toStart);
 			self.setRng(rng);
 		},
 
@@ -49344,7 +53750,7 @@ define("tinymce/dom/Selection", [
 		getRng: function(w3c) {
 			var self = this, selection, rng, elm, doc = self.win.document, ieRng;
 
-			function tryCompareBounderyPoints(how, sourceRange, destinationRange) {
+			function tryCompareBoundaryPoints(how, sourceRange, destinationRange) {
 				try {
 					return sourceRange.compareBoundaryPoints(how, destinationRange);
 				} catch (ex) {
@@ -49424,8 +53830,8 @@ define("tinymce/dom/Selection", [
 			}
 
 			if (self.selectedRange && self.explicitRange) {
-				if (tryCompareBounderyPoints(rng.START_TO_START, rng, self.selectedRange) === 0 &&
-					tryCompareBounderyPoints(rng.END_TO_END, rng, self.selectedRange) === 0) {
+				if (tryCompareBoundaryPoints(rng.START_TO_START, rng, self.selectedRange) === 0 &&
+					tryCompareBoundaryPoints(rng.END_TO_END, rng, self.selectedRange) === 0) {
 					// Safari, Opera and Chrome only ever select text which causes the range to change.
 					// This lets us use the originally set range if the selection hasn't been changed by the user.
 					rng = self.explicitRange;
@@ -49446,6 +53852,10 @@ define("tinymce/dom/Selection", [
 		 */
 		setRng: function(rng, forward) {
 			var self = this, sel;
+
+			if (!rng) {
+				return;
+			}
 
 			// Is IE specific range
 			if (rng.select) {
@@ -49766,6 +54176,30 @@ define("tinymce/dom/Selection", [
 			}
 		},
 
+		placeCaretAt: function(clientX, clientY) {
+			var doc = this.editor.getDoc(), rng, point;
+
+			if (doc.caretPositionFromPoint) {
+				point = doc.caretPositionFromPoint(clientX, clientY);
+				rng = doc.createRange();
+				rng.setStart(point.offsetNode, point.offset);
+				rng.collapse(true);
+			} else if (doc.caretRangeFromPoint) {
+				rng = doc.caretRangeFromPoint(clientX, clientY);
+			} else if (doc.body.createTextRange) {
+				rng = doc.body.createTextRange();
+
+				try {
+					rng.moveToPoint(clientX, clientY);
+					rng.collapse(true);
+				} catch (ex) {
+					rng.collapse(clientY < doc.body.clientHeight);
+				}
+			}
+
+			this.setRng(rng);
+		},
+
 		_moveEndPoint: function(rng, node, start) {
 			var root = node, walker = new TreeWalker(node, root);
 			var nonEmptyElementsMap = this.dom.schema.getNonEmptyElements();
@@ -49782,8 +54216,8 @@ define("tinymce/dom/Selection", [
 					return;
 				}
 
-				// BR/IMG/INPUT elements
-				if (nonEmptyElementsMap[node.nodeName]) {
+				// BR/IMG/INPUT elements but not table cells
+				if (nonEmptyElementsMap[node.nodeName] && !/^(TD|TH)$/.test(node.nodeName)) {
 					if (start) {
 						rng.setStartBefore(node);
 					} else {
@@ -50239,8 +54673,8 @@ define("tinymce/Formatter", [
 					{inline: 'strike', remove: 'all'}
 				],
 
-				forecolor: {inline: 'span', styles: {color: '%value'}, wrap_links: false, remove_similar: true},
-				hilitecolor: {inline: 'span', styles: {backgroundColor: '%value'}, wrap_links: false, remove_similar: true},
+				forecolor: {inline: 'span', styles: {color: '%value'}, links: true, remove_similar: true},
+				hilitecolor: {inline: 'span', styles: {backgroundColor: '%value'}, links: true, remove_similar: true},
 				fontname: {inline: 'span', styles: {fontFamily: '%value'}},
 				fontsize: {inline: 'span', styles: {fontSize: '%value'}},
 				fontsize_class: {inline: 'span', attributes: {'class': '%value'}},
@@ -50365,6 +54799,20 @@ define("tinymce/Formatter", [
 			}
 		}
 
+		/**
+		 * Unregister a specific format by name.
+		 *
+		 * @method unregister
+		 * @param {String} name Name of the format for example "bold".
+		 */
+		function unregister(name) {
+			if (name && formats[name]) {
+				delete formats[name];
+			}
+
+			return formats;
+		}
+
 		function getTextDecoration(node) {
 			var decoration;
 
@@ -50459,62 +54907,6 @@ define("tinymce/Formatter", [
 				}
 
 				return rng;
-			}
-
-			function applyStyleToList(node, bookmark, wrapElm, newWrappers, process) {
-				var nodes = [], listIndex = -1, list, startIndex = -1, endIndex = -1, currentWrapElm;
-
-				// find the index of the first child list.
-				each(node.childNodes, function(n, index) {
-					if (n.nodeName === "UL" || n.nodeName === "OL") {
-						listIndex = index;
-						list = n;
-						return false;
-					}
-				});
-
-				// get the index of the bookmarks
-				each(node.childNodes, function(n, index) {
-					if (isBookmarkNode(n)) {
-						if (n.id == bookmark.id + "_start") {
-							startIndex = index;
-						} else if (n.id == bookmark.id + "_end") {
-							endIndex = index;
-						}
-					}
-				});
-
-				// if the selection spans across an embedded list, or there isn't an embedded list - handle processing normally
-				if (listIndex <= 0 || (startIndex < listIndex && endIndex > listIndex)) {
-					each(grep(node.childNodes), process);
-					return 0;
-				} else {
-					currentWrapElm = dom.clone(wrapElm, FALSE);
-
-					// create a list of the nodes on the same side of the list as the selection
-					each(grep(node.childNodes), function(n, index) {
-						if ((startIndex < listIndex && index < listIndex) || (startIndex > listIndex && index > listIndex)) {
-							nodes.push(n);
-							n.parentNode.removeChild(n);
-						}
-					});
-
-					// insert the wrapping element either before or after the list.
-					if (startIndex < listIndex) {
-						node.insertBefore(currentWrapElm, list);
-					} else if (startIndex > listIndex) {
-						node.insertBefore(currentWrapElm, list.nextSibling);
-					}
-
-					// add the new nodes to the list.
-					newWrappers.push(currentWrapElm);
-
-					each(nodes, function(node) {
-						currentWrapElm.appendChild(node);
-					});
-
-					return currentWrapElm;
-				}
 			}
 
 			function applyRngStyle(rng, bookmark, node_specific) {
@@ -50613,10 +55005,6 @@ define("tinymce/Formatter", [
 							}
 
 							currentWrapElm.appendChild(node);
-						} else if (nodeName == 'li' && bookmark) {
-							// Start wrapping - if we are in a list node and have a bookmark, then
-							// we will always begin by wrapping in a new element.
-							currentWrapElm = applyStyleToList(node, bookmark, wrapElm, newWrappers, process);
 						} else {
 							// Start a new wrapper for possible children
 							currentWrapElm = 0;
@@ -50636,22 +55024,12 @@ define("tinymce/Formatter", [
 					each(nodes, process);
 				});
 
-				// Wrap links inside as well, for example color inside a link when the wrapper is around the link
-				if (format.wrap_links === false) {
+				// Apply formats to links as well to get the color of the underline to change as well
+				if (format.links === true) {
 					each(newWrappers, function(node) {
 						function process(node) {
-							var i, currentWrapElm, children;
-
 							if (node.nodeName === 'A') {
-								currentWrapElm = dom.clone(wrapElm, FALSE);
-								newWrappers.push(currentWrapElm);
-
-								children = grep(node.childNodes);
-								for (i = 0; i < children.length; i++) {
-									currentWrapElm.appendChild(children[i]);
-								}
-
-								node.appendChild(currentWrapElm);
+								setElementFormat(node, format);
 							}
 
 							each(grep(node.childNodes), process);
@@ -50721,22 +55099,8 @@ define("tinymce/Formatter", [
 							// this: <span style="color:red"><b><span style="color:red; font-size:10px">text</span></b></span>
 							// will become: <span style="color:red"><b><span style="font-size:10px">text</span></b></span>
 							each(dom.select(format.inline, node), function(child) {
-								var parent;
-
 								if (isBookmarkNode(child)) {
 									return;
-								}
-
-								// When wrap_links is set to false we don't want
-								// to remove the format on children within links
-								if (format.wrap_links === false) {
-									parent = child.parentNode;
-
-									do {
-										if (parent.nodeName === 'A') {
-											return;
-										}
-									} while ((parent = parent.parentNode));
 								}
 
 								removeFormat(format, vars, child, format.exact ? child : null);
@@ -50881,12 +55245,12 @@ define("tinymce/Formatter", [
 				return formatRoot;
 			}
 
-			function wrapAndSplit(format_root, container, target, split) {
+			function wrapAndSplit(formatRoot, container, target, split) {
 				var parent, clone, lastClone, firstClone, i, formatRootParent;
 
 				// Format root found then clone formats and split it
-				if (format_root) {
-					formatRootParent = format_root.parentNode;
+				if (formatRoot) {
+					formatRootParent = formatRoot.parentNode;
 
 					for (parent = container.parentNode; parent && parent != formatRootParent; parent = parent.parentNode) {
 						clone = dom.clone(parent, FALSE);
@@ -50913,8 +55277,8 @@ define("tinymce/Formatter", [
 					}
 
 					// Never split block elements if the format is mixed
-					if (split && (!format.mixed || !isBlock(format_root))) {
-						container = dom.split(format_root, container);
+					if (split && (!format.mixed || !isBlock(formatRoot))) {
+						container = dom.split(formatRoot, container);
 					}
 
 					// Wrap container in cloned formats
@@ -51278,6 +55642,11 @@ define("tinymce/Formatter", [
 				ed.on('NodeChange', function(e) {
 					var parents = getParents(e.element), matchedFormats = {};
 
+					// Ignore bogus nodes like the <a> tag created by moveStart()
+					parents = Tools.grep(parents, function(node) {
+						return node.nodeType == 1 && !node.getAttribute('data-mce-bogus');
+					});
+
 					// Check for new formats
 					each(formatChangeData, function(callbacks, format) {
 						each(parents, function(node) {
@@ -51341,6 +55710,7 @@ define("tinymce/Formatter", [
 		extend(this, {
 			get: get,
 			register: register,
+			unregister: unregister,
 			apply: apply,
 			remove: remove,
 			toggle: toggle,
@@ -51355,8 +55725,8 @@ define("tinymce/Formatter", [
 		// Initialize
 		defaultFormats();
 		addKeyboardShortcuts();
-		ed.on('BeforeGetContent', function() {
-			if (markCaretContainersBogus) {
+		ed.on('BeforeGetContent', function(e) {
+			if (markCaretContainersBogus && e.format != 'raw') {
 				markCaretContainersBogus();
 			}
 		});
@@ -51561,7 +55931,7 @@ define("tinymce/Formatter", [
 						offset = node.nodeType === 3 ? node.length : node.childNodes.length;
 					}
 				}
-				return { node: node, offset: offset };
+				return {node: node, offset: offset};
 			}
 
 			// If index based start position then resolve it
@@ -51846,6 +56216,10 @@ define("tinymce/Formatter", [
 			};
 		}
 
+		function isColorFormatAndAnchor(node, format) {
+			return format.links && node.tagName == 'A';
+		}
+
 		/**
 		 * Removes the specified format for the specified node. It will also remove the node if it doesn't have
 		 * any attributes if the format specifies it to do so.
@@ -51861,7 +56235,7 @@ define("tinymce/Formatter", [
 			var i, attrs, stylesModified;
 
 			// Check if node matches format
-			if (!matchName(node, format)) {
+			if (!matchName(node, format) && !isColorFormatAndAnchor(node, format)) {
 				return FALSE;
 			}
 
@@ -52221,12 +56595,12 @@ define("tinymce/Formatter", [
 							child.deleteData(0, 1);
 
 							// Fix for bug #6976
-							if (rng.startContainer == child) {
-								rng.startOffset--;
+							if (rng.startContainer == child && rng.startOffset > 0) {
+								rng.setStart(child, rng.startOffset - 1);
 							}
 
-							if (rng.endContainer == child) {
-								rng.endOffset--;
+							if (rng.endContainer == child && rng.endOffset > 0) {
+								rng.setEnd(child, rng.endOffset - 1);
 							}
 						}
 
@@ -52462,7 +56836,7 @@ define("tinymce/Formatter", [
 					if (node.nodeType == 3 && !isWhiteSpaceNode(node)) {
 						// IE has a "neat" feature where it moves the start node into the closest element
 						// we can avoid this by inserting an element before it and then remove it after we set the selection
-						tmpNode = dom.create('a', null, INVISIBLE_CHAR);
+						tmpNode = dom.create('a', {'data-mce-bogus': 'all'}, INVISIBLE_CHAR);
 						node.parentNode.insertBefore(tmpNode, node);
 
 						// Set selection and remove tmpNode
@@ -52521,7 +56895,7 @@ define("tinymce/UndoManager", [
 		 * @return {String} HTML contents of the editor excluding some internal bogus elements.
 		 */
 		function getContent() {
-			var content = trim(editor.getContent({format: 'raw', no_events: 1}));
+			var content = editor.getContent({format: 'raw', no_events: 1});
 			var bogusAllRegExp = /<(\w+) [^>]*data-mce-bogus="all"[^>]*>/g;
 			var endTagIndex, index, matchLength, matches, shortEndedElements, schema = editor.schema;
 
@@ -52543,7 +56917,7 @@ define("tinymce/UndoManager", [
 				bogusAllRegExp.lastIndex = index - matchLength;
 			}
 
-			return content;
+			return trim(content);
 		}
 
 		function addNonTypingUndoLevel(e) {
@@ -52647,38 +57021,6 @@ define("tinymce/UndoManager", [
 				editor.nodeChanged();
 			}
 		});
-
-		// Selection range isn't updated until after the click events default handler is executed
-		// so we need to wait for the selection to update on Gecko/WebKit it happens right away.
-		// On IE it might take a while so we listen for the SelectionChange event.
-		//
-		// We can't use the SelectionChange on all browsers event since Gecko doesn't support that.
-		if (Env.ie) {
-			editor.on('MouseUp', function(e) {
-				if (!e.isDefaultPrevented()) {
-					editor.once('SelectionChange', function() {
-						// Selection change might fire when focus is lost
-						if (editor.dom.isChildOf(editor.selection.getStart(), editor.getBody())) {
-							editor.nodeChanged();
-						}
-					});
-
-					editor.nodeChanged();
-				}
-			});
-		} else {
-			editor.on('MouseUp', function() {
-				editor.nodeChanged();
-			});
-
-			editor.on('Click', function(e) {
-				if (!e.isDefaultPrevented()) {
-					setTimeout(function() {
-						editor.nodeChanged();
-					}, 0);
-				}
-			});
-		}
 
 		self = {
 			// Explose for debugging reasons
@@ -53510,7 +57852,7 @@ define("tinymce/EnterKey", [
 			dom.setAttrib(newBlock, 'id', ''); // Remove ID since it needs to be document unique
 
 			// Allow custom handling of new blocks
-			editor.fire('NewBlock', { newBlock: newBlock });
+			editor.fire('NewBlock', {newBlock: newBlock});
 
 			undoManager.add();
 		}
@@ -54050,7 +58392,7 @@ define("tinymce/EditorCommands", [
 				// Setup parser and serializer
 				parser = editor.parser;
 				serializer = new Serializer({}, editor.schema);
-				bookmarkHtml = '<span id="mce_marker" data-mce-type="bookmark">&#xFEFF;&#200B;</span>';
+				bookmarkHtml = '<span id="mce_marker" data-mce-type="bookmark">&#xFEFF;&#x200B;</span>';
 
 				// Run beforeSetContent handlers on the HTML to be inserted
 				args = {content: value, format: 'html', selection: true};
@@ -54098,7 +58440,9 @@ define("tinymce/EditorCommands", [
 
 					for (node = node.prev; node; node = node.walk(true)) {
 						if (node.type == 3 || !dom.isBlock(node.name)) {
-							node.parent.insert(marker, node, node.name === 'br');
+							if (editor.schema.isValidChild(node.parent.name, 'span')) {
+								node.parent.insert(marker, node, node.name === 'br');
+							}
 							break;
 						}
 					}
@@ -55106,7 +59450,7 @@ define("tinymce/util/EventDispatcher", [
 		"focus blur focusin focusout click dblclick mousedown mouseup mousemove mouseover beforepaste paste cut copy selectionchange " +
 		"mouseout mouseenter mouseleave wheel keydown keypress keyup input contextmenu dragstart dragend dragover " +
 		"draggesture dragdrop drop drag submit " +
-		"compositionstart compositionend compositionupdate",
+		"compositionstart compositionend compositionupdate touchstart touchend",
 		' '
 	);
 
@@ -56252,6 +60596,10 @@ define("tinymce/ui/DomUtils", [
 			return DOMUtils.DOM.setStyle(elm, name, value);
 		},
 
+		getRuntimeStyle: function(elm, name) {
+			return DOMUtils.DOM.getStyle(elm, name, true);
+		},
+
 		on: function(target, name, callback, scope) {
 			return DOMUtils.DOM.bind(target, name, callback, scope);
 		},
@@ -56300,7 +60648,6 @@ define("tinymce/ui/Control", [
 ], function(Class, Tools, EventDispatcher, Collection, DomUtils) {
 	
 
-	var elementIdCache = {};
 	var hasMouseWheelEventSupport = "onmousewheel" in document;
 	var hasWheelEventSupport = false;
 	var classPrefix = "mce-";
@@ -56330,7 +60677,6 @@ define("tinymce/ui/Control", [
 
 	var Control = Class.extend({
 		Statics: {
-			elementIdCache: elementIdCache,
 			classPrefix: classPrefix
 		},
 
@@ -56373,6 +60719,7 @@ define("tinymce/ui/Control", [
 			self._text = self._name = '';
 			self._width = self._height = 0;
 			self._aria = {role: settings.role};
+			this._elmCache = {};
 
 			// Setup classes
 			classes = settings.classes;
@@ -57114,15 +61461,16 @@ define("tinymce/ui/Control", [
 		 *
 		 * @method getEl
 		 * @param {String} [suffix] Suffix to get element by.
-		 * @param {Boolean} [dropCache] True if the cache for the element should be dropped.
 		 * @return {Element} HTML DOM element for the current control or it's children.
 		 */
-		getEl: function(suffix, dropCache) {
-			var elm, id = suffix ? this._id + '-' + suffix : this._id;
+		getEl: function(suffix) {
+			var id = suffix ? this._id + '-' + suffix : this._id;
 
-			elm = elementIdCache[id] = (dropCache === true ? null : elementIdCache[id]) || DomUtils.get(id);
+			if (!this._elmCache[id]) {
+				this._elmCache[id] = DomUtils.get(id);
+			}
 
-			return elm;
+			return this._elmCache[id];
 		},
 
 		/**
@@ -57333,16 +61681,7 @@ define("tinymce/ui/Control", [
 				delete lookup[self._id];
 			}
 
-			delete elementIdCache[self._id];
-
 			if (elm && elm.parentNode) {
-				var nodes = elm.getElementsByTagName('*');
-
-				i = nodes.length;
-				while (i--) {
-					delete elementIdCache[nodes[i].id];
-				}
-
 				elm.parentNode.removeChild(elm);
 			}
 
@@ -57900,7 +62239,13 @@ define("tinymce/ui/KeyboardNavigation", [
 	return function(settings) {
 		var root = settings.root, focusedElement, focusedControl;
 
-		focusedElement = document.activeElement;
+		try {
+			focusedElement = document.activeElement;
+		} catch (ex) {
+			// IE sometimes fails to return a proper element
+			focusedElement = document.body;
+		}
+
 		focusedControl = root.getParentCtrl(focusedElement);
 
 		/**
@@ -58016,7 +62361,7 @@ define("tinymce/ui/KeyboardNavigation", [
 		/**
 		 * Returns the navigation root control for the specified control. The navigation root
 		 * is the control that the keyboard navigation gets scoped to for example a menubar or toolbar group.
-		 * It will look for parents of the specified target control or the currenty focused control if this option is omitted.
+		 * It will look for parents of the specified target control or the currently focused control if this option is omitted.
 		 *
 		 * @private
 		 * @param {tinymce.ui.Control} targetControl Optional target control to find root of.
@@ -59155,7 +63500,7 @@ define("tinymce/ui/Movable", [
 		x = pos.x;
 		y = pos.y;
 
-		if (ctrl._fixed) {
+		if (ctrl._fixed && DomUtils.getRuntimeStyle(document.body, 'position') == 'static') {
 			x -= viewport.x;
 			y -= viewport.y;
 		}
@@ -59489,8 +63834,15 @@ define("tinymce/ui/FloatPanel", [
 
 	function bindWindowResizeHandler() {
 		if (!windowResizeHandler) {
+			var docElm = document.documentElement, clientWidth = docElm.clientWidth, clientHeight = docElm.clientHeight;
+
 			windowResizeHandler = function() {
-				FloatPanel.hideAll();
+				// Workaround for #7065 IE 7 fires resize events event though the window wasn't resized
+				if (!document.all || clientWidth != docElm.clientWidth || clientHeight != docElm.clientHeight) {
+					clientWidth = docElm.clientWidth;
+					clientHeight = docElm.clientHeight;
+					FloatPanel.hideAll();
+				}
 			};
 
 			DomUtils.on(window, 'resize', windowResizeHandler);
@@ -59537,6 +63889,46 @@ define("tinymce/ui/FloatPanel", [
 		}
 	}
 
+	function addRemove(add, ctrl) {
+		var i, zIndex = FloatPanel.zIndex || 0xFFFF, topModal;
+
+		if (add) {
+			zOrder.push(ctrl);
+		} else {
+			i = zOrder.length;
+
+			while (i--) {
+				if (zOrder[i] === ctrl) {
+					zOrder.splice(i, 1);
+				}
+			}
+		}
+
+		if (zOrder.length) {
+			for (i = 0; i < zOrder.length; i++) {
+				if (zOrder[i].modal) {
+					zIndex++;
+					topModal = zOrder[i];
+				}
+
+				zOrder[i].getEl().style.zIndex = zIndex;
+				zOrder[i].zIndex = zIndex;
+				zIndex++;
+			}
+		}
+
+		var modalBlockEl = document.getElementById(ctrl.classPrefix + 'modal-block');
+
+		if (topModal) {
+			DomUtils.css(modalBlockEl, 'z-index', topModal.zIndex - 1);
+		} else if (modalBlockEl) {
+			modalBlockEl.parentNode.removeChild(modalBlockEl);
+			hasModal = false;
+		}
+
+		FloatPanel.currentZIndex = zIndex;
+	}
+
 	var FloatPanel = Panel.extend({
 		Mixins: [Movable, Resizable],
 
@@ -59549,34 +63941,6 @@ define("tinymce/ui/FloatPanel", [
 		 */
 		init: function(settings) {
 			var self = this;
-
-			function reorder() {
-				var i, zIndex = FloatPanel.zIndex || 0xFFFF, topModal;
-
-				if (zOrder.length) {
-					for (i = 0; i < zOrder.length; i++) {
-						if (zOrder[i].modal) {
-							zIndex++;
-							topModal = zOrder[i];
-						}
-
-						zOrder[i].getEl().style.zIndex = zIndex;
-						zOrder[i].zIndex = zIndex;
-						zIndex++;
-					}
-				}
-
-				var modalBlockEl = document.getElementById(self.classPrefix + 'modal-block');
-
-				if (topModal) {
-					DomUtils.css(modalBlockEl, 'z-index', topModal.zIndex - 1);
-				} else if (modalBlockEl) {
-					modalBlockEl.parentNode.removeChild(modalBlockEl);
-					hasModal = false;
-				}
-
-				FloatPanel.currentZIndex = zIndex;
-			}
 
 			self._super(settings);
 			self._eventsRoot = self;
@@ -59617,22 +63981,7 @@ define("tinymce/ui/FloatPanel", [
 						hasModal = true;
 					}
 
-					zOrder.push(self);
-					reorder();
-				}
-			});
-
-			self.on('close hide', function(e) {
-				if (e.control == self) {
-					var i = zOrder.length;
-
-					while (i--) {
-						if (zOrder[i] === self) {
-							zOrder.splice(i, 1);
-						}
-					}
-
-					reorder();
+					addRemove(true, self);
 				}
 			});
 
@@ -59703,6 +64052,8 @@ define("tinymce/ui/FloatPanel", [
 		 */
 		hide: function() {
 			removeVisiblePanel(this);
+			addRemove(false, this);
+
 			return this._super();
 		},
 
@@ -59724,9 +64075,12 @@ define("tinymce/ui/FloatPanel", [
 		close: function() {
 			var self = this;
 
-			self.fire('close');
+			if (!self.fire('close').isDefaultPrevented()) {
+				self.remove();
+				addRemove(false, self);
+			}
 
-			return self.remove();
+			return self;
 		},
 
 		/**
@@ -60276,44 +64630,41 @@ define("tinymce/ui/MessageBox", [
 			msgBox: function(settings) {
 				var buttons, callback = settings.callback || function() {};
 
+				function createButton(text, status, primary) {
+					return {
+						type: "button",
+						text: text,
+						subtype: primary ? 'primary' : '',
+						onClick: function(e) {
+							e.control.parents()[1].close();
+							callback(status);
+						}
+					};
+				}
+
 				switch (settings.buttons) {
 					case MessageBox.OK_CANCEL:
 						buttons = [
-							{type: "button", text: "Ok", subtype: "primary", onClick: function(e) {
-								e.control.parents()[1].close();
-								callback(true);
-							}},
-
-							{type: "button", text: "Cancel", onClick: function(e) {
-								e.control.parents()[1].close();
-								callback(false);
-							}}
+							createButton('Ok', true, true),
+							createButton('Cancel', false)
 						];
 						break;
 
 					case MessageBox.YES_NO:
-						buttons = [
-							{type: "button", text: "Ok", subtype: "primary", onClick: function(e) {
-								e.control.parents()[1].close();
-								callback(true);
-							}}
-						];
-						break;
-
 					case MessageBox.YES_NO_CANCEL:
 						buttons = [
-							{type: "button", text: "Ok", subtype: "primary", onClick: function(e) {
-								e.control.parents()[1].close();
-							}}
+							createButton('Yes', 1, true),
+							createButton('No', 0)
 						];
+
+						if (settings.buttons == MessageBox.YES_NO_CANCEL) {
+							buttons.push(createButton('Cancel', -1));
+						}
 						break;
 
 					default:
 						buttons = [
-							{type: "button", text: "Ok", subtype: "primary", onClick: function(e) {
-								e.control.parents()[1].close();
-								callback(true);
-							}}
+							createButton('Ok', true, true)
 						];
 						break;
 				}
@@ -60439,6 +64790,14 @@ define("tinymce/WindowManager", [
 
 		self.windows = windows;
 
+		editor.on('remove', function() {
+			var i = windows.length;
+
+			while (i--) {
+				windows[i].close();
+			}
+		});
+
 		/**
 		 * Opens a new window.
 		 *
@@ -60456,7 +64815,7 @@ define("tinymce/WindowManager", [
 		self.open = function(args, params) {
 			var win;
 
-			editor.editorManager.activeEditor = editor;
+			editor.editorManager.setActive(editor);
 
 			args.title = args.title || ' ';
 
@@ -60500,7 +64859,9 @@ define("tinymce/WindowManager", [
 					}
 				}
 
-				editor.focus();
+				if (!windows.length) {
+					editor.focus();
+				}
 			});
 
 			// Handle data
@@ -60521,7 +64882,9 @@ define("tinymce/WindowManager", [
 			win.params = params || {};
 
 			// Takes a snapshot in the FocusManager of the selection before focus is lost to dialog
-			editor.nodeChanged();
+			if (windows.length === 1) {
+				editor.nodeChanged();
+			}
 
 			return win.renderTo().reflow();
 		};
@@ -60765,7 +65128,7 @@ define("tinymce/util/Quirks", [
 
 					// Make sure all elements has a data-mce-style attribute
 					if (!elm.hasAttribute('data-mce-style') && elm.hasAttribute('style')) {
-						editor.dom.setAttrib(elm, 'style', elm.getAttribute('style'));
+						editor.dom.setAttrib(elm, 'style', editor.dom.getAttrib(elm, 'style'));
 					}
 				});
 
@@ -61011,12 +65374,7 @@ define("tinymce/util/Quirks", [
 		 * This selects the whole body so that backspace/delete logic will delete everything
 		 */
 		function selectAll() {
-			editor.on('keydown', function(e) {
-				if (!isDefaultPrevented(e) && e.keyCode == 65 && VK.metaKeyPressed(e)) {
-					e.preventDefault();
-					editor.execCommand('SelectAll');
-				}
-			});
+			editor.shortcuts.add('ctrl+a', null, 'SelectAll');
 		}
 
 		/**
@@ -61038,10 +65396,17 @@ define("tinymce/util/Quirks", [
 				});
 
 				// Case 2 IME doesn't initialize if you click the documentElement it also doesn't properly fire the focusin event
-				dom.bind(editor.getDoc(), 'mousedown', function(e) {
+				// Needs to be both down/up due to weird rendering bug on Chrome Windows
+				dom.bind(editor.getDoc(), 'mousedown mouseup', function(e) {
 					if (e.target == editor.getDoc().documentElement) {
 						editor.getBody().focus();
-						selection.setRng(selection.getRng());
+
+						if (e.type == 'mousedown') {
+							// Edge case for mousedown, drag select and mousedown again within selection on Chrome Windows to render caret
+							selection.placeCaretAt(e.clientX, e.clientY);
+						} else {
+							selection.setRng(selection.getRng());
+						}
 					}
 				});
 			}
@@ -61113,20 +65478,21 @@ define("tinymce/util/Quirks", [
 		 */
 		function selectControlElements() {
 			editor.on('click', function(e) {
-				e = e.target;
+				var target = e.target;
 
 				// Workaround for bug, http://bugs.webkit.org/show_bug.cgi?id=12250
 				// WebKit can't even do simple things like selecting an image
-				// Needs tobe the setBaseAndExtend or it will fail to select floated images
-				if (/^(IMG|HR)$/.test(e.nodeName)) {
-					selection.getSel().setBaseAndExtent(e, 0, e, 1);
+				// Needs to be the setBaseAndExtend or it will fail to select floated images
+				if (/^(IMG|HR)$/.test(target.nodeName)) {
+					e.preventDefault();
+					selection.getSel().setBaseAndExtent(target, 0, target, 1);
+					editor.nodeChanged();
 				}
 
-				if (e.nodeName == 'A' && dom.hasClass(e, 'mce-item-anchor')) {
-					selection.select(e);
+				if (target.nodeName == 'A' && dom.hasClass(target, 'mce-item-anchor')) {
+					e.preventDefault();
+					selection.select(target);
 				}
-
-				editor.nodeChanged();
 			});
 		}
 
@@ -61186,35 +65552,6 @@ define("tinymce/util/Quirks", [
 						applyAttributes();
 					}, 0);
 				}
-			});
-		}
-
-		/**
-		 * Fire a nodeChanged when the selection is changed on WebKit this fixes selection issues on iOS5. It only fires the nodeChange
-		 * event every 50ms since it would other wise update the UI when you type and it hogs the CPU.
-		 */
-		function selectionChangeNodeChanged() {
-			var lastRng, selectionTimer;
-
-			editor.on('selectionchange', function() {
-				if (selectionTimer) {
-					clearTimeout(selectionTimer);
-					selectionTimer = 0;
-				}
-
-				selectionTimer = window.setTimeout(function() {
-					if (editor.removed) {
-						return;
-					}
-
-					var rng = selection.getRng();
-
-					// Compare the ranges to see if it was a real change or not
-					if (!lastRng || !RangeUtils.compareRanges(rng, lastRng)) {
-						editor.nodeChanged();
-						lastRng = rng;
-					}
-				}, 50);
 			});
 		}
 
@@ -61745,6 +66082,61 @@ define("tinymce/util/Quirks", [
 		}
 
 		/**
+		 * iOS Safari and possible other browsers have a bug where it won't fire
+		 * a click event when a contentEditable is focused. This function fakes click events
+		 * by using touchstart/touchend and measuring the time and distance travelled.
+		 */
+		function touchClickEvent() {
+			editor.on('touchstart', function(e) {
+				var elm, time, startTouch, changedTouches;
+
+				elm = e.target;
+				time = new Date().getTime();
+				changedTouches = e.changedTouches;
+
+				if (!changedTouches || changedTouches.length > 1) {
+					return;
+				}
+
+				startTouch = changedTouches[0];
+
+				editor.once('touchend', function(e) {
+					var endTouch = e.changedTouches[0], args;
+
+					if (new Date().getTime() - time > 500) {
+						return;
+					}
+
+					if (Math.abs(startTouch.clientX - endTouch.clientX) > 5) {
+						return;
+					}
+
+					if (Math.abs(startTouch.clientY - endTouch.clientY) > 5) {
+						return;
+					}
+
+					args = {
+						target: elm
+					};
+
+					each('pageX pageY clientX clientY screenX screenY'.split(' '), function(key) {
+						args[key] = endTouch[key];
+					});
+
+					args = editor.fire('click', args);
+
+					if (!args.isDefaultPrevented()) {
+						// iOS WebKit can't place the caret properly once
+						// you bind touch events so we need to do this manually
+						// TODO: Expand to the closest word? Touble tap still works.
+						editor.selection.placeCaretAt(endTouch.clientX, endTouch.clientY);
+						editor.nodeChanged();
+					}
+				});
+			});
+		}
+
+		/**
 		 * WebKit has a bug where it will allow forms to be submitted if they are inside a contentEditable element.
 		 * For example this: <form><button></form>
 		 */
@@ -61753,6 +66145,26 @@ define("tinymce/util/Quirks", [
 				editor.dom.bind(editor.getBody(), 'submit', function(e) {
 					e.preventDefault();
 				});
+			});
+		}
+
+		/**
+		 * Sometimes WebKit/Blink generates BR elements with the Apple-interchange-newline class.
+		 *
+		 * Scenario:
+		 *  1) Create a table 2x2.
+		 *  2) Select and copy cells A2-B2.
+		 *  3) Paste and it will add BR element to table cell.
+		 */
+		function removeAppleInterchangeBrs() {
+			parser.addNodeFilter('br', function(nodes) {
+				var i = nodes.length;
+
+				while (i--) {
+					if (nodes[i].attr('class') == 'Apple-interchange-newline') {
+						nodes[i].remove();
+					}
+				}
 			});
 		}
 
@@ -61769,10 +66181,11 @@ define("tinymce/util/Quirks", [
 			setDefaultBlockType();
 			blockFormSubmitInsideEditor();
 			disableBackspaceIntoATable();
+			removeAppleInterchangeBrs();
+			touchClickEvent();
 
 			// iOS
 			if (Env.iOS) {
-				selectionChangeNodeChanged();
 				restoreFocusOnKeyDown();
 				bodyHeight();
 				tapLinksAndImages();
@@ -61974,8 +66387,18 @@ define("tinymce/EditorObservable", [
 	"tinymce/dom/DOMUtils",
 	"tinymce/util/Tools"
 ], function(Observable, DOMUtils, Tools) {
-	var DOM = DOMUtils.DOM;
+	var DOM = DOMUtils.DOM, customEventRootDelegates;
 
+	/**
+	 * Returns the event target so for the specified event. Some events fire
+	 * only on document, some fire on documentElement etc. This also handles the
+	 * custom event root setting where it returns that element instead of the body.
+	 *
+	 * @private
+	 * @param {tinymce.Editor} editor Editor instance to get event target from.
+	 * @param {String} eventName Name of the event for example "click".
+	 * @return {Element/Document} HTML Element or document target to bind on.
+	 */
 	function getEventTarget(editor, eventName) {
 		if (eventName == 'selectionchange') {
 			return editor.getDoc();
@@ -61984,62 +66407,96 @@ define("tinymce/EditorObservable", [
 		// Need to bind mousedown/mouseup etc to document not body in iframe mode
 		// Since the user might click on the HTML element not the BODY
 		if (!editor.inline && /^mouse|click|contextmenu|drop|dragover|dragend/.test(eventName)) {
-			return editor.getDoc();
+			return editor.getDoc().documentElement;
+		}
+
+		// Bind to event root instead of body if it's defined
+		if (editor.settings.event_root) {
+			if (!editor.eventRoot) {
+				editor.eventRoot = DOM.select(editor.settings.event_root)[0];
+			}
+
+			return editor.eventRoot;
 		}
 
 		return editor.getBody();
 	}
 
-	function bindEventDelegate(editor, name) {
-		var eventRootSelector = editor.settings.event_root, editorManager = editor.editorManager;
-		var eventRootElm = editorManager.eventRootElm || getEventTarget(editor, name);
+	/**
+	 * Binds a event delegate for the specified name this delegate will fire
+	 * the event to the editor dispatcher.
+	 *
+	 * @private
+	 * @param {tinymce.Editor} editor Editor instance to get event target from.
+	 * @param {String} eventName Name of the event for example "click".
+	 */
+	function bindEventDelegate(editor, eventName) {
+		var eventRootElm = getEventTarget(editor, eventName), delegate;
 
-		if (eventRootSelector) {
-			if (!editorManager.rootEvents) {
-				editorManager.rootEvents = {};
+		if (!editor.delegates) {
+			editor.delegates = {};
+		}
 
-				editorManager.on('RemoveEditor', function() {
-					if (!editorManager.activeEditor) {
-						DOM.unbind(eventRootElm);
-						delete editorManager.rootEvents;
+		if (editor.delegates[eventName]) {
+			return;
+		}
+
+		if (editor.settings.event_root) {
+			if (!customEventRootDelegates) {
+				customEventRootDelegates = {};
+				editor.editorManager.on('removeEditor', function() {
+					var name;
+
+					if (!editor.editorManager.activeEditor) {
+						if (customEventRootDelegates) {
+							for (name in customEventRootDelegates) {
+								editor.dom.unbind(getEventTarget(editor, name));
+							}
+
+							customEventRootDelegates = null;
+						}
 					}
 				});
 			}
 
-			if (editorManager.rootEvents[name]) {
+			if (customEventRootDelegates[eventName]) {
 				return;
 			}
 
-			if (eventRootElm == editor.getBody()) {
-				eventRootElm = DOM.select(eventRootSelector)[0];
-				editorManager.eventRootElm = eventRootElm;
-			}
-
-			editorManager.rootEvents[name] = true;
-
-			DOM.bind(eventRootElm, name, function(e) {
-				var target = e.target, editors = editorManager.editors, i = editors.length;
+			delegate = function(e) {
+				var target = e.target, editors = editor.editorManager.editors, i = editors.length;
 
 				while (i--) {
 					var body = editors[i].getBody();
 
 					if (body === target || DOM.isChildOf(target, body)) {
 						if (!editors[i].hidden) {
-							editors[i].fire(name, e);
+							editors[i].fire(eventName, e);
 						}
 					}
 				}
-			});
+			};
+
+			customEventRootDelegates[eventName] = delegate;
+			DOM.bind(eventRootElm, eventName, delegate);
 		} else {
-			editor.dom.bind(eventRootElm, name, function(e) {
+			delegate = function(e) {
 				if (!editor.hidden) {
-					editor.fire(name, e);
+					editor.fire(eventName, e);
 				}
-			});
+			};
+
+			DOM.bind(eventRootElm, eventName, delegate);
+			editor.delegates[eventName] = delegate;
 		}
 	}
 
 	var EditorObservable = {
+		/**
+		 * Bind any pending event delegates. This gets executed after the target body/document is created.
+		 *
+		 * @private
+		 */
 		bindPendingEventDelegates: function() {
 			var self = this;
 
@@ -62048,6 +66505,12 @@ define("tinymce/EditorObservable", [
 			});
 		},
 
+		/**
+		 * Toggles a native event on/off this is called by the EventDispatcher when
+		 * the first native event handler is added and when the last native event handler is removed.
+		 *
+		 * @private
+		 */
 		toggleNativeEvent: function(name, state) {
 			var self = this;
 
@@ -62071,8 +66534,35 @@ define("tinymce/EditorObservable", [
 					}
 				}
 			} else if (self.initialized) {
-				self.dom.unbind(getEventTarget(self, name), name);
+				self.dom.unbind(getEventTarget(self, name), name, self.delegates[name]);
+				delete self.delegates[name];
 			}
+		},
+
+		/**
+		 * Unbinds all native event handlers that means delegates, custom events bound using the Events API etc.
+		 *
+		 * @private
+		 */
+		unbindAllNativeEvents: function() {
+			var self = this, name;
+
+			if (self.delegates) {
+				for (name in self.delegates) {
+					self.dom.unbind(getEventTarget(self, name), name, self.delegates[name]);
+				}
+
+				delete self.delegates;
+			}
+
+			if (!self.inline) {
+				self.getBody().onload = null;
+				self.dom.unbind(self.getWin());
+				self.dom.unbind(self.getDoc());
+			}
+
+			self.dom.unbind(self.getBody());
+			self.dom.unbind(self.getContainer());
 		}
 	};
 
@@ -62112,7 +66602,7 @@ define("tinymce/Shortcuts", [
 		var self = this, shortcuts = {};
 
 		editor.on('keyup keypress keydown', function(e) {
-			if (e.altKey || e.ctrlKey || e.metaKey) {
+			if ((e.altKey || e.ctrlKey || e.metaKey) && !e.isDefaultPrevented()) {
 				each(shortcuts, function(shortcut) {
 					var ctrlKey = Env.mac ? e.metaKey : e.ctrlKey;
 
@@ -62248,6 +66738,7 @@ define("tinymce/Editor", [
 	"tinymce/dom/DOMUtils",
 	"tinymce/dom/DomQuery",
 	"tinymce/AddOnManager",
+	"tinymce/NodeChange",
 	"tinymce/html/Node",
 	"tinymce/dom/Serializer",
 	"tinymce/html/Serializer",
@@ -62269,7 +66760,7 @@ define("tinymce/Editor", [
 	"tinymce/EditorObservable",
 	"tinymce/Shortcuts"
 ], function(
-	DOMUtils, DomQuery, AddOnManager, Node, DomSerializer, Serializer,
+	DOMUtils, DomQuery, AddOnManager, NodeChange, Node, DomSerializer, Serializer,
 	Selection, Formatter, UndoManager, EnterKey, ForceBlocks, EditorCommands,
 	URI, ScriptLoader, EventUtils, WindowManager,
 	Schema, DomParser, Quirks, Env, Tools, EditorObservable, Shortcuts
@@ -62341,9 +66832,9 @@ define("tinymce/Editor", [
 			inline_styles: true,
 			convert_fonts_to_spans: true,
 			indent: 'simple',
-			indent_before: 'p,h1,h2,h3,h4,h5,h6,blockquote,div,title,style,pre,script,td,ul,li,area,table,thead,' +
+			indent_before: 'p,h1,h2,h3,h4,h5,h6,blockquote,div,title,style,pre,script,td,ul,ol,li,dl,dt,dd,area,table,thead,' +
 				'tfoot,tbody,tr,section,article,hgroup,aside,figure,option,optgroup,datalist',
-			indent_after: 'p,h1,h2,h3,h4,h5,h6,blockquote,div,title,style,pre,script,td,ul,li,area,table,thead,' +
+			indent_after: 'p,h1,h2,h3,h4,h5,h6,blockquote,div,title,style,pre,script,td,ul,ol,li,dl,dt,dd,area,table,thead,' +
 				'tfoot,tbody,tr,section,article,hgroup,aside,figure,option,optgroup,datalist',
 			validate: true,
 			entity_encoding: 'named',
@@ -62447,6 +66938,10 @@ define("tinymce/Editor", [
 		self.queryStateCommands = {};
 		self.queryValueCommands = {};
 		self.loadedCSS = {};
+
+		if (settings.target) {
+			self.targetElm = settings.target;
+		}
 
 		self.suffix = editorManager.suffix;
 		self.editorManager = editorManager;
@@ -62757,12 +67252,6 @@ define("tinymce/Editor", [
 
 					// Resize editor
 					if (!settings.content_editable) {
-						DOM.setStyles(o.sizeContainer || o.editorContainer, {
-							wi2dth: w,
-							// TODO: Fix this
-							h2eight: h
-						});
-
 						h = (o.iframeHeight || h) + (typeof(h) == 'number' ? (o.deltaHeight || 0) : '');
 						if (h < minHeight) {
 							h = minHeight;
@@ -62840,8 +67329,13 @@ define("tinymce/Editor", [
 				bodyClass = bodyClass[self.id] || '';
 			}
 
-			self.iframeHTML += '</head><body id="' + bodyId + '" class="mce-content-body ' + bodyClass + '" ' +
-				'onload="window.parent.tinymce.get(\'' + self.id + '\').fire(\'load\');"><br></body></html>';
+			if (settings.content_security_policy) {
+				self.iframeHTML += '<meta http-equiv="Content-Security-Policy" content="' + settings.content_security_policy + '" />';
+			}
+
+			self.iframeHTML += '</head><body id="' + bodyId +
+				'" class="mce-content-body ' + bodyClass +
+				'" data-id="' + self.id + '"><br></body></html>';
 
 			/*eslint no-script-url:0 */
 			var domainRelaxUrl = 'javascript:(function(){' +
@@ -62856,14 +67350,14 @@ define("tinymce/Editor", [
 
 			// Create iframe
 			// TODO: ACC add the appropriate description on this.
-			n = DOM.add(o.iframeContainer, 'iframe', {
+			var ifr = DOM.create('iframe', {
 				id: self.id + "_ifr",
-				src: url || 'javascript:""', // Workaround for HTTPS warning in IE6/7
+				//src: url || 'javascript:""', // Workaround for HTTPS warning in IE6/7
 				frameBorder: '0',
 				allowTransparency: "true",
 				title: self.editorManager.translate(
-					"Rich Text Area. Press ALT-F9 for menu. " +
-					"Press ALT-F10 for toolbar. Press ALT-0 for help"
+						"Rich Text Area. Press ALT-F9 for menu. " +
+						"Press ALT-F10 for toolbar. Press ALT-0 for help"
 				),
 				style: {
 					width: '100%',
@@ -62871,6 +67365,18 @@ define("tinymce/Editor", [
 					display: 'block' // Important for Gecko to render the iframe correctly
 				}
 			});
+
+			ifr.onload = function() {
+				ifr.onload = null;
+				self.fire("load");
+			};
+
+			DOM.setAttrib(ifr, "src", url || 'javascript:""');
+
+			self.contentAreaContainer = o.iframeContainer;
+			self.iframeElement = ifr;
+
+			n = DOM.add(o.iframeContainer, ifr);
 
 			// Try accessing the document this will fail on IE when document.domain is set to the same as location.hostname
 			// Then we have to force domain relaxing using the domainRelaxUrl approach very ugly!!
@@ -62882,13 +67388,12 @@ define("tinymce/Editor", [
 				}
 			}
 
-			self.contentAreaContainer = o.iframeContainer;
-
 			if (o.editorContainer) {
 				DOM.get(o.editorContainer).style.display = self.orgDisplay;
+				self.hidden = DOM.isHidden(o.editorContainer);
 			}
 
-			DOM.get(self.id).style.display = 'none';
+			self.getElement().style.display = 'none';
 			DOM.setAttrib(self.id, 'aria-hidden', true);
 
 			if (!url) {
@@ -62906,7 +67411,7 @@ define("tinymce/Editor", [
 		 * @private
 		 */
 		initContentBody: function(skipWrite) {
-			var self = this, settings = self.settings, targetElm = DOM.get(self.id), doc = self.getDoc(), body, contentCssText;
+			var self = this, settings = self.settings, targetElm = self.getElement(), doc = self.getDoc(), body, contentCssText;
 
 			// Restore visibility on target element
 			if (!settings.inline) {
@@ -62979,7 +67484,7 @@ define("tinymce/Editor", [
 				hex_colors: settings.force_hex_style_colors,
 				class_filter: settings.class_filter,
 				update_styles: true,
-				root_element: settings.content_editable ? self.id : null,
+				root_element: self.inline ? self.getBody() : null,
 				collect: settings.content_editable,
 				schema: self.schema,
 				onSetAttrib: function(e) {
@@ -63053,7 +67558,7 @@ define("tinymce/Editor", [
 					node = nodes[i];
 
 					if (node.isEmpty(nonEmptyElements)) {
-						node.empty().append(new Node('br', 1)).shortEnded = true;
+						node.append(new Node('br', 1)).shortEnded = true;
 					}
 				}
 			});
@@ -63108,6 +67613,7 @@ define("tinymce/Editor", [
 			self.forceBlocks = new ForceBlocks(self);
 			self.enterKey = new EnterKey(self);
 			self.editorCommands = new EditorCommands(self);
+			self._nodeChangeDispatcher = new NodeChange(self);
 
 			self.fire('PreInit');
 
@@ -63118,7 +67624,7 @@ define("tinymce/Editor", [
 
 			self.fire('PostRender');
 
-			self.quirks = Quirks(self);
+			self.quirks = new Quirks(self);
 
 			if (settings.directionality) {
 				body.dir = settings.directionality;
@@ -63192,12 +67698,15 @@ define("tinymce/Editor", [
 			// Handle auto focus
 			if (settings.auto_focus) {
 				setTimeout(function() {
-					var ed = self.editorManager.get(settings.auto_focus);
+					var editor;
 
-					ed.selection.select(ed.getBody(), 1);
-					ed.selection.collapse(1);
-					ed.getBody().focus();
-					ed.getWin().focus();
+					if (settings.auto_focus === true) {
+						editor = self;
+					} else {
+						editor = self.editorManager.get(settings.auto_focus);
+					}
+
+					editor.focus();
 				}, 100);
 			}
 
@@ -63210,13 +67719,13 @@ define("tinymce/Editor", [
 		 * it will also place DOM focus inside the editor.
 		 *
 		 * @method focus
-		 * @param {Boolean} skip_focus Skip DOM focus. Just set is as the active editor.
+		 * @param {Boolean} skipFocus Skip DOM focus. Just set is as the active editor.
 		 */
-		focus: function(skip_focus) {
-			var oed, self = this, selection = self.selection, contentEditable = self.settings.content_editable, rng;
+		focus: function(skipFocus) {
+			var self = this, selection = self.selection, contentEditable = self.settings.content_editable, rng;
 			var controlElm, doc = self.getDoc(), body;
 
-			if (!skip_focus) {
+			if (!skipFocus) {
 				// Get selected control element
 				rng = selection.getRng();
 				if (rng.item) {
@@ -63267,15 +67776,7 @@ define("tinymce/Editor", [
 				}
 			}
 
-			if (self.editorManager.activeEditor != self) {
-				if ((oed = self.editorManager.activeEditor)) {
-					oed.fire('deactivate', {relatedTarget: self});
-				}
-
-				self.fire('activate', {relatedTarget: oed});
-			}
-
-			self.editorManager.activeEditor = self;
+			self.editorManager.setActive(self);
 		},
 
 		/**
@@ -63393,36 +67894,7 @@ define("tinymce/Editor", [
 		 * @param {Object} args Optional args to pass to NodeChange event handlers.
 		 */
 		nodeChanged: function(args) {
-			var self = this, selection = self.selection, node, parents, root;
-
-			// Fix for bug #1896577 it seems that this can not be fired while the editor is loading
-			if (self.initialized && !self.settings.disable_nodechange && !self.settings.readonly) {
-				// Get start node
-				root = self.getBody();
-				node = selection.getStart() || root;
-				node = ie && node.ownerDocument != self.getDoc() ? self.getBody() : node; // Fix for IE initial state
-
-				// Edge case for <p>|<img></p>
-				if (node.nodeName == 'IMG' && selection.isCollapsed()) {
-					node = node.parentNode;
-				}
-
-				// Get parents and add them to object
-				parents = [];
-				self.dom.getParent(node, function(node) {
-					if (node === root) {
-						return true;
-					}
-
-					parents.push(node);
-				});
-
-				args = args || {};
-				args.element = node;
-				args.parents = parents;
-
-				self.fire('NodeChange', args);
-			}
+			this._nodeChangeDispatcher.nodeChanged(args);
 		},
 
 		/**
@@ -63968,7 +68440,7 @@ define("tinymce/Editor", [
 					content = '<br data-mce-bogus="1">';
 				}
 
-				body.innerHTML = content;
+				self.dom.setHTML(body, content);
 
 				self.fire('SetContent', args);
 			} else {
@@ -64116,7 +68588,11 @@ define("tinymce/Editor", [
 		 * @return {Element} HTML DOM element for the replaced element.
 		 */
 		getElement: function() {
-			return DOM.get(this.settings.content_element || this.id);
+			if (!this.targetElm) {
+				this.targetElm = DOM.get(this.id);
+			}
+
+			return this.targetElm;
 		},
 
 		/**
@@ -64129,7 +68605,7 @@ define("tinymce/Editor", [
 			var self = this, elm;
 
 			if (!self.contentWindow) {
-				elm = DOM.get(self.id + "_ifr");
+				elm = self.iframeElement;
 
 				if (elm) {
 					self.contentWindow = elm.contentWindow;
@@ -64227,12 +68703,10 @@ define("tinymce/Editor", [
 						cls = settings.visual_table_class || 'mce-item-table';
 						value = dom.getAttrib(elm, 'border');
 
-						if (!value || value == '0') {
-							if (self.hasVisual) {
-								dom.addClass(elm, cls);
-							} else {
-								dom.removeClass(elm, cls);
-							}
+						if ((!value || value == '0') && self.hasVisual) {
+							dom.addClass(elm, cls);
+						} else {
+							dom.removeClass(elm, cls);
 						}
 
 						return;
@@ -64242,12 +68716,10 @@ define("tinymce/Editor", [
 							value = dom.getAttrib(elm, 'name') || elm.id;
 							cls = settings.visual_anchor_class || 'mce-item-anchor';
 
-							if (value) {
-								if (self.hasVisual) {
-									dom.addClass(elm, cls);
-								} else {
-									dom.removeClass(elm, cls);
-								}
+							if (value && self.hasVisual) {
+								dom.addClass(elm, cls);
+							} else {
+								dom.removeClass(elm, cls);
 							}
 						}
 
@@ -64269,6 +68741,7 @@ define("tinymce/Editor", [
 			if (!self.removed) {
 				self.save();
 				self.removed = 1;
+				self.unbindAllNativeEvents();
 
 				// Remove any hidden input
 				if (self.hasHiddenInput) {
@@ -64284,21 +68757,12 @@ define("tinymce/Editor", [
 
 					DOM.setStyle(self.id, 'display', self.orgDisplay);
 					self.getBody().onload = null; // Prevent #6816
-
-					// Don't clear the window or document if content editable
-					// is enabled since other instances might still be present
-					Event.unbind(self.getWin());
-					Event.unbind(self.getDoc());
 				}
-
-				var elm = self.getContainer();
-				Event.unbind(self.getBody());
-				Event.unbind(elm);
 
 				self.fire('remove');
 
 				self.editorManager.remove(self);
-				DOM.remove(elm);
+				DOM.remove(self.getContainer());
 				self.destroy();
 			}
 		},
@@ -64326,14 +68790,6 @@ define("tinymce/Editor", [
 				return;
 			}
 
-			// We must unbind on Gecko since it would otherwise produce the pesky "attempt
-			// to run compile-and-go script on a cleared scope" message
-			if (automatic && isGecko) {
-				Event.unbind(self.getDoc());
-				Event.unbind(self.getWin());
-				Event.unbind(self.getBody());
-			}
-
 			if (!automatic) {
 				self.editorManager.off('beforeunload', self._beforeUnload);
 
@@ -64358,7 +68814,8 @@ define("tinymce/Editor", [
 			}
 
 			self.contentAreaContainer = self.formElement = self.container = self.editorContainer = null;
-			self.settings.content_element = self.bodyElement = self.contentDocument = self.contentWindow = null;
+			self.bodyElement = self.contentDocument = self.contentWindow = null;
+			self.iframeElement = self.targetElm = null;
 
 			if (self.selection) {
 				self.selection = self.selection.win = self.selection.dom = self.selection.dom.doc = null;
@@ -64573,19 +69030,39 @@ define("tinymce/FocusManager", [
 			editor.on('init', function() {
 				// Gecko/WebKit has ghost selections in iframes and IE only has one selection per browser tab
 				if (editor.inline || Env.ie) {
-					// On other browsers take snapshot on nodechange in inline mode since they have Ghost selections for iframes
-					editor.on('nodechange keyup', function() {
-						var node = document.activeElement;
+					// Use the onbeforedeactivate event when available since it works better see #7023
+					if ("onbeforedeactivate" in document && Env.ie < 9) {
+						editor.dom.bind(editor.getBody(), 'beforedeactivate', function(e) {
+							if (e.target != editor.getBody()) {
+								return;
+							}
 
-						// IE 11 reports active element as iframe not body of iframe
-						if (node && node.id == editor.id + '_ifr') {
-							node = editor.getBody();
-						}
+							try {
+								editor.lastRng = editor.selection.getRng();
+							} catch (ex) {
+								// IE throws "Unexcpected call to method or property access" some times so lets ignore it
+							}
+						});
+					} else {
+						// On other browsers take snapshot on nodechange in inline mode since they have Ghost selections for iframes
+						editor.on('nodechange mouseup keyup', function(e) {
+							var node = getActiveElement();
 
-						if (editor.dom.isChildOf(node, editor.getBody())) {
-							editor.lastRng = editor.selection.getRng();
-						}
-					});
+							// Only act on manual nodechanges
+							if (e.type == 'nodechange' && e.selectionChange) {
+								return;
+							}
+
+							// IE 11 reports active element as iframe not body of iframe
+							if (node && node.id == editor.id + '_ifr') {
+								node = editor.getBody();
+							}
+
+							if (editor.dom.isChildOf(node, editor.getBody())) {
+								editor.lastRng = editor.selection.getRng();
+							}
+						});
+					}
 
 					// Handles the issue with WebKit not retaining selection within inline document
 					// If the user releases the mouse out side the body since a mouse up event wont occur on the body
@@ -64630,7 +69107,7 @@ define("tinymce/FocusManager", [
 						focusedEditor.fire('blur', {focusedEditor: editor});
 					}
 
-					editorManager.activeEditor = editor;
+					editorManager.setActive(editor);
 					editorManager.focusedEditor = editor;
 					editor.fire('focus', {blurredEditor: focusedEditor});
 					editor.focus(true);
@@ -64663,13 +69140,14 @@ define("tinymce/FocusManager", [
 					var activeEditor = editorManager.activeEditor;
 
 					if (activeEditor && e.target.ownerDocument == document) {
-						// Check to make sure we have a valid selection
-						if (activeEditor.selection) {
+						// Check to make sure we have a valid selection don't update the bookmark if it's
+						// a focusin to the body of the editor see #7025
+						if (activeEditor.selection && e.target != activeEditor.getBody()) {
 							activeEditor.selection.lastFocusBookmark = createBookmark(activeEditor.dom, activeEditor.lastRng);
 						}
 
 						// Fire a blur event if the element isn't a UI element
-						if (!isUIElement(e.target) && editorManager.focusedEditor == activeEditor) {
+						if (e.target != document.body && !isUIElement(e.target) && editorManager.focusedEditor == activeEditor) {
 							activeEditor.fire('blur', {focusedEditor: null});
 							editorManager.focusedEditor = null;
 						}
@@ -64798,6 +69276,7 @@ define("tinymce/EditorManager", [
 		// User has manually destroyed the editor lets clean up the mess
 		if (editor && !(editor.getContainer() || editor.getBody()).parentNode) {
 			removeEditorFromList(editor);
+			editor.unbindAllNativeEvents();
 			editor.destroy(true);
 			editor = null;
 		}
@@ -64828,7 +69307,7 @@ define("tinymce/EditorManager", [
 		 * @property minorVersion
 		 * @type String
 		 */
-		minorVersion: '1.0',
+		minorVersion: '1.6',
 
 		/**
 		 * Release date of TinyMCE build.
@@ -64836,7 +69315,7 @@ define("tinymce/EditorManager", [
 		 * @property releaseDate
 		 * @type String
 		 */
-		releaseDate: '2014-06-18',
+		releaseDate: '2014-10-08',
 
 		/**
 		 * Collection of editor instances.
@@ -64974,7 +69453,7 @@ define("tinymce/EditorManager", [
 		 * });
 		 */
 		init: function(settings) {
-			var self = this, editors = [], editor;
+			var self = this, editors = [];
 
 			function createId(elm) {
 				var id = elm.id;
@@ -64996,26 +69475,28 @@ define("tinymce/EditorManager", [
 				return id;
 			}
 
-			function createEditor(id, settings) {
+			function createEditor(id, settings, targetElm) {
 				if (!purgeDestroyedEditor(self.get(id))) {
 					var editor = new Editor(id, settings, self);
+
+					editor.targetElm = editor.targetElm || targetElm;
 					editors.push(editor);
 					editor.render();
 				}
 			}
 
-			function execCallback(se, n, s) {
-				var f = se[n];
+			function execCallback(name) {
+				var callback = settings[name];
 
-				if (!f) {
+				if (!callback) {
 					return;
 				}
 
-				return f.apply(s || this, Array.prototype.slice.call(arguments, 2));
+				return callback.apply(self, Array.prototype.slice.call(arguments, 2));
 			}
 
-			function hasClass(n, c) {
-				return c.constructor === RegExp ? c.test(n.className) : DOM.hasClass(n, c);
+			function hasClass(elm, className) {
+				return className.constructor === RegExp ? className.test(elm.className) : DOM.hasClass(elm, className);
 			}
 
 			function readyHandler() {
@@ -65023,13 +69504,13 @@ define("tinymce/EditorManager", [
 
 				DOM.unbind(window, 'ready', readyHandler);
 
-				execCallback(settings, 'onpageload');
+				execCallback('onpageload');
 
 				if (settings.types) {
 					// Process type specific selector
 					each(settings.types, function(type) {
 						each(DOM.select(type.selector), function(elm) {
-							createEditor(createId(elm), extend({}, settings, type));
+							createEditor(createId(elm), extend({}, settings, type), elm);
 						});
 					});
 
@@ -65037,10 +69518,12 @@ define("tinymce/EditorManager", [
 				} else if (settings.selector) {
 					// Process global selector
 					each(DOM.select(settings.selector), function(elm) {
-						createEditor(createId(elm), settings);
+						createEditor(createId(elm), settings, elm);
 					});
 
 					return;
+				} else if (settings.target) {
+					createEditor(createId(settings.target), settings);
 				}
 
 				// Fallback to old setting
@@ -65049,18 +69532,18 @@ define("tinymce/EditorManager", [
 						l = settings.elements || '';
 
 						if (l.length > 0) {
-							each(explode(l), function(v) {
-								if (DOM.get(v)) {
-									editor = new Editor(v, settings, self);
-									editors.push(editor);
-									editor.render();
+							each(explode(l), function(id) {
+								var elm;
+
+								if ((elm = DOM.get(id))) {
+									createEditor(id, settings, elm);
 								} else {
 									each(document.forms, function(f) {
 										each(f.elements, function(e) {
-											if (e.name === v) {
-												v = 'mce_editor_' + instanceCounter++;
-												DOM.setAttrib(e, 'id', v);
-												createEditor(v, settings);
+											if (e.name === id) {
+												id = 'mce_editor_' + instanceCounter++;
+												DOM.setAttrib(e, 'id', id);
+												createEditor(id, settings, e);
 											}
 										});
 									});
@@ -65077,7 +69560,7 @@ define("tinymce/EditorManager", [
 							}
 
 							if (!settings.editor_selector || hasClass(elm, settings.editor_selector)) {
-								createEditor(createId(elm), settings);
+								createEditor(createId(elm), settings, elm);
 							}
 						});
 						break;
@@ -65097,7 +69580,7 @@ define("tinymce/EditorManager", [
 
 								// All done
 								if (l == co) {
-									execCallback(settings, 'oninit');
+									execCallback('oninit');
 								}
 							});
 						} else {
@@ -65106,7 +69589,7 @@ define("tinymce/EditorManager", [
 
 						// All done
 						if (l == co) {
-							execCallback(settings, 'oninit');
+							execCallback('oninit');
 						}
 					});
 				}
@@ -65156,6 +69639,8 @@ define("tinymce/EditorManager", [
 			editors[editor.id] = editor;
 			editors.push(editor);
 
+			// Doesn't call setActive method since we don't want
+			// to fire a bunch of activate/deactivate calls while initializing
 			self.activeEditor = editor;
 
 			/**
@@ -65226,7 +69711,11 @@ define("tinymce/EditorManager", [
 				selector = selector.selector || selector;
 
 				each(DOM.select(selector), function(elm) {
-					self.remove(editors[elm.id]);
+					editor = editors[elm.id];
+
+					if (editor) {
+						self.remove(editor);
+					}
 				});
 
 				return;
@@ -65344,6 +69833,26 @@ define("tinymce/EditorManager", [
 		 */
 		translate: function(text) {
 			return I18n.translate(text);
+		},
+
+		/**
+		 * Sets the active editor instance and fires the deactivate/activate events.
+		 *
+		 * @method setActive
+		 * @param {tinymce.Editor} editor Editor instance to set as the active instance.
+		 */
+		setActive: function(editor) {
+			var activeEditor = this.activeEditor;
+
+			if (this.activeEditor != editor) {
+				if (activeEditor) {
+					activeEditor.fire('deactivate', {relatedTarget: editor});
+				}
+
+				editor.fire('activate', {relatedTarget: activeEditor});
+			}
+
+			this.activeEditor = editor;
 		}
 	};
 
@@ -65448,6 +69957,7 @@ define("tinymce/LegacyInput", [
 /**
  * This class enables you to send XMLHTTPRequests cross browser.
  * @class tinymce.util.XHR
+ * @mixes tinymce.util.Observable
  * @static
  * @example
  * // Sends a low level Ajax request
@@ -65457,9 +69967,17 @@ define("tinymce/LegacyInput", [
  *       console.debug(text);
  *    }
  * });
+ *
+ * // Add custom header to XHR request
+ * tinymce.util.XHR.on('beforeSend', function(e) {
+ *     e.xhr.setRequestHeader('X-Requested-With', 'Something');
+ * });
  */
-define("tinymce/util/XHR", [], function() {
-	return {
+define("tinymce/util/XHR", [
+	"tinymce/util/Observable",
+	"tinymce/util/Tools"
+], function(Observable, Tools) {
+	var XHR = {
 		/**
 		 * Sends a XMLHTTPRequest.
 		 * Consult the Wiki for details on what settings this method takes.
@@ -65503,12 +70021,14 @@ define("tinymce/util/XHR", [], function() {
 				if (settings.crossDomain) {
 					xhr.withCredentials = true;
 				}
+
 				if (settings.content_type) {
 					xhr.setRequestHeader('Content-Type', settings.content_type);
 				}
 
 				xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
+				xhr = XHR.fire('beforeSend', {xhr: xhr, settings: settings}).xhr;
 				xhr.send(settings.data);
 
 				// Syncronous request
@@ -65521,6 +70041,10 @@ define("tinymce/util/XHR", [], function() {
 			}
 		}
 	};
+
+	Tools.extend(XHR, Observable);
+
+	return XHR;
 });
 
 // Included from: js/tinymce/classes/util/JSON.js
@@ -67255,7 +71779,10 @@ define("tinymce/ui/ColorBox", [
 			var self = this;
 
 			settings.spellcheck = false;
-			settings.icon = 'none';
+
+			if (settings.onaction) {
+				settings.icon = 'none';
+			}
 
 			self._super(settings);
 
@@ -67266,7 +71793,15 @@ define("tinymce/ui/ColorBox", [
 		},
 
 		repaintColor: function(value) {
-			this.getEl().getElementsByTagName('i')[0].style.background = value;
+			var elm = this.getEl().getElementsByTagName('i')[0];
+
+			if (elm) {
+				try {
+					elm.style.background = value;
+				} catch (ex) {
+					// Ignore
+				}
+			}
 		},
 
 		value: function(value) {
@@ -67387,6 +71922,15 @@ define("tinymce/ui/PanelButton", [
 			});
 
 			return self._super();
+		},
+
+		remove: function() {
+			if (this.panel) {
+				this.panel.remove();
+				this.panel = null;
+			}
+
+			return this._super();
 		}
 	});
 });
@@ -68137,38 +72681,32 @@ define("tinymce/ui/ElementPath", [
 			}
 
 			self.on('select', function(e) {
-				var parents = [], node, body = editor.getBody();
-
 				editor.focus();
-
-				node = editor.selection.getStart();
-				while (node && node != body) {
-					if (!isHidden(node)) {
-						parents.push(node);
-					}
-
-					node = node.parentNode;
-				}
-
-				editor.selection.select(parents[parents.length - 1 - e.index]);
+				editor.selection.select(this.data()[e.index].element);
 				editor.nodeChanged();
 			});
 
 			editor.on('nodeChange', function(e) {
-				var parents = [], selectionParents = e.parents, i = selectionParents.length;
+				var outParents = [], parents = e.parents, i = parents.length;
 
 				while (i--) {
-					if (selectionParents[i].nodeType == 1 && !isHidden(selectionParents[i])) {
+					if (parents[i].nodeType == 1 && !isHidden(parents[i])) {
 						var args = editor.fire('ResolveName', {
-							name: selectionParents[i].nodeName.toLowerCase(),
-							target: selectionParents[i]
+							name: parents[i].nodeName.toLowerCase(),
+							target: parents[i]
 						});
 
-						parents.push({name: args.name});
+						if (!args.isDefaultPrevented()) {
+							outParents.push({name: args.name, element: parents[i]});
+						}
+
+						if (args.isPropagationStopped()) {
+							break;
+						}
 					}
 				}
 
-				self.data(parents);
+				self.data(outParents);
 			});
 
 			return self._super();
@@ -69179,7 +73717,6 @@ define("tinymce/ui/FormatControls", [
 			paste: ['Paste', 'Paste'],
 			help: ['Help', 'mceHelp'],
 			selectall: ['Select all', 'SelectAll'],
-			hr: ['Insert horizontal rule', 'InsertHorizontalRule'],
 			removeformat: ['Clear formatting', 'RemoveFormat'],
 			visualaid: ['Visual aids', 'mceToggleVisualAid'],
 			newdocument: ['New document', 'mceNewDocument']
@@ -70146,14 +74683,30 @@ define("tinymce/ui/MenuButton", [
 		 */
 		renderHtml: function() {
 			var self = this, id = self._id, prefix = self.classPrefix;
-			var icon = self.settings.icon ? prefix + 'ico ' + prefix + 'i-' + self.settings.icon : '';
+			var icon = self.settings.icon, image;
+
+			image = self.settings.image;
+			if (image) {
+				icon = 'none';
+
+				// Support for [high dpi, low dpi] image sources
+				if (typeof image != "string") {
+					image = window.getSelection ? image[0] : image[1];
+				}
+
+				image = ' style="background-image: url(\'' + image + '\')"';
+			} else {
+				image = '';
+			}
+
+			icon = self.settings.icon ? prefix + 'ico ' + prefix + 'i-' + icon : '';
 
 			self.aria('role', self.parent() instanceof MenuBar ? 'menuitem' : 'button');
 
 			return (
 				'<div id="' + id + '" class="' + self.classes() + '" tabindex="-1" aria-labelledby="' + id + '">' +
 					'<button id="' + id + '-open" role="presentation" type="button" tabindex="-1">' +
-						(icon ? '<i class="' + icon + '"></i>' : '') +
+						(icon ? '<i class="' + icon + '"' + image + '></i>' : '') +
 						'<span>' + (self._text ? (icon ? '\u00a0' : '') + self.encode(self._text) : '') + '</span>' +
 						' <i class="' + prefix + 'caret"></i>' +
 					'</button>' +
@@ -71065,13 +75618,29 @@ define("tinymce/ui/SplitButton", [
 		 * @return {String} HTML representing the control.
 		 */
 		renderHtml: function() {
-			var self = this, id = self._id, prefix = self.classPrefix;
-			var icon = self.settings.icon ? prefix + 'ico ' + prefix + 'i-' + self.settings.icon : '';
+			var self = this, id = self._id, prefix = self.classPrefix, image;
+			var icon = self.settings.icon;
+
+			image = self.settings.image;
+			if (image) {
+				icon = 'none';
+
+				// Support for [high dpi, low dpi] image sources
+				if (typeof image != "string") {
+					image = window.getSelection ? image[0] : image[1];
+				}
+
+				image = ' style="background-image: url(\'' + image + '\')"';
+			} else {
+				image = '';
+			}
+
+			icon = self.settings.icon ? prefix + 'ico ' + prefix + 'i-' + icon : '';
 
 			return (
 				'<div id="' + id + '" class="' + self.classes() + '" role="button" tabindex="-1">' +
 					'<button type="button" hidefocus="1" tabindex="-1">' +
-						(icon ? '<i class="' + icon + '"></i>' : '') +
+						(icon ? '<i class="' + icon + '"' + image + '></i>' : '') +
 						(self._text ? (icon ? ' ' : '') + self._text : '') +
 					'</button>' +
 					'<button type="button" class="' + prefix + 'open" hidefocus="1" tabindex="-1">' +
@@ -71697,21 +76266,6 @@ return (function () { this.tinyMCE.DOM.events.domLoaded = true; return this.tiny
  *        </fieldset>
  *    </div>
  *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -71783,7 +76337,7 @@ define('mockup-patterns-autotoc',[
                 scrollTop: $level.offset().top
               }, self.options.scrollDuration, self.options.scrollEasing);
             }
-            if (self.$el.parents('.modal').size() !== 0) {
+            if (self.$el.parents('.plone-modal').size() !== 0) {
               self.$el.trigger('resize.modal.patterns');
             }
             $(this).trigger('clicked');
@@ -74058,22 +78612,6 @@ define('text!mockup-patterns-upload-url/templates/preview.xml',[],function () { 
  *      </div>
  *    </div>
  *
- *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 
@@ -74200,31 +78738,31 @@ define('mockup-patterns-upload',[
         throw e;
       }
 
-      self.$dropzone.on('addedfile', function(file) {
+      self.dropzone.on('addedfile', function(file) {
         self.showControls();
       });
 
-      self.$dropzone.on('removedfile', function() {
+      self.dropzone.on('removedfile', function() {
         if (self.dropzone.files.length < 1) {
           self.hideControls();
         }
       });
 
       if (self.options.autoCleanResults) {
-        self.$dropzone.on('complete', function(file) {
+        self.dropzone.on('complete', function(file) {
           setTimeout(function() {
             $(file.previewElement).fadeOut();
           }, 3000);
         });
       }
 
-      self.$dropzone.on('complete', function(file) {
+      self.dropzone.on('complete', function(file) {
         if (self.dropzone.files.length < 1) {
           self.hideControls();
         }
       });
 
-      self.$dropzone.on('totaluploadprogress', function(pct) {
+      self.dropzone.on('totaluploadprogress', function(pct) {
         // need to caclulate total pct here in reality since we're manually
         // processing each file one at a time.
         pct = ((((self.currentFile - 1) * 100) + pct) / (self.numFiles * 100)) * 100;
@@ -74462,32 +79000,6 @@ define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { re
 
 define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales.split(\',\'), function(scale){ %>\n                  <% var scale = scale.split(\':\'); %>\n                  <option value="<%- scale[1] %>">\n                    <%- scale[0] %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="btn btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
 
-// Author: Nathan Van Gheem
-// Contact: nathan@vangheem.us
-// Version: 1.0
-//
-// Description:
-//    TinyMCE pattern (for now its depening on Plone's integration)
-//
-// License:
-//
-// Copyright (C) 2010 Plone Foundation
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the Free
-// Software Foundation; either version 2 of the License.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT
-// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-// more details.
-//
-// You should have received a copy of the GNU General Public License along with
-// this program; if not, write to the Free Software Foundation, Inc., 51
-// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//
-
-
 define('mockup-patterns-tinymce-url/js/links',[
   'jquery',
   'underscore',
@@ -74503,6 +79015,7 @@ define('mockup-patterns-tinymce-url/js/links',[
   
 
   var LinkType = Base.extend({
+    name: 'linktype',
     defaults: {
       linkModal: null // required
     },
@@ -74875,7 +79388,7 @@ define('mockup-patterns-tinymce-url/js/links',[
     initElements: function() {
       var self = this;
       self.$target = $('select[name="target"]', self.modal.$modal);
-      self.$button = $('.modal-footer input[name="insert"]', self.modal.$modal);
+      self.$button = $('.plone-modal-footer input[name="insert"]', self.modal.$modal);
       self.$title = $('input[name="title"]', self.modal.$modal);
       self.$subject = $('input[name="subject"]', self.modal.$modal);
 
@@ -74999,7 +79512,7 @@ define('mockup-patterns-tinymce-url/js/links',[
         }
         self.hide();
       });
-      $('.modal-footer input[name="cancel"]', self.modal.$modal).click(function(e) {
+      $('.plone-modal-footer input[name="cancel"]', self.modal.$modal).click(function(e) {
         e.preventDefault();
         self.hide();
       });
@@ -75810,8 +80323,8 @@ tinymce.PluginManager.add('advlist', function(editor) {
 		lastStyles[listName] = styleValue;
 
 		list = dom.getParent(sel.getNode(), 'ol,ul');
-		if (list && styleValue) {
-			dom.setStyle(list, 'listStyleType', styleValue);
+		if (list) {
+			dom.setStyle(list, 'listStyleType', styleValue ? styleValue : null);
 			list.removeAttribute('data-mce-style');
 		}
 
@@ -76284,6 +80797,7 @@ define("tinymce-autosave", ["tinymce"], function() {
 // Internal unload handler will be called before the page is unloaded
 // Needs to be outside the plugin since it would otherwise keep
 // a reference to editor in closue scope
+/*eslint no-func-assign:0 */
 tinymce._beforeUnloadHandler = function() {
 	var msg;
 
@@ -80323,13 +84837,24 @@ tinymce.PluginManager.add('lists', function(editor) {
 		self.backspaceDelete = function(isForward) {
 			function findNextCaretContainer(rng, isForward) {
 				var node = rng.startContainer, offset = rng.startOffset;
+				var nonEmptyBlocks, walker;
 
 				if (node.nodeType == 3 && (isForward ? offset < node.data.length : offset > 0)) {
 					return node;
 				}
 
-				var walker = new tinymce.dom.TreeWalker(rng.startContainer);
+				nonEmptyBlocks = editor.schema.getNonEmptyElements();
+				walker = new tinymce.dom.TreeWalker(rng.startContainer);
+
 				while ((node = walker[isForward ? 'next' : 'prev']())) {
+					if (node.nodeName == 'LI' && !node.hasChildNodes()) {
+						return node;
+					}
+
+					if (nonEmptyBlocks[node.nodeName]) {
+						return node;
+					}
+
 					if (node.nodeType == 3 && node.data.length > 0) {
 						return node;
 					}
@@ -80348,8 +84873,14 @@ tinymce.PluginManager.add('lists', function(editor) {
 					dom.remove(node);
 				}
 
-				while ((node = fromElm.firstChild)) {
-					toElm.appendChild(node);
+				if (dom.isEmpty(toElm)) {
+					dom.$(toElm).empty();
+				}
+
+				if (!dom.isEmpty(fromElm)) {
+					while ((node = fromElm.firstChild)) {
+						toElm.appendChild(node);
+					}
 				}
 
 				if (listNode) {
@@ -80420,7 +84951,12 @@ tinymce.PluginManager.add('lists', function(editor) {
 		editor.addQueryStateHandler('InsertDefinitionList', queryListCommandState('DL'));
 
 		editor.on('keydown', function(e) {
-			if (e.keyCode == 9 && editor.dom.getParent(editor.selection.getStart(), 'LI,DT,DD')) {
+			// Check for tab but not ctrl/cmd+tab since it switches browser tabs
+			if (e.keyCode != 9 || tinymce.util.VK.metaKeyPressed(e)) {
+				return;
+			}
+
+			if (editor.dom.getParent(editor.selection.getStart(), 'LI,DT,DD')) {
 				e.preventDefault();
 
 				if (e.shiftKey) {
@@ -80621,7 +85157,7 @@ tinymce.PluginManager.add('media', function(editor, url) {
 		};
 
 		function updateValueOnChange() {
-			data = htmlToData( this.value() );
+			data = htmlToData(this.value());
 			this.parent().parent().fromJSON(data);
 		}
 
@@ -80856,6 +85392,56 @@ tinymce.PluginManager.add('media', function(editor, url) {
 		}
 
 		return {};
+	}
+
+	function sanitize(html) {
+		if (editor.settings.media_filter_html === false) {
+			return html;
+		}
+
+		var writer = new tinymce.html.Writer();
+
+		new tinymce.html.SaxParser({
+			validate: false,
+			allow_conditional_comments: false,
+			special: 'script,noscript',
+
+			comment: function(text) {
+				writer.comment(text);
+			},
+
+			cdata: function(text) {
+				writer.cdata(text);
+			},
+
+			text: function(text, raw) {
+				writer.text(text, raw);
+			},
+
+			start: function(name, attrs, empty) {
+				if (name == 'script' || name == 'noscript') {
+					return;
+				}
+
+				for (var i = 0; i < attrs.length; i++) {
+					if (attrs[i].name.indexOf('on') === 0) {
+						return;
+					}
+				}
+
+				writer.start(name, attrs, empty);
+			},
+
+			end: function(name) {
+				if (name == 'script' || name == 'noscript') {
+					return;
+				}
+
+				writer.end(name);
+			}
+		}, new tinymce.html.Schema({})).parse(html);
+
+		return writer.getContent();
 	}
 
 	function updateHtml(html, data, updateAll) {
@@ -81151,7 +85737,7 @@ tinymce.PluginManager.add('media', function(editor, url) {
 				if (innerHtml) {
 					innerNode = new tinymce.html.Node('#text', 3);
 					innerNode.raw = true;
-					innerNode.value = unescape(innerHtml);
+					innerNode.value = sanitize(unescape(innerHtml));
 					realElm.append(innerNode);
 				}
 
@@ -82261,15 +86847,63 @@ define("tinymce/pasteplugin/Clipboard", [
 				}
 			}
 
+			/**
+			 * Returns the rect of the current caret if the caret is in an empty block before a
+			 * BR we insert a temporary invisible character that we get the rect this way we always get a proper rect.
+			 *
+			 * TODO: This might be useful in core.
+			 */
+			function getCaretRect(rng) {
+				var rects, textNode, node, container = rng.startContainer;
+
+				rects = rng.getClientRects();
+				if (rects.length) {
+					return rects[0];
+				}
+
+				if (!rng.collapsed || container.nodeType != 1) {
+					return;
+				}
+
+				node = container.childNodes[lastRng.startOffset];
+
+				// Skip empty whitespace nodes
+				while (node && node.nodeType == 3 && !node.data.length) {
+					node = node.nextSibling;
+				}
+
+				if (!node) {
+					return;
+				}
+
+				// Check if the location is |<br>
+				// TODO: Might need to expand this to say |<table>
+				if (node.tagName == 'BR') {
+					textNode = dom.doc.createTextNode('\uFEFF');
+					node.parentNode.insertBefore(textNode, node);
+
+					rng = dom.createRng();
+					rng.setStartBefore(textNode);
+					rng.setEndAfter(textNode);
+
+					rects = rng.getClientRects();
+					dom.remove(textNode);
+				}
+
+				if (rects.length) {
+					return rects[0];
+				}
+			}
+
 			// Calculate top cordinate this is needed to avoid scrolling to top of document
 			// We want the paste bin to be as close to the caret as possible to avoid scrolling
 			if (lastRng.getClientRects) {
-				var rects = lastRng.getClientRects();
+				var rect = getCaretRect(lastRng);
 
-				if (rects.length) {
+				if (rect) {
 					// Client rects gets us closes to the actual
 					// caret location in for example a wrapped paragraph block
-					top = scrollTop + (rects[0].top - dom.getPos(body).y);
+					top = scrollTop + (rect.top - dom.getPos(body).y);
 				} else {
 					top = scrollTop;
 
@@ -82447,12 +87081,12 @@ define("tinymce/pasteplugin/Clipboard", [
 		}
 
 		/**
-		 * Chrome on Andoid doesn't support proper clipboard access so we have no choice but to allow the browser default behavior.
+		 * Chrome on Android doesn't support proper clipboard access so we have no choice but to allow the browser default behavior.
 		 *
 		 * @param {Event} e Paste event object to check if it contains any data.
 		 * @return {Boolean} true/false if the clipboard is empty or not.
 		 */
-		function isBrokenAndoidClipboardEvent(e) {
+		function isBrokenAndroidClipboardEvent(e) {
 			var clipboardData = e.clipboardData;
 
 			return navigator.userAgent.indexOf('Android') != -1 && clipboardData && clipboardData.items && clipboardData.items.length === 0;
@@ -82536,13 +87170,17 @@ define("tinymce/pasteplugin/Clipboard", [
 			});
 
 			editor.on('paste', function(e) {
+				// Getting content from the Clipboard can take some time
+				var clipboardTimer = new Date().getTime();
 				var clipboardContent = getClipboardContent(e);
-				var isKeyBoardPaste = new Date().getTime() - keyboardPasteTimeStamp < 1000;
+				var clipboardDelay = new Date().getTime() - clipboardTimer;
+
+				var isKeyBoardPaste = (new Date().getTime() - keyboardPasteTimeStamp - clipboardDelay) < 1000;
 				var plainTextMode = self.pasteFormat == "text" || keyboardPastePlainTextState;
 
 				keyboardPastePlainTextState = false;
 
-				if (e.isDefaultPrevented() || isBrokenAndoidClipboardEvent(e)) {
+				if (e.isDefaultPrevented() || isBrokenAndroidClipboardEvent(e)) {
 					removePasteBin();
 					return;
 				}
@@ -82896,10 +87534,22 @@ define("tinymce/pasteplugin/WordFilter", [
 					trimListStart(paragraphNode, /^\u00a0+/);
 				}
 
-				var paragraphs = node.getAll('p');
+				// Build a list of all root level elements before we start
+				// altering them in the loop below.
+				var elements = [], child = node.firstChild;
+				while (typeof child !== 'undefined' && child !== null) {
+					elements.push(child);
 
-				for (var i = 0; i < paragraphs.length; i++) {
-					node = paragraphs[i];
+					child = child.walk();
+					if (child !== null) {
+						while (typeof child !== 'undefined' && child.parent !== node) {
+							child = child.walk();
+						}
+					}
+				}
+
+				for (var i = 0; i < elements.length; i++) {
+					node = elements[i];
 
 					if (node.name == 'p' && node.firstChild) {
 						// Find first text node in paragraph
@@ -82914,7 +87564,7 @@ define("tinymce/pasteplugin/WordFilter", [
 						// Detect ordered lists 1., a. or ixv.
 						if (isNumericList(nodeText)) {
 							// Parse OL start number
-							var matches = /([0-9])\./.exec(nodeText);
+							var matches = /([0-9]+)\./.exec(nodeText);
 							var start = 1;
 							if (matches) {
 								start = parseInt(matches[1], 10);
@@ -82930,6 +87580,13 @@ define("tinymce/pasteplugin/WordFilter", [
 							continue;
 						}
 
+						currentListNode = null;
+					} else {
+						// If the root level element isn't a p tag which can be
+						// processed by convertParagraphToLi, it interrupts the
+						// lists, causing a new list to start instead of having
+						// elements from the next list inserted above this tag.
+						prevListNode = currentListNode;
 						currentListNode = null;
 					}
 				}
@@ -83064,8 +87721,11 @@ define("tinymce/pasteplugin/WordFilter", [
 
 				var validElements = settings.paste_word_valid_elements;
 				if (!validElements) {
-					validElements = '-strong/b,-em/i,-span,-p,-ol,-ul,-li,-h1,-h2,-h3,-h4,-h5,-h6,-p/div,' +
-						'-table[width],-tr,-td[colspan|rowspan|width],-th,-thead,-tfoot,-tbody,-a[href|name],sub,sup,strike,br,del';
+					validElements = (
+						'-strong/b,-em/i,-u,-span,-p,-ol,-ul,-li,-h1,-h2,-h3,-h4,-h5,-h6,' +
+						'-p/div,-a[href|name],sub,sup,strike,br,del,table[width],tr,' +
+						'td[colspan|rowspan|width],th[colspan|rowspan|width],thead,tfoot,tbody'
+					);
 				}
 
 				// Setup strict schema
@@ -85088,8 +89748,6 @@ define("tinymce/spellcheckerplugin/Plugin", [
 				finish();
 			}
 
-			started = true;
-
 			function errorCallback(message) {
 				editor.windowManager.alert(message);
 				editor.setProgressState(false);
@@ -85203,6 +89861,8 @@ define("tinymce/spellcheckerplugin/Plugin", [
 			onPostRender: function() {
 				var self = this;
 
+				self.active(started);
+
 				editor.on('SpellcheckStart SpellcheckEnd', function() {
 					self.active(started);
 				});
@@ -85260,6 +89920,7 @@ define("tinymce/spellcheckerplugin/Plugin", [
 				});
 			});
 
+			started = true;
 			editor.fire('SpellcheckStart');
 		}
 
@@ -85342,7 +90003,7 @@ tinymce.PluginManager.add('tabfocus', function(editor) {
 	function tabHandler(e) {
 		var x, el, v, i;
 
-		if (e.keyCode !== 9 || e.ctrlKey || e.altKey || e.metaKey) {
+		if (e.keyCode !== 9 || e.ctrlKey || e.altKey || e.metaKey || e.isDefaultPrevented()) {
 			return;
 		}
 
@@ -85355,12 +90016,8 @@ tinymce.PluginManager.add('tabfocus', function(editor) {
 					e.style.visibility != "hidden" && canSelectRecursive(e.parentNode));
 			}
 
-			function canSelectInOldIe(el) {
-				return el.tabIndex || el.nodeName == "INPUT" || el.nodeName == "TEXTAREA";
-			}
-
 			function canSelect(el) {
-				return ((!canSelectInOldIe(el))) && el.getAttribute("tabindex") != '-1' && canSelectRecursive(el);
+				return /INPUT|TEXTAREA|BUTTON/.test(el.tagName) && tinymce.get(e.id)  && el.tabIndex != -1 && canSelectRecursive(el);
 			}
 
 			each(el, function(e, i) {
@@ -85432,15 +90089,15 @@ tinymce.PluginManager.add('tabfocus', function(editor) {
 			// Remove default tabIndex in inline mode
 			tinymce.DOM.setAttrib(editor.getBody(), 'tabIndex', null);
 		}
+
+		editor.on('keyup', tabCancel);
+
+		if (tinymce.Env.gecko) {
+			editor.on('keypress keydown', tabHandler);
+		} else {
+			editor.on('keydown', tabHandler);
+		}
 	});
-
-	editor.on('keyup', tabCancel);
-
-	if (tinymce.Env.gecko) {
-		editor.on('keypress keydown', tabHandler);
-	} else {
-		editor.on('keydown', tabHandler);
-	}
 });
 
 
@@ -86981,17 +91638,21 @@ define("tinymce/tableplugin/Dialogs", [
 	return function(editor) {
 		var self = this;
 
-		function pickColorAction() {
-			var self = this, colorPickerCallback = editor.settings.color_picker_callback;
+		function createColorPickAction() {
+			var colorPickerCallback = editor.settings.color_picker_callback;
 
 			if (colorPickerCallback) {
-				colorPickerCallback.call(
-					editor,
-					function(value) {
-						self.value(value).fire('change');
-					},
-					self.value()
-				);
+				return function() {
+					var self = this;
+
+					colorPickerCallback.call(
+						editor,
+						function(value) {
+							self.value(value).fire('change');
+						},
+						self.value()
+					);
+				};
 			}
 		}
 
@@ -87026,14 +91687,14 @@ define("tinymce/tableplugin/Dialogs", [
 								label: 'Border color',
 								type: 'colorbox',
 								name: 'borderColor',
-								onaction: pickColorAction
+								onaction: createColorPickAction()
 							},
 
 							{
 								label: 'Background color',
 								type: 'colorbox',
 								name: 'backgroundColor',
-								onaction: pickColorAction
+								onaction: createColorPickAction()
 							}
 						]
 					}
@@ -87278,7 +91939,7 @@ define("tinymce/tableplugin/Dialogs", [
 				]
 			};
 
-			if (editor.settings.table_adv_tab !== false) {
+			if (editor.settings.table_advtab !== false) {
 				appendStylesToData(dom, data, tableElm);
 
 				editor.windowManager.open({
@@ -87500,7 +92161,7 @@ define("tinymce/tableplugin/Dialogs", [
 				]
 			};
 
-			if (editor.settings.table_cell_adv_tab !== false) {
+			if (editor.settings.table_cell_advtab !== false) {
 				appendStylesToData(dom, data, cellElm);
 
 				editor.windowManager.open({
@@ -87523,7 +92184,7 @@ define("tinymce/tableplugin/Dialogs", [
 				editor.windowManager.open({
 					title: "Cell properties",
 					data: data,
-					items: generalCellForm,
+					body: generalCellForm,
 					onsubmit: onSubmitCellForm
 				});
 			}
@@ -87672,7 +92333,7 @@ define("tinymce/tableplugin/Dialogs", [
 				]
 			};
 
-			if (editor.settings.table_row_adv_tab !== false) {
+			if (editor.settings.table_row_advtab !== false) {
 				appendStylesToData(dom, data, rowElm);
 
 				editor.windowManager.open({
@@ -89271,24 +93932,9 @@ toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignrig
  *                            {"upload": {"baseUrl": "/", relativePath: "upload"} } }'></textarea>
  *    </form>
  *
- * License:
- *    Copyright (C) 2010 Plone Foundation
- *
- *    This program is free software; you can redistribute it and/or modify it
- *    under the terms of the GNU General Public License as published by the
- *    Free Software Foundation; either version 2 of the License.
- *
- *    This program is distributed in the hope that it will be useful, but
- *    WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- *    Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License along
- *    with this program; if not, write to the Free Software Foundation, Inc.,
- *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-/*global alert:true */
+/* global alert:true */
 
 
 define('mockup-patterns-tinymce',[
@@ -89361,7 +94007,7 @@ define('mockup-patterns-tinymce',[
         externalImage: _t('External Image URI')
       },
       // URL generation options
-      loadingBaseUrl: '../../../bower_components/tinymce-builded/js/tinymce/',
+      loadingBaseUrl: '../../../bower_components/tinymce/',
       prependToUrl: '',
       appendToUrl: '',
       linkAttribute: 'path', // attribute to get link value from data
@@ -89474,7 +94120,6 @@ define('mockup-patterns-tinymce',[
     getScaleFromUrl: function(url) {
       var self = this;
       var split = url.split(self.options.prependToScalePart);
-      var baseUrl = split[0];
       if (split.length !== 2) {
         // not valid scale, screw it
         return null;
@@ -89490,7 +94135,6 @@ define('mockup-patterns-tinymce',[
       return url;
     },
     init: function() {
-      debugger;
       var self = this;
       self.linkModal = self.imageModal = self.uploadModal = null;
       // tiny needs an id in order to initialize. Creat it if not set.
@@ -89538,38 +94182,16 @@ define('mockup-patterns-tinymce',[
 
 });
 
-// Author: Rok Garbas
-// Contact: rok@garbas.si
-// Version: 1.0
-// Description:
-//
-// License:
-//
-// Copyright (C) 2010 Plone Foundation
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the Free
-// Software Foundation; either version 2 of the License.
-//
-// This program is distributed in the hope that it will be useful, but WITHOUT
-// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-// more details.
-//
-// You should have received a copy of the GNU General Public License along with
-// this program; if not, write to the Free Software Foundation, Inc., 51
-// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//
-
-
 define('mockup-bundles-widgets',[
   'jquery',
   'mockup-registry',
   'mockup-patterns-base',
   'mockup-patterns-select2',
+  'mockup-patterns-passwordstrength',
   'mockup-patterns-pickadate',
   'mockup-patterns-relateditems',
   'mockup-patterns-querystring',
+  'mockup-patterns-fileupload',
   'mockup-patterns-tinymce'
 ], function($, Registry, Base) {
   

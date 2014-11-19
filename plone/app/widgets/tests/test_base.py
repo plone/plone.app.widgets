@@ -285,3 +285,52 @@ class TextareaWidgetTests(unittest.TestCase):
         self.assertRaises(
             TypeError,
             TextareaWidget, 'example1', el='input', name='example2')
+
+
+class FileUploadWidgetTests(unittest.TestCase):
+    """Tests for plone.app.widgets.base.FileWidget."""
+
+    def test_defaults(self):
+        from plone.app.widgets.base import FileWidget
+
+        widget = FileWidget('fileupload', name='example1')
+        self.assertEqual(
+            widget.render(),
+            '<input class="pat-fileupload" type="file" name="example1"/>')
+
+        self.assertEqual(widget.klass, 'pat-fileupload')
+
+    def test_multiple(self):
+        from plone.app.widgets.base import FileWidget
+
+        widget = FileWidget('fileupload', name='example2', multiple=True)
+        self.assertEqual(
+            widget.render(),
+            '<input class="pat-fileupload" type="file" multiple="multiple" name="example2"/>')
+
+        self.assertTrue(widget.multiple)
+
+        widget = FileWidget('fileupload', name='example3', multiple=False)
+        self.assertEqual(
+            widget.render(),
+            '<input class="pat-fileupload" type="file" name="example3"/>')
+
+        self.assertFalse(widget.multiple)
+
+    def test_setting_patterns_options(self):
+        from plone.app.widgets.base import FileWidget
+
+        widget = FileWidget(
+            'fileupload',
+            name='example2',
+            pattern_options={
+                'option1': 'value1',
+                'option2': 'value2',
+            })
+
+        self.assertEqual(
+            widget.render(),
+            '<input class="pat-fileupload" type="file" name="example2" '
+            'data-pat-fileupload="{'
+            '&quot;option2&quot;: &quot;value2&quot;, '
+            '&quot;option1&quot;: &quot;value1&quot;}"/>')

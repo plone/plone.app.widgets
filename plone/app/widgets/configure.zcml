@@ -19,6 +19,27 @@
   <include package="mockup"
       zcml:condition="installed mockup" />
 
+  <browser:page
+      name="upload"
+      for=".dx.IFileUploadWidget"
+      class=".dx.Upload"
+      permission="zope2.View"
+      />
+
+  <browser:page
+      name="downloadexisting"
+      for=".dx.IFileUploadWidget"
+      class=".dx.DownloadExisting"
+      permission="zope2.View"
+      />
+
+  <browser:page
+      name="download"
+      for=".dx.IFileUploadWidget"
+      class=".dx.Download"
+      permission="zope2.View"
+      />
+
   <browser:resource
       name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.eot"
       file="static/widgets-bootstrap-glyphicons-halflings-regular.eot"
@@ -194,6 +215,7 @@
     <adapter factory=".dx.QueryStringDataConverter" />
     <adapter factory=".dx.RelationChoiceRelatedItemsWidgetConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
+    <adapter factory=".dx.FileUploadConverter" />
   </configure>
 
   <!-- plone<5 configuration -->

@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from AccessControl import getSecurityManager
+from Acquisition import aq_inner
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.utils import safe_callable
+from Products.CMFPlone.utils import safe_unicode
+from Products.Five.browser import BrowserView
+from ZPublisher.Iterators import filestream_iterator
 from datetime import date
 from datetime import datetime
+from os.path import basename
+from os.path import join
 
 from plone.app.textfield.widget import IRichTextWidget \
     as patextfield_IRichTextWidget
@@ -14,6 +20,7 @@ from plone.app.textfield.value import RichTextValue
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget as BaseSelectWidget
 from plone.app.widgets.base import TextareaWidget
+from plone.app.widgets.base import FileWidget
 from plone.app.widgets.base import dict_merge
 from plone.app.widgets.interfaces import IFieldPermissionChecker
 from plone.app.widgets.interfaces import IWidgetsLayer
@@ -29,9 +36,12 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.utils import resolveDottedName
 from plone.dexterity.interfaces import IDexterityContent
 from plone.dexterity.utils import iterSchemata, getAdditionalSchemata
+from plone.namedfile.utils import set_headers, stream_data
 from plone.registry.interfaces import IRegistry
 from plone.supermodel.utils import mergedTaggedValueDict
 from plone.uuid.interfaces import IUUID
+from tempfile import NamedTemporaryFile
+from tempfile import gettempdir
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.browser.text import TextWidget as z3cform_TextWidget
 from z3c.form.browser.widget import HTMLInputWidget
@@ -43,6 +53,8 @@ from z3c.form.interfaces import IFieldWidget
 from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextWidget
+from z3c.form.interfaces import IMultiWidget
+from z3c.form.interfaces import IDataManager
 from z3c.form.interfaces import NO_VALUE
 from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
@@ -59,6 +71,7 @@ from zope.interface import implements
 from zope.interface import implementsOnly
 from zope.interface import Interface
 from zope.publisher.browser import TestRequest
+from zope.publisher.interfaces import IPublishTraverse, NotFound
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IDate
@@ -70,6 +83,10 @@ from zope.security.interfaces import IPermission
 
 import pytz
 import json
+import fnmatch
+import os
+import time
+import mimetypes
 
 try:
     from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
@@ -129,6 +146,11 @@ class IRelatedItemsWidget(ITextWidget):
 
 class IRichTextWidget(patextfield_IRichTextWidget):
     """Marker interface for the TinyMCEWidget."""
+
+
+class IFileUploadWidget(IMultiWidget):
+    """Marker interface for the file upload widget.
+    """
 
 
 class DateWidgetConverter(BaseDataConverter):
@@ -408,6 +430,52 @@ class QueryStringDataConverter(BaseDataConverter):
         if not value:
             return self.field.missing_value
         return value
+
+
+class FileUploadConverter(BaseDataConverter):
+    """Converter for multi file widgets used on `schema.List` fields."""
+
+    adapts(ISequence, IFileUploadWidget)
+
+    def toWidgetValue(self, value):
+        """Converts the value to a form used by the widget.
+            For some reason this never gets called for File Uploads
+            """
+        return value
+
+    def toFieldValue(self, value):
+        """Converts the value to a storable form."""
+        context = self.widget.context
+        if not IAddForm.providedBy(self.widget.form):
+            dm = queryMultiAdapter((context, self.field), IDataManager)
+        else:
+            dm = None
+
+        current_field_value = (
+            dm.query()
+            if ((dm is not None) and self.field.interface.providedBy(context))
+            else None
+        )
+        if not current_field_value or current_field_value == NO_VALUE:
+            current_field_value = []
+        if not isinstance(current_field_value, list):
+            current_field_value = [current_field_value]
+        current_field_set = set(current_field_value)
+        retvalue = []
+        value_type = self.field.value_type._type
+        if not value:
+            return value
+        elif not isinstance(value, list):
+            value = [value]
+        for item in value:
+            if item['new']:
+                retvalue.append(value_type(data=item['file'].read(),
+                                filename=item['name']))
+            else:
+                for existing_file in current_field_set:
+                    if existing_file.filename == item['name']:
+                        retvalue.append(existing_file)
+        return retvalue
 
 
 class BaseWidget(Widget):
@@ -846,6 +914,318 @@ class RichTextWidget(BaseWidget, patextfield_RichTextWidget):
             return self.value.output
 
         return super(RichTextWidget, self).render()
+
+
+class FileUploadWidget(BaseWidget, z3cform_TextWidget):
+    implementsOnly(IFileUploadWidget)
+
+    _base = FileWidget
+    _converter = FileUploadConverter
+
+    pattern = 'fileupload'
+    pattern_options = BaseWidget.pattern_options.copy()
+    multiple = True
+    maxNumberOfFiles = 1000
+
+    def _base_args(self):
+        """Method which will calculate _base class arguments.
+
+        Returns (as python dictionary):
+            - `pattern`: pattern name
+            - `pattern_options`: pattern options
+            - `name`: field name
+            - `multiple `: field multiple
+
+        :returns: Arguments which will be passed to _base
+        :rtype: dict
+        """
+        args = super(FileUploadWidget, self)._base_args()
+        url = '%s/++widget++%s/@@upload/' % (
+                    self.request.getURL(),
+                    self.name)
+        args['name'] = self.name
+        args.setdefault('pattern_options', {})
+        args['pattern_options'] = {'url': url}
+        self.cleanup()
+        loaded = []
+        extractName = self.name + "uploaded"
+        if getattr(self.request, extractName, None) is not None:
+            files = self.request[extractName]
+            if files:
+                extracted = json.loads(str(files))
+                for extracted_file in extracted:
+                    if extracted_file['name'] != extracted_file['title']:
+                        tmpdir = gettempdir()
+                        path = join(tmpdir, extracted_file['name'])
+                        file_ = open(path, 'r+b')
+                        file_.seek(0, 2)  # end of file
+                        tmpsize = file_.tell()
+                        file_.seek(0)
+                        file_.close()
+                        dl_url = '%s/++widget++%s/@@download/' % (
+                                  self.request.getURL(),
+                                  self.name) + (extracted_file['name'] +
+                                                '?name=' +
+                                                extracted_file['title'])
+                        newfile = {'title': extracted_file['title'],
+                                   'size': tmpsize,
+                                   'url': dl_url,
+                                   'name': extracted_file['name']}
+                        loaded.append(newfile)
+
+        if not IAddForm.providedBy(self.form):
+            dm = queryMultiAdapter((self.context, self.field,), IDataManager)
+        else:
+            dm = None
+
+        current_field_value = (
+            dm.query()
+            if ((dm is not None) and
+                self.field.interface.providedBy(self.context))
+            else None
+        )
+        if current_field_value and current_field_value != NO_VALUE:
+            if not isinstance(current_field_value, list):
+                current_field_value = [current_field_value]
+            current_field_set = set(current_field_value)
+            for item in current_field_set:
+                dl_url = '%s/++widget++%s/@@downloadexisting/' % (
+                             self.request.getURL(),
+                             self.name) + item.filename
+                info = {'name': item.filename,
+                        'title': item.filename,
+                        'size': item.getSize(),
+                        'url': dl_url,
+                        }
+                loaded.append(info)
+        args['pattern_options']['existing'] = loaded
+        if self.maxNumberOfFiles == 1:
+            self.multiple = False
+        args['pattern_options']['maxNumberOfFiles'] = self.maxNumberOfFiles
+        args['multiple'] = self.multiple
+        return args
+
+    def extract(self, default=NO_VALUE):
+        """Extract all real FileUpload objects.
+        """
+        value = []
+        extractName = self.name + "uploaded"
+        if getattr(self.request, extractName, None) is not None:
+            files = self.request[extractName]
+            if files:
+                extracted = json.loads(str(files))
+                for extracted_file in extracted:
+                    if extracted_file['name'] != extracted_file['title']:
+                        tmpdir = gettempdir()
+                        path = join(tmpdir, extracted_file['name'])
+                        file_ = open(path, 'r+b')
+                        newfile = {'name': extracted_file['title'],
+                                   'file': file_, 'new': True,
+                                   'temp': extracted_file['name']}
+                        value.append(newfile)
+                    else:
+                        oldfile = {'name': extracted_file['name'],
+                                   'file': None, 'new': False}
+                        value.append(oldfile)
+        return value
+
+    def render(self):
+        """Render widget.
+
+        :returns: Widget's HTML.
+        :rtype: string
+        """
+        if self.mode != 'display':
+            return super(FileUploadWidget, self).render()
+
+        if not IAddForm.providedBy(self.form):
+            dm = queryMultiAdapter((self.context, self.field,), IDataManager)
+        else:
+            dm = None
+        ret_value = '<div class="files">'
+        current_field_value = (
+            dm.query()
+            if ((dm is not None) and
+                self.field.interface.providedBy(self.context))
+            else None
+        )
+        if current_field_value and current_field_value != NO_VALUE:
+            if not isinstance(current_field_value, list):
+                current_field_value = [current_field_value]
+            current_field_set = set(current_field_value)
+            for item in current_field_set:
+                ret_value = ret_value + '<div class="existfileupload">'
+                dl_url = '%s/++widget++%s/@@downloadexisting/' % (
+                             self.request.getURL(),
+                             self.name) + item.filename
+                ret_value = ret_value + '<a href=' + dl_url + '>'
+                ret_value = ret_value + '<span class="filename">' + item.filename + '</span>'
+                size = self.formatSize(item.getSize())
+                ret_value = ret_value + '<span class="filesize"> ' + size + '</span>'
+                ret_value = ret_value + '</div>'
+        ret_value = ret_value + '</div>'
+        return ret_value
+
+    def formatSize(self, numBytes):
+        """
+        Format a human readable file size
+        """
+        if numBytes > 1000000000:
+            return str(int(round(numBytes / (1024 * 1024 * 1024)))) + ' GB'
+        if numBytes > 1000000:
+            return str(int(round(numBytes / (1024 * 1024)))) + ' MB'
+        return str(int(round(numBytes / 1024))) + ' KB'
+
+    def cleanup(self):
+        """
+        look through upload directory and remove old uploads
+        (older than 2 hrs)
+        """
+        now = time.time()
+        tmpdir = gettempdir()
+        for filename in os.listdir(tmpdir):
+            if fnmatch.fnmatch(filename, '*FileUpload'):
+                filepath = os.path.join(tmpdir, filename)
+                if (os.stat(filepath).st_mtime) < now - 2 * 60 * 60:
+                    os.unlink(filepath)
+
+
+@implementer(IFieldWidget)
+def FileUploadFieldWidget(field, request):
+    return FieldWidget(field, FileUploadWidget(request))
+
+
+class Upload(BrowserView):
+    """Upload a file via ++widget++widget_name/@@upload"""
+
+    implements(IPublishTraverse)
+
+    def __call__(self):
+
+        if hasattr(self.request, "REQUEST_METHOD"):
+            # TODO: we should check errors in the creation process, and
+            # broadcast those to the error template in JS
+            if self.request["REQUEST_METHOD"] == "POST":
+                if getattr(self.request, self.context.name, None) is not None:
+                    files = self.request[self.context.name]
+                    uploaded = self.upload([files])
+                    if uploaded:
+                        return json.dumps({'files': uploaded})
+                return json.dumps({'files': []})
+
+    def upload(self, files):
+        loaded = []
+        fileid = self.request[self.context.name + 'fileids']
+        for item in files:
+            if item.filename:
+                filename = safe_unicode(item.filename)
+                item.seek(0, 2)  # end of file
+                tmpsize = item.tell()
+                tmpfile = NamedTemporaryFile(suffix='FileUpload', delete=False)
+                item.seek(0)
+                tmpfile.write(item.read())
+                tmpfile.close()
+                dlname = basename(tmpfile.name)
+                dl_url = '%s/@@download/' % (
+                         self.request.URL1) + dlname + '?name=' + filename
+                info = {'name': dlname,
+                        'title': filename,
+                        'size': tmpsize,
+                        'url': dl_url,
+                        'fileid': fileid,
+                        }
+                loaded.append(info)
+            return loaded
+
+
+class DownloadExisting(BrowserView):
+    """Download a file via ++widget++widget_name/@@downloadexisting/filename"""
+
+    implements(IPublishTraverse)
+
+    def __init__(self, context, request):
+        super(BrowserView, self).__init__(context, request)
+        self.filename = None
+
+    def publishTraverse(self, request, name):
+
+        if self.filename is None:  # ../@@download/filename
+            self.filename = name
+        else:
+            raise NotFound(self, name, request)
+
+        return self
+
+    def __call__(self):
+
+        if self.context.form is not None:
+            content = aq_inner(self.context.form.getContent())
+        else:
+            content = aq_inner(self.context.context)
+        field = aq_inner(self.context.field)
+
+        dm = queryMultiAdapter((content, field,), IDataManager)
+        file_list = dm.query()
+        if file_list == NO_VALUE:
+            return None
+        file_ = None
+        if not isinstance(file_list, list):
+            file_list = [file_list]
+        for curr_file in file_list:
+            if curr_file.filename == self.filename:
+                file_ = curr_file
+        filename = getattr(file_, 'filename', '')
+        if not file_:
+            return None
+        set_headers(file_, self.request.response, filename=filename)
+        return stream_data(file_)
+
+
+class Download(BrowserView):
+    """Download a file via ++widget++widget_name/@@download/filename"""
+
+    implements(IPublishTraverse)
+
+    def __init__(self, context, request):
+        super(BrowserView, self).__init__(context, request)
+        self.filename = None
+
+    def publishTraverse(self, request, name):
+
+        if self.filename is None:  # ../@@download/filename
+            self.filename = name
+        else:
+            raise NotFound(self, name, request)
+
+        return self
+
+    def __call__(self):
+
+        if getattr(self.request, "name", None) is not None:
+            filename = self.request['name']
+        tmpdir = gettempdir()
+        filepath = os.path.join(tmpdir, self.filename)
+        try:
+            file_ = open(filepath)
+        except IOError:
+            return
+
+        file_.seek(0, 2)  # end of file
+        tmpsize = file_.tell()
+        file_.seek(0)
+        contenttype = 'application/octet-stream'
+        filename = safe_unicode(filename)
+        if filename:
+            extension = os.path.splitext(filename)[1].lower()
+            contenttype = mimetypes.types_map.get(extension,
+                                                  'application/octet-stream')
+        self.request.response.setHeader("Content-Type", contenttype)
+        self.request.response.setHeader("Content-Length", tmpsize)
+        if filename is not None:
+            self.request.response.setHeader("Content-Disposition",
+                                            "attachment; filename=\"%s\""
+                                             % filename)
+        return filestream_iterator(filepath, 'rb')
 
 
 @implementer(IFieldWidget)
