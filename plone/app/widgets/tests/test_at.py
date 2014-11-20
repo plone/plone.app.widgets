@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
-
 from DateTime import DateTime
+from Products.Archetypes.atapi import BaseContent
+from Products.Archetypes.atapi import ReferenceField
+from Products.Archetypes.atapi import Schema
+from Products.Archetypes.atapi import StringField
+from Products.Archetypes.mimetype_utils import getAllowedContentTypes
+from Products.Archetypes.mimetype_utils import getDefaultContentType
+from Products.CMFCore.utils import getToolByName
 from datetime import datetime
 from mock import Mock
 from plone.app.testing import TEST_USER_ID
@@ -11,15 +17,11 @@ from plone.app.widgets.browser.vocabulary import VocabularyView
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
 from plone.testing.zca import ZCML_DIRECTIVES
-from Products.Archetypes.atapi import BaseContent
-from Products.Archetypes.atapi import ReferenceField
-from Products.Archetypes.atapi import StringField
-from Products.Archetypes.atapi import Schema
-from Products.CMFCore.utils import getToolByName
 from zope.configuration import xmlconfig
 from zope.globalrequest import setRequest
 
 import json
+import mock
 
 try:
     import unittest2 as unittest
@@ -551,6 +553,7 @@ class TinyMCEWidgetTests(unittest.TestCase):
         self.field = Mock()
         self.field.getAccessor.return_value = lambda: 'fieldvalue'
         self.field.getName.return_value = 'fieldname'
+        self.field.getContentType.return_value = 'text/html'
 
     def test_widget(self):
         # BBB: portal_tinymce is removed in Plone 5. Remove this check when
@@ -565,13 +568,46 @@ class TinyMCEWidgetTests(unittest.TestCase):
         self.assertEqual(base_args['name'], 'fieldname')
         self.assertEqual(base_args['value'], 'fieldvalue')
         self.assertEqual(base_args['pattern'], 'tinymce')
-        # TODO: remove those lines
-        #self.assertEqual(base_args['pattern_options']['prependToUrl'],
-                         #'resolveuid/')
-        #self.assertEqual(base_args['pattern_options']['prependToUrl'],
-                         #'resolveuid/')
-        #self.assertEqual(base_args['pattern_options']['anchorSelector'],
-                         #self.portal.portal_tinymce.anchor_selector)
+
+    @mock.patch(
+        'Products.Archetypes.mimetype_utils.getDefaultContentType',
+        new=lambda ctx: 'text/html')
+    @mock.patch(
+        'Products.Archetypes.mimetype_utils.getAllowedContentTypes',
+        new=lambda ctx: ['text/html'])
+    def test_at_tinymcewidget_single_mimetype(self):
+        """A RichTextWidget with only one available mimetype should render the
+        pattern class directly on itself.
+        """
+        from plone.app.widgets.at import TinyMCEWidget
+        widget = TinyMCEWidget()
+        rendered = widget.edit(self.portal, self.field, self.request)
+
+        self.assertTrue('<select' not in rendered)
+        self.assertTrue('pat-tinymce' in rendered)
+        self.assertTrue('data-pat-tinymce' in rendered)
+
+    @mock.patch(
+        'Products.Archetypes.mimetype_utils.getDefaultContentType',
+        new=lambda ctx: 'text/html')
+    @mock.patch(
+        'Products.Archetypes.mimetype_utils.getAllowedContentTypes',
+        new=lambda ctx: ['text/html', 'text/plain'])
+    def test_at_tinymcewidget_multiple_mimetypes_create(self):
+        """A RichTextWidget with multiple available mimetypes should render a
+        mimetype selection widget along with the textfield. When there is no
+        field value, the default mimetype should be preselected.
+        """
+        from plone.app.widgets.at import TinyMCEWidget
+        widget = TinyMCEWidget()
+        rendered = widget.edit(self.portal, self.field, self.request)
+
+        self.assertTrue('<select' in rendered)
+        self.assertTrue('pat-textareamimetypeselector' in rendered)
+        self.assertTrue('data-pat-textareamimetypeselector' in rendered)
+        self.assertTrue(
+            '<option value="text/html" selected="selected">' in rendered)
+        self.assertTrue('pat-tinymce' not in rendered)
 
 
 class ArchetypesVocabularyPermissionTests(unittest.TestCase):

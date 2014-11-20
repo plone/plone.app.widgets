@@ -4,6 +4,9 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Use a mimetype selector for richtext areas, if multiple mimetypes are allowed.
+  [thet]
+
 - Allow to remove a selected option in the ``select2`` widget if the field
   is not required
   [frapell]

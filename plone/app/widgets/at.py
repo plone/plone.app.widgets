@@ -582,6 +582,72 @@ class TinyMCEWidget(BaseWidget):
 
         return args
 
+    def edit(self, context, field, request):
+        """Render widget on edit.
+
+        :returns: Widget's HTML.
+        :rtype: string
+        """
+        from Products.Archetypes.mimetype_utils import getAllowedContentTypes
+        from Products.Archetypes.mimetype_utils import getDefaultContentType
+        from lxml import etree
+
+        rendered = ''
+        allowed_mime_types = getAllowedContentTypes(context)
+        if not allowed_mime_types or len(allowed_mime_types) <= 1:
+            # Display textarea with default widget
+            rendered = self._base(
+                **self._base_args(context, field, request)).render()
+        else:
+            # Let pat-textarea-mimetype-selector choose the widget
+
+            # Initialize the widget without a pattern
+            base_args = self._base_args(context, field, request)
+            pattern_options = base_args['pattern_options']
+            del base_args['pattern']
+            del base_args['pattern_options']
+            textarea_widget = self._base(None, None, **base_args)
+            textarea_widget.klass = ''
+            mt_pattern_name = '{}{}'.format(
+                self._base._klass_prefix,
+                'textareamimetypeselector'
+            )
+
+            # Initialize mimetype selector pattern
+            value_mime_type = field.getContentType(context)\
+                or getDefaultContentType(context)
+            mt_select = etree.Element('select')
+            mt_select.attrib['id'] = '{}_text_format'.format(field.getName())
+            mt_select.attrib['name'] = '{}_text_format'.format(field.getName())
+            mt_select.attrib['class'] = mt_pattern_name
+            mt_select.attrib['{}{}'.format('data-', mt_pattern_name)] =\
+                json.dumps({
+                    'textareaName': field.getName(),
+                    'widgets': {
+                        'text/html': {  # TODO: currently, we only support
+                                        # richtext widget config for
+                                        # 'text/html', no other mimetypes.
+                            'pattern': self.pattern,
+                            'patternOptions': pattern_options
+                        }
+                    }
+                })
+
+            # Create a list of allowed mime types
+            for mt in allowed_mime_types:
+                opt = etree.Element('option')
+                opt.attrib['value'] = mt
+                if value_mime_type == mt:
+                    opt.attrib['selected'] = 'selected'
+                opt.text = mt
+                mt_select.append(opt)
+
+            # Render the combined widget
+            rendered = '{}\n{}'.format(
+                textarea_widget.render(),
+                etree.tostring(mt_select)
+            )
+        return rendered
 
 registerWidget(
     TinyMCEWidget,

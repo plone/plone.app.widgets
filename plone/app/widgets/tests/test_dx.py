@@ -11,27 +11,29 @@ from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.testing import ExampleVocabulary
 from plone.app.widgets.testing import PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
 from plone.app.widgets.testing import TestRequest
-from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.interfaces import WIDGETS_KEY
+from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.dexterity.fti import DexterityFTI
+from plone.registry.interfaces import IRegistry
 from plone.testing.zca import UNIT_TESTING
 from z3c.form.interfaces import IFieldWidget, IFormLayer
-from z3c.form.widget import FieldWidget
 from z3c.form.util import getSpecification
+from z3c.form.widget import FieldWidget
 from zope import schema
-from zope.component import provideUtility
+from zope.component import getUtility
 from zope.component import provideAdapter
+from zope.component import provideUtility
 from zope.component.globalregistry import base
+from zope.globalrequest import setRequest
 from zope.interface import Interface
 from zope.interface import alsoProvides
-from zope.globalrequest import setRequest
+from zope.schema import Choice
 from zope.schema import Date
 from zope.schema import Datetime
 from zope.schema import List
-from zope.schema import Choice
+from zope.schema import Set
 from zope.schema import TextLine
 from zope.schema import Tuple
-from zope.schema import Set
 
 import mock
 import json
@@ -48,6 +50,11 @@ try:
     PLONE50 = True
 except ImportError:
     PLONE50 = False
+
+try:
+    from Products.CMFPlone.interfaces import IMarkupSchema
+except ImportError:
+    IMarkupSchema = None
 
 
 class BaseWidgetTests(unittest.TestCase):
@@ -1096,27 +1103,6 @@ def _disable_custom_widget(field):
             provided=IFieldWidget)
 
 
-class IMockSchema(Interface):
-    allowed_field = schema.Choice(
-        vocabulary='plone.app.vocabularies.PortalTypes')
-    disallowed_field = schema.Choice(
-        vocabulary='plone.app.vocabularies.PortalTypes')
-    default_field = schema.Choice(
-        vocabulary='plone.app.vocabularies.PortalTypes')
-    custom_widget_field = schema.TextLine()
-    adapted_widget_field = schema.TextLine()
-
-IMockSchema.setTaggedValue(WRITE_PERMISSIONS_KEY, {
-    'allowed_field': u'zope2.View',
-    'disallowed_field': u'zope2.ViewManagementScreens',
-    'custom_widget_field': u'zope2.View',
-    'adapted_widget_field': u'zope2.View',
-})
-IMockSchema.setTaggedValue(WIDGETS_KEY, {
-    'custom_widget_field': _custom_field_widget,
-})
-
-
 class RichTextWidgetTests(unittest.TestCase):
 
     layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
@@ -1164,6 +1150,98 @@ class RichTextWidgetTests(unittest.TestCase):
         widget.value = RichTextValue(u'Lorem ipsum \u2026')
         base_args = widget._base_args()
         self.assertEquals(base_args['value'], u'Lorem ipsum \u2026')
+
+    def _set_mimetypes(self, default='text/html', allowed=('text/html')):
+        """Set portal's mimetype settings.
+        """
+        if IMarkupSchema:
+            registry = getUtility(IRegistry)
+            self.settings = registry.forInterface(
+                IMarkupSchema, prefix="plone")
+            self.settings.default_type = default
+            self.settings.allowed_types = allowed
+
+    def test_dx_tinymcewidget_single_mimetype(self):
+        """A RichTextWidget with only one available mimetype should render the
+        pattern class directly on itself.
+        """
+        if IMarkupSchema:
+            # if not, don't run this test
+            self._set_mimetypes(allowed=('text/html',))
+            from plone.app.widgets.dx import RichTextWidget
+            widget = FieldWidget(self.field, RichTextWidget(self.request))
+            # set the context so we can get tinymce settings
+            widget.context = self.portal
+            rendered = widget.render()
+
+            self.assertTrue('<select' not in rendered)
+            self.assertTrue('pat-tinymce' in rendered)
+            self.assertTrue('data-pat-tinymce' in rendered)
+
+    def test_dx_tinymcewidget_multiple_mimetypes_create(self):
+        """A RichTextWidget with multiple available mimetypes should render a
+        mimetype selection widget along with the textfield. When there is no
+        field value, the default mimetype should be preselected.
+        """
+        if IMarkupSchema:
+            # if not, don't run this test
+            self._set_mimetypes(allowed=('text/html', 'text/plain'))
+            from plone.app.widgets.dx import RichTextWidget
+            widget = FieldWidget(self.field, RichTextWidget(self.request))
+            # set the context so we can get tinymce settings
+            widget.context = self.portal
+            rendered = widget.render()
+
+            self.assertTrue('<select' in rendered)
+            self.assertTrue('pat-textareamimetypeselector' in rendered)
+            self.assertTrue('data-pat-textareamimetypeselector' in rendered)
+            self.assertTrue(
+                '<option value="text/html" selected="selected">' in rendered)
+            self.assertTrue('pat-tinymce' not in rendered)
+
+    def test_dx_tinymcewidget_multiple_mimetypes_edit(self):
+        """A RichTextWidget with multiple available mimetypes should render a
+        mimetype selection widget along with the textfield. When there is
+        already a RichTextValue, it's mimetype should be preselected.
+        """
+        if IMarkupSchema:
+            # if not, don't run this test
+            self._set_mimetypes(allowed=('text/html', 'text/plain'))
+            from plone.app.widgets.dx import RichTextWidget
+            from plone.app.textfield.value import RichTextValue
+            widget = FieldWidget(self.field, RichTextWidget(self.request))
+            # set the context so we can get tinymce settings
+            widget.context = self.portal
+            widget.value = RichTextValue(u'Hello world', mimeType='text/plain')
+            rendered = widget.render()
+
+            self.assertTrue('<select' in rendered)
+            self.assertTrue('pat-textareamimetypeselector' in rendered)
+            self.assertTrue('data-pat-textareamimetypeselector' in rendered)
+            self.assertTrue(
+                '<option value="text/plain" selected="selected">' in rendered)
+            self.assertTrue('pat-tinymce' not in rendered)
+
+
+class IMockSchema(Interface):
+    allowed_field = schema.Choice(
+        vocabulary='plone.app.vocabularies.PortalTypes')
+    disallowed_field = schema.Choice(
+        vocabulary='plone.app.vocabularies.PortalTypes')
+    default_field = schema.Choice(
+        vocabulary='plone.app.vocabularies.PortalTypes')
+    custom_widget_field = schema.TextLine()
+    adapted_widget_field = schema.TextLine()
+
+IMockSchema.setTaggedValue(WRITE_PERMISSIONS_KEY, {
+    'allowed_field': u'zope2.View',
+    'disallowed_field': u'zope2.ViewManagementScreens',
+    'custom_widget_field': u'zope2.View',
+    'adapted_widget_field': u'zope2.View',
+})
+IMockSchema.setTaggedValue(WIDGETS_KEY, {
+    'custom_widget_field': _custom_field_widget,
+})
 
 
 class DexterityVocabularyPermissionTests(unittest.TestCase):

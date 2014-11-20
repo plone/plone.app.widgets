@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-
 from AccessControl import getSecurityManager
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.utils import safe_callable
 from datetime import date
 from datetime import datetime
-
-from plone.app.textfield.widget import IRichTextWidget \
-    as patextfield_IRichTextWidget
-from plone.app.textfield.widget import RichTextWidget \
-    as patextfield_RichTextWidget
+from lxml import etree
 from plone.app.textfield.value import RichTextValue
+from plone.app.textfield.widget import IRichTextWidget as patextfield_IRichTextWidget  # noqa
+from plone.app.textfield.widget import RichTextWidget as patextfield_RichTextWidget  # noqa
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget as BaseSelectWidget
 from plone.app.widgets.base import TextareaWidget
@@ -36,8 +33,8 @@ from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.browser.text import TextWidget as z3cform_TextWidget
 from z3c.form.browser.widget import HTMLInputWidget
 from z3c.form.converter import BaseDataConverter
-from z3c.form.converter import SequenceDataConverter
 from z3c.form.converter import CollectionSequenceDataConverter
+from z3c.form.converter import SequenceDataConverter
 from z3c.form.interfaces import IAddForm
 from z3c.form.interfaces import IFieldWidget
 from z3c.form.interfaces import IFormLayer
@@ -49,15 +46,15 @@ from z3c.form.widget import FieldWidget
 from z3c.form.widget import Widget
 from zope.component import adapter
 from zope.component import adapts
+from zope.component import getUtility
 from zope.component import queryMultiAdapter
 from zope.component import queryUtility
-from zope.component import getUtility
 from zope.component.hooks import getSite
 from zope.i18n import translate
+from zope.interface import Interface
 from zope.interface import implementer
 from zope.interface import implements
 from zope.interface import implementsOnly
-from zope.interface import Interface
 from zope.publisher.browser import TestRequest
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ICollection
@@ -593,7 +590,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
         args['multiple'] = self.multiple
 
         self.required = self.field.required
- 
+
         options = args.setdefault('pattern_options', {})
         if self.multiple or ICollection.providedBy(self.field):
             options['multiple'] = args['multiple'] = self.multiple = True
@@ -618,7 +615,7 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
                     default=item['value'])
             items.append((item['value'], item['content']))
         args['items'] = items
-       
+
         return args
 
     def extract(self, default=NO_VALUE):
@@ -846,7 +843,64 @@ class RichTextWidget(BaseWidget, patextfield_RichTextWidget):
         :rtype: string
         """
         if self.mode != 'display':
-            return super(RichTextWidget, self).render()
+            # MODE "INPUT"
+            rendered = ''
+            allowed_mime_types = self.allowedMimeTypes()
+            if not allowed_mime_types or len(allowed_mime_types) <= 1:
+                # Display textarea with default widget
+                rendered = super(RichTextWidget, self).render()
+            else:
+                # Let pat-textarea-mimetype-selector choose the widget
+
+                # Initialize the widget without a pattern
+                base_args = self._base_args()
+                pattern_options = base_args['pattern_options']
+                del base_args['pattern']
+                del base_args['pattern_options']
+                textarea_widget = self._base(None, None, **base_args)
+                textarea_widget.klass = ''
+                mt_pattern_name = '{}{}'.format(
+                    self._base._klass_prefix,
+                    'textareamimetypeselector'
+                )
+
+                # Initialize mimetype selector pattern
+                # TODO: default_mime_type returns 'text/html', regardless of
+                # settings. fix in plone.app.textfield
+                value_mime_type = self.value.mimeType if self.value\
+                    else self.field.default_mime_type
+                mt_select = etree.Element('select')
+                mt_select.attrib['id'] = '{}_text_format'.format(self.id)
+                mt_select.attrib['name'] = '{}.mimeType'.format(self.name)
+                mt_select.attrib['class'] = mt_pattern_name
+                mt_select.attrib['{}{}'.format('data-', mt_pattern_name)] =\
+                    json.dumps({
+                        'textareaName': self.name,
+                        'widgets': {
+                            'text/html': {  # TODO: currently, we only support
+                                            # richtext widget config for
+                                            # 'text/html', no other mimetypes.
+                                'pattern': self.pattern,
+                                'patternOptions': pattern_options
+                            }
+                        }
+                    })
+
+                # Create a list of allowed mime types
+                for mt in allowed_mime_types:
+                    opt = etree.Element('option')
+                    opt.attrib['value'] = mt
+                    if value_mime_type == mt:
+                        opt.attrib['selected'] = 'selected'
+                    opt.text = mt
+                    mt_select.append(opt)
+
+                # Render the combined widget
+                rendered = '{}\n{}'.format(
+                    textarea_widget.render(),
+                    etree.tostring(mt_select)
+                )
+            return rendered
 
         if not self.value:
             return ''
