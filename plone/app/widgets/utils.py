@@ -199,7 +199,7 @@ def get_tinymce_options(context, field, request):
             },
             'tiny': config,
             # This is for loading the languages on tinymce
-            'loadingBaseUrl': '++plone++static/components/tinymce-builded/js/tinymce',
+            'loadingBaseUrl': '++resource++plone.app.widgets.tinymce',
             'prependToUrl': 'resolveuid/',
             'linkAttribute': 'UID',
             'prependToScalePart': '/@@images/image/',
@@ -210,7 +210,7 @@ def get_tinymce_options(context, field, request):
         }
     else:
         # Plone 5
-        # They are setted on the body
+        # They are set on the body
         pattern_options = getMultiAdapter(
             (context, request, field),
             name="tinymce_settings")()['data-pat-tinymce']

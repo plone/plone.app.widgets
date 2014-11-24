@@ -134,6 +134,12 @@
       file="static/widgets-tinymce-img-object.gif"
       layer=".interfaces.IWidgetsLayer"
       />
+  <browser:resourceDirectory
+      name="plone.app.widgets.tinymce"
+      directory="static/widgets-tinymce"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
 
   <browser:resource
       name="plone.app.widgets.js"
