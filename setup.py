@@ -29,12 +29,8 @@ setup(
         'Products.ResourceRegistries>=2.1',
         # nedded because users vocabulary was added here
         'plone.app.vocabularies>=2.1.12dev',
-        # needed for pickadate javascript
-        'plone.app.jquery>=1.8.0',
-        # needed so it works with jquery >= 1.8
-        'plone.app.search>=1.1.2',
-        'plone.app.registry>=1.2.2',
-        'plone.app.querystring>=1.1.0'
+        # needed for compatibility with jQuery 1.9+
+        'Products.CMFPlone>=4.3.4'
     ],
     extras_require={
         'test': [

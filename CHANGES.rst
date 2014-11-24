@@ -4,6 +4,11 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Raise minimum ``Products.CMFPlone`` requirement to 4.3.4 to ensure
+  compatibility with jQuery 1.9+. jQuery 1.11.1 is included in recent
+  ``mockup``.
+  [thet]
+
 - Always include CSS and JS SourceMap files. They are only loaded, when the
   browser's developer console is open. Replaces previous behavior, where
   uninified (and broken) resources were loaded when mockup was installed, which
