@@ -4,6 +4,12 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Always include CSS and JS SourceMap files. They are only loaded, when the
+  browser's developer console is open. Replaces previous behavior, where
+  uninified (and broken) resources were loaded when mockup was installed, which
+  was also an ugly implicit development mode behavior.
+  [thet]
+
 - Use a mimetype selector for richtext areas, if multiple mimetypes are allowed.
   [thet]
 
