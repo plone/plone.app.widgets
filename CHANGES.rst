@@ -9,7 +9,7 @@ Changelog
 
 - Raise minimum ``Products.CMFPlone`` requirement to 4.3.4 to ensure
   compatibility with jQuery 1.9+. jQuery 1.11.1 is included in recent
-  ``mockup``. Remove dependency on plone.app.jquery.
+  ``mockup``.
   [thet]
 
 - Always include CSS and JS SourceMap files. They are only loaded, when the
