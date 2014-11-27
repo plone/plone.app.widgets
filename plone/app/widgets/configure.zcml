@@ -13,7 +13,6 @@
 
   <include package="Products.CMFPlone" />
   <include package="plone.app.vocabularies" />
-  <include package="plone.app.jquery" />
   <include package=".browser" />
 
   <include package="mockup"
