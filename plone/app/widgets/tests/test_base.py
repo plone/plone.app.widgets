@@ -285,3 +285,34 @@ class TextareaWidgetTests(unittest.TestCase):
         self.assertRaises(
             TypeError,
             TextareaWidget, 'example1', el='input', name='example2')
+
+
+class DivWidgetTests(unittest.TestCase):
+    """Tests for plone.app.widgets.base.DivWidget."""
+
+    def test_defaults(self):
+        from plone.app.widgets.base import DivWidget
+
+        widget = DivWidget('upload')
+        self.assertEqual(
+            widget.render(),
+            '<div class="pat-upload"/>')
+
+        self.assertEqual(widget.klass, 'pat-upload')
+
+    def test_setting_patterns_options(self):
+        from plone.app.widgets.base import DivWidget
+
+        widget = DivWidget(
+            'upload',
+            pattern_options={
+                'option1': 'value1',
+                'option2': 'value2',
+            })
+
+        self.assertEqual(
+            widget.render(),
+            '<div class="pat-upload" '
+            'data-pat-upload="{'
+            '&quot;option2&quot;: &quot;value2&quot;, '
+            '&quot;option1&quot;: &quot;value1&quot;}"/>')
