@@ -112,6 +112,21 @@ class BaseWidget(object):
         return etree.tostring(self.el)
 
 
+class DivWidget(BaseWidget):
+    """Widget with `div` element."""
+
+    def __init__(self, pattern, pattern_options={}):
+        """
+        :param pattern: [required] Pattern name.
+        :type pattern: string
+
+        :param pattern_options: Patterns options.
+        :type pattern_options: dict
+
+        """
+        super(DivWidget, self).__init__('div', pattern, pattern_options)
+
+
 class InputWidget(BaseWidget):
     """Widget with `input` element."""
 
