@@ -81,6 +81,7 @@ class DateWidgetTests(unittest.TestCase):
         self.widget = DateWidget()
 
     def test_widget(self):
+        current_year = datetime.today().year
         self.assertEqual(
             {
                 'pattern': 'pickadate',
@@ -89,8 +90,8 @@ class DateWidgetTests(unittest.TestCase):
                 'pattern_options': {
                     'date': {
                         'firstDay': 0,
-                        'min': [1914, 1, 1],
-                        'max': [2034, 1, 1],
+                        'min': [current_year - 100, 1, 1],
+                        'max': [current_year + 20, 1, 1],
                         'clear': u'Clear',
                         'format': 'mmmm d, yyyy',
                         'monthsFull': [u'January', u'February', u'March',
@@ -140,6 +141,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         self.widget = DatetimeWidget()
 
     def test_widget(self):
+        current_year = datetime.today().year
         self.assertEqual(
             {
                 'pattern': 'pickadate',
@@ -148,8 +150,8 @@ class DatetimeWidgetTests(unittest.TestCase):
                 'pattern_options': {
                     'date': {
                         'firstDay': 0,
-                        'min': [1914, 1, 1],
-                        'max': [2034, 1, 1],
+                        'min': [current_year - 100, 1, 1],
+                        'max': [current_year + 20, 1, 1],
                         'clear': u'Clear',
                         'format': 'mmmm d, yyyy',
                         'monthsFull': [u'January', u'February', u'March',
