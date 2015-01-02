@@ -116,6 +116,7 @@ class DateWidgetTests(unittest.TestCase):
         self.widget.pattern_options = {'date': {'firstDay': 0}}
 
     def test_widget(self):
+        # TODO: fails on january first?
         self.assertEqual(
             {
                 'pattern': 'pickadate',
