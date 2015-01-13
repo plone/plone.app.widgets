@@ -572,7 +572,7 @@ class TinyMCEWidget(BaseWidget):
         charset = properties.site_properties.getProperty('default_charset',
                                                          'utf-8')
         args['value'] = (request.get(field.getName(),
-                                     field.getAccessor(context)())
+                                     field.getRaw(context))
                          ).decode(charset)
 
         args.setdefault('pattern_options', {})
