@@ -29,7 +29,7 @@
 
   <browser:page
     name="qsOptions"
-    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    for="plone.app.layout.navigation.interfaces.INavigationRoot"
     class=".query.QueryStringIndexOptions"
     permission="zope2.View"
     />
