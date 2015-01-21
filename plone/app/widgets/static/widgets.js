@@ -20436,9 +20436,9 @@ Picker.extend( 'pickatime', TimePicker )
  *
  * This is a singleton.
  * Configuration is done on the body tag data-i18ncatalogurl attribute
- *     <body data-i18ncatalogurl="/jsi18n">
+ *     <body data-i18ncatalogurl="/plonejsi18n">
  *
- *  Or, it'll default to "/jsi18n"
+ *  Or, it'll default to "/plonejsi18n"
  */
 
 /* global portal_url:true */
@@ -20454,7 +20454,7 @@ define('mockup-i18n',[
 
     self.baseUrl = $('body').attr('data-i18ncatalogurl');
     if (!self.baseUrl) {
-      self.baseUrl = '/jsi18n';
+      self.baseUrl = '/plonejsi18n';
     }
     self.currentLanguage = $('html').attr('lang') || 'en';
     self.storage = null;
