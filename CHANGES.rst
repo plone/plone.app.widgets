@@ -29,7 +29,7 @@ Changelog
   [thet]
 
 - add jsi18n integration
-  [vangheem]
+  [vangheem, kiorky]
 
 
 1.7.0 (2014-07-15)
