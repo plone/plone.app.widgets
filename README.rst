@@ -22,6 +22,13 @@ provide tested and modularized widgets based on the concept of *patterns*.
 .. contents::
 
 
+1.x
+===
+
+The 1.x branch of plone.app.widgets is to be used only for Plone 4.3. 2.x
+is only to be used with Plone 5.
+
+
 Is safe to use this package?
 ============================
 
