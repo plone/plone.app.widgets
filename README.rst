@@ -22,6 +22,11 @@ provide tested and modularized widgets based on the concept of *patterns*.
 .. contents::
 
 
+Versions
+========
+
+2.x is only to be used with Plone 5 and 1.x is to be used in Plone 4.3.
+
 Is safe to use this package?
 ============================
 

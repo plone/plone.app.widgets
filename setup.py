@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '1.8.0.dev0'
+version = '2.0.dev0'
 
 setup(
     name='plone.app.widgets',
@@ -30,7 +30,7 @@ setup(
         # nedded because users vocabulary was added here
         'plone.app.vocabularies>=2.1.12dev',
         # needed for compatibility with jQuery 1.9+
-        'Products.CMFPlone>=4.3.4'
+        'Products.CMFPlone>=5'
     ],
     extras_require={
         'test': [

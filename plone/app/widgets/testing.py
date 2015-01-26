@@ -6,8 +6,7 @@ from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
 from plone.app.testing import PloneSandboxLayer
 from plone.app.testing.layers import FunctionalTesting
 from plone.app.testing.layers import IntegrationTesting
-from plone.app.widgets.dx import SelectWidget
-from plone.app.widgets.interfaces import IWidgetsLayer
+from plone.app.z3cform.widget import SelectWidget
 from plone.autoform import directives
 from plone.autoform.form import AutoExtensibleForm
 from plone.testing import z2
@@ -52,7 +51,7 @@ directlyProvides(ExampleFunctionVocabulary, IVocabularyFactory)
 
 
 class TestRequest(BaseTestRequest):
-    implements(IWidgetsLayer)
+    pass
 
 
 class DummyContext(object):

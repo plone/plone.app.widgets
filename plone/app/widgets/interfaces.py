@@ -21,16 +21,6 @@ class IWidgetsView(Interface):
         """
 
 
-class IATCTFileFactory(IFileFactory):
-    """ adapter factory for ATCT
-    """
-
-
-class IDXFileFactory(IFileFactory):
-    """ adapter factory for DX types
-    """
-
-
 class IFieldPermissionChecker(Interface):
     """Adapter factory for checking whether a user has permission to
     edit a specific field on a content object.
