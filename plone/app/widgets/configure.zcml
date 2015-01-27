@@ -22,4 +22,13 @@
     factory=".factories.Zope2FileUploadStorable"
     />
 
+  <genericsetup:registerProfile
+    name="default"
+    title="Plone Widgets"
+    directory="profiles/p5"
+    description="Better widgets for Plone"
+    provides="Products.GenericSetup.interfaces.EXTENSION"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    />
+
 </configure>
