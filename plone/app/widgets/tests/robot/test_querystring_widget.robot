@@ -13,6 +13,7 @@ ${querywidget_selector}  \#formfield-form-widgets-ICollection-query
 Querystring Widget rows appear and disappear correctly
   Given I'm logged in as a 'Site Administrator'
     And I create a collection  My Collection
+        Wait For Condition  return $('.querystring-wrapper:visible').size() > 0
         Page should contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(1)
         Page should not contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When I select criteria index in row  1  Expiration date
@@ -90,6 +91,8 @@ I select criteria index in row
   [Arguments]  ${number}  ${label}
   ${criteria_row} =  Convert to String  ${querywidget_selector} .querystring-criteria-wrapper:nth-child(${number})
   Click Element  css=${criteria_row} .querystring-criteria-index .select2-container a
+  Input Text  css=.select2-drop-active .select2-input  text=${label}
+  Press Key  css=.select2-drop-active .select2-input  \\13
   Press Key  jquery=:focus  ${label}\n
 
 I select criteria operator in row

@@ -38,11 +38,11 @@ I edit
 I create a collection
   [Arguments]  ${title}
   Go to  ${PLONE_URL}/++add++Collection
-  Wait until page contains  Add Collection
-  Input text  name=form.widgets.IDublinCore.title  ${title}
+  Wait For Condition  return $('.autotoc-nav .active:visible').size() > 0
+  Execute Javascript  $('#form-widgets-IDublinCore-title').val('${title}'); return 0;
 
 I create a folder
   [Arguments]  ${title}
   Go to  ${PLONE_URL}/++add++Folder
-  Wait until page contains  Add Folder
-  Input text  name=form.widgets.IDublinCore.title  ${title}
+  Wait For Condition  return $('.autotoc-nav .active:visible').size() > 0
+  Execute Javascript  $('#form-widgets-IDublinCore-title').val('${title}'); return 0;
