@@ -93,7 +93,6 @@ I select criteria index in row
   Click Element  css=${criteria_row} .querystring-criteria-index .select2-container a
   Input Text  css=.select2-drop-active .select2-input  text=${label}
   Press Key  css=.select2-drop-active .select2-input  \\13
-  Press Key  jquery=:focus  ${label}\n
 
 I select criteria operator in row
   [Arguments]  ${number}  ${label}
