@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from Acquisition import aq_inner, aq_parent
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
 from datetime import datetime
@@ -12,10 +11,8 @@ from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
 from z3c.form.interfaces import IAddForm
-from Products.CMFCore.interfaces._content import IFolderish
-from plone.uuid.interfaces import IUUID
-from Products.CMFPlone.interfaces import IPloneSiteRoot
 from zope.component import getMultiAdapter
+from zope.component import ComponentLookupError
 import json
 
 _ = MessageFactory('plone.app.widgets')
@@ -159,62 +156,18 @@ def get_querystring_options(context, querystring_view):
 
 
 def get_tinymce_options(context, field, request):
+    """
+    We're just going to be looking up settings from
+    plone pattern options
+    """
     args = {'pattern_options': {}}
-    folder = context
-    if not IFolderish.providedBy(context):
-        folder = aq_parent(context)
-    if IPloneSiteRoot.providedBy(folder):
-        initial = None
-    else:
-        initial = IUUID(folder, None)
-    portal_url = get_portal_url(context)
-    current_path = folder.absolute_url()[len(portal_url):]
-
-    utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
-    if utility:
-        # Plone 4.3
-        config = utility.getConfiguration(context=context,
-                                          field=field,
-                                          request=request)
-
-        config['content_css'] = config['portal_url'] + '/base.css'
-        del config['customplugins']
-        del config['plugins']
-        del config['theme']
-
-        config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
-        args['pattern_options'] = {
-            'relatedItems': {
-                'vocabularyUrl': config['portal_url'] +
-                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
-            },
-            'upload': {
-                'initialFolder': initial,
-                'currentPath': current_path,
-                'baseUrl': config['document_base_url'],
-                'relativePath': '@@fileUpload',
-                'uploadMultiple': False,
-                'maxFiles': 1,
-                'showTitle': False
-            },
-            'tiny': config,
-            # This is for loading the languages on tinymce
-            'loadingBaseUrl': '++resource++plone.app.widgets.tinymce',
-            'prependToUrl': 'resolveuid/',
-            'linkAttribute': 'UID',
-            'prependToScalePart': '/@@images/image/',
-            'folderTypes': utility.containsobjects.replace('\n', ','),
-            'imageTypes': utility.imageobjects.replace('\n', ','),
-            'anchorSelector': utility.anchor_selector,
-            'linkableTypes': utility.linkable.replace('\n', ',')
-        }
-    else:
-        # Plone 5
-        # They are set on the body
+    try:
         pattern_options = getMultiAdapter(
             (context, request, field),
-            name="tinymce_settings")()['data-pat-tinymce']
+            name="plone_settings").tinymce()['data-pat-tinymce']
         args['pattern_options'] = json.loads(pattern_options)
+    except (ComponentLookupError, AttributeError):
+        pass
     return args
 
 
