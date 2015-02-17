@@ -296,9 +296,31 @@ def get_tinymce_options(context, field, request):
                 table=button_settings['table'],
                 )
 
+        # map Plone4 TinyMCE "styles" (raw format) to TinyMCE 4 "style_formats"
+        # see http://www.tinymce.com/tryit/custom_formats.php
+        p_sytle_formats = []
+        for f in getattr(utility, 'styles', '').split('\n'):
+            f_parts = f.split("|")
+            s_format = dict(title=f_parts[0])
+            # XXX: These node-types need review
+            if f_parts[1].lower() in ["span", "a", "b", "i"]:
+                s_format['inline'] = f_parts[1].lower()
+            elif f_parts[1].lower() in ["tr", "th", "dt", "dd", "ol", "ul"]:
+                s_format['selector'] = f_parts[1].lower()
+            else:
+                s_format['block'] = f_parts[1].lower()
+            if len(f_parts) > 2:
+                s_format['classes'] = f_parts[2]
+            p_sytle_formats.append(s_format)
+        config["style_formats"] = [
+            dict(title=u"Plone Styles", items=p_sytle_formats),
+        ]
+        # XXX: Mayber there should be an option to merge default styles or not
+        config["style_formats_merge"] = "true"
+
         args['pattern_options'] = {
             'relatedItems': {
-                'vocabularyUrl': config['portal_url'] + 
+                'vocabularyUrl': config['portal_url'] +
                 '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
             },
             'upload': {
