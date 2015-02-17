@@ -180,7 +180,8 @@ def get_tinymce_options(context, field, request):
                                           field=field,
                                           request=request)
 
-        config['content_css'] = config['portal_url'] + '/base.css'
+        if config['content_css'] == "":
+            config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
 
         # FIXME: this might be needed in order to still load/support
         # custom plugins such as collective.tinymceplugins.*
@@ -191,8 +192,6 @@ def get_tinymce_options(context, field, request):
         # asynchronously loaded but contained in the mockup bundle anyway
         del config['plugins']
         del config['theme']
-
-        config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
 
         # FIXME: map old names to new names in the configuration for plone5
         # and notify migration-team
@@ -297,26 +296,28 @@ def get_tinymce_options(context, field, request):
                 )
 
         # map Plone4 TinyMCE "styles" (raw format) to TinyMCE 4 "style_formats"
-        # see http://www.tinymce.com/tryit/custom_formats.php
-        p_sytle_formats = []
-        for f in getattr(utility, 'styles', '').split('\n'):
+        # see http://www.tinymce.com/wiki.php/Configuration:style_formats
+        p_style_formats = []
+        u_styles = utility.styles and utility.styles.split('\n') or []
+        for f in u_styles:
             f_parts = f.split("|")
             s_format = dict(title=f_parts[0])
             # XXX: These node-types need review
-            if f_parts[1].lower() in ["span", "a", "b", "i"]:
+            if f_parts[1].lower() in ["span", "b", "i"]:
                 s_format['inline'] = f_parts[1].lower()
-            elif f_parts[1].lower() in ["tr", "th", "dt", "dd", "ol", "ul"]:
+            elif f_parts[1].lower() in ["tr", "th", "dt", "dd", "ol", "ul", "a"]:
                 s_format['selector'] = f_parts[1].lower()
             else:
                 s_format['block'] = f_parts[1].lower()
             if len(f_parts) > 2:
                 s_format['classes'] = f_parts[2]
-            p_sytle_formats.append(s_format)
-        config["style_formats"] = [
-            dict(title=u"Plone Styles", items=p_sytle_formats),
-        ]
-        # XXX: Mayber there should be an option to merge default styles or not
-        config["style_formats_merge"] = "true"
+            p_style_formats.append(s_format)
+        if p_style_formats:
+            config["style_formats"] = [
+                dict(title=u"Plone Styles", items=p_style_formats),
+            ]
+            # XXX: Maybe there should be an option to merge default styles or not
+            config["style_formats_merge"] = "true"
 
         args['pattern_options'] = {
             'relatedItems': {
