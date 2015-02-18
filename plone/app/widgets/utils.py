@@ -14,6 +14,7 @@ from z3c.form.interfaces import IAddForm
 from zope.component import getMultiAdapter
 from zope.component import ComponentLookupError
 import json
+from zope.globalrequest import getRequest
 
 _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')
@@ -124,13 +125,14 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
 
-    msgstr = translate(_plone(u'Search'), context=context.REQUEST)
+    request = getRequest()
+    msgstr = translate(_plone(u'Search'), context=request)
     options.setdefault('searchText', msgstr)
-    msgstr = translate(_(u'Entire site'), context=context.REQUEST)
+    msgstr = translate(_(u'Entire site'), context=request)
     options.setdefault('searchAllText', msgstr)
     msgstr = translate(_plone('tabs_home',
                        default=u'Home'),
-                       context=context.REQUEST)
+                       context=request)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
 
