@@ -4,6 +4,9 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Include mockup v.1.8.3 bundle
+  [fRiSi] 
+
 - Include TinyMCE languages from mockup.
   [petschki]
 

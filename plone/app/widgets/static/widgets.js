@@ -1,5 +1,5 @@
 /** vim: et:ts=4:sw=4:sts=4
- * @license RequireJS 2.1.15 Copyright (c) 2010-2014, The Dojo Foundation All Rights Reserved.
+ * @license RequireJS 2.1.16 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/requirejs for details
  */
@@ -12,7 +12,7 @@ var requirejs, require, define;
 (function (global) {
     var req, s, head, baseElement, dataMain, src,
         interactiveScript, currentlyAddingScript, mainScript, subPath,
-        version = '2.1.15',
+        version = '2.1.16',
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
         jsSuffixRegExp = /\.js$/,
@@ -1123,6 +1123,13 @@ var requirejs, require, define;
 
                         if (this.errback) {
                             on(depMap, 'error', bind(this, this.errback));
+                        } else if (this.events.error) {
+                            // No direct errback on this module, but something
+                            // else is listening for errors, so be sure to
+                            // propagate the error correctly.
+                            on(depMap, 'error', bind(this, function(err) {
+                                this.emit('error', err);
+                            }));
                         }
                     }
 
@@ -20551,6 +20558,23 @@ define('mockup-i18n',[
   return new I18N();
 });
 
+/* i18n integration.
+ *
+ * This is a singleton.
+ * Configuration is done on the body tag data-i18ncatalogurl attribute
+ *     <body data-i18ncatalogurl="/plonejsi18n">
+ *
+ *  Or, it'll default to "/plonejsi18n"
+ */
+
+define('translate',[
+  'mockup-i18n'
+], function(i18n) {
+  
+  i18n.loadCatalog('widgets');
+  return i18n.MessageFactory('widgets');
+});
+
 /* PickADate pattern.
  *
  * Options:
@@ -20642,12 +20666,9 @@ define('mockup-patterns-pickadate',[
   'picker.date',
   'picker.time',
   'mockup-patterns-select2',
-  'mockup-i18n'
-], function($, Base, Picker, PickerDate, PickerTime, Select2, i18n) {
+  'translate'
+], function($, Base, Picker, PickerDate, PickerTime, Select2, _t) {
   
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var PickADate = Base.extend({
     name: 'pickadate',
@@ -29351,7 +29372,7 @@ define('mockup-patterns-tree',[
  *    separator(string): Select2 option. String which separates multiple items. (',')
  *    tokenSeparators(array): Select2 option, refer to select2 documentation.
  *    ([",", " "])
- *    width(string): Specify a width for the widget. ('300px')
+ *    width(string): Specify a width for the widget. ('100%')
  *
  * Documentation:
  *    The Related Items pattern is based on Select2 so many of the same options will work here as well.
@@ -29400,12 +29421,9 @@ define('mockup-patterns-relateditems',[
   'mockup-patterns-select2',
   'mockup-utils',
   'mockup-patterns-tree',
-  'mockup-i18n'
-], function($, _, Base, Select2, utils, Tree, i18n) {
+  'translate'
+], function($, _, Base, Select2, utils, Tree, _t) {
   
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var RelatedItems = Base.extend({
     name: 'relateditems',
@@ -29413,7 +29431,7 @@ define('mockup-patterns-relateditems',[
     currentPath: null,
     defaults: {
       vocabularyUrl: null, // must be set to work
-      width: '300px',
+      width: '100%',
       multiple: true,
       tokenSeparators: [',', ' '],
       separator: ',',
@@ -29830,12 +29848,9 @@ define('mockup-patterns-querystring',[
   'mockup-patterns-select2',
   'mockup-patterns-pickadate',
   'select2',
-  'mockup-i18n'
-], function($, Base, Select2, PickADate, undefined, i18n) {
+  'translate'
+], function($, Base, Select2, PickADate, undefined, _t) {
   
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var Criteria = function() { this.init.apply(this, arguments); };
   Criteria.prototype = {
@@ -30049,7 +30064,7 @@ define('mockup-patterns-querystring',[
                 });
 
       } else if (widget === 'MultipleSelectionWidget') {
-        self.$value = $('<select/>').attr('multiple', true)
+        self.$value = $('<select/>').prop('multiple', true)
                 .addClass(self.options.classValueName + '-' + widget)
                 .appendTo($wrapper)
                 .change(function() {
@@ -30379,10 +30394,10 @@ define('mockup-patterns-querystring',[
         .attr('name', 'sort_reversed:boolean')
         .change(function() {
           self.refreshPreviewEvent.call(self);
-          if ($(this).attr('checked') === 'checked') {
-            $('.option input[type="checkbox"]', existingSortOrder).attr('checked', 'checked');
+          if ($(this).prop('checked')) {
+            $('.option input[type="checkbox"]', existingSortOrder).prop('checked', true);
           } else {
-            $('.option input[type="checkbox"]', existingSortOrder).removeAttr('checked');
+            $('.option input[type="checkbox"]', existingSortOrder).prop('checked', false);
           }
         });
 
@@ -30399,10 +30414,10 @@ define('mockup-patterns-querystring',[
       // if the form already contains the sort fields, hide them! Their values
       // will be synced back and forth between the querystring's form elements
       if (existingSortOn.length >= 1 && existingSortOrder.length >= 1) {
-        var reversed = $('.option input[type="checkbox"]', existingSortOrder).attr('checked') === 'checked';
+        var reversed = $('.option input[type="checkbox"]', existingSortOrder).prop('checked');
         var sortOn = $('[id$="-sort_on"]', existingSortOn).val();
         if (reversed) {
-          self.$sortOrder.attr('checked', 'checked');
+          self.$sortOrder.prop('checked', true);
         }
         self.$sortOn.select2('val', sortOn);
         $(existingSortOn).hide();
@@ -30454,8 +30469,7 @@ define('mockup-patterns-querystring',[
       }
 
       query.push('sort_on=' + self.$sortOn.val());
-      var sortorder = self.$sortOrder.attr('checked');
-      if (sortorder === 'checked') {
+      if (self.$sortOrder.prop('checked')) {
         query.push('sort_order=reverse');
       }
 
@@ -33671,7 +33685,19 @@ define('mockup-patterns-modal',[
         onTimeout: null,
         redirectOnResponse: false,
         redirectToUrl: function($action, response, options) {
-          return $('body').data('base-url');
+          var baseUrl = '';
+          var reg = /<body.*data-base-url=[\"'](.*)[\"'].*/im.exec(response);
+          if (reg && reg.length > 1) {
+            // Base url as data attribute on body (Plone 5)
+            baseUrl = reg[1];
+          } else {
+            reg = /<base.*href=[\"'](.*)[\"'].*/im.exec(response);
+            if (reg && reg.length > 1) {
+              // base tag available (Plone 4)
+              baseUrl = reg[1];
+            }
+          }
+          return baseUrl;
         }
       },
       routerOptions: {
@@ -74385,16 +74411,13 @@ define('mockup-patterns-upload',[
   'dropzone',
   'text!mockup-patterns-upload-url/templates/upload.xml',
   'text!mockup-patterns-upload-url/templates/preview.xml',
-  'mockup-i18n'
+  'translate'
 ], function($, _, Base, RelatedItems, Dropzone,
-            UploadTemplate, PreviewTemplate, i18n) {
+            UploadTemplate, PreviewTemplate, _t) {
   
 
   /* we do not want this plugin to auto discover */
   Dropzone.autoDiscover = false;
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var UploadPattern = Base.extend({
     name: 'upload',
@@ -74731,6 +74754,12 @@ define('mockup-patterns-upload',[
       return Math.round(mb / 1024) + ' GB';
     },
 
+    setPath: function(path){
+      var self = this;
+      self.currentPath = path;
+      self.options.url = self.dropzone.options.url = self.getUrl();
+    },
+
     setupRelatedItems: function($input) {
       var self = this;
       var options = self.options.relatedItems;
@@ -74740,12 +74769,11 @@ define('mockup-patterns-upload',[
       var ri = new RelatedItems($input, options);
       ri.$el.on('change', function() {
         var result = $(this).select2('data');
+        var path = null;
         if (result.length > 0){
-          self.currentPath = result[0].path;
-        } else {
-          self.currentPath = null;
+          path = result[0].path;
         }
-        self.options.url = self.dropzone.options.url = self.getUrl();
+        self.setPath(path);
       });
       return ri;
     }
@@ -75382,10 +75410,10 @@ define('mockup-patterns-tinymce-url/js/links',[
       }
     },
     setSelectElement: function($el, val) {
-      $el.find('option:selected').attr('selected', '');
+      $el.find('option:selected').prop('selected', false);
       if (val) {
         // update
-        $el.find('option[value="' + val + '"]').attr('selected', 'true');
+        $el.find('option[value="' + val + '"]').prop('selected', true);
       }
     },
     reinitialize: function() {
@@ -89711,7 +89739,7 @@ define('mockup-patterns-tinymce',[
   'text!mockup-patterns-tinymce-url/templates/selection.xml',
   'mockup-utils',
   'mockup-patterns-tinymce-url/js/links',
-  'mockup-i18n',
+  'translate',
   'tinymce-modern-theme', 'tinymce-advlist', 'tinymce-anchor', 'tinymce-autolink',
   'tinymce-autoresize', 'tinymce-autosave', 'tinymce-bbcode', 'tinymce-charmap',
   'tinymce-code', 'tinymce-colorpicker', 'tinymce-contextmenu', 'tinymce-directionality',
@@ -89726,13 +89754,8 @@ define('mockup-patterns-tinymce',[
 ], function($, _,
             Base, RelatedItems, Modal, tinymce,
             AutoTOC, ResultTemplate, SelectionTemplate,
-            utils, LinkModal, i18n) {
+            utils, LinkModal, _t) {
   
-
-
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var TinyMCE = Base.extend({
     name: 'tinymce',
@@ -89862,7 +89885,11 @@ define('mockup-patterns-tinymce',[
     generateImageUrl: function(data, scale) {
       var self = this;
       var url = self.generateUrl(data);
-      return url + self.options.prependToScalePart + scale + self.options.appendToScalePart;
+      if (scale !== ""){
+          url = (url + self.options.prependToScalePart + scale +
+                 self.options.appendToScalePart);
+      }
+      return url;
     },
     stripGeneratedUrl: function(url) {
       // to get original attribute back
