@@ -298,7 +298,7 @@ def get_tinymce_options(context, field, request):
         # map Plone4 TinyMCE "styles" (raw format) to TinyMCE 4 "style_formats"
         # see http://www.tinymce.com/wiki.php/Configuration:style_formats
         p_style_formats = []
-        u_styles = utility.styles and utility.styles.split('\n') or []
+        u_styles = utility.styles and utility.styles.strip().split('\n') or []
         for f in u_styles:
             f_parts = f.split("|")
             s_format = dict(title=f_parts[0])
@@ -318,6 +318,13 @@ def get_tinymce_options(context, field, request):
             ]
             # XXX: Maybe there should be an option to merge default styles or not
             config["style_formats_merge"] = "true"
+
+        # respect resizing settings
+        config['resize'] = utility.resizing
+        # XXX: the autoresize plugin is loaded always by the mockup pattern
+        # so the checkbox doesn't do anything ... all we do here is to remap
+        # the editor_height to autoresize_min_height
+        config['autoresize_min_height'] = config['theme_advanced_source_editor_height']
 
         args['pattern_options'] = {
             'relatedItems': {
