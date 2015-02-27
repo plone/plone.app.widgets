@@ -4,6 +4,12 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Implement selectableTypes for the RelatedItems pattern
+  [petschki]
+
+- Include TinyMCE languages from mockup.
+  [petschki]
+
 - Change TinyMCE pattern options: Add the folderTypes list to the RelatedItems
   widget in TinyMCE (fixes issues with the tinymce configuration option
   ``containsobjects`` not being respected), set the RelatedItems widget mode to
