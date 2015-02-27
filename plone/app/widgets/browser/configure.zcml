@@ -44,7 +44,7 @@
     />
 
   <browser:view
-    for="*"
+    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
     name="plonejsi18n"
     class=".i18n.i18njs"
     permission="zope2.View"
