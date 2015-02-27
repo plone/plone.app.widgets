@@ -121,7 +121,7 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
-                             vocabulary_view, field_name=None):
+                             vocabulary_view, field_name=None, widget=None):
     portal = get_portal()
     options = get_ajaxselect_options(portal, value, separator,
                                      vocabulary_name, vocabulary_view,
@@ -141,6 +141,9 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     if properties:
         options['folderTypes'] = properties.site_properties.getProperty(
             'typesLinkToFolderContentsInFC', options['folderTypes'])
+
+    if getattr(widget, 'selectable_types', None):
+        options['selectableTypes'] = widget.selectable_types
 
     return options
 
