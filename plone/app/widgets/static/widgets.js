@@ -1,5 +1,5 @@
 /** vim: et:ts=4:sw=4:sts=4
- * @license RequireJS 2.1.15 Copyright (c) 2010-2014, The Dojo Foundation All Rights Reserved.
+ * @license RequireJS 2.1.16 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/requirejs for details
  */
@@ -12,7 +12,7 @@ var requirejs, require, define;
 (function (global) {
     var req, s, head, baseElement, dataMain, src,
         interactiveScript, currentlyAddingScript, mainScript, subPath,
-        version = '2.1.15',
+        version = '2.1.16',
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
         jsSuffixRegExp = /\.js$/,
@@ -1123,6 +1123,13 @@ var requirejs, require, define;
 
                         if (this.errback) {
                             on(depMap, 'error', bind(this, this.errback));
+                        } else if (this.events.error) {
+                            // No direct errback on this module, but something
+                            // else is listening for errors, so be sure to
+                            // propagate the error correctly.
+                            on(depMap, 'error', bind(this, function(err) {
+                                this.emit('error', err);
+                            }));
                         }
                     }
 
@@ -12386,36 +12393,1463 @@ return jQuery;
 
 }));
 
-define('mockup-registry',[
+/**
+ * Patterns logging - minimal logging framework
+ *
+ * Copyright 2012 Simplon B.V.
+ */
+
+(function() {
+    // source: https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind
+    if (!Function.prototype.bind) {
+        Function.prototype.bind = function (oThis) {
+            if (typeof this !== "function") {
+                // closest thing possible to the ECMAScript 5 internal IsCallable function
+                throw new TypeError("Function.prototype.bind - what is trying to be bound is not callable");
+            }
+
+            var aArgs = Array.prototype.slice.call(arguments, 1),
+                fToBind = this,
+                fNOP = function () {},
+                fBound = function () {
+                    return fToBind.apply(this instanceof fNOP &&
+                            oThis ? this : oThis,
+                            aArgs.concat(Array.prototype.slice.call(arguments)));
+                };
+            fNOP.prototype = this.prototype;
+            fBound.prototype = new fNOP();
+
+            return fBound;
+        };
+    }
+
+    var root,    // root logger instance
+        writer;  // writer instance, used to output log entries
+
+    var Level = {
+        DEBUG: 10,
+        INFO: 20,
+        WARN: 30,
+        ERROR: 40,
+        FATAL: 50
+    };
+
+    function IEConsoleWriter() {
+    }
+
+    IEConsoleWriter.prototype = {
+        output:  function(log_name, level, messages) {
+            // console.log will magically appear in IE8 when the user opens the
+            // F12 Developer Tools, so we have to test for it every time.
+            if (typeof window.console==="undefined" || typeof console.log==="undefined")
+                    return;
+            if (log_name)
+                messages.unshift(log_name+":");
+            var message = messages.join(" ");
+
+            // Under some conditions console.log will be available but the
+            // other functions are missing.
+            if (typeof console.info===undefined) {
+                var level_name;
+                if (level<=Level.DEBUG)
+                    level_name="DEBUG";
+                else if (level<=Level.INFO)
+                    level_name="INFO";
+                else if (level<=Level.WARN)
+                    level_name="WARN";
+                else if (level<=Level.ERROR)
+                    level_name="ERROR";
+                else
+                    level_name="FATAL";
+                console.log("["+level_name+"] "+message);
+            } else {
+                if (level<=Level.DEBUG) {
+                    // console.debug exists but is deprecated
+                    message="[DEBUG] "+message;
+                    console.log(message);
+                } else if (level<=Level.INFO)
+                    console.info(message);
+                else if (level<=Level.WARN)
+                    console.warn(message);
+                else
+                    console.error(message);
+            }
+        }
+    };
+
+
+    function ConsoleWriter() {
+    }
+
+    ConsoleWriter.prototype = {
+        output: function(log_name, level, messages) {
+            if (log_name)
+                messages.unshift(log_name+":");
+            if (level<=Level.DEBUG) {
+                // console.debug exists but is deprecated
+                messages.unshift("[DEBUG]");
+                console.log.apply(console, messages);
+            } else if (level<=Level.INFO)
+                console.info.apply(console, messages);
+            else if (level<=Level.WARN)
+                console.warn.apply(console, messages);
+            else
+                console.error.apply(console, messages);
+        }
+    };
+
+
+    function Logger(name, parent) {
+        this._loggers={};
+        this.name=name || "";
+        this._parent=parent || null;
+        if (!parent) {
+            this._enabled=true;
+            this._level=Level.WARN;
+        }
+    }
+
+    Logger.prototype = {
+        getLogger: function(name) {
+            var path = name.split("."),
+                root = this,
+                route = this.name ? [this.name] : [];
+            while (path.length) {
+                var entry = path.shift();
+                route.push(entry);
+                if (!(entry in root._loggers))
+                    root._loggers[entry] = new Logger(route.join("."), root);
+                root=root._loggers[entry];
+            }
+            return root;
+        },
+
+        _getFlag: function(flag) {
+            var context=this;
+            flag="_"+flag;
+            while (context!==null) {
+                if (context[flag]!==undefined)
+                    return context[flag];
+                context=context._parent;
+            }
+            return null;
+        },
+
+        setEnabled: function(state) {
+            this._enabled=!!state;
+        },
+
+        isEnabled: function() {
+            this._getFlag("enabled");
+        },
+
+        setLevel: function(level) {
+            if (typeof level==="number")
+                this._level=level;
+            else if (typeof level==="string") {
+                level=level.toUpperCase();
+                if (level in Level)
+                    this._level=Level[level];
+            }
+        },
+
+        getLevel: function() {
+            return this._getFlag("level");
+        },
+
+        log: function(level, messages) {
+            if (!messages.length || !this._getFlag("enabled") || level<this._getFlag("level"))
+                return;
+            messages=Array.prototype.slice.call(messages);
+            writer.output(this.name, level, messages);
+        },
+
+        debug: function() {
+            this.log(Level.DEBUG, arguments);
+        },
+
+        info: function() {
+            this.log(Level.INFO, arguments);
+        },
+
+        warn: function() {
+            this.log(Level.WARN, arguments);
+        },
+
+        error: function() {
+            this.log(Level.ERROR, arguments);
+        },
+
+        fatal: function() {
+            this.log(Level.FATAL, arguments);
+        }
+    };
+
+    function getWriter() {
+        return writer;
+    }
+
+    function setWriter(w) {
+        writer=w;
+    }
+
+    if (!window.console || !window.console.log || typeof window.console.log.apply !== "function") {
+        setWriter(new IEConsoleWriter());
+    } else {
+        setWriter(new ConsoleWriter());
+    }
+
+    root=new Logger();
+
+    var logconfig = /loglevel(|-[^=]+)=([^&]+)/g,
+        match;
+
+    while ((match=logconfig.exec(window.location.search))!==null) {
+        var logger = (match[1]==="") ? root : root.getLogger(match[1].slice(1));
+        logger.setLevel(match[2].toUpperCase());
+    }
+
+    var api = {
+        Level: Level,
+        getLogger: root.getLogger.bind(root),
+        setEnabled: root.setEnabled.bind(root),
+        isEnabled: root.isEnabled.bind(root),
+        setLevel: root.setLevel.bind(root),
+        getLevel: root.getLevel.bind(root),
+        debug: root.debug.bind(root),
+        info: root.info.bind(root),
+        warn: root.warn.bind(root),
+        error: root.error.bind(root),
+        fatal: root.fatal.bind(root),
+        getWriter: getWriter,
+        setWriter: setWriter
+    };
+
+    // Expose as either an AMD module if possible. If not fall back to exposing
+    // a global object.
+    if (typeof define==="function")
+        define("logging", [], function () {
+            return api;
+        });
+    else
+        window.logging=api;
+})();
+
+/**
+ * Patterns logger - wrapper around logging library
+ *
+ * Copyright 2012-2013 Florian Friesdorf
+ */
+define('pat-logger',[
+    'logging'
+], function(logging) {
+    var log = logging.getLogger('patterns');
+    return log;
+});
+
+define('pat-utils',[
+    "jquery"
+], function($) {
+
+    var singleBoundJQueryPlugin = function (pattern, method, options) {
+        /* This is a jQuery plugin for patterns which are invoked ONCE FOR EACH
+         * matched element in the DOM.
+         *
+         * This is how the Mockup-type patterns behave. They are constructor
+         * functions which need to be invoked once per jQuery-wrapped DOM node
+         * for all DOM nodes on which the pattern applies.
+         */
+        var $this = this;
+        $this.each(function() {
+            var pat, $el = $(this);
+            pat = pattern.init($el, options);
+            if (method) {
+                if (pat[method] === undefined) {
+                    $.error("Method " + method +
+                            " does not exist on jQuery." + pattern.name);
+                    return false;
+                }
+                if (method.charAt(0) === '_') {
+                    $.error("Method " + method +
+                            " is private on jQuery." + pattern.name);
+                    return false;
+                }
+                pat[method].apply(pat, [options]);
+            }
+        });
+        return $this;
+    };
+
+    var pluralBoundJQueryPlugin = function (pattern, method, options) {
+        /* This is a jQuery plugin for patterns which are invoked ONCE FOR ALL
+         * matched elements in the DOM.
+         *
+         * This is how the vanilla Patternslib-type patterns behave. They are
+         * simple objects with an init method and this method gets called once
+         * with a list of jQuery-wrapped DOM nodes on which the pattern
+         * applies.
+         */
+        var $this = this;
+        if (method) {
+            if (pattern[method]) {
+                return pattern[method].apply($this, [$this].concat([options]));
+            } else {
+                $.error("Method " + method +
+                        " does not exist on jQuery." + pattern.name);
+            }
+        } else {
+            pattern.init.apply($this, [$this].concat([options]));
+        }
+        return $this;
+    };
+
+    var jqueryPlugin = function(pattern) {
+        return function(method, options) {
+            var $this = this;
+            if ($this.length === 0) {
+                return $this;
+            }
+            if (typeof method === 'object') {
+                options = method;
+                method = undefined;
+            }
+            if (typeof pattern === "function") {
+                return singleBoundJQueryPlugin.call(this, pattern, method, options);
+            } else {
+                return pluralBoundJQueryPlugin.call(this, pattern, method, options);
+            }
+        };
+    };
+
+    //     Underscore.js 1.3.1
+    //     (c) 2009-2012 Jeremy Ashkenas, DocumentCloud Inc.
+    //     Underscore is freely distributable under the MIT license.
+    //     Portions of Underscore are inspired or borrowed from Prototype,
+    //     Oliver Steele's Functional, and John Resig's Micro-Templating.
+    //     For all details and documentation:
+    //     http://documentcloud.github.com/underscore
+    //
+    // Returns a function, that, as long as it continues to be invoked, will not
+    // be triggered. The function will be called after it stops being called for
+    // N milliseconds.
+    function debounce(func, wait) {
+        var timeout;
+        return function debounce_run() {
+            var context = this, args = arguments;
+            var later = function() {
+                timeout = null;
+                func.apply(context, args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Is a given variable an object?
+    function isObject(obj) {
+        var type = typeof obj;
+        return type === 'function' || type === 'object' && !!obj;
+    }
+
+    // Extend a given object with all the properties in passed-in object(s).
+    function extend(obj) {
+        if (!isObject(obj)) return obj;
+        var source, prop;
+        for (var i = 1, length = arguments.length; i < length; i++) {
+            source = arguments[i];
+            for (prop in source) {
+                if (hasOwnProperty.call(source, prop)) {
+                    obj[prop] = source[prop];
+                }
+            }
+        }
+        return obj;
+    }
+    // END: Taken from Underscore.js until here.
+
+    function rebaseURL(base, url) {
+        if (url.indexOf("://")!==-1 || url[0]==="/")
+            return url;
+        return base.slice(0, base.lastIndexOf("/")+1) + url;
+    }
+
+    function findLabel(input) {
+        for (var label=input.parentNode; label && label.nodeType!==11; label=label.parentNode)
+            if (label.tagName==="LABEL")
+                return label;
+
+        var $label;
+
+        if (input.id)
+            $label = $("label[for="+input.id+"]");
+        if ($label && $label.length===0 && input.form)
+            $label = $("label[for="+input.name+"]", input.form);
+        if ($label && $label.length)
+            return $label[0];
+        else
+            return null;
+    }
+
+    // Taken from http://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport
+    function elementInViewport(el) {
+       var rect = el.getBoundingClientRect(),
+           docEl = document.documentElement,
+           vWidth = window.innerWidth || docEl.clientWidth,
+           vHeight = window.innerHeight || docEl.clientHeight;
+
+        if (rect.right<0 || rect.bottom<0 || rect.left>vWidth || rect.top>vHeight)
+            return false;
+        return true;
+    }
+
+    // Taken from http://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+    function escapeRegExp(str) {
+        return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    }
+
+    function removeWildcardClass($targets, classes) {
+        if (classes.indexOf("*")===-1)
+            $targets.removeClass(classes);
+        else {
+            var matcher = classes.replace(/[\-\[\]{}()+?.,\\\^$|#\s]/g, "\\$&");
+            matcher = matcher.replace(/[*]/g, ".*");
+            matcher = new RegExp("^" + matcher + "$");
+            $targets.filter("[class]").each(function() {
+                var $this = $(this),
+                    classes = $this.attr("class").split(/\s+/),
+                    ok=[];
+                for (var i=0; i<classes.length; i++)
+                    if (!matcher.test(classes[i]))
+                        ok.push(classes[i]);
+                if (ok.length)
+                    $this.attr("class", ok.join(" "));
+                else
+                    $this.removeAttr("class");
+            });
+        }
+    }
+
+    var transitions = {
+        none: {hide: "hide", show: "show"},
+        fade: {hide: "fadeOut", show: "fadeIn"},
+        slide: {hide: "slideUp", show: "slideDown"}
+    };
+
+    function hideOrShow($slave, visible, options, pattern_name) {
+        var duration = (options.transition==="css" || options.transition==="none") ? null : options.effect.duration;
+
+        $slave.removeClass("visible hidden in-progress");
+        var onComplete = function() {
+            $slave
+                .removeClass("in-progress")
+                .addClass(visible ? "visible" : "hidden")
+                .trigger("pat-update",
+                        {pattern: pattern_name,
+                         transition: "complete"});
+        };
+        if (!duration) {
+            if (options.transition!=="css")
+                $slave[visible ? "show" : "hide"]();
+            onComplete();
+        } else {
+            var t = transitions[options.transition];
+            $slave
+                .addClass("in-progress")
+                .trigger("pat-update",
+                        {pattern: pattern_name,
+                         transition: "start"});
+            $slave[visible ? t.show : t.hide]({
+                duration: duration,
+                easing: options.effect.easing,
+                complete: onComplete
+            });
+        }
+    }
+
+    function addURLQueryParameter(fullURL, param, value) {
+        /* Using a positive lookahead (?=\=) to find the given parameter,
+         * preceded by a ? or &, and followed by a = with a value after
+         * than (using a non-greedy selector) and then followed by
+         * a & or the end of the string.
+         *
+         * Taken from http://stackoverflow.com/questions/7640270/adding-modify-query-string-get-variables-in-a-url-with-javascript
+         */
+        var val = new RegExp('(\\?|\\&)' + param + '=.*?(?=(&|$))'),
+            parts = fullURL.toString().split('#'),
+            url = parts[0],
+            hash = parts[1],
+            qstring = /\?.+$/,
+            newURL = url;
+        // Check if the parameter exists
+        if (val.test(url)) {
+            // if it does, replace it, using the captured group
+            // to determine & or ? at the beginning
+            newURL = url.replace(val, '$1' + param + '=' + value);
+        } else if (qstring.test(url)) {
+            // otherwise, if there is a query string at all
+            // add the param to the end of it
+            newURL = url + '&' + param + '=' + value;
+        } else {
+            // if there's no query string, add one
+            newURL = url + '?' + param + '=' + value;
+        }
+        if (hash) { newURL += '#' + hash; }
+        return newURL;
+    }
+
+    var utils = {
+        // pattern pimping - own module?
+        jqueryPlugin: jqueryPlugin,
+        debounce: debounce,
+        escapeRegExp: escapeRegExp,
+        isObject: isObject,
+        extend: extend,
+        rebaseURL: rebaseURL,
+        findLabel: findLabel,
+        elementInViewport: elementInViewport,
+        removeWildcardClass: removeWildcardClass,
+        hideOrShow: hideOrShow,
+        addURLQueryParameter: addURLQueryParameter
+    };
+    return utils;
+});
+
+define('pat-compat',[],function() {
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every (JS 1.6)
+    if (!Array.prototype.every)
+    {
+        Array.prototype.every = function(fun /*, thisp */)
+        {
+            
+
+            if (this === null)
+                throw new TypeError();
+
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (typeof fun !== "function")
+                throw new TypeError();
+
+            var thisp = arguments[1];
+            for (var i = 0; i < len; i++)
+            {
+                if (i in t && !fun.call(thisp, t[i], i, t))
+                    return false;
+            }
+
+            return true;
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter (JS 1.6)
+    if (!Array.prototype.filter) {
+        Array.prototype.filter = function(fun /*, thisp */) {
+            
+
+            if (this === null)
+                throw new TypeError();
+
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (typeof fun !== "function")
+                throw new TypeError();
+
+            var res = [];
+            var thisp = arguments[1];
+            for (var i = 0; i < len; i++)
+            {
+                if (i in t)
+                {
+                    var val = t[i]; // in case fun mutates this
+                    if (fun.call(thisp, val, i, t))
+                        res.push(val);
+                }
+            }
+
+            return res;
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/forEach (JS 1.6)
+    // Production steps of ECMA-262, Edition 5, 15.4.4.18
+    // Reference: http://es5.github.com/#x15.4.4.18
+    if ( !Array.prototype.forEach ) {
+
+        Array.prototype.forEach = function( callback, thisArg ) {
+
+            var T, k;
+
+            if ( this === null ) {
+                throw new TypeError( " this is null or not defined" );
+            }
+
+            // 1. Let O be the result of calling ToObject passing the |this| value as the argument.
+            var O = Object(this);
+
+            // 2. Let lenValue be the result of calling the Get internal method of O with the argument "length".
+            // 3. Let len be ToUint32(lenValue).
+            var len = O.length >>> 0; // Hack to convert O.length to a UInt32
+
+            // 4. If IsCallable(callback) is false, throw a TypeError exception.
+            // See: http://es5.github.com/#x9.11
+            if ( {}.toString.call(callback) !== "[object Function]" ) {
+                throw new TypeError( callback + " is not a function" );
+            }
+
+            // 5. If thisArg was supplied, let T be thisArg; else let T be undefined.
+            if ( thisArg ) {
+                T = thisArg;
+            }
+
+            // 6. Let k be 0
+            k = 0;
+
+            // 7. Repeat, while k < len
+            while( k < len ) {
+
+                var kValue;
+
+                // a. Let Pk be ToString(k).
+                //   This is implicit for LHS operands of the in operator
+                // b. Let kPresent be the result of calling the HasProperty internal method of O with argument Pk.
+                //   This step can be combined with c
+                // c. If kPresent is true, then
+                if ( k in O ) {
+
+                    // i. Let kValue be the result of calling the Get internal method of O with argument Pk.
+                    kValue = O[ k ];
+
+                    // ii. Call the Call internal method of callback with T as the this value and
+                    // argument list containing kValue, k, and O.
+                    callback.call( T, kValue, k, O );
+                }
+                // d. Increase k by 1.
+                k++;
+            }
+            // 8. return undefined
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf (JS 1.6)
+    if (!Array.prototype.indexOf) {
+        Array.prototype.indexOf = function (searchElement /*, fromIndex */ ) {
+            
+            if (this === null) {
+                throw new TypeError();
+            }
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (len === 0) {
+                return -1;
+            }
+            var n = 0;
+            if (arguments.length > 0) {
+                n = Number(arguments[1]);
+                if (n !== n) { // shortcut for verifying if it's NaN
+                    n = 0;
+                } else if (n !== 0 && n !== Infinity && n !== -Infinity) {
+                    n = (n > 0 || -1) * Math.floor(Math.abs(n));
+                }
+            }
+            if (n >= len) {
+                return -1;
+            }
+            var k = n >= 0 ? n : Math.max(len - Math.abs(n), 0);
+            for (; k < len; k++) {
+                if (k in t && t[k] === searchElement) {
+                    return k;
+                }
+            }
+            return -1;
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf (JS 1.6)
+    if (!Array.prototype.lastIndexOf) {
+        Array.prototype.lastIndexOf = function(searchElement /*, fromIndex*/) {
+            
+
+            if (this === null)
+                throw new TypeError();
+
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (len === 0)
+                return -1;
+
+            var n = len;
+            if (arguments.length > 1)
+            {
+                n = Number(arguments[1]);
+                if (n !== n)
+                    n = 0;
+                else if (n !== 0 && n !== (1 / 0) && n !== -(1 / 0))
+                    n = (n > 0 || -1) * Math.floor(Math.abs(n));
+            }
+
+            var k = n >= 0 ? Math.min(n, len - 1) : len - Math.abs(n);
+
+            for (; k >= 0; k--)
+            {
+                if (k in t && t[k] === searchElement)
+                    return k;
+            }
+            return -1;
+        };
+    }
+
+
+    // source: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map (JS 1.6)
+    // Production steps of ECMA-262, Edition 5, 15.4.4.19
+    // Reference: http://es5.github.com/#x15.4.4.19
+    if (!Array.prototype.map) {
+        Array.prototype.map = function(callback, thisArg) {
+
+            var T, A, k;
+
+            if (this === null) {
+                throw new TypeError(" this is null or not defined");
+            }
+
+            // 1. Let O be the result of calling ToObject passing the |this| value as the argument.
+            var O = Object(this);
+
+            // 2. Let lenValue be the result of calling the Get internal method of O with the argument "length".
+            // 3. Let len be ToUint32(lenValue).
+            var len = O.length >>> 0;
+
+            // 4. If IsCallable(callback) is false, throw a TypeError exception.
+            // See: http://es5.github.com/#x9.11
+            if ({}.toString.call(callback) !== "[object Function]") {
+                throw new TypeError(callback + " is not a function");
+            }
+
+            // 5. If thisArg was supplied, let T be thisArg; else let T be undefined.
+            if (thisArg) {
+                T = thisArg;
+            }
+
+            // 6. Let A be a new array created as if by the expression new Array(len) where Array is
+            // the standard built-in constructor with that name and len is the value of len.
+            A = new Array(len);
+
+            // 7. Let k be 0
+            k = 0;
+
+            // 8. Repeat, while k < len
+            while(k < len) {
+
+                var kValue, mappedValue;
+
+                // a. Let Pk be ToString(k).
+                //   This is implicit for LHS operands of the in operator
+                // b. Let kPresent be the result of calling the HasProperty internal method of O with argument Pk.
+                //   This step can be combined with c
+                // c. If kPresent is true, then
+                if (k in O) {
+
+                    // i. Let kValue be the result of calling the Get internal method of O with argument Pk.
+                    kValue = O[ k ];
+
+                    // ii. Let mappedValue be the result of calling the Call internal method of callback
+                    // with T as the this value and argument list containing kValue, k, and O.
+                    mappedValue = callback.call(T, kValue, k, O);
+
+                    // iii. Call the DefineOwnProperty internal method of A with arguments
+                    // Pk, Property Descriptor {Value: mappedValue, Writable: true, Enumerable: true, Configurable: true},
+                    // and false.
+
+                    // In browsers that support Object.defineProperty, use the following:
+                    // Object.defineProperty(A, Pk, { value: mappedValue, writable: true, enumerable: true, configurable: true });
+
+                    // For best browser support, use the following:
+                    A[ k ] = mappedValue;
+                }
+                // d. Increase k by 1.
+                k++;
+            }
+
+            // 9. return A
+            return A;
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/Reduce (JS 1.8)
+    if (!Array.prototype.reduce) {
+        Array.prototype.reduce = function reduce(accumulator){
+            if (this===null || this===undefined) throw new TypeError("Object is null or undefined");
+            var i = 0, l = this.length >> 0, curr;
+
+            if(typeof accumulator !== "function") // ES5 : "If IsCallable(callbackfn) is false, throw a TypeError exception."
+                throw new TypeError("First argument is not callable");
+
+            if(arguments.length < 2) {
+                if (l === 0) throw new TypeError("Array length is 0 and no second argument");
+                curr = this[0];
+                i = 1; // start accumulating at the second element
+            }
+            else
+                curr = arguments[1];
+
+            while (i < l) {
+                if(i in this) curr = accumulator.call(undefined, curr, this[i], i, this);
+                ++i;
+            }
+
+            return curr;
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/ReduceRight (JS 1.8)
+    if (!Array.prototype.reduceRight)
+    {
+        Array.prototype.reduceRight = function(callbackfn /*, initialValue */)
+        {
+            
+
+            if (this === null)
+                throw new TypeError();
+
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (typeof callbackfn !== "function")
+                throw new TypeError();
+
+            // no value to return if no initial value, empty array
+            if (len === 0 && arguments.length === 1)
+                throw new TypeError();
+
+            var k = len - 1;
+            var accumulator;
+            if (arguments.length >= 2)
+            {
+                accumulator = arguments[1];
+            }
+            else
+            {
+                do
+                {
+                    if (k in this)
+                    {
+                        accumulator = this[k--];
+                        break;
+                    }
+
+                    // if array contains no values, no initial value to return
+                    if (--k < 0)
+                        throw new TypeError();
+                }
+                while (true);
+            }
+
+            while (k >= 0)
+            {
+                if (k in t)
+                    accumulator = callbackfn.call(undefined, accumulator, t[k], k, t);
+                k--;
+            }
+
+            return accumulator;
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some (JS 1.6)
+    if (!Array.prototype.some)
+    {
+        Array.prototype.some = function(fun /*, thisp */)
+        {
+            
+
+            if (this === null)
+                throw new TypeError();
+
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (typeof fun !== "function")
+                throw new TypeError();
+
+            var thisp = arguments[1];
+            for (var i = 0; i < len; i++)
+            {
+                if (i in t && fun.call(thisp, t[i], i, t))
+                    return true;
+            }
+
+            return false;
+        };
+    }
+
+
+    // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray (JS 1.8.5)
+    if (!Array.isArray) {
+        Array.isArray = function (arg) {
+            return Object.prototype.toString.call(arg) === "[object Array]";
+        };
+    }
+
+    // source: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/Trim (JS 1.8.1)
+    if (!String.prototype.trim) {
+        String.prototype.trim = function () {
+            return this.replace(/^\s+|\s+$/g, "");
+        };
+    }
+
+    // source: https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Function/bind
+    if (!Function.prototype.bind) {
+        Function.prototype.bind = function (oThis) {
+            if (typeof this !== "function") {
+                // closest thing possible to the ECMAScript 5 internal IsCallable function
+                throw new TypeError("Function.prototype.bind - what is trying to be bound is not callable");
+            }
+
+            var aArgs = Array.prototype.slice.call(arguments, 1),
+                fToBind = this,
+                fNOP = function () {},
+                fBound = function () {
+                    return fToBind.apply(this instanceof fNOP &&
+                            oThis ? this : oThis,
+                            aArgs.concat(Array.prototype.slice.call(arguments)));
+                };
+            fNOP.prototype = this.prototype;
+            fBound.prototype = new fNOP();
+
+            return fBound;
+        };
+    }
+
+    // https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Object/keys
+    if (!Object.keys) {
+        Object.keys = (function () {
+            var _hasOwnProperty = Object.prototype.hasOwnProperty,
+            hasDontEnumBug = !({toString: null}).propertyIsEnumerable("toString"),
+            dontEnums = [
+            "toString",
+            "toLocaleString",
+            "valueOf",
+            "hasOwnProperty",
+            "isPrototypeOf",
+            "propertyIsEnumerable",
+            "constructor"
+            ],
+            dontEnumsLength = dontEnums.length;
+
+            return function (obj) {
+                if (typeof obj !== "object" && typeof obj !== "function" || obj === null)
+                    throw new TypeError("Object.keys called on non-object");
+
+                var result = [];
+                for (var prop in obj)
+                    if (_hasOwnProperty.call(obj, prop))
+                        result.push(prop);
+
+                if (hasDontEnumBug)
+                    for (var i=0; i < dontEnumsLength; i++)
+                        if (_hasOwnProperty.call(obj, dontEnums[i]))
+                            result.push(dontEnums[i]);
+                return result;
+            };
+        })();
+    }
+});
+
+/**
+ * @license
+ * Patterns @VERSION@ jquery-ext - various jQuery extensions
+ *
+ * Copyright 2011 Humberto Sermeño
+ */
+define('pat-jquery-ext',["jquery"], function($) {
+    var methods = {
+        init: function( options ) {
+            var settings = {
+                time: 3, /* time it will wait before moving to "timeout" after a move event */
+                initialTime: 8, /* time it will wait before first adding the "timeout" class */
+                exceptionAreas: [] /* IDs of elements that, if the mouse is over them, will reset the timer */
+            };
+            return this.each(function() {
+                var $this = $(this),
+                    data = $this.data("timeout");
+
+                if (!data) {
+                    if ( options ) {
+                        $.extend( settings, options );
+                    }
+                    $this.data("timeout", {
+                        "lastEvent": new Date(),
+                        "trueTime": settings.time,
+                        "time": settings.initialTime,
+                        "untouched": true,
+                        "inExceptionArea": false
+                    });
+
+                    $this.bind( "mouseover.timeout", methods.mouseMoved );
+                    $this.bind( "mouseenter.timeout", methods.mouseMoved );
+
+                    $(settings.exceptionAreas).each(function() {
+                        $this.find(this)
+                            .live( "mouseover.timeout", {"parent":$this}, methods.enteredException )
+                            .live( "mouseleave.timeout", {"parent":$this}, methods.leftException );
+                    });
+
+                    if (settings.initialTime > 0)
+                        $this.timeout("startTimer");
+                    else
+                        $this.addClass("timeout");
+                }
+            });
+        },
+
+        enteredException: function(event) {
+            var data = event.data.parent.data("timeout");
+            data.inExceptionArea = true;
+            event.data.parent.data("timeout", data);
+            event.data.parent.trigger("mouseover");
+        },
+
+        leftException: function(event) {
+            var data = event.data.parent.data("timeout");
+            data.inExceptionArea = false;
+            event.data.parent.data("timeout", data);
+        },
+
+        destroy: function() {
+            return this.each( function() {
+                var $this = $(this),
+                    data = $this.data("timeout");
+
+                $(window).unbind(".timeout");
+                data.timeout.remove();
+                $this.removeData("timeout");
+            });
+        },
+
+        mouseMoved: function() {
+            var $this = $(this), data = $this.data("timeout");
+
+            if ($this.hasClass("timeout")) {
+                $this.removeClass("timeout");
+                $this.timeout("startTimer");
+            } else if ( data.untouched ) {
+                data.untouched = false;
+                data.time = data.trueTime;
+            }
+
+            data.lastEvent = new Date();
+            $this.data("timeout", data);
+        },
+
+        startTimer: function() {
+            var $this = $(this), data = $this.data("timeout");
+            var fn = function(){
+                var data = $this.data("timeout");
+                if ( data && data.lastEvent ) {
+                    if ( data.inExceptionArea ) {
+                        setTimeout( fn, Math.floor( data.time*1000 ) );
+                    } else {
+                        var now = new Date();
+                        var diff = Math.floor(data.time*1000) - ( now - data.lastEvent );
+                        if ( diff > 0 ) {
+                            // the timeout has not ocurred, so set the timeout again
+                            setTimeout( fn, diff+100 );
+                        } else {
+                            // timeout ocurred, so set the class
+                            $this.addClass("timeout");
+                        }
+                    }
+                }
+            };
+
+            setTimeout( fn, Math.floor( data.time*1000 ) );
+        }
+    };
+
+    $.fn.timeout = function( method ) {
+        if ( methods[method] ) {
+            return methods[method].apply( this, Array.prototype.slice.call( arguments, 1 ));
+        } else if ( typeof method === "object" || !method ) {
+            return methods.init.apply( this, arguments );
+        } else {
+            $.error( "Method " + method + " does not exist on jQuery.timeout" );
+        }
+    };
+
+    // Custom jQuery selector to find elements with scrollbars
+    $.extend($.expr[":"], {
+        scrollable: function(element) {
+            var vertically_scrollable, horizontally_scrollable;
+            if ($(element).css("overflow") === "scroll" ||
+                $(element).css("overflowX") === "scroll" ||
+                $(element).css("overflowY") === "scroll")
+                return true;
+
+            vertically_scrollable = (element.clientHeight < element.scrollHeight) && (
+                $.inArray($(element).css("overflowY"), ["scroll", "auto"]) !== -1 || $.inArray($(element).css("overflow"), ["scroll", "auto"]) !== -1);
+
+            if (vertically_scrollable)
+                return true;
+
+            horizontally_scrollable = (element.clientWidth < element.scrollWidth) && (
+                $.inArray($(element).css("overflowX"), ["scroll", "auto"]) !== -1 || $.inArray($(element).css("overflow"), ["scroll", "auto"]) !== -1);
+            return horizontally_scrollable;
+        }
+    });
+
+    // Make Visible in scroll
+    $.fn.makeVisibleInScroll = function( parent_id ) {
+        var absoluteParent = null;
+        if ( typeof parent_id === "string" ) {
+            absoluteParent = $("#" + parent_id);
+        } else if ( parent_id ) {
+            absoluteParent = $(parent_id);
+        }
+
+        return this.each(function() {
+            var $this = $(this), parent;
+            if (!absoluteParent) {
+                parent = $this.parents(":scrollable");
+                if (parent.length > 0) {
+                    parent = $(parent[0]);
+                } else {
+                    parent = $(window);
+                }
+            } else {
+                parent = absoluteParent;
+            }
+
+            var elemTop = $this.position().top;
+            var elemBottom = $this.height() + elemTop;
+
+            var viewTop = parent.scrollTop();
+            var viewBottom = parent.height() + viewTop;
+
+            if (elemTop < viewTop) {
+                parent.scrollTop(elemTop);
+            } else if ( elemBottom > viewBottom - parent.height()/2 ) {
+                parent.scrollTop( elemTop - (parent.height() - $this.height())/2 );
+            }
+        });
+    };
+
+    //Make absolute location
+    $.fn.setPositionAbsolute = function(element,offsettop,offsetleft) {
+        return this.each(function() {
+            // set absolute location for based on the element passed
+            // dynamically since every browser has different settings
+            var $this = $(this);
+            var thiswidth = $(this).width();
+            var    pos   = element.offset();
+            var    width = element.width();
+            var    height = element.height();
+            var setleft = (pos.left + width - thiswidth + offsetleft);
+            var settop = (pos.top + height + offsettop);
+            $this.css({ "z-index" : 1, "position": "absolute", "marginLeft": 0, "marginTop": 0, "left": setleft + "px", "top":settop + "px" ,"width":thiswidth});
+            $this.remove().appendTo("body").show();
+        });
+    };
+
+    $.fn.positionAncestor = function(selector) {
+        var left = 0;
+        var top = 0;
+        this.each(function() {
+            // check if current element has an ancestor matching a selector
+            // and that ancestor is positioned
+            var $ancestor = $(this).closest(selector);
+            if ($ancestor.length && $ancestor.css("position") !== "static") {
+                var $child = $(this);
+                var childMarginEdgeLeft = $child.offset().left - parseInt($child.css("marginLeft"), 10);
+                var childMarginEdgeTop = $child.offset().top - parseInt($child.css("marginTop"), 10);
+                var ancestorPaddingEdgeLeft = $ancestor.offset().left + parseInt($ancestor.css("borderLeftWidth"), 10);
+                var ancestorPaddingEdgeTop = $ancestor.offset().top + parseInt($ancestor.css("borderTopWidth"), 10);
+                left = childMarginEdgeLeft - ancestorPaddingEdgeLeft;
+                top = childMarginEdgeTop - ancestorPaddingEdgeTop;
+                // we have found the ancestor and computed the position
+                // stop iterating
+                return false;
+            }
+        });
+        return {
+            left:    left,
+            top:    top
+        };
+    };
+
+
+    // XXX: In compat.js we include things for browser compatibility,
+    // but these two seem to be only convenience. Do we really want to
+    // include these as part of patterns?
+    String.prototype.startsWith = function(str) { return (this.match("^"+str) !== null); };
+    String.prototype.endsWith = function(str) { return (this.match(str+"$") !== null); };
+
+
+    /******************************
+
+     Simple Placeholder
+
+     ******************************/
+
+    $.simplePlaceholder = {
+        placeholder_class: null,
+
+        hide_placeholder: function(){
+            var $this = $(this);
+            if($this.val() === $this.attr("placeholder")){
+                $this.val("").removeClass($.simplePlaceholder.placeholder_class);
+            }
+        },
+
+        show_placeholder: function(){
+            var $this = $(this);
+            if($this.val() === ""){
+                $this.val($this.attr("placeholder")).addClass($.simplePlaceholder.placeholder_class);
+            }
+        },
+
+        prevent_placeholder_submit: function(){
+            $(this).find(".simple-placeholder").each(function() {
+                var $this = $(this);
+                if ($this.val() === $this.attr("placeholder")){
+                    $this.val("");
+                }
+            });
+            return true;
+        }
+    };
+
+    $.fn.simplePlaceholder = function(options) {
+        if(document.createElement("input").placeholder === undefined){
+            var config = {
+                placeholder_class : "placeholding"
+            };
+
+            if(options) $.extend(config, options);
+            $.simplePlaceholder.placeholder_class = config.placeholder_class;
+
+            this.each(function() {
+                var $this = $(this);
+                $this.focus($.simplePlaceholder.hide_placeholder);
+                $this.blur($.simplePlaceholder.show_placeholder);
+                if($this.val() === "") {
+                    $this.val($this.attr("placeholder"));
+                    $this.addClass($.simplePlaceholder.placeholder_class);
+                }
+                $this.addClass("simple-placeholder");
+                $(this.form).submit($.simplePlaceholder.prevent_placeholder_submit);
+            });
+        }
+
+        return this;
+    };
+
+    $.fn.findInclusive = function(selector) {
+        return this.find('*').addBack().filter(selector);
+    };
+
+    $.fn.slideIn = function(speed, easing, callback) {
+        return this.animate({width: "show"}, speed, easing, callback);
+    };
+
+    $.fn.slideOut = function(speed, easing, callback) {
+        return this.animate({width: "hide"}, speed, easing, callback);
+    };
+
+    // case-insensitive :contains
+    $.expr[":"].Contains = function(a, i, m) {
+        return $(a).text().toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+    };
+
+    $.fn.scopedFind = function (selector) {
+        /*  If the selector starts with an object id do a global search,
+         *  otherwise do a local search.
+         */
+        if (selector.startsWith('#')) {
+            return $(selector);
+        } else {
+            return this.find(selector);
+        }
+    };
+});
+
+/**
+ * Patterns registry - Central registry and scan logic for patterns
+ *
+ * Copyright 2012-2013 Simplon B.V.
+ * Copyright 2012-2013 Florian Friesdorf
+ * Copyright 2013 Marko Durkovic
+ * Copyright 2013 Rok Garbas
+ */
+
+/*
+ * changes to previous patterns.register/scan mechanism
+ * - if you want initialised class, do it in init
+ * - init returns set of elements actually initialised
+ * - handle once within init
+ * - no turnstile anymore
+ * - set pattern.jquery_plugin if you want it
+ */
+define('pat-registry',[
+    "jquery",
+    "pat-logger",
+    "pat-utils",
+    // below here modules that are only loaded
+    "pat-compat",
+    "pat-jquery-ext"
+], function($, logger, utils) {
+    var log = logger.getLogger("registry");
+
+    var disable_re = /patterns-disable=([^&]+)/g,
+        dont_catch_re = /patterns-dont-catch/g,
+        dont_catch = false,
+        disabled = {}, match;
+
+    while ((match=disable_re.exec(window.location.search)) !== null) {
+        disabled[match[1]] = true;
+        log.info('Pattern disabled via url config:', match[1]);
+    }
+
+    while ((match=dont_catch_re.exec(window.location.search)) !== null) {
+        dont_catch = true;
+        log.info('I will not catch init exceptions');
+    }
+
+    var registry = {
+        patterns: {},
+        // as long as the registry is not initialized, pattern
+        // registration just registers a pattern. Once init is called,
+        // the DOM is scanned. After that registering a new pattern
+        // results in rescanning the DOM only for this pattern.
+        initialized: false,
+        init: function registry_init() {
+            $(document).ready(function() {
+                log.info('loaded: ' + Object.keys(registry.patterns).sort().join(', '));
+                registry.scan(document.body);
+                registry.initialized = true;
+                log.info('finished initial scan.');
+            });
+        },
+
+        scan: function registry_scan(content, patterns, trigger) {
+            var $content = $(content),
+                all = [], allsel,
+                $match, plog;
+
+            // If no list of patterns was specified, we scan for all patterns
+            patterns = patterns || Object.keys(registry.patterns);
+
+            // selector for all patterns
+            patterns.forEach(function registry_scan_loop(name) {
+                if (disabled[name]) {
+                    log.debug('Skipping disabled pattern:', name);
+                    return;
+                }
+                var pattern = registry.patterns[name];
+                if (pattern.transform) {
+                    try {
+                        pattern.transform($content);
+                    } catch (e) {
+                        if (dont_catch) { throw(e); }
+                        log.error("Transform error for pattern" + name, e);
+                    }
+                }
+                if (pattern.trigger) {
+                    all.push(pattern.trigger);
+                }
+            });
+            // Find all elements that belong to any pattern.
+            allsel = all.join(",");
+            $match = $content.findInclusive(allsel);
+            $match = $match.filter(function() { return $(this).parents('pre').length === 0; });
+            $match = $match.filter(":not(.cant-touch-this)");
+
+            // walk list backwards and initialize patterns inside-out.
+            $match.toArray().reduceRight(function registry_pattern_init(acc, el) {
+                var pattern, $el = $(el);
+                for (var name in registry.patterns) {
+                    pattern = registry.patterns[name];
+                    if (pattern.init) {
+                        plog = logger.getLogger("pat." + name);
+                        if ($el.is(pattern.trigger)) {
+                            plog.debug("Initialising:", $el);
+                            try {
+                                pattern.init($el, null, trigger);
+                                plog.debug("done.");
+                            } catch (e) {
+                                if (dont_catch) { throw(e); }
+                                plog.error("Caught error:", e);
+                            }
+                        }
+                    }
+                }
+            }, null);
+            $('body').addClass('patterns-loaded');
+        },
+
+        register: function registry_register(pattern, name) {
+            var plugin_name, jquery_plugin;
+            name = name || pattern.name;
+            if (!name) {
+                log.error("Pattern lacks a name:", pattern);
+                return false;
+            }
+            if (registry.patterns[name]) {
+                log.error("Already have a pattern called: " + name);
+                return false;
+            }
+
+            // register pattern to be used for scanning new content
+            registry.patterns[name] = pattern;
+
+            // register pattern as jquery plugin
+            if (pattern.jquery_plugin) {
+                plugin_name = ("pat-" + name)
+                        .replace(/-([a-zA-Z])/g, function(match, p1) {
+                            return p1.toUpperCase();
+                        });
+                $.fn[plugin_name] = utils.jqueryPlugin(pattern);
+                // BBB 2012-12-10 and also for Mockup patterns.
+                $.fn[plugin_name.replace(/^pat/, "pattern")] = utils.jqueryPlugin(pattern);
+            }
+            log.debug("Registered pattern:", name, pattern);
+            if (registry.initialized) {
+                registry.scan(document.body, [name]);
+            }
+            return true;
+        }
+    };
+
+    $(document).on("patterns-injected.patterns",
+            function registry_onInject(ev, inject_config, inject_trigger) {
+                registry.scan(ev.target, null, {type: "injection", element: inject_trigger});
+                $(ev.target).trigger("patterns-injected-scanned");
+            });
+
+    return registry;
+});
+// jshint indent: 4, browser: true, jquery: true, quotmark: double
+// vim: sw=4 expandtab
+;
+define('mockup-parser',[
   'jquery'
-], function($, undefined) {
+], function($) {
   
 
-  var Registry = {
-
-    patterns: {},
-
-    warn: function(msg) {
-      /* istanbul ignore next */
-      if (window.DEBUG) {
-        Registry.error(msg);
-      }
-    },
-
-    error: function(msg){
-      if (window.console) {
-        console.warn(msg);
-      }
-    },
-
-    getOptions: function($el, patternName, options) {
+  var parser = {
+    getOptions: function getOptions($el, patternName, options) {
+      /* This is the Mockup parser. It parses a DOM element for pattern
+      * configuration options.
+      */
       options = options || {};
-
       // get options from parent element first, stop if element tag name is 'body'
       if ($el.length !== 0 && !$.nodeName($el[0], 'body')) {
-        options = Registry.getOptions($el.parent(), patternName, options);
+        options = getOptions($el.parent(), patternName, options);
       }
-
       // collect all options from element
       var elOptions = {};
       if ($el.length !== 0) {
@@ -12423,137 +13857,68 @@ define('mockup-registry',[
         if (elOptions) {
           // parse options if string
           if (typeof(elOptions) === 'string') {
-            var tmpOptions = {};
-            $.each(elOptions.split(';'), function(i, item) {
-              item = item.split(':');
-              item.reverse();
-              var key = item.pop();
-              key = key.replace(/^\s+|\s+$/g, '');  // trim
-              item.reverse();
-              var value = item.join(':');
-              value = value.replace(/^\s+|\s+$/g, '');  // trim
-              tmpOptions[key] = value;
-            });
-            elOptions = tmpOptions;
+              var tmpOptions = {};
+              $.each(elOptions.split(';'), function(i, item) {
+                  item = item.split(':');
+                  item.reverse();
+                  var key = item.pop();
+                  key = key.replace(/^\s+|\s+$/g, '');  // trim
+                  item.reverse();
+                  var value = item.join(':');
+                  value = value.replace(/^\s+|\s+$/g, '');  // trim
+                  tmpOptions[key] = value;
+              });
+              elOptions = tmpOptions;
           }
         }
       }
-
       return $.extend(true, {}, options, elOptions);
-    },
-
-    init: function($el, patternName, options) {
-      var pattern = $el.data('pattern-' + patternName);
-      if (pattern === undefined && Registry.patterns[patternName]) {
-        if (window.DEBUG) {
-          pattern = new Registry.patterns[patternName]($el,
-              Registry.getOptions($el, patternName, options));
-        } else {
-          try {
-            pattern = new Registry.patterns[patternName]($el,
-                Registry.getOptions($el, patternName, options));
-          } catch (e) {
-            Registry.error('Failed while initializing "' + patternName + '" pattern.');
-            if(window.DEBUG) {
-                throw(e);
-            }
-          }
-        }
-        $el.data('pattern-' + patternName, pattern);
-      }
-      return pattern;
-    },
-
-    scan: function(content) {
-      var $content = $(content),
-          patterns = [];
-
-      patterns = $.merge(patterns, $content.filter('[class*="pat-"]'));
-      patterns = $.merge(patterns, $('[class*="pat-"]', $content));
-
-      $.each(patterns, function(i, $el) {
-        $el = $($el);
-        $.each($el.attr('class').split(' '), function(j, className) {
-          if (className.indexOf('pat-') === 0) {
-            Registry.init($el, className.substr(4));
-          }
-        });
-      });
-      // Trigger event after pattern scan has completed and all patterns were
-      // initialized
-      $(document).trigger('scan-completed.registry.mockup-core');
-    },
-
-    register: function(Pattern) {
-
-      // require name
-      if (!Pattern.prototype.name) {
-        Registry.warn('Pattern didn\'t specified a name.');
-        return false;
-      }
-
-      // automatically create jquery plugin from pattern
-      if (Pattern.prototype.jqueryPlugin === undefined) {
-        Pattern.prototype.jqueryPlugin = 'pattern' +
-            Pattern.prototype.name.charAt(0).toUpperCase() +
-            Pattern.prototype.name.slice(1);
-      }
-
-      $.fn[Pattern.prototype.jqueryPlugin] = function(method, options) {
-        $(this).each(function() {
-          if (typeof method === 'object') {
-            options = method;
-            method = undefined;
-          }
-          var $el = $(this),
-              pattern = Registry.init($el, Pattern.prototype.name, options);
-
-          if (method) {
-            if (pattern[method] === undefined) {
-              Registry.error('Method "' + method + '" does not exists.');
-              return false;
-            }
-            if (method.charAt(0) === '_') {
-              Registry.warn('Method "' + method + '" is private.');
-              return false;
-            }
-            pattern[method].apply(pattern, [options]);
-          }
-        });
-        return this;
-      };
-
-      Registry.patterns[Pattern.prototype.name] = Pattern;
     }
-
   };
-
-  return Registry;
+  return parser;
 });
 
 /* Base Pattern
  */
 
-
 define('mockup-patterns-base',[
   'jquery',
-  'mockup-registry'
-], function($, Registry) {
+  'pat-registry',
+  'mockup-parser',
+  "pat-logger"
+], function($, Registry, mockupParser, logger) {
   
+  var log = logger.getLogger("Mockup Base");
+
+  var initMockup = function initMockup($el, options, trigger) {
+    var name = this.prototype.name;
+    var log = logger.getLogger("pat." + name);
+    var pattern = $el.data('pattern-' + name);
+    if (pattern === undefined && Registry.patterns[name]) {
+      try {
+          pattern = new Registry.patterns[name]($el, mockupParser.getOptions($el, name, options));
+      } catch (e) {
+          log.error('Failed while initializing "' + name + '" pattern.');
+      }
+      $el.data('pattern-' + name, pattern);
+    }
+    return pattern;
+  };
 
   // Base Pattern
   var Base = function($el, options) {
     this.$el = $el;
     this.options = $.extend(true, {}, this.defaults || {}, options || {});
     this.init();
-    this.trigger('init');
+    this.emit('init');
   };
+
   Base.prototype = {
     constructor: Base,
     on: function(eventName, eventCallback) {
       this.$el.on(eventName + '.' + this.name + '.patterns', eventCallback);
     },
-    trigger: function(eventName, args) {
+    emit: function(eventName, args) {
       // args should be a list
       if (args === undefined) {
         args = [];
@@ -12561,29 +13926,58 @@ define('mockup-patterns-base',[
       this.$el.trigger(eventName + '.' + this.name + '.patterns', args);
     }
   };
-  Base.extend = function(NewPattern) {
-    var Base = this, Constructor;
 
-    if (NewPattern && NewPattern.hasOwnProperty('constructor')) {
-      Constructor = NewPattern.constructor;
-    } else {
-      Constructor = function() { Base.apply(this, arguments); };  // TODO: arguments from where
+  Base.extend = function(patternProps) {
+    /* Helper function to correctly set up the prototype chain for new patterns.
+     */
+    var parent = this;
+    var child;
+
+    // Check that the required configuration properties are given.
+    if (!patternProps) {
+      throw new Error("Pattern configuration properties required when calling Base.extend");
     }
 
-    var Surrogate = function() { this.constructor = Constructor; };
-    Surrogate.prototype = Base.prototype;
-    Constructor.prototype = new Surrogate();
-    Constructor.extend = Base.extend;
+    // The constructor function for the new subclass is either defined by you
+    // (the "constructor" property in your `extend` definition), or defaulted
+    // by us to simply call the parent's constructor.
+    if (patternProps.hasOwnProperty('constructor')) {
+      child = patternProps.constructor;
+    } else {
+      child = function() { parent.apply(this, arguments); };
+    }
 
-    $.extend(true, Constructor.prototype, NewPattern);
+    // Allow patterns to be extended indefinitely
+    child.extend = Base.extend;
 
-    Constructor.__super__ = Base.prototype;  // TODO: needed?
+    // Static properties required by the Patternslib registry 
+    child.init = initMockup;
+    child.jquery_plugin = true;
+    child.trigger = patternProps.trigger;
 
-    Registry.register(Constructor);
+    // Set the prototype chain to inherit from `parent`, without calling
+    // `parent`'s constructor function.
+    var Surrogate = function() { this.constructor = child; };
+    Surrogate.prototype = parent.prototype;
+    child.prototype = new Surrogate();
 
-    return Constructor;
+    // Add pattern's configuration properties (instance properties) to the subclass,
+    $.extend(true, child.prototype, patternProps);
+
+    // Set a convenience property in case the parent's prototype is needed
+    // later.
+    child.__super__ = parent.prototype;
+
+    // Register the pattern in the Patternslib registry.
+    if (!patternProps.name) {
+      log.warn("This mockup pattern without a name attribute will not be registered!");
+    } else if (!patternProps.trigger) {
+      log.warn("The mockup pattern '"+patternProps.name+"' does not have a trigger attribute, it will not be registered.");
+    } else {
+      Registry.register(child, patternProps.name);
+    }
+    return child;
   };
-
   return Base;
 });
 
@@ -16892,6 +18286,7 @@ define('mockup-patterns-select2',[
 
   var Select2 = Base.extend({
     name: 'select2',
+    trigger: '.pat-select2',
     defaults: {
       separator: ','
     },
@@ -17164,6 +18559,7 @@ define('mockup-patterns-passwordstrength',[
 
   var PasswordStrength = Base.extend({
     name: 'passwordstrength',
+    trigger: '.pat-passwordstrength',
     defaults: {
         zxcvbn: '//cdnjs.cloudflare.com/ajax/libs/zxcvbn/1.0/zxcvbn.js'
     },
@@ -20551,6 +21947,23 @@ define('mockup-i18n',[
   return new I18N();
 });
 
+/* i18n integration.
+ *
+ * This is a singleton.
+ * Configuration is done on the body tag data-i18ncatalogurl attribute
+ *     <body data-i18ncatalogurl="/plonejsi18n">
+ *
+ *  Or, it'll default to "/plonejsi18n"
+ */
+
+define('translate',[
+  'mockup-i18n'
+], function(i18n) {
+  
+  i18n.loadCatalog('widgets');
+  return i18n.MessageFactory('widgets');
+});
+
 /* PickADate pattern.
  *
  * Options:
@@ -20642,15 +22055,13 @@ define('mockup-patterns-pickadate',[
   'picker.date',
   'picker.time',
   'mockup-patterns-select2',
-  'mockup-i18n'
-], function($, Base, Picker, PickerDate, PickerTime, Select2, i18n) {
+  'translate'
+], function($, Base, Picker, PickerDate, PickerTime, Select2, _t) {
   
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var PickADate = Base.extend({
     name: 'pickadate',
+    trigger: '.pat-pickadate',
     defaults: {
       separator: ' ',
       date: {
@@ -20857,11 +22268,4007 @@ define('mockup-patterns-pickadate',[
 
       self.$el.attr('value', value);
 
-      self.trigger('updated');
+      self.emit('updated');
     }
   });
 
   return PickADate;
+
+});
+
+(function(root) {
+define("jquery.tools.overlay", ["jquery"], function() {
+  return (function() {
+/**
+ * @license 
+ * jQuery Tools @VERSION Overlay - Overlay base. Extend it.
+ * 
+ * NO COPYRIGHTS OR LICENSES. DO WHAT YOU LIKE.
+ * 
+ * http://flowplayer.org/tools/overlay/
+ *
+ * Since: March 2008
+ * Date: @DATE 
+ */
+(function($) { 
+
+	// static constructs
+	$.tools = $.tools || {version: '@VERSION'};
+	
+	$.tools.overlay = {
+		
+		addEffect: function(name, loadFn, closeFn) {
+			effects[name] = [loadFn, closeFn];	
+		},
+	
+		conf: {  
+			close: null,	
+			closeOnClick: true,
+			closeOnEsc: true,			
+			closeSpeed: 'fast',
+			effect: 'default',
+			
+			// since 1.2. fixed positioning not supported by IE6
+			fixed: !/msie/.test(navigator.userAgent.toLowerCase()) || navigator.appVersion > 6, 
+			
+			left: 'center',		
+			load: false, // 1.2
+			mask: null,  
+			oneInstance: true,
+			speed: 'normal',
+			target: null, // target element to be overlayed. by default taken from [rel]
+			top: '10%'
+		}
+	};
+
+	
+	var instances = [], effects = {};
+		
+	// the default effect. nice and easy!
+	$.tools.overlay.addEffect('default', 
+		
+		/* 
+			onLoad/onClose functions must be called otherwise none of the 
+			user supplied callback methods won't be called
+		*/
+		function(pos, onLoad) {
+			
+			var conf = this.getConf(),
+				 w = $(window);				 
+				
+			if (!conf.fixed)  {
+				pos.top += w.scrollTop();
+				pos.left += w.scrollLeft();
+			} 
+				
+			pos.position = conf.fixed ? 'fixed' : 'absolute';
+			this.getOverlay().css(pos).fadeIn(conf.speed, onLoad); 
+			
+		}, function(onClose) {
+			this.getOverlay().fadeOut(this.getConf().closeSpeed, onClose); 			
+		}		
+	);		
+
+	
+	function Overlay(trigger, conf) {		
+		
+		// private variables
+		var self = this,
+			 fire = trigger.add(self),
+			 w = $(window), 
+			 closers,            
+			 overlay,
+			 opened,
+			 maskConf = $.tools.expose && (conf.mask || conf.expose),
+			 uid = Math.random().toString().slice(10);		
+		
+			 
+		// mask configuration
+		if (maskConf) {			
+			if (typeof maskConf == 'string') { maskConf = {color: maskConf}; }
+			maskConf.closeOnClick = maskConf.closeOnEsc = false;
+		}			 
+		 
+		// get overlay and trigger
+		var jq = conf.target || trigger.attr("rel");
+		overlay = jq ? $(jq) : null || trigger;	
+		
+		// overlay not found. cannot continue
+		if (!overlay.length) { throw "Could not find Overlay: " + jq; }
+		
+		// trigger's click event
+		if (trigger && trigger.index(overlay) == -1) {
+			trigger.click(function(e) {				
+				self.load(e);
+				return e.preventDefault();
+			});
+		}   			
+		
+		// API methods  
+		$.extend(self, {
+
+			load: function(e) {
+				
+				// can be opened only once
+				if (self.isOpened()) { return self; }
+				
+				// find the effect
+		 		var eff = effects[conf.effect];
+		 		if (!eff) { throw "Overlay: cannot find effect : \"" + conf.effect + "\""; }
+				
+				// close other instances?
+				if (conf.oneInstance) {
+					$.each(instances, function() {
+						this.close(e);
+					});
+				}
+				
+				// onBeforeLoad
+				e = e || $.Event();
+				e.type = "onBeforeLoad";
+				fire.trigger(e);				
+				if (e.isDefaultPrevented()) { return self; }				
+
+				// opened
+				opened = true;
+				
+				// possible mask effect
+				if (maskConf) { $(overlay).expose(maskConf); }				
+				
+				// position & dimensions 
+				var top = conf.top,					
+					 left = conf.left,
+					 oWidth = overlay.outerWidth(true),
+					 oHeight = overlay.outerHeight(true); 
+				
+				if (typeof top == 'string')  {
+					top = top == 'center' ? Math.max((w.height() - oHeight) / 2, 0) : 
+						parseInt(top, 10) / 100 * w.height();			
+				}				
+				
+				if (left == 'center') { left = Math.max((w.width() - oWidth) / 2, 0); }
+
+				
+		 		// load effect  		 		
+				eff[0].call(self, {top: top, left: left}, function() {					
+					if (opened) {
+						e.type = "onLoad";
+						fire.trigger(e);
+					}
+				}); 				
+
+				// mask.click closes overlay
+				if (maskConf && conf.closeOnClick) {
+					$.mask.getMask().one("click", self.close); 
+				}
+				
+				// when window is clicked outside overlay, we close
+				if (conf.closeOnClick) {
+					$(document).on("click." + uid, function(e) { 
+						if (!$(e.target).parents(overlay).length) { 
+							self.close(e); 
+						}
+					});						
+				}						
+			
+				// keyboard::escape
+				if (conf.closeOnEsc) { 
+
+					// one callback is enough if multiple instances are loaded simultaneously
+					$(document).on("keydown." + uid, function(e) {
+						if (e.keyCode == 27) { 
+							self.close(e);	 
+						}
+					});			
+				}
+
+				
+				return self; 
+			}, 
+			
+			close: function(e) {
+
+				if (!self.isOpened()) { return self; }
+				
+				e = e || $.Event();
+				e.type = "onBeforeClose";
+				fire.trigger(e);				
+				if (e.isDefaultPrevented()) { return; }				
+				
+				opened = false;
+				
+				// close effect
+				effects[conf.effect][1].call(self, function() {
+					e.type = "onClose";
+					fire.trigger(e); 
+				});
+				
+				// unbind the keyboard / clicking actions
+				$(document).off("click." + uid + " keydown." + uid);		  
+				
+				if (maskConf) {
+					$.mask.close();		
+				}
+				 
+				return self;
+			}, 
+			
+			getOverlay: function() {
+				return overlay;	
+			},
+			
+			getTrigger: function() {
+				return trigger;	
+			},
+			
+			getClosers: function() {
+				return closers;	
+			},			
+
+			isOpened: function()  {
+				return opened;
+			},
+			
+			// manipulate start, finish and speeds
+			getConf: function() {
+				return conf;	
+			}			
+			
+		});
+		
+		// callbacks	
+		$.each("onBeforeLoad,onStart,onLoad,onBeforeClose,onClose".split(","), function(i, name) {
+				
+			// configuration
+			if ($.isFunction(conf[name])) { 
+				$(self).on(name, conf[name]); 
+			}
+
+			// API
+			self[name] = function(fn) {
+				if (fn) { $(self).on(name, fn); }
+				return self;
+			};
+		});
+		
+		// close button
+		closers = overlay.find(conf.close || ".close");		
+		
+		if (!closers.length && !conf.close) {
+			closers = $('<a class="close"></a>');
+			overlay.prepend(closers);	
+		}		
+		
+		closers.click(function(e) { 
+			self.close(e);  
+		});	
+		
+		// autoload
+		if (conf.load) { self.load(); }
+		
+	}
+	
+	// jQuery plugin initialization
+	$.fn.overlay = function(conf) {   
+		
+		// already constructed --> return API
+		var el = this.data("overlay");
+		if (el) { return el; }	  		 
+		
+		if ($.isFunction(conf)) {
+			conf = {onBeforeLoad: conf};	
+		}
+
+		conf = $.extend(true, {}, $.tools.overlay.conf, conf);
+		
+		this.each(function() {		
+			el = new Overlay($(this), conf);
+			instances.push(el);
+			$(this).data("overlay", el);	
+		});
+		
+		return conf.api ? el: this;		
+	}; 
+	
+})(jQuery);
+
+
+
+/**
+ * @license 
+ * jQuery Tools @VERSION Scrollable - New wave UI design
+ * 
+ * NO COPYRIGHTS OR LICENSES. DO WHAT YOU LIKE.
+ * 
+ * http://flowplayer.org/tools/scrollable.html
+ *
+ * Since: March 2008
+ * Date: @DATE 
+ */
+(function($) { 
+
+	// static constructs
+	$.tools = $.tools || {version: '@VERSION'};
+	
+	$.tools.scrollable = {
+		
+		conf: {	
+			activeClass: 'active',
+			circular: false,
+			clonedClass: 'cloned',
+			disabledClass: 'disabled',
+			easing: 'swing',
+			initialIndex: 0,
+			item: '> *',
+			items: '.items',
+			keyboard: true,
+			mousewheel: false,
+			next: '.next',   
+			prev: '.prev', 
+			size: 1,
+			speed: 400,
+			vertical: false,
+			touch: true,
+			wheelSpeed: 0
+		} 
+	};
+					
+	// get hidden element's width or height even though it's hidden
+	function dim(el, key) {
+		var v = parseInt(el.css(key), 10);
+		if (v) { return v; }
+		var s = el[0].currentStyle; 
+		return s && s.width && parseInt(s.width, 10);	
+	}
+
+	function find(root, query) { 
+		var el = $(query);
+		return el.length < 2 ? el : root.parent().find(query);
+	}
+	
+	var current;		
+	
+	// constructor
+	function Scrollable(root, conf) {   
+		
+		// current instance
+		var self = this, 
+			 fire = root.add(self),
+			 itemWrap = root.children(),
+			 index = 0,
+			 vertical = conf.vertical;
+				
+		if (!current) { current = self; } 
+		if (itemWrap.length > 1) { itemWrap = $(conf.items, root); }
+		
+		
+		// in this version circular not supported when size > 1
+		if (conf.size > 1) { conf.circular = false; } 
+		
+		// methods
+		$.extend(self, {
+				
+			getConf: function() {
+				return conf;	
+			},			
+			
+			getIndex: function() {
+				return index;	
+			}, 
+
+			getSize: function() {
+				return self.getItems().size();	
+			},
+
+			getNaviButtons: function() {
+				return prev.add(next);	
+			},
+			
+			getRoot: function() {
+				return root;	
+			},
+			
+			getItemWrap: function() {
+				return itemWrap;	
+			},
+			
+			getItems: function() {
+				return itemWrap.find(conf.item).not("." + conf.clonedClass);	
+			},
+							
+			move: function(offset, time) {
+				return self.seekTo(index + offset, time);
+			},
+			
+			next: function(time) {
+				return self.move(conf.size, time);	
+			},
+			
+			prev: function(time) {
+				return self.move(-conf.size, time);	
+			},
+			
+			begin: function(time) {
+				return self.seekTo(0, time);	
+			},
+			
+			end: function(time) {
+				return self.seekTo(self.getSize() -1, time);	
+			},	
+			
+			focus: function() {
+				current = self;
+				return self;
+			},
+			
+			addItem: function(item) {
+				item = $(item);
+				
+				if (!conf.circular)  {
+					itemWrap.append(item);
+					next.removeClass("disabled");
+					
+				} else {
+					itemWrap.children().last().before(item);
+					itemWrap.children().first().replaceWith(item.clone().addClass(conf.clonedClass)); 						
+				}
+				
+				fire.trigger("onAddItem", [item]);
+				return self;
+			},
+			
+			
+			/* all seeking functions depend on this */		
+			seekTo: function(i, time, fn) {	
+				
+				// ensure numeric index
+				if (!i.jquery) { i *= 1; }
+				
+				// avoid seeking from end clone to the beginning
+				if (conf.circular && i === 0 && index == -1 && time !== 0) { return self; }
+				
+				// check that index is sane				
+				if (!conf.circular && i < 0 || i > self.getSize() || i < -1) { return self; }
+				
+				var item = i;
+			
+				if (i.jquery) {
+					i = self.getItems().index(i);	
+					
+				} else {
+					item = self.getItems().eq(i);
+				}  
+				
+				// onBeforeSeek
+				var e = $.Event("onBeforeSeek"); 
+				if (!fn) {
+					fire.trigger(e, [i, time]);				
+					if (e.isDefaultPrevented() || !item.length) { return self; }			
+				}  
+	
+				var props = vertical ? {top: -item.position().top} : {left: -item.position().left};  
+				
+				index = i;
+				current = self;  
+				if (time === undefined) { time = conf.speed; }   
+				
+				itemWrap.animate(props, time, conf.easing, fn || function() { 
+					fire.trigger("onSeek", [i]);		
+				});	 
+				
+				return self; 
+			}					
+			
+		});
+				
+		// callbacks	
+		$.each(['onBeforeSeek', 'onSeek', 'onAddItem'], function(i, name) {
+				
+			// configuration
+			if ($.isFunction(conf[name])) { 
+				$(self).on(name, conf[name]); 
+			}
+			
+			self[name] = function(fn) {
+				if (fn) { $(self).on(name, fn); }
+				return self;
+			};
+		});  
+		
+		// circular loop
+		if (conf.circular) {
+			
+			var cloned1 = self.getItems().slice(-1).clone().prependTo(itemWrap),
+				 cloned2 = self.getItems().eq(1).clone().appendTo(itemWrap);
+
+			cloned1.add(cloned2).addClass(conf.clonedClass);
+			
+			self.onBeforeSeek(function(e, i, time) {
+				
+				if (e.isDefaultPrevented()) { return; }
+				
+				/*
+					1. animate to the clone without event triggering
+					2. seek to correct position with 0 speed
+				*/
+				if (i == -1) {
+					self.seekTo(cloned1, time, function()  {
+						self.end(0);		
+					});          
+					return e.preventDefault();
+					
+				} else if (i == self.getSize()) {
+					self.seekTo(cloned2, time, function()  {
+						self.begin(0);		
+					});	
+				}
+				
+			});
+
+			// seek over the cloned item
+
+			// if the scrollable is hidden the calculations for seekTo position
+			// will be incorrect (eg, if the scrollable is inside an overlay).
+			// ensure the elements are shown, calculate the correct position,
+			// then re-hide the elements. This must be done synchronously to
+			// prevent the hidden elements being shown to the user.
+
+			// See: https://github.com/jquerytools/jquerytools/issues#issue/87
+
+			var hidden_parents = root.parents().add(root).filter(function () {
+				if ($(this).css('display') === 'none') {
+					return true;
+				}
+			});
+			if (hidden_parents.length) {
+				hidden_parents.show();
+				self.seekTo(0, 0, function() {});
+				hidden_parents.hide();
+			}
+			else {
+				self.seekTo(0, 0, function() {});
+			}
+
+		}
+		
+		// next/prev buttons
+		var prev = find(root, conf.prev).click(function(e) { e.stopPropagation(); self.prev(); }),
+			 next = find(root, conf.next).click(function(e) { e.stopPropagation(); self.next(); }); 
+		
+		if (!conf.circular) {
+			self.onBeforeSeek(function(e, i) {
+				setTimeout(function() {
+					if (!e.isDefaultPrevented()) {
+						prev.toggleClass(conf.disabledClass, i <= 0);
+						next.toggleClass(conf.disabledClass, i >= self.getSize() -1);
+					}
+				}, 1);
+			});
+			
+			if (!conf.initialIndex) {
+				prev.addClass(conf.disabledClass);	
+			}			
+		}
+			
+		if (self.getSize() < 2) {
+			prev.add(next).addClass(conf.disabledClass);	
+		}
+			
+		// mousewheel support
+		if (conf.mousewheel && $.fn.mousewheel) {
+			root.mousewheel(function(e, delta)  {
+				if (conf.mousewheel) {
+					self.move(delta < 0 ? 1 : -1, conf.wheelSpeed || 50);
+					return false;
+				}
+			});			
+		}
+		
+		// touch event
+		if (conf.touch) {
+			var touch = {};
+			
+			itemWrap[0].ontouchstart = function(e) {
+				var t = e.touches[0];
+				touch.x = t.clientX;
+				touch.y = t.clientY;
+			};
+			
+			itemWrap[0].ontouchmove = function(e) {
+				
+				// only deal with one finger
+				if (e.touches.length == 1 && !itemWrap.is(":animated")) {			
+					var t = e.touches[0],
+						 deltaX = touch.x - t.clientX,
+						 deltaY = touch.y - t.clientY;
+	
+					self[vertical && deltaY > 0 || !vertical && deltaX > 0 ? 'next' : 'prev']();				
+					e.preventDefault();
+				}
+			};
+		}
+		
+		if (conf.keyboard)  {
+			
+			$(document).on("keydown.scrollable", function(evt) {
+
+				// skip certain conditions
+				if (!conf.keyboard || evt.altKey || evt.ctrlKey || evt.metaKey || $(evt.target).is(":input")) { 
+					return; 
+				}
+				
+				// does this instance have focus?
+				if (conf.keyboard != 'static' && current != self) { return; }
+					
+				var key = evt.keyCode;
+			
+				if (vertical && (key == 38 || key == 40)) {
+					self.move(key == 38 ? -1 : 1);
+					return evt.preventDefault();
+				}
+				
+				if (!vertical && (key == 37 || key == 39)) {					
+					self.move(key == 37 ? -1 : 1);
+					return evt.preventDefault();
+				}	  
+				
+			});  
+		}
+		
+		// initial index
+		if (conf.initialIndex) {
+			self.seekTo(conf.initialIndex, 0, function() {});
+		}
+	} 
+
+		
+	// jQuery plugin implementation
+	$.fn.scrollable = function(conf) { 
+			
+		// already constructed --> return API
+		var el = this.data("scrollable");
+		if (el) { return el; }		 
+
+		conf = $.extend({}, $.tools.scrollable.conf, conf); 
+		
+		this.each(function() {			
+			el = new Scrollable($(this), conf);
+			$(this).data("scrollable", el);	
+		});
+		
+		return conf.api ? el: this; 
+		
+	};
+			
+	
+})(jQuery);
+
+
+/**
+ * @license 
+ * jQuery Tools @VERSION Tabs- The basics of UI design.
+ * 
+ * NO COPYRIGHTS OR LICENSES. DO WHAT YOU LIKE.
+ * 
+ * http://flowplayer.org/tools/tabs/
+ *
+ * Since: November 2008
+ * Date: @DATE 
+ */  
+(function($) {
+		
+	// static constructs
+	$.tools = $.tools || {version: '@VERSION'};
+	
+	$.tools.tabs = {
+		
+		conf: {
+			tabs: 'a',
+			current: 'current',
+			onBeforeClick: null,
+			onClick: null, 
+			effect: 'default',
+			initialEffect: false,   // whether or not to show effect in first init of tabs
+			initialIndex: 0,			
+			event: 'click',
+			rotate: false,
+			
+      // slide effect
+      slideUpSpeed: 400,
+      slideDownSpeed: 400,
+			
+			// 1.2
+			history: false
+		},
+		
+		addEffect: function(name, fn) {
+			effects[name] = fn;
+		}
+		
+	};
+	
+	var effects = {
+		
+		// simple "toggle" effect
+		'default': function(i, done) { 
+			this.getPanes().hide().eq(i).show();
+			done.call();
+		}, 
+		
+		/*
+			configuration:
+				- fadeOutSpeed (positive value does "crossfading")
+				- fadeInSpeed
+		*/
+		fade: function(i, done) {		
+			
+			var conf = this.getConf(),
+				 speed = conf.fadeOutSpeed,
+				 panes = this.getPanes();
+			
+			if (speed) {
+				panes.fadeOut(speed);	
+			} else {
+				panes.hide();	
+			}
+
+			panes.eq(i).fadeIn(conf.fadeInSpeed, done);	
+		},
+		
+		// for basic accordions
+		slide: function(i, done) {
+		  var conf = this.getConf();
+		  
+			this.getPanes().slideUp(conf.slideUpSpeed);
+			this.getPanes().eq(i).slideDown(conf.slideDownSpeed, done);			 
+		}, 
+
+		/**
+		 * AJAX effect
+		 */
+		ajax: function(i, done)  {			
+			this.getPanes().eq(0).load(this.getTabs().eq(i).attr("href"), done);	
+		}		
+	};   	
+	
+	/**
+	 * Horizontal accordion
+	 * 
+	 * @deprecated will be replaced with a more robust implementation
+	*/
+	
+	var
+	  /**
+	  *   @type {Boolean}
+	  *
+	  *   Mutex to control horizontal animation
+	  *   Disables clicking of tabs while animating
+	  *   They mess up otherwise as currentPane gets set *after* animation is done
+	  */
+	  animating,
+	  /**
+	  *   @type {Number}
+	  *   
+	  *   Initial width of tab panes
+	  */
+	  w;
+	 
+	$.tools.tabs.addEffect("horizontal", function(i, done) {
+	  if (animating) return;    // don't allow other animations
+	  
+	  var nextPane = this.getPanes().eq(i),
+	      currentPane = this.getCurrentPane();
+	      
+		// store original width of a pane into memory
+		w || ( w = this.getPanes().eq(0).width() );
+		animating = true;
+		
+		nextPane.show(); // hidden by default
+		
+		// animate current pane's width to zero
+    // animate next pane's width at the same time for smooth animation
+    currentPane.animate({width: 0}, {
+      step: function(now){
+        nextPane.css("width", w-now);
+      },
+      complete: function(){
+        $(this).hide();
+        done.call();
+        animating = false;
+     }
+    });
+    // Dirty hack...  onLoad, currentPant will be empty and nextPane will be the first pane
+    // If this is the case, manually run callback since the animation never occured, and reset animating
+    if (!currentPane.length){ 
+      done.call(); 
+      animating = false;
+    }
+	});	
+
+	
+	function Tabs(root, paneSelector, conf) {
+		
+		var self = this,
+        trigger = root.add(this),
+        tabs = root.find(conf.tabs),
+        panes = paneSelector.jquery ? paneSelector : root.children(paneSelector),
+        current;
+			 
+		
+		// make sure tabs and panes are found
+		if (!tabs.length)  { tabs = root.children(); }
+		if (!panes.length) { panes = root.parent().find(paneSelector); }
+		if (!panes.length) { panes = $(paneSelector); }
+		
+		
+		// public methods
+		$.extend(this, {				
+			click: function(i, e) {
+			  
+				var tab = tabs.eq(i),
+				    firstRender = !root.data('tabs');
+				
+				if (typeof i == 'string' && i.replace("#", "")) {
+					tab = tabs.filter("[href*=\"" + i.replace("#", "") + "\"]");
+					i = Math.max(tabs.index(tab), 0);
+				}
+								
+				if (conf.rotate) {
+					var last = tabs.length -1; 
+					if (i < 0) { return self.click(last, e); }
+					if (i > last) { return self.click(0, e); }						
+				}
+				
+				if (!tab.length) {
+					if (current >= 0) { return self; }
+					i = conf.initialIndex;
+					tab = tabs.eq(i);
+				}				
+				
+				// current tab is being clicked
+				if (i === current) { return self; }
+				
+				// possibility to cancel click action				
+				e = e || $.Event();
+				e.type = "onBeforeClick";
+				trigger.trigger(e, [i]);				
+				if (e.isDefaultPrevented()) { return; }
+				
+        // if firstRender, only run effect if initialEffect is set, otherwise default
+				var effect = firstRender ? conf.initialEffect && conf.effect || 'default' : conf.effect;
+
+				// call the effect
+				effects[effect].call(self, i, function() {
+					current = i;
+					// onClick callback
+					e.type = "onClick";
+					trigger.trigger(e, [i]);
+				});			
+				
+				// default behaviour
+				tabs.removeClass(conf.current);	
+				tab.addClass(conf.current);				
+				
+				return self;
+			},
+			
+			getConf: function() {
+				return conf;	
+			},
+
+			getTabs: function() {
+				return tabs;	
+			},
+			
+			getPanes: function() {
+				return panes;	
+			},
+			
+			getCurrentPane: function() {
+				return panes.eq(current);	
+			},
+			
+			getCurrentTab: function() {
+				return tabs.eq(current);	
+			},
+			
+			getIndex: function() {
+				return current;	
+			}, 
+			
+			next: function() {
+				return self.click(current + 1);
+			},
+			
+			prev: function() {
+				return self.click(current - 1);	
+			},
+			
+			destroy: function() {
+				tabs.off(conf.event).removeClass(conf.current);
+				panes.find("a[href^=\"#\"]").off("click.T"); 
+				return self;
+			}
+		
+		});
+
+		// callbacks	
+		$.each("onBeforeClick,onClick".split(","), function(i, name) {
+				
+			// configuration
+			if ($.isFunction(conf[name])) {
+				$(self).on(name, conf[name]); 
+			}
+
+			// API
+			self[name] = function(fn) {
+				if (fn) { $(self).on(name, fn); }
+				return self;	
+			};
+		});
+	
+		
+		if (conf.history && $.fn.history) {
+			$.tools.history.init(tabs);
+			conf.event = 'history';
+		}	
+		
+		// setup click actions for each tab
+		tabs.each(function(i) { 				
+			$(this).on(conf.event, function(e) {
+				self.click(i, e);
+				return e.preventDefault();
+			});			
+		});
+		
+		// cross tab anchor link
+		panes.find("a[href^=\"#\"]").on("click.T", function(e) {
+			self.click($(this).attr("href"), e);		
+		}); 
+		
+		// open initial tab
+		if (location.hash && conf.tabs == "a" && root.find("[href=\"" +location.hash+ "\"]").length) {
+			self.click(location.hash);
+
+		} else {
+			if (conf.initialIndex === 0 || conf.initialIndex > 0) {
+				self.click(conf.initialIndex);
+			}
+		}				
+		
+	}
+	
+	
+	// jQuery plugin implementation
+	$.fn.tabs = function(paneSelector, conf) {
+		
+		// return existing instance
+		var el = this.data("tabs");
+		if (el) { 
+			el.destroy();	
+			this.removeData("tabs");
+		}
+
+		if ($.isFunction(conf)) {
+			conf = {onBeforeClick: conf};
+		}
+		
+		// setup conf
+		conf = $.extend({}, $.tools.tabs.conf, conf);		
+		
+		
+		this.each(function() {				
+			el = new Tabs($(this), paneSelector, conf);
+			$(this).data("tabs", el); 
+		});		
+		
+		return conf.api ? el: this;		
+	};		
+		
+}) (jQuery); 
+
+
+
+
+/**
+ * @license 
+ * jQuery Tools @VERSION History "Back button for AJAX apps"
+ * 
+ * NO COPYRIGHTS OR LICENSES. DO WHAT YOU LIKE.
+ * 
+ * http://flowplayer.org/tools/toolbox/history.html
+ * 
+ * Since: Mar 2010
+ * Date: @DATE 
+ */
+(function($) {
+		
+	var hash, iframe, links, inited;		
+	
+	$.tools = $.tools || {version: '@VERSION'};
+	
+	$.tools.history = {
+	
+		init: function(els) {
+			
+			if (inited) { return; }
+			
+			// IE
+			if ($.browser.msie && $.browser.version < '8') {
+				
+				// create iframe that is constantly checked for hash changes
+				if (!iframe) {
+					iframe = $("<iframe/>").attr("src", "javascript:false;").hide().get(0);
+					$("body").append(iframe);
+									
+					setInterval(function() {
+						var idoc = iframe.contentWindow.document, 
+							 h = idoc.location.hash;
+					
+						if (hash !== h) {						
+							$(window).trigger("hash", h);
+						}
+					}, 100);
+					
+					setIframeLocation(location.hash || '#');
+				}
+
+				
+			// other browsers scans for location.hash changes directly without iframe hack
+			} else { 
+				setInterval(function() {
+					var h = location.hash;
+					if (h !== hash) {
+						$(window).trigger("hash", h);
+					}						
+				}, 100);
+			}
+
+			links = !links ? els : links.add(els);
+			
+			els.click(function(e) {
+				var href = $(this).attr("href");
+				if (iframe) { setIframeLocation(href); }
+				
+				// handle non-anchor links
+				if (href.slice(0, 1) != "#") {
+					location.href = "#" + href;
+					return e.preventDefault();		
+				}
+				
+			}); 
+			
+			inited = true;
+		}	
+	};  
+	
+
+	function setIframeLocation(h) {
+		if (h) {
+			var doc = iframe.contentWindow.document;
+			doc.open().close();	
+			doc.location.hash = h;
+		}
+	} 
+		 
+	// global histroy change listener
+	$(window).on("hash", function(e, h)  { 
+		if (h) {
+			links.filter(function() {
+			  var href = $(this).attr("href");
+			  return href == h || href == h.replace("#", ""); 
+			}).trigger("history", [h]);	
+		} else {
+			links.eq(0).trigger("history", [h]);	
+		}
+
+		hash = h;
+
+	});
+		
+	
+	// jQuery plugin implementation
+	$.fn.history = function(fn) {
+			
+		$.tools.history.init(this);
+
+		// return jQuery
+		return this.on("history", fn);		
+	};	
+		
+})(jQuery); 
+
+
+
+/**
+ * @license 
+ * jQuery Tools @VERSION / Expose - Dim the lights
+ * 
+ * NO COPYRIGHTS OR LICENSES. DO WHAT YOU LIKE.
+ * 
+ * http://flowplayer.org/tools/toolbox/expose.html
+ *
+ * Since: Mar 2010
+ * Date: @DATE 
+ */
+(function($) { 	
+
+	// static constructs
+	$.tools = $.tools || {version: '@VERSION'};
+	
+	var tool;
+	
+	tool = $.tools.expose = {
+		
+		conf: {	
+			maskId: 'exposeMask',
+			loadSpeed: 'slow',
+			closeSpeed: 'fast',
+			closeOnClick: true,
+			closeOnEsc: true,
+			
+			// css settings
+			zIndex: 9998,
+			opacity: 0.8,
+			startOpacity: 0,
+			color: '#fff',
+			
+			// callbacks
+			onLoad: null,
+			onClose: null
+		}
+	};
+
+	/* one of the greatest headaches in the tool. finally made it */
+	function viewport() {
+				
+		// the horror case
+		if (/msie/.test(navigator.userAgent.toLowerCase())) {
+			
+			// if there are no scrollbars then use window.height
+			var d = $(document).height(), w = $(window).height();
+			
+			return [
+				window.innerWidth || 							// ie7+
+				document.documentElement.clientWidth || 	// ie6  
+				document.body.clientWidth, 					// ie6 quirks mode
+				d - w < 20 ? w : d
+			];
+		} 
+		
+		// other well behaving browsers
+		return [$(document).width(), $(document).height()]; 
+	} 
+	
+	function call(fn) {
+		if (fn) { return fn.call($.mask); }
+	}
+	
+	var mask, exposed, loaded, config, overlayIndex;		
+	
+	
+	$.mask = {
+		
+		load: function(conf, els) {
+			
+			// already loaded ?
+			if (loaded) { return this; }			
+			
+			// configuration
+			if (typeof conf == 'string') {
+				conf = {color: conf};	
+			}
+			
+			// use latest config
+			conf = conf || config;
+			
+			config = conf = $.extend($.extend({}, tool.conf), conf);
+
+			// get the mask
+			mask = $("#" + conf.maskId);
+				
+			// or create it
+			if (!mask.length) {
+				mask = $('<div/>').attr("id", conf.maskId);
+				$("body").append(mask);
+			}
+			
+			// set position and dimensions 			
+			var size = viewport();
+				
+			mask.css({				
+				position:'absolute', 
+				top: 0, 
+				left: 0,
+				width: size[0],
+				height: size[1],
+				display: 'none',
+				opacity: conf.startOpacity,					 		
+				zIndex: conf.zIndex 
+			});
+			
+			if (conf.color) {
+				mask.css("backgroundColor", conf.color);	
+			}			
+			
+			// onBeforeLoad
+			if (call(conf.onBeforeLoad) === false) {
+				return this;
+			}
+			
+			// esc button
+			if (conf.closeOnEsc) {						
+				$(document).on("keydown.mask", function(e) {							
+					if (e.keyCode == 27) {
+						$.mask.close(e);	
+					}		
+				});			
+			}
+			
+			// mask click closes
+			if (conf.closeOnClick) {
+				mask.on("click.mask", function(e)  {
+					$.mask.close(e);		
+				});					
+			}			
+			
+			// resize mask when window is resized
+			$(window).on("resize.mask", function() {
+				$.mask.fit();
+			});
+			
+			// exposed elements
+			if (els && els.length) {
+				
+				overlayIndex = els.eq(0).css("zIndex");
+
+				// make sure element is positioned absolutely or relatively
+				$.each(els, function() {
+					var el = $(this);
+					if (!/relative|absolute|fixed/i.test(el.css("position"))) {
+						el.css("position", "relative");		
+					}					
+				});
+			 
+				// make elements sit on top of the mask
+				exposed = els.css({ zIndex: Math.max(conf.zIndex + 1, overlayIndex == 'auto' ? 0 : overlayIndex)});			
+			}	
+			
+			// reveal mask
+			mask.css({display: 'block'}).fadeTo(conf.loadSpeed, conf.opacity, function() {
+				$.mask.fit(); 
+				call(conf.onLoad);
+				loaded = "full";
+			});
+			
+			loaded = true;			
+			return this;				
+		},
+		
+		close: function() {
+			if (loaded) {
+				
+				// onBeforeClose
+				if (call(config.onBeforeClose) === false) { return this; }
+					
+				mask.fadeOut(config.closeSpeed, function()  {										
+					if (exposed) {
+						exposed.css({zIndex: overlayIndex});						
+					}				
+					loaded = false;
+					call(config.onClose);
+				});				
+				
+				// unbind various event listeners
+				$(document).off("keydown.mask");
+				mask.off("click.mask");
+				$(window).off("resize.mask");  
+			}
+			
+			return this; 
+		},
+		
+		fit: function() {
+			if (loaded) {
+				var size = viewport();				
+				mask.css({width: size[0], height: size[1]});
+			}				
+		},
+		
+		getMask: function() {
+			return mask;	
+		},
+		
+		isLoaded: function(fully) {
+			return fully ? loaded == 'full' : loaded;	
+		}, 
+		
+		getConf: function() {
+			return config;	
+		},
+		
+		getExposed: function() {
+			return exposed;	
+		}		
+	};
+	
+	$.fn.mask = function(conf) {
+		$.mask.load(conf);
+		return this;		
+	};			
+	
+	$.fn.expose = function(conf) {
+		$.mask.load(conf, this);
+		return this;			
+	};
+
+
+})(jQuery);
+
+
+/**
+ * @license 
+ * jQuery Tools @VERSION Tooltip - UI essentials
+ * 
+ * NO COPYRIGHTS OR LICENSES. DO WHAT YOU LIKE.
+ * 
+ * http://flowplayer.org/tools/tooltip/
+ *
+ * Since: November 2008
+ * Date: @DATE 
+ */
+(function($) { 	
+	// static constructs
+	$.tools = $.tools || {version: '@VERSION'};
+	
+	$.tools.tooltip = {
+		
+		conf: { 
+			
+			// default effect variables
+			effect: 'toggle',			
+			fadeOutSpeed: "fast",
+			predelay: 0,
+			delay: 30,
+			opacity: 1,			
+			tip: 0,
+            fadeIE: false, // enables fade effect in IE
+			
+			// 'top', 'bottom', 'right', 'left', 'center'
+			position: ['top', 'center'], 
+			offset: [0, 0],
+			relative: false,
+			cancelDefault: true,
+			
+			// type to event mapping 
+			events: {
+				def: 			"mouseenter,mouseleave",
+				input: 		"focus,blur",
+				widget:		"focus mouseenter,blur mouseleave",
+				tooltip:		"mouseenter,mouseleave"
+			},
+			
+			// 1.2
+			layout: '<div/>',
+			tipClass: 'tooltip'
+		},
+		
+		addEffect: function(name, loadFn, hideFn) {
+			effects[name] = [loadFn, hideFn];	
+		} 
+	};
+	
+	
+	var effects = { 
+		toggle: [ 
+			function(done) { 
+				var conf = this.getConf(), tip = this.getTip(), o = conf.opacity;
+				if (o < 1) { tip.css({opacity: o}); }
+				tip.show();
+				done.call();
+			},
+			
+			function(done) { 
+				this.getTip().hide();
+				done.call();
+			} 
+		],
+		
+		fade: [
+			function(done) {
+				var conf = this.getConf();
+				if (!/msie/.test(navigator.userAgent.toLowerCase()) || conf.fadeIE) {
+					this.getTip().fadeTo(conf.fadeInSpeed, conf.opacity, done);
+				}
+				else {
+					this.getTip().show();
+					done();
+				}
+			},
+			function(done) {
+				var conf = this.getConf();
+				if (!/msie/.test(navigator.userAgent.toLowerCase()) || conf.fadeIE) {
+					this.getTip().fadeOut(conf.fadeOutSpeed, done);
+				}
+				else {
+					this.getTip().hide();
+					done();
+				}
+			}
+		]		
+	};   
+
+		
+	/* calculate tip position relative to the trigger */  	
+	function getPosition(trigger, tip, conf) {	
+
+		
+		// get origin top/left position 
+		var top = conf.relative ? trigger.position().top : trigger.offset().top, 
+			 left = conf.relative ? trigger.position().left : trigger.offset().left,
+			 pos = conf.position[0];
+
+		top  -= tip.outerHeight() - conf.offset[0];
+		left += trigger.outerWidth() + conf.offset[1];
+		
+		// iPad position fix
+		if (/iPad/i.test(navigator.userAgent)) {
+			top -= $(window).scrollTop();
+		}
+		
+		// adjust Y		
+		var height = tip.outerHeight() + trigger.outerHeight();
+		if (pos == 'center') 	{ top += height / 2; }
+		if (pos == 'bottom') 	{ top += height; }
+		
+		
+		// adjust X
+		pos = conf.position[1]; 	
+		var width = tip.outerWidth() + trigger.outerWidth();
+		if (pos == 'center') 	{ left -= width / 2; }
+		if (pos == 'left')   	{ left -= width; }	 
+		
+		return {top: top, left: left};
+	}		
+
+	
+	
+	function Tooltip(trigger, conf) {
+
+		var self = this, 
+			 fire = trigger.add(self),
+			 tip,
+			 timer = 0,
+			 pretimer = 0, 
+			 title = trigger.attr("title"),
+			 tipAttr = trigger.attr("data-tooltip"),
+			 effect = effects[conf.effect],
+			 shown,
+				 
+			 // get show/hide configuration
+			 isInput = trigger.is(":input"), 
+			 isWidget = isInput && trigger.is(":checkbox, :radio, select, :button, :submit"),			
+			 type = trigger.attr("type"),
+			 evt = conf.events[type] || conf.events[isInput ? (isWidget ? 'widget' : 'input') : 'def']; 
+		
+		
+		// check that configuration is sane
+		if (!effect) { throw "Nonexistent effect \"" + conf.effect + "\""; }					
+		
+		evt = evt.split(/,\s*/); 
+		if (evt.length != 2) { throw "Tooltip: bad events configuration for " + type; } 
+		
+		
+		// trigger --> show  
+		trigger.on(evt[0], function(e) {
+
+			clearTimeout(timer);
+			if (conf.predelay) {
+				pretimer = setTimeout(function() { self.show(e); }, conf.predelay);	
+				
+			} else {
+				self.show(e);	
+			}
+			
+		// trigger --> hide
+		}).on(evt[1], function(e)  {
+			clearTimeout(pretimer);
+			if (conf.delay)  {
+				timer = setTimeout(function() { self.hide(e); }, conf.delay);	
+				
+			} else {
+				self.hide(e);		
+			}
+			
+		}); 
+		
+		
+		// remove default title
+		if (title && conf.cancelDefault) { 
+			trigger.removeAttr("title");
+			trigger.data("title", title);			
+		}		
+		
+		$.extend(self, {
+				
+			show: function(e) {  
+
+				// tip not initialized yet
+				if (!tip) {
+					
+					// data-tooltip 
+					if (tipAttr) {
+						tip = $(tipAttr);
+
+					// single tip element for all
+					} else if (conf.tip) { 
+						tip = $(conf.tip).eq(0);
+						
+					// autogenerated tooltip
+					} else if (title) { 
+						tip = $(conf.layout).addClass(conf.tipClass).appendTo(document.body)
+							.hide().append(title);
+
+					// manual tooltip
+					} else {	
+						tip = trigger.find('.' + conf.tipClass);
+						if (!tip.length) { tip = trigger.next(); }
+						if (!tip.length) { tip = trigger.parent().next(); } 	 
+					}
+					
+					if (!tip.length) { throw "Cannot find tooltip for " + trigger;	}
+				} 
+			 	
+			 	if (self.isShown()) { return self; }  
+				
+			 	// stop previous animation
+			 	tip.stop(true, true); 			 	
+			 	
+				// get position
+				var pos = getPosition(trigger, tip, conf);			
+		
+				// restore title for single tooltip element
+				if (conf.tip) {
+					tip.html(trigger.data("title"));
+				}
+
+				// onBeforeShow
+				e = $.Event();
+				e.type = "onBeforeShow";
+				fire.trigger(e, [pos]);				
+				if (e.isDefaultPrevented()) { return self; }
+		
+				
+				// onBeforeShow may have altered the configuration
+				pos = getPosition(trigger, tip, conf);
+				
+				// set position
+				tip.css({position:'absolute', top: pos.top, left: pos.left});					
+				
+				shown = true;
+				
+				// invoke effect 
+				effect[0].call(self, function() {
+					e.type = "onShow";
+					shown = 'full';
+					fire.trigger(e);		 
+				});					
+
+	 	
+				// tooltip events       
+				var event = conf.events.tooltip.split(/,\s*/);
+
+				if (!tip.data("__set")) {
+					
+					tip.off(event[0]).on(event[0], function() { 
+						clearTimeout(timer);
+						clearTimeout(pretimer);
+					});
+					
+					if (event[1] && !trigger.is("input:not(:checkbox, :radio), textarea")) { 					
+						tip.off(event[1]).on(event[1], function(e) {
+	
+							// being moved to the trigger element
+							if (e.relatedTarget != trigger[0]) {
+								trigger.trigger(evt[1].split(" ")[0]);
+							}
+						}); 
+					} 
+					
+					// bind agein for if same tip element
+					if (!conf.tip) tip.data("__set", true);
+				}
+				
+				return self;
+			},
+			
+			hide: function(e) {
+
+				if (!tip || !self.isShown()) { return self; }
+			
+				// onBeforeHide
+				e = $.Event();
+				e.type = "onBeforeHide";
+				fire.trigger(e);				
+				if (e.isDefaultPrevented()) { return; }
+	
+				shown = false;
+				
+				effects[conf.effect][1].call(self, function() {
+					e.type = "onHide";
+					fire.trigger(e);		 
+				});
+				
+				return self;
+			},
+			
+			isShown: function(fully) {
+				return fully ? shown == 'full' : shown;	
+			},
+				
+			getConf: function() {
+				return conf;	
+			},
+				
+			getTip: function() {
+				return tip;	
+			},
+			
+			getTrigger: function() {
+				return trigger;	
+			}		
+
+		});		
+
+		// callbacks	
+		$.each("onHide,onBeforeShow,onShow,onBeforeHide".split(","), function(i, name) {
+				
+			// configuration
+			if ($.isFunction(conf[name])) { 
+				$(self).on(name, conf[name]); 
+			}
+
+			// API
+			self[name] = function(fn) {
+				if (fn) { $(self).on(name, fn); }
+				return self;
+			};
+		});
+		
+	}
+		
+	
+	// jQuery plugin implementation
+	$.fn.tooltip = function(conf) {
+		
+		// return existing instance
+		var api = this.data("tooltip");
+		if (api) { return api; }
+
+		conf = $.extend(true, {}, $.tools.tooltip.conf, conf);
+		
+		// position can also be given as string
+		if (typeof conf.position == 'string') {
+			conf.position = conf.position.split(/,?\s/);	
+		}
+		
+		// install tooltip for each entry in jQuery object
+		this.each(function() {
+			api = new Tooltip($(this), conf); 
+			$(this).data("tooltip", api); 
+		});
+		
+		return conf.api ? api: this;		 
+	};
+		
+}) (jQuery);
+
+		
+
+
+
+  }).apply(root, arguments);
+});
+}(this));
+
+(function(root) {
+define("jquery.tools.dateinput", ["jquery"], function() {
+  return (function() {
+!function($,undefined){function dayAm(year,month){return new Date(year,month+1,0).getDate()}function zeropad(val,len){for(val=""+val,len=len||2;val.length<len;)val="0"+val;return val}function format(formatter,date,text,lang){var d=date.getDate(),D=date.getDay(),m=date.getMonth(),y=date.getFullYear(),flags={d:d,dd:zeropad(d),ddd:LABELS[lang].shortDays[D],dddd:LABELS[lang].days[D],m:m+1,mm:zeropad(m+1),mmm:LABELS[lang].shortMonths[m],mmmm:LABELS[lang].months[m],yy:String(y).slice(2),yyyy:y},ret=formatters[formatter](text,date,flags,lang);return tmpTag.html(ret).html()}function integer(val){return parseInt(val,10)}function isSameDay(d1,d2){return d1.getFullYear()===d2.getFullYear()&&d1.getMonth()==d2.getMonth()&&d1.getDate()==d2.getDate()}function parseDate(val){if(val!==undefined){if(val.constructor==Date)return val;if("string"==typeof val){var els=val.split("-");if(3==els.length)return new Date(integer(els[0]),integer(els[1])-1,integer(els[2]));if(!/^-?\d+$/.test(val))return;val=integer(val)}var date=new Date;return date.setDate(date.getDate()+val),date}}function Dateinput(input,conf){function select(date,conf,e){return input.attr("readonly")?void self.hide(e):(value=date,currYear=date.getFullYear(),currMonth=date.getMonth(),currDay=date.getDate(),e||(e=$.Event("api")),"click"!=e.type||/msie/.test(navigator.userAgent.toLowerCase())||input.focus(),e.type="beforeChange",fire.trigger(e,[date]),void(e.isDefaultPrevented()||(input.val(format(conf.formatter,date,conf.format,conf.lang)),e.type="change",e.target=input[0],fire.trigger(e),input.data("date",date),self.hide(e))))}function onShow(ev){ev.type="onShow",fire.trigger(ev),$(document).on("keydown.d",function(e){if(e.ctrlKey)return!0;var key=e.keyCode;if(8==key||46==key)return input.val(""),self.hide(e);if(27==key||9==key)return self.hide(e);if($(KEYS).index(key)>=0){if(!opened)return self.show(e),e.preventDefault();var days=$("#"+css.weeks+" a"),el=$("."+css.focus),index=days.index(el);return el.removeClass(css.focus),74==key||40==key?index+=7:75==key||38==key?index-=7:76==key||39==key?index+=1:(72==key||37==key)&&(index-=1),index>41?(self.addMonth(),el=$("#"+css.weeks+" a:eq("+(index-42)+")")):0>index?(self.addMonth(-1),el=$("#"+css.weeks+" a:eq("+(index+42)+")")):el=days.eq(index),el.addClass(css.focus),e.preventDefault()}return 34==key?self.addMonth():33==key?self.addMonth(-1):36==key?self.today():(13==key&&($(e.target).is("select")||$("."+css.focus).click()),$([16,17,18,9]).index(key)>=0)}),$(document).on("click.d",function(e){var el=e.target;el.id==css.root||$(el).parents("#"+css.root).length||el==input[0]||trigger&&el==trigger[0]||self.hide(e)})}var trigger,pm,nm,currYear,currMonth,currDay,opened,original,self=this,now=new Date,yearNow=now.getFullYear(),css=conf.css,labels=LABELS[conf.lang],root=$("#"+css.root),title=root.find("#"+css.title),value=input.attr("data-value")||conf.value||input.val(),min=input.attr("min")||conf.min,max=input.attr("max")||conf.max;if(0===min&&(min="0"),value=parseDate(value)||now,min=parseDate(min||new Date(yearNow+conf.yearRange[0],1,1)),max=parseDate(max||new Date(yearNow+conf.yearRange[1]+1,1,-1)),!labels)throw"Dateinput: invalid language: "+conf.lang;if("date"==input.attr("type")){var original=input.clone(),def=original.wrap("<div/>").parent().html(),clone=$(def.replace(/type/i,"type=text data-orig-type"));conf.value&&clone.val(conf.value),input.replaceWith(clone),input=clone}input.addClass(css.input);var fire=input.add(self);if(!root.length){if(root=$("<div><div><a/><div/><a/></div><div><div/><div/></div></div>").hide().css({position:"absolute"}).attr("id",css.root),root.children().eq(0).attr("id",css.head).end().eq(1).attr("id",css.body).children().eq(0).attr("id",css.days).end().eq(1).attr("id",css.weeks).end().end().end().find("a").eq(0).attr("id",css.prev).end().eq(1).attr("id",css.next),title=root.find("#"+css.head).find("div").attr("id",css.title),conf.selectors){var monthSelector=$("<select/>").attr("id",css.month),yearSelector=$("<select/>").attr("id",css.year);title.html(monthSelector.add(yearSelector))}for(var days=root.find("#"+css.days),d=0;7>d;d++)days.append($("<span/>").text(labels.shortDays[(d+conf.firstDay)%7]));$("body").append(root)}conf.trigger&&(trigger=$("<a/>").attr("href","#").addClass(css.trigger).click(function(e){return conf.toggle?self.toggle():self.show(),e.preventDefault()}).insertAfter(input));var weeks=root.find("#"+css.weeks);yearSelector=root.find("#"+css.year),monthSelector=root.find("#"+css.month),$.extend(self,{show:function(e){if(!input.attr("disabled")&&!opened&&(e=e||$.Event(),e.type="onBeforeShow",fire.trigger(e),!e.isDefaultPrevented())){$.each(instances,function(){this.hide()}),opened=!0,monthSelector.off("change").change(function(){self.setValue(integer(yearSelector.val()),integer($(this).val()))}),yearSelector.off("change").change(function(){self.setValue(integer($(this).val()),integer(monthSelector.val()))}),pm=root.find("#"+css.prev).off("click").click(function(){return pm.hasClass(css.disabled)||self.addMonth(-1),!1}),nm=root.find("#"+css.next).off("click").click(function(){return nm.hasClass(css.disabled)||self.addMonth(),!1}),self.setValue(value);var pos=input.offset();return/iPad/i.test(navigator.userAgent)&&(pos.top-=$(window).scrollTop()),root.css({top:pos.top+input.outerHeight(!0)+conf.offset[0],left:pos.left+conf.offset[1]}),conf.speed?root.show(conf.speed,function(){onShow(e)}):(root.show(),onShow(e)),self}},setValue:function(year,month,day){var date=integer(month)>=-1?new Date(integer(year),integer(month),integer(day==undefined||isNaN(day)?1:day)):year||value;if(min>date?date=min:date>max&&(date=max),"string"==typeof year&&(date=parseDate(year)),year=date.getFullYear(),month=date.getMonth(),day=date.getDate(),-1==month?(month=11,year--):12==month&&(month=0,year++),!opened)return select(date,conf),self;currMonth=month,currYear=year,currDay=day;var week,tmp=new Date(year,month,1-conf.firstDay),begin=tmp.getDay(),days=dayAm(year,month),prevDays=dayAm(year,month-1);if(conf.selectors){monthSelector.empty(),$.each(labels.months,function(i,m){min<new Date(year,i+1,1)&&max>new Date(year,i,0)&&monthSelector.append($("<option/>").html(m).attr("value",i))}),yearSelector.empty();for(var yearNow=now.getFullYear(),i=yearNow+conf.yearRange[0];i<yearNow+conf.yearRange[1];i++)min<new Date(i+1,0,1)&&max>new Date(i,0,0)&&yearSelector.append($("<option/>").text(i));monthSelector.val(month),yearSelector.val(year)}else title.html(labels.months[month]+" "+year);weeks.empty(),pm.add(nm).removeClass(css.disabled);for(var a,num,j=begin?0:-7;(begin?42:35)>j;j++)a=$("<a/>"),j%7===0&&(week=$("<div/>").addClass(css.week),weeks.append(week)),begin>j?(a.addClass(css.off),num=prevDays-begin+j+1,date=new Date(year,month-1,num)):j>=begin+days?(a.addClass(css.off),num=j-days-begin+1,date=new Date(year,month+1,num)):(num=j-begin+1,date=new Date(year,month,num),isSameDay(value,date)?a.attr("id",css.current).addClass(css.focus):isSameDay(now,date)&&a.attr("id",css.today)),min&&min>date&&a.add(pm).addClass(css.disabled),max&&date>max&&a.add(nm).addClass(css.disabled),a.attr("href","#"+num).text(num).data("date",date),week.append(a);return weeks.find("a").click(function(e){var el=$(this);return el.hasClass(css.disabled)||($("#"+css.current).removeAttr("id"),el.attr("id",css.current),select(el.data("date"),conf,e)),!1}),css.sunday&&weeks.find("."+css.week).each(function(){var beg=conf.firstDay?7-conf.firstDay:0;$(this).children().slice(beg,beg+1).addClass(css.sunday)}),self},setMin:function(val,fit){return min=parseDate(val),fit&&min>value&&self.setValue(min),self},setMax:function(val,fit){return max=parseDate(val),fit&&value>max&&self.setValue(max),self},today:function(){return self.setValue(now)},addDay:function(amount){return this.setValue(currYear,currMonth,currDay+(amount||1))},addMonth:function(amount){var targetMonth=currMonth+(amount||1),daysInTargetMonth=dayAm(currYear,targetMonth),targetDay=daysInTargetMonth>=currDay?currDay:daysInTargetMonth;return this.setValue(currYear,targetMonth,targetDay)},addYear:function(amount){return this.setValue(currYear+(amount||1),currMonth,currDay)},destroy:function(){input.add(document).off("click.d keydown.d"),root.add(trigger).remove(),input.removeData("dateinput").removeClass(css.input),original&&input.replaceWith(original)},hide:function(e){if(opened){if(e=$.Event(),e.type="onHide",fire.trigger(e),e.isDefaultPrevented())return;$(document).off("click.d keydown.d"),root.hide(),opened=!1}return self},toggle:function(){return self.isOpen()?self.hide():self.show()},getConf:function(){return conf},getInput:function(){return input},getCalendar:function(){return root},getValue:function(dateFormat){return dateFormat?format(conf.formatter,value,dateFormat,conf.lang):value},isOpen:function(){return opened}}),$.each(["onBeforeShow","onShow","change","onHide"],function(i,name){$.isFunction(conf[name])&&$(self).on(name,conf[name]),self[name]=function(fn){return fn&&$(self).on(name,fn),self}}),conf.editable||input.on("focus.d click.d",self.show).keydown(function(e){var key=e.keyCode;return!opened&&$(KEYS).index(key)>=0?(self.show(e),e.preventDefault()):((8==key||46==key)&&input.val(""),e.shiftKey||e.ctrlKey||e.altKey||9==key?!0:e.preventDefault())}),parseDate(input.val())&&select(value,conf)}$.tools=$.tools||{version:"@VERSION"};var tool,instances=[],formatters={},KEYS=[75,76,38,39,74,72,40,37],LABELS={};tool=$.tools.dateinput={conf:{format:"mm/dd/yy",formatter:"default",selectors:!1,yearRange:[-5,5],lang:"en",offset:[0,0],speed:0,firstDay:0,min:undefined,max:undefined,trigger:0,toggle:0,editable:0,css:{prefix:"cal",input:"date",root:0,head:0,title:0,prev:0,next:0,month:0,year:0,days:0,body:0,weeks:0,today:0,current:0,week:0,off:0,sunday:0,focus:0,disabled:0,trigger:0}},addFormatter:function(name,fn){formatters[name]=fn},localize:function(language,labels){$.each(labels,function(key,val){labels[key]=val.split(",")}),LABELS[language]=labels}},tool.localize("en",{months:"January,February,March,April,May,June,July,August,September,October,November,December",shortMonths:"Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",days:"Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday",shortDays:"Sun,Mon,Tue,Wed,Thu,Fri,Sat"});var tmpTag=$("<a/>");tool.addFormatter("default",function(text,date,flags){return text.replace(/d{1,4}|m{1,4}|yy(?:yy)?|"[^"]*"|'[^']*'/g,function($0){return $0 in flags?flags[$0]:$0})}),tool.addFormatter("prefixed",function(text,date,flags){return text.replace(/%(d{1,4}|m{1,4}|yy(?:yy)?|"[^"]*"|'[^']*')/g,function($0,$1){return $1 in flags?flags[$1]:$0})}),$.expr[":"].date=function(el){var type=el.getAttribute("type");return type&&"date"==type||!!$(el).data("dateinput")},$.fn.dateinput=function(conf){if(this.data("dateinput"))return this;conf=$.extend(!0,{},tool.conf,conf),$.each(conf.css,function(key,val){val||"prefix"==key||(conf.css[key]=(conf.css.prefix||"")+(val||key))});var els;return this.each(function(){var el=new Dateinput($(this),conf);instances.push(el);var input=el.getInput().data("dateinput",el);els=els?els.add(input):input}),els?els:this}}(jQuery);
+
+  }).apply(root, arguments);
+});
+}(this));
+
+(function(root) {
+define("jquery.tmpl", ["jquery"], function() {
+  return (function() {
+/*
+ * jQuery Templating Plugin
+ * Copyright 2010, John Resig
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ */
+(function( jQuery, undefined ){
+	var oldManip = jQuery.fn.domManip, tmplItmAtt = "_tmplitem", htmlExpr = /^[^<]*(<[\w\W]+>)[^>]*$|\{\{\! /,
+		newTmplItems = {}, wrappedItems = {}, appendToTmplItems, topTmplItem = { key: 0, data: {} }, itemKey = 0, cloneIndex = 0, stack = [];
+
+	function newTmplItem( options, parentItem, fn, data ) {
+		// Returns a template item data structure for a new rendered instance of a template (a 'template item').
+		// The content field is a hierarchical array of strings and nested items (to be
+		// removed and replaced by nodes field of dom elements, once inserted in DOM).
+		var newItem = {
+			data: data || (parentItem ? parentItem.data : {}),
+			_wrap: parentItem ? parentItem._wrap : null,
+			tmpl: null,
+			parent: parentItem || null,
+			nodes: [],
+			calls: tiCalls,
+			nest: tiNest,
+			wrap: tiWrap,
+			html: tiHtml,
+			update: tiUpdate
+		};
+		if ( options ) {
+			jQuery.extend( newItem, options, { nodes: [], parent: parentItem } );
+		}
+		if ( fn ) {
+			// Build the hierarchical content to be used during insertion into DOM
+			newItem.tmpl = fn;
+			newItem._ctnt = newItem._ctnt || newItem.tmpl( jQuery, newItem );
+			newItem.key = ++itemKey;
+			// Keep track of new template item, until it is stored as jQuery Data on DOM element
+			(stack.length ? wrappedItems : newTmplItems)[itemKey] = newItem;
+		}
+		return newItem;
+	}
+
+	// Override appendTo etc., in order to provide support for targeting multiple elements. (This code would disappear if integrated in jquery core).
+	jQuery.each({
+		appendTo: "append",
+		prependTo: "prepend",
+		insertBefore: "before",
+		insertAfter: "after",
+		replaceAll: "replaceWith"
+	}, function( name, original ) {
+		jQuery.fn[ name ] = function( selector ) {
+			var ret = [], insert = jQuery( selector ), elems, i, l, tmplItems,
+				parent = this.length === 1 && this[0].parentNode;
+
+			appendToTmplItems = newTmplItems || {};
+			if ( parent && parent.nodeType === 11 && parent.childNodes.length === 1 && insert.length === 1 ) {
+				insert[ original ]( this[0] );
+				ret = this;
+			} else {
+				for ( i = 0, l = insert.length; i < l; i++ ) {
+					cloneIndex = i;
+					elems = (i > 0 ? this.clone(true) : this).get();
+					jQuery.fn[ original ].apply( jQuery(insert[i]), elems );
+					ret = ret.concat( elems );
+				}
+				cloneIndex = 0;
+				ret = this.pushStack( ret, name, insert.selector );
+			}
+			tmplItems = appendToTmplItems;
+			appendToTmplItems = null;
+			jQuery.tmpl.complete( tmplItems );
+			return ret;
+		};
+	});
+
+	jQuery.fn.extend({
+		// Use first wrapped element as template markup.
+		// Return wrapped set of template items, obtained by rendering template against data.
+		tmpl: function( data, options, parentItem ) {
+			return jQuery.tmpl( this[0], data, options, parentItem );
+		},
+
+		// Find which rendered template item the first wrapped DOM element belongs to
+		tmplItem: function() {
+			return jQuery.tmplItem( this[0] );
+		},
+
+		// Consider the first wrapped element as a template declaration, and get the compiled template or store it as a named template.
+		template: function( name ) {
+			return jQuery.template( name, this[0] );
+		},
+
+		domManip: function( args, table, callback, options ) {
+			// This appears to be a bug in the appendTo, etc. implementation
+			// it should be doing .call() instead of .apply(). See #6227
+			if ( args[0] && args[0].nodeType ) {
+				var dmArgs = jQuery.makeArray( arguments ), argsLength = args.length, i = 0, tmplItem;
+				while ( i < argsLength && !(tmplItem = jQuery.data( args[i++], "tmplItem" ))) {}
+				if ( argsLength > 1 ) {
+					dmArgs[0] = [jQuery.makeArray( args )];
+				}
+				if ( tmplItem && cloneIndex ) {
+					dmArgs[2] = function( fragClone ) {
+						// Handler called by oldManip when rendered template has been inserted into DOM.
+						jQuery.tmpl.afterManip( this, fragClone, callback );
+					};
+				}
+				oldManip.apply( this, dmArgs );
+			} else {
+				oldManip.apply( this, arguments );
+			}
+			cloneIndex = 0;
+			if ( !appendToTmplItems ) {
+				jQuery.tmpl.complete( newTmplItems );
+			}
+			return this;
+		}
+	});
+
+	jQuery.extend({
+		// Return wrapped set of template items, obtained by rendering template against data.
+		tmpl: function( tmpl, data, options, parentItem ) {
+			var ret, topLevel = !parentItem;
+			if ( topLevel ) {
+				// This is a top-level tmpl call (not from a nested template using {{tmpl}})
+				parentItem = topTmplItem;
+				tmpl = jQuery.template[tmpl] || jQuery.template( null, tmpl );
+				wrappedItems = {}; // Any wrapped items will be rebuilt, since this is top level
+			} else if ( !tmpl ) {
+				// The template item is already associated with DOM - this is a refresh.
+				// Re-evaluate rendered template for the parentItem
+				tmpl = parentItem.tmpl;
+				newTmplItems[parentItem.key] = parentItem;
+				parentItem.nodes = [];
+				if ( parentItem.wrapped ) {
+					updateWrapped( parentItem, parentItem.wrapped );
+				}
+				// Rebuild, without creating a new template item
+				return jQuery( build( parentItem, null, parentItem.tmpl( jQuery, parentItem ) ));
+			}
+			if ( !tmpl ) {
+				return []; // Could throw...
+			}
+			if ( typeof data === "function" ) {
+				data = data.call( parentItem || {} );
+			}
+			if ( options && options.wrapped ) {
+				updateWrapped( options, options.wrapped );
+			}
+			ret = jQuery.isArray( data ) ? 
+				jQuery.map( data, function( dataItem ) {
+					return dataItem ? newTmplItem( options, parentItem, tmpl, dataItem ) : null;
+				}) :
+				[ newTmplItem( options, parentItem, tmpl, data ) ];
+			return topLevel ? jQuery( build( parentItem, null, ret ) ) : ret;
+		},
+
+		// Return rendered template item for an element.
+		tmplItem: function( elem ) {
+			var tmplItem;
+			if ( elem instanceof jQuery ) {
+				elem = elem[0];
+			}
+			while ( elem && elem.nodeType === 1 && !(tmplItem = jQuery.data( elem, "tmplItem" )) && (elem = elem.parentNode) ) {}
+			return tmplItem || topTmplItem;
+		},
+
+		// Set:
+		// Use $.template( name, tmpl ) to cache a named template,
+		// where tmpl is a template string, a script element or a jQuery instance wrapping a script element, etc.
+		// Use $( "selector" ).template( name ) to provide access by name to a script block template declaration.
+
+		// Get:
+		// Use $.template( name ) to access a cached template.
+		// Also $( selectorToScriptBlock ).template(), or $.template( null, templateString )
+		// will return the compiled template, without adding a name reference.
+		// If templateString includes at least one HTML tag, $.template( templateString ) is equivalent
+		// to $.template( null, templateString )
+		template: function( name, tmpl ) {
+			if (tmpl) {
+				// Compile template and associate with name
+				if ( typeof tmpl === "string" ) {
+					// This is an HTML string being passed directly in.
+					tmpl = buildTmplFn( tmpl )
+				} else if ( tmpl instanceof jQuery ) {
+					tmpl = tmpl[0] || {};
+				}
+				if ( tmpl.nodeType ) {
+					// If this is a template block, use cached copy, or generate tmpl function and cache.
+					tmpl = jQuery.data( tmpl, "tmpl" ) || jQuery.data( tmpl, "tmpl", buildTmplFn( tmpl.innerHTML ));
+				}
+				return typeof name === "string" ? (jQuery.template[name] = tmpl) : tmpl;
+			}
+			// Return named compiled template
+			return name ? (typeof name !== "string" ? jQuery.template( null, name ): 
+				(jQuery.template[name] || 
+					// If not in map, treat as a selector. (If integrated with core, use quickExpr.exec) 
+					jQuery.template( null, htmlExpr.test( name ) ? name : jQuery( name )))) : null; 
+		},
+
+		encode: function( text ) {
+			// Do HTML encoding replacing < > & and ' and " by corresponding entities.
+			return ("" + text).split("<").join("&lt;").split(">").join("&gt;").split('"').join("&#34;").split("'").join("&#39;");
+		}
+	});
+
+	jQuery.extend( jQuery.tmpl, {
+		tag: {
+			"tmpl": {
+				_default: { $2: "null" },
+				open: "if($notnull_1){_=_.concat($item.nest($1,$2));}"
+				// tmpl target parameter can be of type function, so use $1, not $1a (so not auto detection of functions)
+				// This means that {{tmpl foo}} treats foo as a template (which IS a function). 
+				// Explicit parens can be used if foo is a function that returns a template: {{tmpl foo()}}.
+			},
+			"wrap": {
+				_default: { $2: "null" },
+				open: "$item.calls(_,$1,$2);_=[];",
+				close: "call=$item.calls();_=call._.concat($item.wrap(call,_));"
+			},
+			"each": {
+				_default: { $2: "$index, $value" },
+				open: "if($notnull_1){$.each($1a,function($2){with(this){",
+				close: "}});}"
+			},
+			"if": {
+				open: "if(($notnull_1) && $1a){",
+				close: "}"
+			},
+			"else": {
+				_default: { $1: "true" },
+				open: "}else if(($notnull_1) && $1a){"
+			},
+			"html": {
+				// Unecoded expression evaluation. 
+				open: "if($notnull_1){_.push($1a);}"
+			},
+			"=": {
+				// Encoded expression evaluation. Abbreviated form is ${}.
+				_default: { $1: "$data" },
+				open: "if($notnull_1){_.push($.encode($1a));}"
+			},
+			"!": {
+				// Comment tag. Skipped by parser
+				open: ""
+			}
+		},
+
+		// This stub can be overridden, e.g. in jquery.tmplPlus for providing rendered events
+		complete: function( items ) {
+			newTmplItems = {};
+		},
+
+		// Call this from code which overrides domManip, or equivalent
+		// Manage cloning/storing template items etc.
+		afterManip: function afterManip( elem, fragClone, callback ) {
+			// Provides cloned fragment ready for fixup prior to and after insertion into DOM
+			var content = fragClone.nodeType === 11 ?
+				jQuery.makeArray(fragClone.childNodes) :
+				fragClone.nodeType === 1 ? [fragClone] : [];
+
+			// Return fragment to original caller (e.g. append) for DOM insertion
+			callback.call( elem, fragClone );
+
+			// Fragment has been inserted:- Add inserted nodes to tmplItem data structure. Replace inserted element annotations by jQuery.data.
+			storeTmplItems( content );
+			cloneIndex++;
+		}
+	});
+
+	//========================== Private helper functions, used by code above ==========================
+
+	function build( tmplItem, nested, content ) {
+		// Convert hierarchical content into flat string array 
+		// and finally return array of fragments ready for DOM insertion
+		var frag, ret = content ? jQuery.map( content, function( item ) {
+			return (typeof item === "string") ? 
+				// Insert template item annotations, to be converted to jQuery.data( "tmplItem" ) when elems are inserted into DOM.
+				(tmplItem.key ? item.replace( /(<\w+)(?=[\s>])(?![^>]*_tmplitem)([^>]*)/g, "$1 " + tmplItmAtt + "=\"" + tmplItem.key + "\" $2" ) : item) :
+				// This is a child template item. Build nested template.
+				build( item, tmplItem, item._ctnt );
+		}) : 
+		// If content is not defined, insert tmplItem directly. Not a template item. May be a string, or a string array, e.g. from {{html $item.html()}}. 
+		tmplItem;
+		if ( nested ) {
+			return ret;
+		}
+
+		// top-level template
+		ret = ret.join("");
+
+		// Support templates which have initial or final text nodes, or consist only of text
+		// Also support HTML entities within the HTML markup.
+		ret.replace( /^\s*([^<\s][^<]*)?(<[\w\W]+>)([^>]*[^>\s])?\s*$/, function( all, before, middle, after) {
+			frag = jQuery( middle ).get();
+
+			storeTmplItems( frag );
+			if ( before ) {
+				frag = unencode( before ).concat(frag);
+			}
+			if ( after ) {
+				frag = frag.concat(unencode( after ));
+			}
+		});
+		return frag ? frag : unencode( ret );
+	}
+
+	function unencode( text ) {
+		// Use createElement, since createTextNode will not render HTML entities correctly
+		var el = document.createElement( "div" );
+		el.innerHTML = text;
+		return jQuery.makeArray(el.childNodes);
+	}
+
+	// Generate a reusable function that will serve to render a template against data
+	function buildTmplFn( markup ) {
+		return new Function("jQuery","$item",
+			"var $=jQuery,call,_=[],$data=$item.data;" +
+
+			// Introduce the data as local variables using with(){}
+			"with($data){_.push('" +
+
+			// Convert the template into pure JavaScript
+			jQuery.trim(markup)
+				.replace( /([\\'])/g, "\\$1" )
+				.replace( /[\r\t\n]/g, " " )
+				.replace( /\$\{([^\}]*)\}/g, "{{= $1}}" )
+				.replace( /\{\{(\/?)(\w+|.)(?:\(((?:[^\}]|\}(?!\}))*?)?\))?(?:\s+(.*?)?)?(\(((?:[^\}]|\}(?!\}))*?)\))?\s*\}\}/g,
+				function( all, slash, type, fnargs, target, parens, args ) {
+					var tag = jQuery.tmpl.tag[ type ], def, expr, exprAutoFnDetect;
+					if ( !tag ) {
+						throw "Template command not found: " + type;
+					}
+					def = tag._default || [];
+					if ( parens && !/\w$/.test(target)) {
+						target += parens;
+						parens = "";
+					}
+					if ( target ) {
+						target = unescape( target ); 
+						args = args ? ("," + unescape( args ) + ")") : (parens ? ")" : "");
+						// Support for target being things like a.toLowerCase();
+						// In that case don't call with template item as 'this' pointer. Just evaluate...
+						expr = parens ? (target.indexOf(".") > -1 ? target + parens : ("(" + target + ").call($item" + args)) : target;
+						exprAutoFnDetect = parens ? expr : "(typeof(" + target + ")==='function'?(" + target + ").call($item):(" + target + "))";
+					} else {
+						exprAutoFnDetect = expr = def.$1 || "null";
+					}
+					fnargs = unescape( fnargs );
+					return "');" + 
+						tag[ slash ? "close" : "open" ]
+							.split( "$notnull_1" ).join( target ? "typeof(" + target + ")!=='undefined' && (" + target + ")!=null" : "true" )
+							.split( "$1a" ).join( exprAutoFnDetect )
+							.split( "$1" ).join( expr )
+							.split( "$2" ).join( fnargs ?
+								fnargs.replace( /\s*([^\(]+)\s*(\((.*?)\))?/g, function( all, name, parens, params ) {
+									params = params ? ("," + params + ")") : (parens ? ")" : "");
+									return params ? ("(" + name + ").call($item" + params) : all;
+								})
+								: (def.$2||"")
+							) +
+						"_.push('";
+				}) +
+			"');}return _;"
+		);
+	}
+	function updateWrapped( options, wrapped ) {
+		// Build the wrapped content. 
+		options._wrap = build( options, true, 
+			// Suport imperative scenario in which options.wrapped can be set to a selector or an HTML string.
+			jQuery.isArray( wrapped ) ? wrapped : [htmlExpr.test( wrapped ) ? wrapped : jQuery( wrapped ).html()]
+		).join("");
+	}
+
+	function unescape( args ) {
+		return args ? args.replace( /\\'/g, "'").replace(/\\\\/g, "\\" ) : null;
+	}
+	function outerHtml( elem ) {
+		var div = document.createElement("div");
+		div.appendChild( elem.cloneNode(true) );
+		return div.innerHTML;
+	}
+
+	// Store template items in jQuery.data(), ensuring a unique tmplItem data data structure for each rendered template instance.
+	function storeTmplItems( content ) {
+		var keySuffix = "_" + cloneIndex, elem, elems, newClonedItems = {}, i, l, m;
+		for ( i = 0, l = content.length; i < l; i++ ) {
+			if ( (elem = content[i]).nodeType !== 1 ) {
+				continue;
+			}
+			elems = elem.getElementsByTagName("*");
+			for ( m = elems.length - 1; m >= 0; m-- ) {
+				processItemKey( elems[m] );
+			}
+			processItemKey( elem );
+		}
+		function processItemKey( el ) {
+			var pntKey, pntNode = el, pntItem, tmplItem, key;
+			// Ensure that each rendered template inserted into the DOM has its own template item,
+			if ( (key = el.getAttribute( tmplItmAtt ))) {
+				while ( pntNode.parentNode && (pntNode = pntNode.parentNode).nodeType === 1 && !(pntKey = pntNode.getAttribute( tmplItmAtt ))) { }
+				if ( pntKey !== key ) {
+					// The next ancestor with a _tmplitem expando is on a different key than this one.
+					// So this is a top-level element within this template item
+					// Set pntNode to the key of the parentNode, or to 0 if pntNode.parentNode is null, or pntNode is a fragment.
+					pntNode = pntNode.parentNode ? (pntNode.nodeType === 11 ? 0 : (pntNode.getAttribute( tmplItmAtt ) || 0)) : 0;
+					if ( !(tmplItem = newTmplItems[key]) ) {
+						// The item is for wrapped content, and was copied from the temporary parent wrappedItem.
+						tmplItem = wrappedItems[key];
+						tmplItem = newTmplItem( tmplItem, newTmplItems[pntNode]||wrappedItems[pntNode], null, true );
+						tmplItem.key = ++itemKey;
+						newTmplItems[itemKey] = tmplItem;
+					}
+					if ( cloneIndex ) {
+						cloneTmplItem( key );
+					}
+				}
+				el.removeAttribute( tmplItmAtt );
+			} else if ( cloneIndex && (tmplItem = jQuery.data( el, "tmplItem" )) ) {
+				// This was a rendered element, cloned during append or appendTo etc.
+				// TmplItem stored in jQuery data has already been cloned in cloneCopyEvent. We must replace it with a fresh cloned tmplItem.
+				cloneTmplItem( tmplItem.key );
+				newTmplItems[tmplItem.key] = tmplItem;
+				pntNode = jQuery.data( el.parentNode, "tmplItem" );
+				pntNode = pntNode ? pntNode.key : 0;
+			}
+			if ( tmplItem ) {
+				pntItem = tmplItem;
+				// Find the template item of the parent element. 
+				// (Using !=, not !==, since pntItem.key is number, and pntNode may be a string)
+				while ( pntItem && pntItem.key != pntNode ) { 
+					// Add this element as a top-level node for this rendered template item, as well as for any
+					// ancestor items between this item and the item of its parent element
+					pntItem.nodes.push( el );
+					pntItem = pntItem.parent;
+				}
+				// Delete content built during rendering - reduce API surface area and memory use, and avoid exposing of stale data after rendering...
+				delete tmplItem._ctnt;
+				delete tmplItem._wrap;
+				// Store template item as jQuery data on the element
+				jQuery.data( el, "tmplItem", tmplItem );
+			}
+			function cloneTmplItem( key ) {
+				key = key + keySuffix;
+				tmplItem = newClonedItems[key] = 
+					(newClonedItems[key] || newTmplItem( tmplItem, newTmplItems[tmplItem.parent.key + keySuffix] || tmplItem.parent, null, true ));
+			}
+		}
+	}
+
+	//---- Helper functions for template item ----
+
+	function tiCalls( content, tmpl, data, options ) {
+		if ( !content ) {
+			return stack.pop();
+		}
+		stack.push({ _: content, tmpl: tmpl, item:this, data: data, options: options });
+	}
+
+	function tiNest( tmpl, data, options ) {
+		// nested template, using {{tmpl}} tag
+		return jQuery.tmpl( jQuery.template( tmpl ), data, options, this );
+	}
+
+	function tiWrap( call, wrapped ) {
+		// nested template, using {{wrap}} tag
+		var options = call.options || {};
+		options.wrapped = wrapped;
+		// Apply the template, which may incorporate wrapped content, 
+		return jQuery.tmpl( jQuery.template( call.tmpl ), call.data, options, call.item );
+	}
+
+	function tiHtml( filter, textOnly ) {
+		var wrapped = this._wrap;
+		return jQuery.map(
+			jQuery( jQuery.isArray( wrapped ) ? wrapped.join("") : wrapped ).filter( filter || "*" ),
+			function(e) {
+				return textOnly ?
+					e.innerText || e.textContent :
+					e.outerHTML || outerHtml(e);
+			});
+	}
+
+	function tiUpdate() {
+		var coll = this.nodes;
+		jQuery.tmpl( null, null, null, this).insertBefore( coll[0] );
+		jQuery( coll ).remove();
+	}
+})( jQuery );
+
+
+  }).apply(root, arguments);
+});
+}(this));
+
+(function(root) {
+define("jquery.recurrenceinput", ["jquery","jquery.tools.overlay","jquery.tools.dateinput","jquery.tmpl"], function() {
+  return (function() {
+/*jslint regexp: false, continue: true, indent: 4 */
+/*global $, alert, jQuery */
+
+
+(function ($) {
+    $.tools = $.tools || {version: '@VERSION'};
+
+    var tool;
+    var LABELS = {};
+
+    tool = $.tools.recurrenceinput = {
+        conf: {
+            lang: 'en',
+            readOnly: false,
+            firstDay: 0,
+
+            // "REMOTE" FIELD
+            startField: null,
+            startFieldYear: null,
+            startFieldMonth: null,
+            startFieldDay: null,
+            ajaxURL: null,
+            ajaxContentType: 'application/json; charset=utf8',
+            ributtonExtraClass: '',
+
+            // INPUT CONFIGURATION
+            hasRepeatForeverButton: true,
+
+            // FORM OVERLAY
+            formOverlay: {
+                speed: 'fast',
+                fixed: false
+            },
+
+            // JQUERY TEMPLATE NAMES
+            template: {
+                form: '#jquery-recurrenceinput-form-tmpl',
+                display: '#jquery-recurrenceinput-display-tmpl'
+            },
+
+            // RECURRENCE TEMPLATES
+            rtemplate: {
+                daily: {
+                    rrule: 'FREQ=DAILY',
+                    fields: [
+                        'ridailyinterval',
+                        'rirangeoptions'
+                    ]
+                },
+                mondayfriday: {
+                    rrule: 'FREQ=WEEKLY;BYDAY=MO,FR',
+                    fields: [
+                        'rirangeoptions'
+                    ]
+                },
+                weekdays: {
+                    rrule: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+                    fields: [
+                        'rirangeoptions'
+                    ]
+                },
+                weekly: {
+                    rrule: 'FREQ=WEEKLY',
+                    fields: [
+                        'riweeklyinterval',
+                        'riweeklyweekdays',
+                        'rirangeoptions'
+                    ]
+                },
+                monthly: {
+                    rrule: 'FREQ=MONTHLY',
+                    fields: [
+                        'rimonthlyinterval',
+                        'rimonthlyoptions',
+                        'rirangeoptions'
+                    ]
+                },
+                yearly: {
+                    rrule: 'FREQ=YEARLY',
+                    fields: [
+                        'riyearlyinterval',
+                        'riyearlyoptions',
+                        'rirangeoptions'
+                    ]
+                }
+            }
+        },
+
+        localize: function (language, labels) {
+            LABELS[language] = labels;
+        },
+
+        setTemplates: function (templates, titles) {
+            var lang, template;
+            tool.conf.rtemplate = templates;
+            for (lang in titles) {
+                if (titles.hasOwnProperty(lang)) {
+                    for (template in titles[lang]) {
+                        if (titles[lang].hasOwnProperty(template)) {
+                            LABELS[lang].rtemplate[template] = titles[lang][template];
+                        }
+                    }
+                }
+            }
+        }
+
+    };
+
+    tool.localize("en", {
+        displayUnactivate: 'Does not repeat',
+        displayActivate: 'Repeats every',
+        add_rules: 'Add',
+        edit_rules: 'Edit',
+        delete_rules: 'Delete',
+        add:  'Add',
+        refresh: 'Refresh',
+
+        title: 'Repeat',
+        preview: 'Selected dates',
+        addDate: 'Add date',
+
+        recurrenceType: 'Repeats:',
+
+        dailyInterval1: 'Repeat every:',
+        dailyInterval2: 'days',
+
+        weeklyInterval1: 'Repeat every:',
+        weeklyInterval2: 'week(s)',
+        weeklyWeekdays: 'Repeat on:',
+        weeklyWeekdaysHuman: 'on:',
+
+        monthlyInterval1: 'Repeat every:',
+        monthlyInterval2: 'month(s)',
+        monthlyDayOfMonth1: 'Day',
+        monthlyDayOfMonth1Human: 'on day',
+        monthlyDayOfMonth2: 'of the month',
+        monthlyDayOfMonth3: 'month(s)',
+        monthlyWeekdayOfMonth1: 'The',
+        monthlyWeekdayOfMonth1Human: 'on the',
+        monthlyWeekdayOfMonth2: '',
+        monthlyWeekdayOfMonth3: 'of the month',
+        monthlyRepeatOn: 'Repeat on:',
+
+        yearlyInterval1: 'Repeat every:',
+        yearlyInterval2: 'year(s)',
+        yearlyDayOfMonth1: 'Every',
+        yearlyDayOfMonth1Human: 'on',
+        yearlyDayOfMonth2: '',
+        yearlyDayOfMonth3: '',
+        yearlyWeekdayOfMonth1: 'The',
+        yearlyWeekdayOfMonth1Human: 'on the',
+        yearlyWeekdayOfMonth2: '',
+        yearlyWeekdayOfMonth3: 'of',
+        yearlyWeekdayOfMonth4: '',
+        yearlyRepeatOn: 'Repeat on:',
+
+        range: 'End recurrence:',
+        rangeNoEnd: 'Never',
+        rangeByOccurrences1: 'After',
+        rangeByOccurrences1Human: 'ends after',
+        rangeByOccurrences2: 'occurrence(s)',
+        rangeByEndDate: 'On',
+        rangeByEndDateHuman: 'ends on',
+
+        including: ', and also',
+        except: ', except for',
+
+        cancel: 'Cancel',
+        save: 'Save',
+
+        recurrenceStart: 'Start of the recurrence',
+        additionalDate: 'Additional date',
+        include: 'Include',
+        exclude: 'Exclude',
+        remove: 'Remove',
+
+        orderIndexes: ['first', 'second', 'third', 'fourth', 'last'],
+        months: [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'],
+        shortMonths: [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        weekdays: [
+            'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+            'Friday', 'Saturday'],
+        shortWeekdays: [
+            'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+
+        longDateFormat: 'mmmm dd, yyyy',
+        shortDateFormat: 'mm/dd/yyyy',
+
+        unsupportedFeatures: 'Warning: This event uses recurrence features not ' +
+                              'supported by this widget. Saving the recurrence ' +
+                              'may change the recurrence in unintended ways:',
+        noTemplateMatch: 'No matching recurrence template',
+        multipleDayOfMonth: 'This widget does not support multiple days in monthly or yearly recurrence',
+        bysetpos: 'BYSETPOS is not supported',
+        noRule: 'No RRULE in RRULE data',
+        noRepeatEvery: 'Error: The "Repeat every"-field must be between 1 and 1000',
+        noEndDate: 'Error: End date is not set. Please set a correct value',
+        noRepeatOn: 'Error: "Repeat on"-value must be selected',
+        pastEndDate: 'Error: End date cannot be before start date',
+        noEndAfterNOccurrences: 'Error: The "After N occurrences"-field must be between 1 and 1000',
+        alreadyAdded: 'This date was already added',
+
+        rtemplate: {
+            daily: 'Daily',
+            mondayfriday: 'Monday and Friday',
+            weekdays: 'Weekday',
+            weekly: 'Weekly',
+            monthly: 'Monthly',
+            yearly: 'Yearly'
+        }
+    });
+
+
+    var OCCURRENCETMPL = ['<div class="rioccurrences">',
+        '{{each occurrences}}',
+            '<div class="occurrence ${occurrences[$index].type}">',
+                '<span>',
+                    '${occurrences[$index].formattedDate}',
+                    '{{if occurrences[$index].type === "start"}}',
+                        '<span class="rlabel">${i18n.recurrenceStart}</span>',
+                    '{{/if}}',
+                    '{{if occurrences[$index].type === "rdate"}}',
+                        '<span class="rlabel">${i18n.additionalDate}</span>',
+                    '{{/if}}',
+                '</span>',
+                '{{if !readOnly}}',
+                    '<span class="action">',
+                        '{{if occurrences[$index].type === "rrule"}}',
+                            '<a date="${occurrences[$index].date}" href="#"',
+                               'class="${occurrences[$index].type}" title="${i18n.exclude}">',
+                                '${i18n.exclude}',
+                            '</a>',
+                        '{{/if}}',
+                        '{{if occurrences[$index].type === "rdate"}}',
+                            '<a date="${occurrences[$index].date}" href="#"',
+                               'class="${occurrences[$index].type}" title="${i18n.remove}" >',
+                                '${i18n.remove}',
+                            '</a>',
+                        '{{/if}}',
+                        '{{if occurrences[$index].type === "exdate"}}',
+                            '<a date="${occurrences[$index].date}" href="#"',
+                               'class="${occurrences[$index].type}" title="${i18n.include}">',
+                                '${i18n.include}',
+                            '</a>',
+                        '{{/if}}',
+                    '</span>',
+                '{{/if}}',
+            '</div>',
+        '{{/each}}',
+        '<div class="batching">',
+            '{{each batch.batches}}',
+                '{{if $index === batch.currentBatch}}<span class="current">{{/if}}',
+                    '<a href="#" start="${batch.batches[$index][0]}">[${batch.batches[$index][0]} - ${batch.batches[$index][1]}]</a>',
+                '{{if $index === batch.currentBatch}}</span>{{/if}}',
+            '{{/each}}',
+        '</div></div>'].join('\n');
+
+    $.template('occurrenceTmpl', OCCURRENCETMPL);
+
+    var DISPLAYTMPL = ['<div class="ridisplay">',
+        '<div class="rimain">',
+            '{{if !readOnly}}',
+                '<a href="#" name="riedit">${i18n.add_rules}</a>',
+                '<a href="#" name="ridelete" style="display:none">${i18n.delete_rules}</a>',
+            '{{/if}}',
+            '<label class="ridisplay">${i18n.displayUnactivate}</label>',
+        '</div>',
+        '<div class="rioccurrences" style="display:none" /></div>'].join('\n');
+
+    $.template('displayTmpl', DISPLAYTMPL);
+
+    var FORMTMPL = ['<div class="riform">',
+            '<form>',
+                '<h1>${i18n.title}</h1>',
+                '<div id="messagearea" style="display: none;">',
+                '</div>',
+                '<div id="rirtemplate">',
+                    '<label for="${name}rtemplate" class="label">',
+                        '${i18n.recurrenceType}',
+                    '</label>',
+                    '<select id="rirtemplate" name="rirtemplate" class="field">',
+                        '{{each rtemplate}}',
+                            '<option value="${$index}">${i18n.rtemplate[$index]}</value>',
+                        '{{/each}}',
+                    '</select>',
+                '<div>',
+                '<div id="riformfields">',
+                    '<div id="ridailyinterval" class="rifield">',
+                        '<label for="${name}dailyinterval" class="label">',
+                            '${i18n.dailyInterval1}',
+                        '</label>',
+                        '<div class="field">',
+                            '<input type="text" size="2"',
+                                'value="1"',
+                                'name="ridailyinterval"',
+                                'id="${name}dailyinterval" />',
+                            '${i18n.dailyInterval2}',
+                        '</div>',
+                    '</div>',
+                    '<div id="riweeklyinterval" class="rifield">',
+                        '<label for="${name}weeklyinterval" class="label">',
+                            '${i18n.weeklyInterval1}',
+                        '</label>',
+                        '<div class="field">',
+                            '<input type="text" size="2"',
+                                'value="1"',
+                                'name="riweeklyinterval"',
+                                'id="${name}weeklyinterval"/>',
+                            '${i18n.weeklyInterval2}',
+                        '</div>',
+                    '</div>',
+                    '<div id="riweeklyweekdays" class="rifield">',
+                        '<label for="${name}weeklyinterval" class="label">${i18n.weeklyWeekdays}</label>',
+                        '<div class="field">',
+                            '{{each orderedWeekdays}}',
+                                '<div class="riweeklyweekday">',
+                                    '<input type="checkbox"',
+                                        'name="riweeklyweekdays${weekdays[$value]}"',
+                                        'id="${name}weeklyWeekdays${weekdays[$value]}"',
+                                        'value="${weekdays[$value]}" />',
+                                    '<label for="${name}weeklyWeekdays${weekdays[$value]}">${i18n.shortWeekdays[$value]}</label>',
+                                '</div>',
+                            '{{/each}}',
+                        '</div>',
+                    '</div>',
+                    '<div id="rimonthlyinterval" class="rifield">',
+                        '<label for="rimonthlyinterval" class="label">${i18n.monthlyInterval1}</label>',
+                        '<div class="field">',
+                            '<input type="text" size="2"',
+                                'value="1" ',
+                                'name="rimonthlyinterval"/>',
+                            '${i18n.monthlyInterval2}',
+                        '</div>',
+                    '</div>',
+                    '<div id="rimonthlyoptions" class="rifield">',
+                        '<label for="rimonthlytype" class="label">${i18n.monthlyRepeatOn}</label>',
+                        '<div class="field">',
+                            '<div>',
+                                '<input',
+                                    'type="radio"',
+                                    'value="DAYOFMONTH"',
+                                    'name="rimonthlytype"',
+                                    'id="${name}monthlytype:DAYOFMONTH" />',
+                                '<label for="${name}monthlytype:DAYOFMONTH">',
+                                    '${i18n.monthlyDayOfMonth1}',
+                                '</label>',
+                                '<select name="rimonthlydayofmonthday"',
+                                    'id="${name}monthlydayofmonthday">',
+                                '{{each [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,',
+                                        '18,19,20,21,22,23,24,25,26,27,28,29,30,31]}}',
+                                    '<option value="${$value}">${$value}</option>',
+                                '{{/each}}',
+                                '</select>',
+                                '${i18n.monthlyDayOfMonth2}',
+                            '</div>',
+                            '<div>',
+                                '<input',
+                                    'type="radio"',
+                                    'value="WEEKDAYOFMONTH"',
+                                    'name="rimonthlytype"',
+                                    'id="${name}monthlytype:WEEKDAYOFMONTH" />',
+                                '<label for="${name}monthlytype:WEEKDAYOFMONTH">',
+                                    '${i18n.monthlyWeekdayOfMonth1}',
+                                '</label>',
+                                '<select name="rimonthlyweekdayofmonthindex">',
+                                    '{{each i18n.orderIndexes}}',
+                                        '<option value="${orderIndexes[$index]}">${$value}</option>',
+                                    '{{/each}}',
+                                '</select>',
+                                '${i18n.monthlyWeekdayOfMonth2}',
+                                '<select name="rimonthlyweekdayofmonth">',
+                                    '{{each orderedWeekdays}}',
+                                        '<option value="${weekdays[$value]}">${i18n.weekdays[$value]}</option>',
+                                    '{{/each}}',
+                                '</select>',
+                                '${i18n.monthlyWeekdayOfMonth3}',
+                            '</div>',
+                        '</div>',
+                    '</div>',
+                    '<div id="riyearlyinterval" class="rifield">',
+                        '<label for="riyearlyinterval" class="label">${i18n.yearlyInterval1}</label>',
+                        '<div class="field">',
+                            '<input type="text" size="2"',
+                                'value="1" ',
+                                'name="riyearlyinterval"/>',
+                            '${i18n.yearlyInterval2}',
+                        '</div>',
+                    '</div>',
+                    '<div id="riyearlyoptions" class="rifield">',
+                        '<label for="riyearlyType" class="label">${i18n.yearlyRepeatOn}</label>',
+                        '<div class="field">',
+                            '<div>',
+                                '<input',
+                                    'type="radio"',
+                                    'value="DAYOFMONTH"',
+                                    'name="riyearlyType"',
+                                    'id="${name}yearlytype:DAYOFMONTH" />',
+                                '<label for="${name}yearlytype:DAYOFMONTH">',
+                                    '${i18n.yearlyDayOfMonth1}',
+                                '</label>',
+                                '<select name="riyearlydayofmonthmonth">',
+                                '{{each i18n.months}}',
+                                    '<option value="${$index+1}">${$value}</option>',
+                                '{{/each}}',
+                                '</select>',
+                                '${i18n.yearlyDayOfMonth2}',
+                                '<select name="riyearlydayofmonthday">',
+                                '{{each [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,',
+                                        '18,19,20,21,22,23,24,25,26,27,28,29,30,31]}}',
+                                    '<option value="${$value}">${$value}</option>',
+                                '{{/each}}',
+                                '</select>',
+                                '${i18n.yearlyDayOfMonth3}',
+                            '</div>',
+                            '<div>',
+                                '<input',
+                                    'type="radio"',
+                                    'value="WEEKDAYOFMONTH"',
+                                    'name="riyearlyType"',
+                                    'id="${name}yearlytype:WEEKDAYOFMONTH"/>',
+                                '<label for="${name}yearlytype:WEEKDAYOFMONTH">',
+                                    '${i18n.yearlyWeekdayOfMonth1}',
+                                '</label>',
+                                '<select name="riyearlyweekdayofmonthindex">',
+                                '{{each i18n.orderIndexes}}',
+                                    '<option value="${orderIndexes[$index]}">${$value}</option>',
+                                '{{/each}}',
+                                '</select>',
+                                '<label for="${name}yearlytype:WEEKDAYOFMONTH">',
+                                    '${i18n.yearlyWeekdayOfMonth2}',
+                                '</label>',
+                                '<select name="riyearlyweekdayofmonthday">',
+                                '{{each orderedWeekdays}}',
+                                    '<option value="${weekdays[$value]}">${i18n.weekdays[$value]}</option>',
+                                '{{/each}}',
+                                '</select>',
+                                '${i18n.yearlyWeekdayOfMonth3}',
+                                '<select name="riyearlyweekdayofmonthmonth">',
+                                '{{each i18n.months}}',
+                                    '<option value="${$index+1}">${$value}</option>',
+                                '{{/each}}',
+                                '</select>',
+                                '${i18n.yearlyWeekdayOfMonth4}',
+                            '</div>',
+                        '</div>',
+                    '</div>',
+                    '<div id="rirangeoptions" class="rifield">',
+                        '<label class="label">${i18n.range}</label>',
+                        '<div class="field">',
+                          '{{if hasRepeatForeverButton}}',
+                            '<div>',
+                                '<input',
+                                    'type="radio"',
+                                    'value="NOENDDATE"',
+                                    'name="rirangetype"',
+                                    'id="${name}rangetype:NOENDDATE"/>',
+                                '<label for="${name}rangetype:NOENDDATE">',
+                                    '${i18n.rangeNoEnd}',
+                                '</label>',
+                            '</div>',
+                          '{{/if}}',
+                            '<div>',
+                                '<input',
+                                    'type="radio"',
+                                    'checked="checked"',
+                                    'value="BYOCCURRENCES"',
+                                    'name="rirangetype"',
+                                    'id="${name}rangetype:BYOCCURRENCES"/>',
+                                '<label for="${name}rangetype:BYOCCURRENCES">',
+                                    '${i18n.rangeByOccurrences1}',
+                                '</label>',
+                                '<input',
+                                    'type="text" size="3"',
+                                    'value="7"',
+                                    'name="rirangebyoccurrencesvalue" />',
+                                '${i18n.rangeByOccurrences2}',
+                            '</div>',
+                            '<div>',
+                                '<input',
+                                    'type="radio"',
+                                    'value="BYENDDATE"',
+                                    'name="rirangetype"',
+                                    'id="${name}rangetype:BYENDDATE"/>',
+                                '<label for="${name}rangetype:BYENDDATE">',
+                                    '${i18n.rangeByEndDate}',
+                                '</label>',
+                                '<input',
+                                    'type="date"',
+                                    'name="rirangebyenddatecalendar" />',
+                            '</div>',
+                        '</div>',
+                    '</div>',
+                '</div>',
+                '<div class="rioccurrencesactions">',
+                    '<div class="rioccurancesheader">',
+                        '<h2>${i18n.preview}</h2>',
+                        '<span class="refreshbutton action">',
+                            '<a class="rirefreshbutton" href="#" title="${i18n.refresh}">',
+                                '${i18n.refresh}',
+                            '</a>',
+                        '</span>',
+                    '</div>',
+                '</div>',
+                '<div class="rioccurrences">',
+                '</div>',
+                '<div class="rioccurrencesactions">',
+                    '<div class="rioccurancesheader">',
+                        '<h2>${i18n.addDate}</h2>',
+                    '</div>',
+                    '<div class="riaddoccurrence">',
+                        '<div class="errorarea"></div>',
+                        '<input type="date" name="adddate" id="adddate" />',
+                        '<input type="button" name="addaction" id="addaction" value="${i18n.add}">',
+                    '</div>',
+                '</div>',
+
+                '<div class="ributtons">',
+                    '<input',
+                        'type="submit"',
+                        'class="ricancelbutton ${ributtonExtraClass}"',
+                        'value="${i18n.cancel}" />',
+                    '<input',
+                        'type="submit"',
+                        'class="risavebutton ${ributtonExtraClass}"',
+                        'value="${i18n.save}" />',
+                '</div>',
+            '</form></div>'].join('\n');
+
+    $.template('formTmpl', FORMTMPL);
+
+    // Formatting function (mostly) from jQueryTools dateinput
+    var Re = /d{1,4}|m{1,4}|yy(?:yy)?|"[^"]*"|'[^']*'/g;
+
+    function zeropad(val, len) {
+        val = val.toString();
+        len = len || 2;
+        while (val.length < len) { val = "0" + val; }
+        return val;
+    }
+
+    function format(date, fmt, conf) {
+        var d = date.getDate(),
+            D = date.getDay(),
+            m = date.getMonth(),
+            y = date.getFullYear(),
+
+            flags = {
+                d:    d,
+                dd:   zeropad(d),
+                ddd:  conf.i18n.shortWeekdays[D],
+                dddd: conf.i18n.weekdays[D],
+                m:    m + 1,
+                mm:   zeropad(m + 1),
+                mmm:  conf.i18n.shortMonths[m],
+                mmmm: conf.i18n.months[m],
+                yy:   String(y).slice(2),
+                yyyy: y
+            };
+
+        var result = fmt.replace(Re, function ($0) {
+            return flags.hasOwnProperty($0) ? flags[$0] : $0.slice(1, $0.length - 1);
+        });
+
+        return result;
+
+    }
+
+    /**
+     * Parsing RFC5545 from widget
+     */
+    function widgetSaveToRfc5545(form, conf, tz) {
+        var value = form.find('select[name=rirtemplate]').val();
+        var rtemplate = conf.rtemplate[value];
+        var result = rtemplate.rrule;
+        var human = conf.i18n.rtemplate[value];
+        var field, input, weekdays, i18nweekdays, i, j, index, tmp;
+        var day, month, year, interval, yearlyType, occurrences, date;
+
+        for (i = 0; i < rtemplate.fields.length; i++) {
+            field = form.find('#' + rtemplate.fields[i]);
+
+            switch (field.attr('id')) {
+
+            case 'ridailyinterval':
+                interval = field.find('input[name=ridailyinterval]').val();
+                if (interval !== '1') {
+                    result += ';INTERVAL=' + interval;
+                }
+                human = interval + ' ' + conf.i18n.dailyInterval2;
+                break;
+
+            case 'riweeklyinterval':
+                interval = field.find('input[name=riweeklyinterval]').val();
+                if (interval !== '1') {
+                    result += ';INTERVAL=' + interval;
+                }
+                human = interval + ' ' + conf.i18n.weeklyInterval2;
+                break;
+
+            case 'riweeklyweekdays':
+                weekdays = '';
+                i18nweekdays = '';
+                for (j = 0; j < conf.weekdays.length; j++) {
+                    input = field.find('input[name=riweeklyweekdays' + conf.weekdays[j] + ']');
+                    if (input.is(':checked')) {
+                        if (weekdays) {
+                            weekdays += ',';
+                            i18nweekdays += ', ';
+                        }
+                        weekdays += conf.weekdays[j];
+                        i18nweekdays += conf.i18n.weekdays[j];
+                    }
+                }
+                if (weekdays) {
+                    result += ';BYDAY=' + weekdays;
+                    human += ' ' + conf.i18n.weeklyWeekdaysHuman + ' ' + i18nweekdays;
+                }
+                break;
+
+            case 'rimonthlyinterval':
+                interval = field.find('input[name=rimonthlyinterval]').val();
+                if (interval !== '1') {
+                    result += ';INTERVAL=' + interval;
+                }
+                human = interval + ' ' + conf.i18n.monthlyInterval2;
+                break;
+
+            case 'rimonthlyoptions':
+                var monthlyType = $('input[name=rimonthlytype]:checked', form).val();
+                switch (monthlyType) {
+
+                case 'DAYOFMONTH':
+                    day = $('select[name=rimonthlydayofmonthday]', form).val();
+                    result += ';BYMONTHDAY=' + day;
+                    human += ', ' + conf.i18n.monthlyDayOfMonth1Human + ' ' + day + ' ' + conf.i18n.monthlyDayOfMonth2;
+                    break;
+                case 'WEEKDAYOFMONTH':
+                    index = $('select[name=rimonthlyweekdayofmonthindex]', form).val();
+                    day = $('select[name=rimonthlyweekdayofmonth]', form).val();
+                    if ($.inArray(day, ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']) > -1) {
+                        result += ';BYDAY=' + index + day;
+                        human += ', ' + conf.i18n.monthlyWeekdayOfMonth1Human + ' ';
+                        human += ' ' + conf.i18n.orderIndexes[$.inArray(index, conf.orderIndexes)];
+                        human += ' ' + conf.i18n.monthlyWeekdayOfMonth2;
+                        human += ' ' + conf.i18n.weekdays[$.inArray(day, conf.weekdays)];
+                        human += ' ' + conf.i18n.monthlyDayOfMonth2;
+                    }
+                    break;
+                }
+                break;
+
+            case 'riyearlyinterval':
+                interval = field.find('input[name=riyearlyinterval]').val();
+                if (interval !== '1') {
+                    result += ';INTERVAL=' + interval;
+                }
+                human = interval + ' ' + conf.i18n.yearlyInterval2;
+                break;
+
+            case 'riyearlyoptions':
+                yearlyType = $('input[name=riyearlyType]:checked', form).val();
+                switch (yearlyType) {
+
+                case 'DAYOFMONTH':
+                    month = $('select[name=riyearlydayofmonthmonth]', form).val();
+                    day = $('select[name=riyearlydayofmonthday]', form).val();
+                    result += ';BYMONTH=' + month;
+                    result += ';BYMONTHDAY=' + day;
+                    human += ', ' + conf.i18n.yearlyDayOfMonth1Human + ' ' + conf.i18n.months[month - 1] + ' ' + day;
+                    break;
+                case 'WEEKDAYOFMONTH':
+                    index = $('select[name=riyearlyweekdayofmonthindex]', form).val();
+                    day = $('select[name=riyearlyweekdayofmonthday]', form).val();
+                    month = $('select[name=riyearlyweekdayofmonthmonth]', form).val();
+                    result += ';BYMONTH=' + month;
+                    if ($.inArray(day, ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']) > -1) {
+                        result += ';BYDAY=' + index + day;
+                        human += ', ' + conf.i18n.yearlyWeekdayOfMonth1Human;
+                        human += ' ' + conf.i18n.orderIndexes[$.inArray(index, conf.orderIndexes)];
+                        human += ' ' + conf.i18n.yearlyWeekdayOfMonth2;
+                        human += ' ' + conf.i18n.weekdays[$.inArray(day, conf.weekdays)];
+                        human += ' ' + conf.i18n.yearlyWeekdayOfMonth3;
+                        human += ' ' + conf.i18n.months[month - 1];
+                        human += ' ' + conf.i18n.yearlyWeekdayOfMonth4;
+                    }
+                    break;
+                }
+                break;
+
+            case 'rirangeoptions':
+                var rangeType = form.find('input[name=rirangetype]:checked').val();
+                switch (rangeType) {
+
+                case 'BYOCCURRENCES':
+                    occurrences = form.find('input[name=rirangebyoccurrencesvalue]').val();
+                    result += ';COUNT=' + occurrences;
+                    human += ', ' + conf.i18n.rangeByOccurrences1Human;
+                    human += ' ' + occurrences;
+                    human += ' ' + conf.i18n.rangeByOccurrences2;
+                    break;
+                case 'BYENDDATE':
+                    field = form.find('input[name=rirangebyenddatecalendar]');
+                    date = field.data('dateinput').getValue('yyyymmdd');
+                    result += ';UNTIL=' + date + 'T000000';
+                    if (tz === true) {
+                        // Make it UTC:
+                        result += 'Z';
+                    }
+                    human += ', ' + conf.i18n.rangeByEndDateHuman;
+                    human += ' ' + field.data('dateinput').getValue(conf.i18n.longDateFormat);
+                    break;
+                }
+                break;
+            }
+        }
+
+        if (form.ical.RDATE !== undefined && form.ical.RDATE.length > 0) {
+            form.ical.RDATE.sort();
+            tmp = [];
+            for (i = 0; i < form.ical.RDATE.length; i++) {
+                if (form.ical.RDATE[i] !== '') {
+                    year = parseInt(form.ical.RDATE[i].substring(0, 4), 10);
+                    month = parseInt(form.ical.RDATE[i].substring(4, 6), 10) - 1;
+                    day = parseInt(form.ical.RDATE[i].substring(6, 8), 10);
+                    tmp.push(format(new Date(year, month, day), conf.i18n.longDateFormat, conf));
+                }
+            }
+            if (tmp.length !== 0) {
+                human = human + conf.i18n.including + ' ' + tmp.join('; ');
+            }
+        }
+
+        if (form.ical.EXDATE !== undefined && form.ical.EXDATE.length > 0) {
+            form.ical.EXDATE.sort();
+            tmp = [];
+            for (i = 0; i < form.ical.EXDATE.length; i++) {
+                if (form.ical.EXDATE[i] !== '') {
+                    year = parseInt(form.ical.EXDATE[i].substring(0, 4), 10);
+                    month = parseInt(form.ical.EXDATE[i].substring(4, 6), 10) - 1;
+                    day = parseInt(form.ical.EXDATE[i].substring(6, 8), 10);
+                    tmp.push(format(new Date(year, month, day), conf.i18n.longDateFormat, conf));
+                }
+            }
+            if (tmp.length !== 0) {
+                human = human + conf.i18n.except + ' ' + tmp.join('; ');
+            }
+        }
+        result = 'RRULE:' + result;
+        if (form.ical.EXDATE !== undefined && form.ical.EXDATE.join() !== "") {
+            tmp = $.map(form.ical.EXDATE, function (x) {
+                if (x.length === 8) { // DATE format. Make it DATE-TIME
+                    x += 'T000000';
+                }
+                if (tz === true) {
+                    // Make it UTC:
+                    x += 'Z';
+                }
+                return x;
+            });
+            result = result + '\nEXDATE:' + tmp;
+        }
+        if (form.ical.RDATE !== undefined && form.ical.RDATE.join() !== "") {
+            tmp = $.map(form.ical.RDATE, function (x) {
+                if (x.length === 8) { // DATE format. Make it DATE-TIME
+                    x += 'T000000';
+                }
+                if (tz === true) {
+                    // Make it UTC:
+                    x += 'Z';
+                }
+                return x;
+            });
+            result = result + '\nRDATE:' + tmp;
+        }
+        return {result: result, description: human};
+    }
+
+    function parseLine(icalline) {
+        var result = {};
+        var pos = icalline.indexOf(':');
+        var property = icalline.substring(0, pos);
+        result.value = icalline.substring(pos + 1);
+
+        if (property.indexOf(';') !== -1) {
+            pos = property.indexOf(';');
+            result.parameters = property.substring(pos + 1);
+            result.property = property.substring(0, pos);
+        } else {
+            result.parameters = null;
+            result.property = property;
+        }
+        return result;
+    }
+
+    function cleanDates(dates) {
+        // Get rid of timezones
+        // TODO: We could parse dates and range here, maybe?
+        var result = [];
+        var splitDates = dates.split(',');
+        var date;
+
+        for (date in splitDates) {
+            if (splitDates.hasOwnProperty(date)) {
+                if (splitDates[date].indexOf('Z') !== -1) {
+                    result.push(splitDates[date].substring(0, 15));
+                } else {
+                    result.push(splitDates[date]);
+                }
+            }
+        }
+        return result;
+    }
+
+    function parseIcal(icaldata) {
+        var lines = [];
+        var result = {};
+        var propAndValue = [];
+        var line = null;
+        var nextline;
+
+        lines = icaldata.split('\n');
+        lines.reverse();
+        while (true) {
+            if (lines.length > 0) {
+                nextline = lines.pop();
+                if (nextline.charAt(0) === ' ' || nextline.charAt(0) === '\t') {
+                    // Line continuation:
+                    line = line + nextline;
+                    continue;
+                }
+            } else {
+                nextline = '';
+            }
+
+            // New line; the current one is finished, add it to the result.
+            if (line !== null) {
+                line = parseLine(line);
+                 // We ignore properties for now
+                if (line.property === 'RDATE' || line.property === 'EXDATE') {
+                    result[line.property] = cleanDates(line.value);
+                } else {
+                    result[line.property] = line.value;
+                }
+            }
+
+            line = nextline;
+            if (line === '') {
+                break;
+            }
+        }
+        return result;
+    }
+
+    function widgetLoadFromRfc5545(form, conf, icaldata, force) {
+        var unsupportedFeatures = [];
+        var i, matches, match, matchIndex, rtemplate, d, input, index;
+        var selector, selectors, field, radiobutton, start, end;
+        var interval, byday, bymonth, bymonthday, count, until;
+        var day, month, year, weekday, ical;
+
+        form.ical = parseIcal(icaldata);
+        if (form.ical.RRULE === undefined) {
+            unsupportedFeatures.push(conf.i18n.noRule);
+            if (!force) {
+                return -1; // Fail!
+            }
+        } else {
+
+
+            matches = /INTERVAL=([0-9]+);?/.exec(form.ical.RRULE);
+            if (matches) {
+                interval = matches[1];
+            } else {
+                interval = '1';
+            }
+
+            matches = /BYDAY=([^;]+);?/.exec(form.ical.RRULE);
+            if (matches) {
+                byday = matches[1];
+            } else {
+                byday = '';
+            }
+
+            matches = /BYMONTHDAY=([^;]+);?/.exec(form.ical.RRULE);
+            if (matches) {
+                bymonthday = matches[1].split(",");
+            } else {
+                bymonthday = null;
+            }
+
+            matches = /BYMONTH=([^;]+);?/.exec(form.ical.RRULE);
+            if (matches) {
+                bymonth = matches[1].split(",");
+            } else {
+                bymonth = null;
+            }
+
+            matches = /COUNT=([0-9]+);?/.exec(form.ical.RRULE);
+            if (matches) {
+                count = matches[1];
+            } else {
+                count = null;
+            }
+
+            matches = /UNTIL=([0-9T]+);?/.exec(form.ical.RRULE);
+            if (matches) {
+                until = matches[1];
+            } else {
+                until = null;
+            }
+
+            matches = /BYSETPOS=([^;]+);?/.exec(form.ical.RRULE);
+            if (matches) {
+                unsupportedFeatures.push(conf.i18n.bysetpos);
+            }
+
+            // Find the best rule:
+            match = '';
+            matchIndex = null;
+            for (i in conf.rtemplate) {
+                if (conf.rtemplate.hasOwnProperty(i)) {
+                    rtemplate = conf.rtemplate[i];
+                    if (form.ical.RRULE.indexOf(rtemplate.rrule) === 0) {
+                        if (form.ical.RRULE.length > match.length) {
+                            // This is the best match so far
+                            match = form.ical.RRULE;
+                            matchIndex = i;
+                        }
+                    }
+                }
+            }
+
+            if (match) {
+                rtemplate = conf.rtemplate[matchIndex];
+                // Set the selector:
+                selector = form.find('select[name=rirtemplate]').val(matchIndex);
+            } else {
+                for (rtemplate in conf.rtemplate) {
+                    if (conf.rtemplate.hasOwnProperty(rtemplate)) {
+                        rtemplate = conf.rtemplate[rtemplate];
+                        break;
+                    }
+                }
+                unsupportedFeatures.push(conf.i18n.noTemplateMatch);
+            }
+
+            for (i = 0; i < rtemplate.fields.length; i++) {
+                field = form.find('#' + rtemplate.fields[i]);
+                switch (field.attr('id')) {
+
+                case 'ridailyinterval':
+                    field.find('input[name=ridailyinterval]').val(interval);
+                    break;
+
+                case 'riweeklyinterval':
+                    field.find('input[name=riweeklyinterval]').val(interval);
+                    break;
+
+                case 'riweeklyweekdays':
+                    byday = byday.split(",");
+                    for (d = 0; d < conf.weekdays.length; d++) {
+                        day = conf.weekdays[d];
+                        input = field.find('input[name=riweeklyweekdays' + day + ']');
+                        input.attr('checked', $.inArray(day, byday) !== -1);
+                    }
+                    break;
+
+                case 'rimonthlyinterval':
+                    field.find('input[name=rimonthlyinterval]').val(interval);
+                    break;
+
+                case 'rimonthlyoptions':
+                    var monthlyType = 'DAYOFMONTH'; // Default to using BYMONTHDAY
+
+                    if (bymonthday) {
+                        monthlyType = 'DAYOFMONTH';
+                        if (bymonthday.length > 1) {
+                            // No support for multiple days in one month
+                            unsupportedFeatures.push(conf.i18n.multipleDayOfMonth);
+                            // Just keep the first
+                            bymonthday = bymonthday[0];
+                        }
+                        field.find('select[name=rimonthlydayofmonthday]').val(bymonthday);
+                    }
+
+                    if (byday) {
+                        monthlyType = 'WEEKDAYOFMONTH';
+
+                        if (byday.indexOf(',') !== -1) {
+                            // No support for multiple days in one month
+                            unsupportedFeatures.push(conf.i18n.multipleDayOfMonth);
+                            byday = byday.split(",")[0];
+                        }
+                        index = byday.slice(0, -2);
+                        if (index.charAt(0) !== '+' && index.charAt(0) !== '-') {
+                            index = '+' + index;
+                        }
+                        weekday = byday.slice(-2);
+                        field.find('select[name=rimonthlyweekdayofmonthindex]').val(index);
+                        field.find('select[name=rimonthlyweekdayofmonth]').val(weekday);
+                    }
+
+                    selectors = field.find('input[name=rimonthlytype]');
+                    for (index = 0; index < selectors.length; index++) {
+                        radiobutton = selectors[index];
+                        $(radiobutton).attr('checked', radiobutton.value === monthlyType);
+                    }
+                    break;
+
+                case 'riyearlyinterval':
+                    field.find('input[name=riyearlyinterval]').val(interval);
+                    break;
+
+                case 'riyearlyoptions':
+                    var yearlyType = 'DAYOFMONTH'; // Default to using BYMONTHDAY
+
+                    if (bymonthday) {
+                        yearlyType = 'DAYOFMONTH';
+                        if (bymonthday.length > 1) {
+                            // No support for multiple days in one month
+                            unsupportedFeatures.push(conf.i18n.multipleDayOfMonth);
+                            bymonthday = bymonthday[0];
+                        }
+                        field.find('select[name=riyearlydayofmonthmonth]').val(bymonth);
+                        field.find('select[name=riyearlydayofmonthday]').val(bymonthday);
+                    }
+
+                    if (byday) {
+                        yearlyType = 'WEEKDAYOFMONTH';
+
+                        if (byday.indexOf(',') !== -1) {
+                            // No support for multiple days in one month
+                            unsupportedFeatures.push(conf.i18n.multipleDayOfMonth);
+                            byday = byday.split(",")[0];
+                        }
+                        index = byday.slice(0, -2);
+                        if (index.charAt(0) !== '+' && index.charAt(0) !== '-') {
+                            index = '+' + index;
+                        }
+                        weekday = byday.slice(-2);
+                        field.find('select[name=riyearlyweekdayofmonthindex]').val(index);
+                        field.find('select[name=riyearlyweekdayofmonthday]').val(weekday);
+                        field.find('select[name=riyearlyweekdayofmonthmonth]').val(bymonth);
+                    }
+
+                    selectors = field.find('input[name=riyearlyType]');
+                    for (index = 0; index < selectors.length; index++) {
+                        radiobutton = selectors[index];
+                        $(radiobutton).attr('checked', radiobutton.value === yearlyType);
+                    }
+                    break;
+
+                case 'rirangeoptions':
+                    var rangeType = 'NOENDDATE';
+
+                    if (count) {
+                        rangeType = 'BYOCCURRENCES';
+                        field.find('input[name=rirangebyoccurrencesvalue]').val(count);
+                    }
+
+                    if (until) {
+                        rangeType = 'BYENDDATE';
+                        input = field.find('input[name=rirangebyenddatecalendar]');
+                        year = until.slice(0, 4);
+                        month = until.slice(4, 6);
+                        month = parseInt(month, 10) - 1;
+                        day = until.slice(6, 8);
+                        input.data('dateinput').setValue(new Date(year, month, day));
+                    }
+
+                    selectors = field.find('input[name=rirangetype]');
+                    for (index = 0; index <  selectors.length; index++) {
+                        radiobutton = selectors[index];
+                        $(radiobutton).attr('checked', radiobutton.value === rangeType);
+                    }
+                    break;
+                }
+            }
+        }
+
+        var messagearea = form.find('#messagearea');
+        if (unsupportedFeatures.length !== 0) {
+            messagearea.text(conf.i18n.unsupportedFeatures + ' ' + unsupportedFeatures.join('; '));
+            messagearea.show();
+            return 1;
+        } else {
+            messagearea.text('');
+            messagearea.hide();
+            return 0;
+        }
+
+    }
+
+    /**
+     * RecurrenceInput - form, display and tools for recurrenceinput widget
+     */
+    function RecurrenceInput(conf, textarea) {
+
+        var self = this;
+        var form, display;
+
+        // Extend conf with non-configurable data used by templates.
+        var orderedWeekdays = [];
+        var index, i;
+        for (i = 0; i < 7; i++) {
+            index = i + conf.firstDay;
+            if (index > 6) {
+                index = index - 7;
+            }
+            orderedWeekdays.push(index);
+        }
+
+        $.extend(conf, {
+            orderIndexes: ['+1', '+2', '+3', '+4', '-1'],
+            weekdays: ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'],
+            orderedWeekdays: orderedWeekdays
+        });
+
+        // The recurrence type dropdown should show certain fields depending
+        // on selection:
+        function displayFields(selector) {
+            var i;
+            // First hide all the fields
+            form.find('.rifield').hide();
+            // Then show the ones that should be shown.
+            var value = selector.val();
+            if (value) {
+                var rtemplate = conf.rtemplate[value];
+                for (i = 0; i < rtemplate.fields.length; i++) {
+                    form.find('#' + rtemplate.fields[i]).show();
+                }
+            }
+        }
+
+        function occurrenceExclude(event) {
+            event.preventDefault();
+            if (form.ical.EXDATE === undefined) {
+                form.ical.EXDATE = [];
+            }
+            form.ical.EXDATE.push(this.attributes.date.value);
+            var $this = $(this);
+            $this.attr('class', 'exdate');
+            $this.parent().parent().addClass('exdate');
+            $this.unbind(event);
+            $this.click(occurrenceInclude); // Jslint warns here, but that's OK.
+        }
+
+        function occurrenceInclude(event) {
+            event.preventDefault();
+            form.ical.EXDATE.splice($.inArray(this.attributes.date.value, form.ical.EXDATE), 1);
+            var $this = $(this);
+            $this.attr('class', 'rrule');
+            $this.parent().parent().removeClass('exdate');
+            $this.unbind(event);
+            $this.click(occurrenceExclude);
+        }
+
+        function occurrenceDelete(event) {
+            event.preventDefault();
+            form.ical.RDATE.splice($.inArray(this.attributes.date.value, form.ical.RDATE), 1);
+            $(this).parent().parent().hide('slow', function () {
+                $(this).remove();
+            });
+        }
+
+        function occurrenceAdd(event) {
+            event.preventDefault();
+            var dateinput = form
+                .find('.riaddoccurrence input#adddate')
+                .data('dateinput');
+            var datevalue = dateinput.getValue('yyyymmddT000000');
+            if (form.ical.RDATE === undefined) {
+                form.ical.RDATE = [];
+            }
+            var errorarea = form.find('.riaddoccurrence div.errorarea');
+            errorarea.text('');
+            errorarea.hide();
+
+            // Add date only if it is not already in RDATE
+            if ($.inArray(datevalue, form.ical.RDATE) === -1) {
+                form.ical.RDATE.push(datevalue);
+                var html = ['<div class="occurrence rdate" style="display: none;">',
+                        '<span class="rdate">',
+                            dateinput.getValue(conf.i18n.longDateFormat),
+                            '<span class="rlabel">' + conf.i18n.additionalDate + '</span>',
+                        '</span>',
+                        '<span class="action">',
+                            '<a date="' + datevalue + '" href="#" class="rdate" >',
+                                'Include',
+                            '</a>',
+                        '</span>',
+                        '</div>'].join('\n');
+                form.find('div.rioccurrences').prepend(html);
+                $(form.find('div.rioccurrences div')[0]).slideDown();
+                $(form.find('div.rioccurrences .action a.rdate')[0]).click(occurrenceDelete);
+            } else {
+                errorarea.text(conf.i18n.alreadyAdded).show();
+            }
+        }
+
+        // element is where to find the tag in question. Can be the form
+        // or the display widget. Defaults to the form.
+        function loadOccurrences(startdate, rfc5545, start, readonly) {
+            var element, occurrenceDiv;
+
+            if (!readonly) {
+                element = form;
+            } else {
+                element = display;
+            }
+
+            occurrenceDiv = element.find('.rioccurrences');
+            occurrenceDiv.hide();
+
+            var year, month, day;
+            year = startdate.getFullYear();
+            month = startdate.getMonth() + 1;
+            day = startdate.getDate();
+
+            var data = {year: year,
+                       month: month, // Sending January as 0? I think not.
+                       day: day,
+                       rrule: rfc5545,
+                       format: conf.i18n.longDateFormat,
+                       start: start};
+
+            var dict = {
+                url: conf.ajaxURL,
+                async: false, // Can't be tested if it's asynchronous, annoyingly.
+                type: 'post',
+                dataType: 'json',
+                contentType: conf.ajaxContentType,
+                cache: false,
+                data: data,
+                success: function (data, status, jqXHR) {
+                    var result, element;
+
+                    if (!readonly) {
+                        element = form;
+                    } else {
+                        element = display;
+                    }
+                    data.readOnly = readonly;
+                    data.i18n = conf.i18n;
+
+                    // Format dates:
+                    var occurrence, date, y, m, d, each;
+                    for (each in data.occurrences) {
+                        if (data.occurrences.hasOwnProperty(each)) {
+                            occurrence = data.occurrences[each];
+                            date = occurrence.date;
+                            y = parseInt(date.substring(0, 4), 10);
+                            m = parseInt(date.substring(4, 6), 10) - 1; // jan=0
+                            d = parseInt(date.substring(6, 8), 10);
+                            occurrence.formattedDate = format(new Date(y, m, d), conf.i18n.longDateFormat, conf);
+                        }
+                    }
+
+                    result = $.tmpl('occurrenceTmpl', data);
+                    occurrenceDiv = element.find('.rioccurrences');
+                    occurrenceDiv.replaceWith(result);
+
+                    // Add the batch actions:
+                    element.find('.rioccurrences .batching a').click(
+                        function (event) {
+                            event.preventDefault();
+                            loadOccurrences(startdate, rfc5545, this.attributes.start.value, readonly);
+                        }
+                    );
+
+                    // Add the delete/undelete actions:
+                    if (!readonly) {
+                        element.find('.rioccurrences .action a.rrule').click(occurrenceExclude);
+                        element.find('.rioccurrences .action a.exdate').click(occurrenceInclude);
+                        element.find('.rioccurrences .action a.rdate').click(occurrenceDelete);
+                    }
+                    // Show the new div
+                    element.find('.rioccurrences').show();
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert(textStatus);
+                }
+            };
+
+            $.ajax(dict);
+        }
+
+        function getField(field) {
+            // See if it is a field already
+            var realField = $(field);
+            if (!realField.length) {
+                // Otherwise, we assume it's an id:
+                realField = $('#' + field);
+            }
+            if (!realField.length) {
+                // Still not? Then it's a name.
+                realField = $("input[name='" + field + "']");
+            }
+            return realField;
+        }
+        function findStartDate() {
+            var startdate = null;
+            var startField, startFieldYear, startFieldMonth, startFieldDay;
+
+            // Find the default byday and bymonthday from the start date, if any:
+            if (conf.startField) {
+                startField = getField(conf.startField);
+                if (!startField.length) {
+                    // Field not found
+                    return null;
+                }
+                // Now we have a field, see if it is a dateinput field:
+                startdate = startField.data('dateinput');
+                if (!startdate) {
+                    //No, it wasn't, just try to interpret it with Date()
+                    startdate = startField.val();
+                    if (startdate === "") {
+                        // Probably not an input at all. Try to see if it contains a date
+                        startdate = startField.text();
+                    }
+                } else {
+                    // Yes it was, get the date:
+                    startdate = startdate.getValue();
+                }
+
+                if (typeof startdate === 'string') {
+                    // convert human readable, non ISO8601 dates, like
+                    // '2014-04-24 19:00', where the 'T' separator is missing.
+                    startdate = startdate.replace(' ', 'T');
+                }
+
+                startdate = new Date(startdate);
+            } else if (conf.startFieldYear &&
+                       conf.startFieldMonth &&
+                       conf.startFieldDay) {
+                startFieldYear = getField(conf.startFieldYear);
+                startFieldMonth = getField(conf.startFieldMonth);
+                startFieldDay = getField(conf.startFieldDay);
+                if (!startFieldYear.length &&
+                    !startFieldMonth.length &&
+                    !startFieldDay.length) {
+                    // Field not found
+                    return null;
+                }
+                startdate = new Date(startFieldYear.val(),
+                                     startFieldMonth.val() - 1,
+                                     startFieldDay.val());
+            }
+            if (startdate === null) {
+                return null;
+            }
+            // We have some sort of startdate:
+            if (isNaN(startdate)) {
+                return null;
+            }
+            return startdate;
+        }
+        function findEndDate(form) {
+            var endField, enddate;
+
+            endField = form.find('input[name=rirangebyenddatecalendar]');
+
+            // Now we have a field, see if it is a dateinput field:
+            enddate = endField.data('dateinput');
+            if (!enddate) {
+                //No, it wasn't, just try to interpret it with Date()
+                enddate = endField.val();
+            } else {
+                // Yes it was, get the date:
+                enddate = enddate.getValue();
+            }
+            enddate = new Date(enddate);
+
+            // if the end date is incorrect or the field is left empty
+            if (isNaN(enddate) || endField.val() === "") {
+                return null;
+            }
+            return enddate;
+        }
+        function findIntField(fieldName, form) {
+            var field, num, isInt;
+
+            field = form.find('input[name=' + fieldName + ']');
+
+            num = field.val();
+
+            // if it's not a number or the field is left empty
+            if (isNaN(num) || (num.toString().indexOf('.') !== -1) || field.val() === "") {
+                return null;
+            }
+            return num;
+        }
+
+        // Loading (populating) display and form widget with
+        // passed RFC5545 string (data)
+        function loadData(rfc5545) {
+            var selector, format, startdate, dayindex, day;
+
+            if (rfc5545) {
+                widgetLoadFromRfc5545(form, conf, rfc5545, true);
+            }
+
+            startdate = findStartDate();
+
+            if (startdate !== null) {
+                // If the date is a real date, set the defaults in the form
+                form.find('select[name=rimonthlydayofmonthday]').val(startdate.getDate());
+                dayindex = conf.orderIndexes[Math.floor((startdate.getDate() - 1) / 7)];
+                day = conf.weekdays[startdate.getDay()];
+                form.find('select[name=rimonthlyweekdayofmonthindex]').val(dayindex);
+                form.find('select[name=rimonthlyweekdayofmonth]').val(day);
+
+                form.find('select[name=riyearlydayofmonthmonth]').val(startdate.getMonth() + 1);
+                form.find('select[name=riyearlydayofmonthday]').val(startdate.getDate());
+                form.find('select[name=riyearlyweekdayofmonthindex]').val(dayindex);
+                form.find('select[name=riyearlyweekdayofmonthday]').val(day);
+                form.find('select[name=riyearlyweekdayofmonthmonth]').val(startdate.getMonth() + 1);
+
+                // Now when we have a start date, we can also do an ajax call to calculate occurrences:
+                loadOccurrences(startdate, widgetSaveToRfc5545(form, conf, false).result, 0, false);
+
+                // Show the add and refresh buttons:
+                form.find('div.rioccurrencesactions').show();
+
+            } else {
+                // No EXDATE/RDATE support
+                form.find('div.rioccurrencesactions').hide();
+            }
+
+
+            selector = form.find('select[name=rirtemplate]');
+            displayFields(selector);
+        }
+
+        function recurrenceOn() {
+            var RFC5545 = widgetSaveToRfc5545(form, conf, false);
+            var label = display.find('label[class=ridisplay]');
+            label.text(conf.i18n.displayActivate + ' ' + RFC5545.description);
+            textarea.val(RFC5545.result).change();
+            var startdate = findStartDate();
+            if (startdate !== null) {
+                loadOccurrences(startdate, widgetSaveToRfc5545(form, conf, false).result, 0, true);
+            }
+            display.find('a[name="riedit"]').text(conf.i18n.edit_rules);
+            display.find('a[name="ridelete"]').show();
+        }
+
+        function recurrenceOff() {
+            var label = display.find('label[class=ridisplay]');
+            label.text(conf.i18n.displayUnactivate);
+            textarea.val('').change();  // Clear the textarea.
+            display.find('.rioccurrences').hide();
+            display.find('a[name="riedit"]').text(conf.i18n.add_rules);
+            display.find('a[name="ridelete"]').hide();
+        }
+
+        function checkFields(form) {
+            var startDate, endDate, num, messagearea;
+            startDate = findStartDate();
+
+            // Hide any error message from before
+            messagearea = form.find('#messagearea');
+            messagearea.text('');
+            messagearea.hide();
+
+            // Hide add field errors
+            form.find('.riaddoccurrence div.errorarea').text('').hide();
+
+            // Repeats Daily
+            if (form.find('#ridailyinterval').css('display') === 'block') {
+                // Check repeat every field
+                num = findIntField('ridailyinterval', form);
+                if (!num || num < 1 || num > 1000) {
+                    messagearea.text(conf.i18n.noRepeatEvery).show();
+                    return false;
+                }
+            }
+
+            // Repeats Weekly
+            if (form.find('#riweeklyinterval').css('display') === 'block') {
+                // Check repeat every field
+                num = findIntField('riweeklyinterval', form);
+                if (!num || num < 1 || num > 1000) {
+                    messagearea.text(conf.i18n.noRepeatEvery).show();
+                    return false;
+                }
+            }
+
+            // Repeats Monthly
+            if (form.find('#rimonthlyinterval').css('display') === 'block') {
+                // Check repeat every field
+                num = findIntField('rimonthlyinterval', form);
+                if (!num || num < 1 || num > 1000) {
+                    messagearea.text(conf.i18n.noRepeatEvery).show();
+                    return false;
+                }
+
+                // Check repeat on
+                if (form.find('#rimonthlyoptions input:checked').length === 0) {
+                    messagearea.text(conf.i18n.noRepeatOn).show();
+                    return false;
+                }
+            }
+
+            // Repeats Yearly
+            if (form.find('#riyearlyinterval').css('display') === 'block') {
+                // Check repeat every field
+                num = findIntField('riyearlyinterval', form);
+                if (!num || num < 1 || num > 1000) {
+                    messagearea.text(conf.i18n.noRepeatEvery).show();
+                    return false;
+                }
+
+                // Check repeat on
+                if (form.find('#riyearlyoptions input:checked').length === 0) {
+                    messagearea.text(conf.i18n.noRepeatOn).show();
+                    return false;
+                }
+            }
+
+            // End recurrence fields
+
+            // If after N occurences is selected, check its value
+            if (form.find('input[value="BYOCCURRENCES"]:visible:checked').length > 0) {
+                num = findIntField('rirangebyoccurrencesvalue', form);
+                if (!num || num < 1 || num > 1000) {
+                    messagearea.text(conf.i18n.noEndAfterNOccurrences).show();
+                    return false;
+                }
+            }
+
+            // If end date is selected, check its value
+            if (form.find('input[value="BYENDDATE"]:visible:checked').length > 0) {
+                endDate = findEndDate(form);
+                if (!endDate) {
+                    // if endDate is null that means the field is empty
+                    messagearea.text(conf.i18n.noEndDate).show();
+                    return false;
+                } else if (endDate < startDate) {
+                    // the end date cannot be before start date
+                    messagearea.text(conf.i18n.pastEndDate).show();
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function save(event) {
+            event.preventDefault();
+            // if no field errors, process the request
+            if (checkFields(form)) {
+                // close overlay
+                form.overlay().close();
+                recurrenceOn();
+            }
+        }
+
+        function cancel(event) {
+            event.preventDefault();
+            // close overlay
+            form.overlay().close();
+        }
+
+        function updateOccurances() {
+            var startDate;
+            startDate = findStartDate();
+
+            // if no field errors, process the request
+            if (checkFields(form)) {
+                loadOccurrences(startDate,
+                    widgetSaveToRfc5545(form, conf, false).result,
+                    0,
+                    false);
+            }
+        }
+
+        /*
+          Load the templates
+        */
+
+        display = $.tmpl('displayTmpl', conf);
+        form = $.tmpl('formTmpl', conf);
+
+        // Make an overlay and hide it
+        form.overlay(conf.formOverlay).hide();
+        form.ical = {RDATE: [], EXDATE: []};
+
+        $.tools.dateinput.localize(conf.lang,  {
+            months:      LABELS[conf.lang].months.join(),
+            shortMonths: LABELS[conf.lang].shortMonths.join(),
+            days:        LABELS[conf.lang].weekdays.join(),
+            shortDays:   LABELS[conf.lang].shortWeekdays.join()
+        });
+
+        // Make the date input into a calendar dateinput()
+        form.find('input[name=rirangebyenddatecalendar]').dateinput({
+            selectors: true,
+            lang: conf.lang,
+            format: conf.i18n.shortDateFormat,
+            firstDay: conf.firstDay,
+            yearRange: [-5, 10]
+        }).data('dateinput').setValue(new Date());
+
+        if (textarea.val()) {
+            var result = widgetLoadFromRfc5545(form, conf, textarea.val(), false);
+            if (result === -1) {
+                var label = display.find('label[class=ridisplay]');
+                label.text(conf.i18n.noRule);
+            } else {
+                recurrenceOn();
+            }
+        }
+
+        /*
+          Do all the GUI stuff:
+        */
+
+        // When you click "Delete...", the recurrence rules should be cleared.
+        display.find('a[name=ridelete]').click(function (e) {
+            e.preventDefault();
+            recurrenceOff();
+        });
+
+        // Show form overlay when you click on the "Edit..." link
+        display.find('a[name=riedit]').click(
+            function (e) {
+                // Load the form to set up the right fields to show, etc.
+                loadData(textarea.val());
+                e.preventDefault();
+                form.overlay().load();
+            }
+        );
+
+        // Pop up the little add form when clicking "Add"
+        form.find('div.riaddoccurrence input#adddate').dateinput({
+            selectors: true,
+            lang: conf.lang,
+            format: conf.i18n.shortDateFormat,
+            firstDay: conf.firstDay,
+            yearRange: [-5, 10]
+        }).data('dateinput').setValue(new Date());
+        form.find('input#addaction').click(occurrenceAdd);
+
+        // When the reload button is clicked, reload
+        form.find('a.rirefreshbutton').click(
+            function (event) {
+                event.preventDefault();
+                updateOccurances();
+            }
+        );
+
+        // When selecting template, update what fieldsets are visible.
+        form.find('select[name=rirtemplate]').change(
+            function (e) {
+                displayFields($(this));
+            }
+        );
+
+        // When focus goes to a drop-down, select the relevant radiobutton.
+        form.find('select').change(
+            function (e) {
+                $(this).parent().find('> input').click().change();
+            }
+        );
+        form.find('input[name=rirangebyoccurrencesvalue]').change(
+            function (e) {
+                $(this).parent().find('input[name=rirangetype]').click().change();
+            }
+        );
+        form.find('input[name=rirangebyenddatecalendar]').change(function () {
+            // Update only if the occurances are shown
+            $(this).parent().find('input[name=rirangetype]').click();
+            if (form.find('.rioccurrencesactions:visible').length !== 0) {
+                updateOccurances();
+            }
+        });
+        // Update the selected dates section
+        form.find('input:radio, .riweeklyweekday > input, input[name=ridailyinterval], input[name=riweeklyinterval], input[name=rimonthlyinterval], input[name=riyearlyinterval]').change(
+            function (e) {
+                // Update only if the occurances are shown
+                if (form.find('.rioccurrencesactions:visible').length !== 0) {
+                    updateOccurances();
+                }
+            }
+        );
+
+        /*
+          Save and cancel methods:
+        */
+        form.find('.ricancelbutton').click(cancel);
+        form.find('.risavebutton').click(save);
+
+        /*
+         * Public API of RecurrenceInput
+         */
+
+        $.extend(self, {
+            display: display,
+            form: form,
+            loadData: loadData, //Used by tests.
+            save: save //Used by tests.
+        });
+
+    }
+
+
+    /*
+     * jQuery plugin implementation
+     */
+    $.fn.recurrenceinput = function (conf) {
+        if (this.data('recurrenceinput')) {
+            // plugin already installed
+            return this.data('recurrenceinput');
+        }
+
+        // "compile" configuration for widget
+        var config = $.extend({}, tool.conf);
+        $.extend(config, conf);
+        $.extend(config, {i18n: LABELS[config.lang], name: this.attr('name')});
+
+        // our recurrenceinput widget instance
+        var recurrenceinput = new RecurrenceInput(config, this);
+        // hide textarea and place display widget after textarea
+        recurrenceinput.form.appendTo('body');
+        this.after(recurrenceinput.display);
+
+        // hide the textarea
+        this.hide();
+
+        // save the data for next call
+        this.data('recurrenceinput', recurrenceinput);
+        return recurrenceinput;
+    };
+
+}(jQuery));
+
+
+  }).apply(root, arguments);
+});
+}(this));
+
+/* Recurrence pattern.
+ *
+ * Options:
+ *    localization(object): Customizations to locatizations. Default to null
+ *    configuration(object): recurrent input widget configuration
+ *
+ * Documentation:
+ *
+ *    # Simple
+ *
+ *    {{ example-1 }}
+ *
+ * Example: example-1
+ *    <textarea class="pat-recurrence"></textarea>
+ *
+ *
+ */
+
+
+define('mockup-patterns-recurrence',[
+  'jquery',
+  'mockup-patterns-base',
+  'jquery.recurrenceinput'
+], function($, Base) {
+  
+
+  var Recurrence = Base.extend({
+    name: 'recurrence',
+    trigger: '.pat-recurrence',
+    defaults: {
+      // just passed onto the widget
+      language: 'en',
+      localization: null,
+      configuration: {}
+    },
+    init: function() {
+      this.$el.addClass('recurrence-widget');
+      if(this.options.localization){
+        $.tools.recurrenceinput.localize(this.options.language, this.options.localization);
+      }
+      this.$el.recurrenceinput(this.options.configuration);
+    }
+  });
+
+  return Recurrence;
 
 });
 
@@ -29274,6 +34681,7 @@ define('mockup-patterns-tree',[
 
   var Tree = Base.extend({
     name: 'tree',
+    trigger: '.pat-tree',
     defaults: {
       dragAndDrop: false,
       autoOpen: false,
@@ -29351,7 +34759,7 @@ define('mockup-patterns-tree',[
  *    separator(string): Select2 option. String which separates multiple items. (',')
  *    tokenSeparators(array): Select2 option, refer to select2 documentation.
  *    ([",", " "])
- *    width(string): Specify a width for the widget. ('300px')
+ *    width(string): Specify a width for the widget. ('100%')
  *
  * Documentation:
  *    The Related Items pattern is based on Select2 so many of the same options will work here as well.
@@ -29400,20 +34808,18 @@ define('mockup-patterns-relateditems',[
   'mockup-patterns-select2',
   'mockup-utils',
   'mockup-patterns-tree',
-  'mockup-i18n'
-], function($, _, Base, Select2, utils, Tree, i18n) {
+  'translate'
+], function($, _, Base, Select2, utils, Tree, _t) {
   
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var RelatedItems = Base.extend({
     name: 'relateditems',
+    trigger: '.pat-relateditems',
     browsing: false,
     currentPath: null,
     defaults: {
       vocabularyUrl: null, // must be set to work
-      width: '300px',
+      width: '100%',
       multiple: true,
       tokenSeparators: [',', ' '],
       separator: ',',
@@ -29427,12 +34833,13 @@ define('mockup-patterns-relateditems',[
       homeText: _t('home'),
       folderTypes: ['Folder'],
       selectableTypes: null, // null means everything is selectable, otherwise a list of strings to match types that are selectable
-      attributes: ['UID', 'Title', 'Type', 'path'],
+      attributes: ['UID', 'Title', 'Type', 'path', 'getIcon'],
       dropdownCssClass: 'pattern-relateditems-dropdown',
       maximumSelectionSize: -1,
       resultTemplate: '' +
         '<div class="pattern-relateditems-result pattern-relateditems-type-<%= Type %> <% if (selected) { %>pattern-relateditems-active<% } %>">' +
-        '  <a href="#" class="pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %>">' +
+        '  <a href="#" class="pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %> contenttype-<%= Type.toLowerCase() %>">' +
+        '    <% if (getIcon) { %><span class="pattern-relateditems-result-icon"><img src="<%= getIcon %>" /></span><% } %>' +
         '    <span class="pattern-relateditems-result-title"><%= Title %></span>' +
         '    <span class="pattern-relateditems-result-path"><%= path %></span>' +
         '  </a>' +
@@ -29445,6 +34852,7 @@ define('mockup-patterns-relateditems',[
       resultTemplateSelector: null,
       selectionTemplate: '' +
         '<span class="pattern-relateditems-item pattern-relateditems-type-<%= Type %>">' +
+        ' <% if (getIcon) { %><span class="pattern-relateditems-result-icon"><img src="<%= getIcon %>" /></span><% } %>' +
         ' <span class="pattern-relateditems-item-title"><%= Title %></span>' +
         ' <span class="pattern-relateditems-item-path"><%= path %></span>' +
         '</span>',
@@ -29507,7 +34915,7 @@ define('mockup-patterns-relateditems',[
     },
     browseTo: function(path) {
       var self = this;
-      self.trigger('before-browse');
+      self.emit('before-browse');
       self.currentPath = path;
       if (path === '/' && self.options.mode === 'search') {
         self.deactivateBrowsing();
@@ -29516,7 +34924,7 @@ define('mockup-patterns-relateditems',[
       }
       self.$el.select2('close');
       self.$el.select2('open');
-      self.trigger('after-browse');
+      self.emit('after-browse');
     },
     setBreadCrumbs: function() {
       var self = this;
@@ -29612,16 +35020,16 @@ define('mockup-patterns-relateditems',[
     },
     selectItem: function(item) {
       var self = this;
-      self.trigger('selecting');
+      self.emit('selecting');
       var data = self.$el.select2('data');
       data.push(item);
       self.$el.select2('data', data);
       item.selected = true;
-      self.trigger('selected');
+      self.emit('selected');
     },
     deselectItem: function(item) {
       var self = this;
-      self.trigger('deselecting');
+      self.emit('deselecting');
       var data = self.$el.select2('data');
       _.each(data, function(obj, i) {
         if (obj.UID === item.UID) {
@@ -29630,7 +35038,7 @@ define('mockup-patterns-relateditems',[
       });
       self.$el.select2('data', data);
       item.selected = false;
-      self.trigger('deselected');
+      self.emit('deselected');
     },
     isSelectable: function(item) {
       var self = this;
@@ -29830,12 +35238,9 @@ define('mockup-patterns-querystring',[
   'mockup-patterns-select2',
   'mockup-patterns-pickadate',
   'select2',
-  'mockup-i18n'
-], function($, Base, Select2, PickADate, undefined, i18n) {
+  'translate'
+], function($, Base, Select2, PickADate, undefined, _t) {
   
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var Criteria = function() { this.init.apply(this, arguments); };
   Criteria.prototype = {
@@ -30049,7 +35454,7 @@ define('mockup-patterns-querystring',[
                 });
 
       } else if (widget === 'MultipleSelectionWidget') {
-        self.$value = $('<select/>').attr('multiple', true)
+        self.$value = $('<select/>').prop('multiple', true)
                 .addClass(self.options.classValueName + '-' + widget)
                 .appendTo($wrapper)
                 .change(function() {
@@ -30201,6 +35606,7 @@ define('mockup-patterns-querystring',[
 
   var QueryString = Base.extend({
     name: 'querystring',
+    trigger: '.pat-querystring',
     defaults: {
       indexes: [],
       classWrapperName: 'querystring-wrapper',
@@ -30379,10 +35785,10 @@ define('mockup-patterns-querystring',[
         .attr('name', 'sort_reversed:boolean')
         .change(function() {
           self.refreshPreviewEvent.call(self);
-          if ($(this).attr('checked') === 'checked') {
-            $('.option input[type="checkbox"]', existingSortOrder).attr('checked', 'checked');
+          if ($(this).prop('checked')) {
+            $('.option input[type="checkbox"]', existingSortOrder).prop('checked', true);
           } else {
-            $('.option input[type="checkbox"]', existingSortOrder).removeAttr('checked');
+            $('.option input[type="checkbox"]', existingSortOrder).prop('checked', false);
           }
         });
 
@@ -30399,10 +35805,10 @@ define('mockup-patterns-querystring',[
       // if the form already contains the sort fields, hide them! Their values
       // will be synced back and forth between the querystring's form elements
       if (existingSortOn.length >= 1 && existingSortOrder.length >= 1) {
-        var reversed = $('.option input[type="checkbox"]', existingSortOrder).attr('checked') === 'checked';
+        var reversed = $('.option input[type="checkbox"]', existingSortOrder).prop('checked');
         var sortOn = $('[id$="-sort_on"]', existingSortOn).val();
         if (reversed) {
-          self.$sortOrder.attr('checked', 'checked');
+          self.$sortOrder.prop('checked', true);
         }
         self.$sortOn.select2('val', sortOn);
         $(existingSortOn).hide();
@@ -30454,8 +35860,7 @@ define('mockup-patterns-querystring',[
       }
 
       query.push('sort_on=' + self.$sortOn.val());
-      var sortorder = self.$sortOrder.attr('checked');
-      if (sortorder === 'checked') {
+      if (self.$sortOrder.prop('checked')) {
         query.push('sort_order=reverse');
       }
 
@@ -30534,6 +35939,7 @@ define('mockup-patterns-backdrop',[
 
   var Backdrop = Base.extend({
     name: 'backdrop',
+    trigger: '.pat-backdrop',
     defaults: {
       zIndex: null,
       opacity: 0.8,
@@ -30574,20 +35980,20 @@ define('mockup-patterns-backdrop',[
     show: function() {
       var self = this;
       if (!self.$el.hasClass(self.options.classActiveName)) {
-        self.trigger('show');
+        self.emit('show');
         self.$backdrop.css('opacity', '0').show();
         self.$el.addClass(self.options.classActiveName);
         self.$backdrop.animate({ opacity: self.options.opacity }, 500);
-        self.trigger('shown');
+        self.emit('shown');
       }
     },
     hide: function() {
       var self = this;
       if (self.$el.hasClass(self.options.classActiveName)) {
-        self.trigger('hide');
+        self.emit('hide');
         self.$backdrop.animate({ opacity: '0' }, 500).hide();
         self.$el.removeClass(self.options.classActiveName);
-        self.trigger('hidden');
+        self.emit('hidden');
       }
     }
   });
@@ -33589,7 +38995,7 @@ define('mockup-patterns-modal',[
   'underscore',
   'mockup-patterns-base',
   'mockup-patterns-backdrop',
-  'mockup-registry',
+  'pat-registry',
   'mockup-router',
   'mockup-utils',
   'jquery.form'
@@ -33598,6 +39004,7 @@ define('mockup-patterns-modal',[
 
   var Modal = Base.extend({
     name: 'modal',
+    trigger: '.pat-modal',
     createModal: null,
     $model: null,
     defaults: {
@@ -33671,7 +39078,19 @@ define('mockup-patterns-modal',[
         onTimeout: null,
         redirectOnResponse: false,
         redirectToUrl: function($action, response, options) {
-          return $('body').data('base-url');
+          var baseUrl = '';
+          var reg = /<body.*data-base-url=[\"'](.*)[\"'].*/im.exec(response);
+          if (reg && reg.length > 1) {
+            // Base url as data attribute on body (Plone 5)
+            baseUrl = reg[1];
+          } else {
+            reg = /<base.*href=[\"'](.*)[\"'].*/im.exec(response);
+            if (reg && reg.length > 1) {
+              // base tag available (Plone 4)
+              baseUrl = reg[1];
+            }
+          }
+          return baseUrl;
         }
       },
       routerOptions: {
@@ -33767,7 +39186,7 @@ define('mockup-patterns-modal',[
             } else {
               console.log('error happened do something');
             }
-            self.trigger('formActionError', [xhr, textStatus, errorStatus]);
+            self.emit('formActionError', [xhr, textStatus, errorStatus]);
           },
           success: function(response, state, xhr, form) {
             self.loading.hide();
@@ -33805,7 +39224,7 @@ define('mockup-patterns-modal',[
                 self.reloadWindow();
               }
             }
-            self.trigger('formActionSuccess', [response, state, xhr, form]);
+            self.emit('formActionSuccess', [response, state, xhr, form]);
           }
         });
       },
@@ -33844,7 +39263,7 @@ define('mockup-patterns-modal',[
               console.log('error happened do something');
             }
             self.loading.hide();
-            self.trigger('linkActionError', [xhr, textStatus, errorStatus]);
+            self.emit('linkActionError', [xhr, textStatus, errorStatus]);
           },
           success: function(response, state, xhr) {
             self.redraw(response, patternOptions);
@@ -33852,14 +39271,14 @@ define('mockup-patterns-modal',[
               options.onSuccess(self, response, state, xhr);
             }
             self.loading.hide();
-            self.trigger('linkActionSuccess', [response, state, xhr]);
+            self.emit('linkActionSuccess', [response, state, xhr]);
           }
         });
       },
       render: function(options) {
         var self = this;
 
-        self.trigger('before-render');
+        self.emit('before-render');
 
         if (!self.$raw) {
           return;
@@ -33939,7 +39358,7 @@ define('mockup-patterns-modal',[
           $button.hide();
         });
 
-        self.trigger('before-events-setup');
+        self.emit('before-events-setup');
 
         // Wire up events
         $('.plone-modal-header > a.plone-modal-close, .plone-modal-footer > a.plone-modal-close', self.$modal)
@@ -33982,7 +39401,7 @@ define('mockup-patterns-modal',[
           .appendTo(self.$wrapperInner);
         self.$modal.data('pattern-' + self.name, self);
 
-        self.trigger('after-render');
+        self.emit('after-render');
       }
     },
     reloadWindow: function() {
@@ -34105,12 +39524,12 @@ define('mockup-patterns-modal',[
           self.show();
         });
       }
-
       self.initModal();
     },
+
     createAjaxModal: function() {
       var self = this;
-      self.trigger('before-ajax');
+      self.emit('before-ajax');
       self.loading.show();
       self.ajaxXHR = $.ajax({
         url: self.options.ajaxUrl,
@@ -34119,26 +39538,30 @@ define('mockup-patterns-modal',[
         self.ajaxXHR = undefined;
         self.loading.hide();
         self.$raw = $('<div />').append($(utils.parseBodyTag(response)));
-        self.trigger('after-ajax', self, textStatus, xhr);
+        self.emit('after-ajax', self, textStatus, xhr);
         self._show();
       });
     },
+
     createTargetModal: function() {
       var self = this;
       self.$raw = $(self.options.target).clone();
       self._show();
     },
+
     createBasicModal: function() {
       var self = this;
       self.$raw = $('<div/>').html(self.$el.clone());
       self._show();
     },
+
     createHtmlModal: function() {
       var self = this;
       var $el = $(self.options.html);
       self.$raw = $el;
       self._show();
     },
+
     initModal: function() {
       var self = this;
       if (self.options.ajaxUrl) {
@@ -34283,9 +39706,9 @@ define('mockup-patterns-modal',[
     },
     render: function(options) {
       var self = this;
-      self.trigger('render');
+      self.emit('render');
       self.options.render.apply(self, [options]);
-      self.trigger('rendered');
+      self.emit('rendered');
     },
     show: function() {
       var self = this;
@@ -34294,7 +39717,7 @@ define('mockup-patterns-modal',[
     _show: function() {
       var self = this;
       self.render.apply(self, [ self.options ]);
-      self.trigger('show');
+      self.emit('show');
       self.backdrop.show();
       self.$wrapper.show();
       self.loading.hide();
@@ -34309,7 +39732,7 @@ define('mockup-patterns-modal',[
       $(window.parent).on('resize.modal.patterns', function() {
         self.positionModal();
       });
-      self.trigger('shown');
+      self.emit('shown');
       $('body').addClass('plone-modal-open');
     },
     hide: function() {
@@ -34317,7 +39740,7 @@ define('mockup-patterns-modal',[
       if (self.ajaxXHR) {
         self.ajaxXHR.abort();
       }
-      self.trigger('hide');
+      self.emit('hide');
       if (self._suppressHide) {
         if (!confirm(self._suppressHide)) {
           return;
@@ -34335,19 +39758,19 @@ define('mockup-patterns-modal',[
         self.initModal();
       }
       $(window.parent).off('resize.modal.patterns');
-      self.trigger('hidden');
+      self.emit('hidden');
       $('body').removeClass('plone-modal-open');
     },
     redraw: function(response, options) {
       var self = this;
-      self.trigger('beforeDraw');
+      self.emit('beforeDraw');
       self.$modal.remove();
       self.$raw = $('<div />').append($(utils.parseBodyTag(response)));
       self.render.apply(self, [options || self.options]);
       self.$modal.addClass(self.options.templateOptions.classActiveName);
       self.positionModal();
       registry.scan(self.$modal);
-      self.trigger('afterDraw');
+      self.emit('afterDraw');
     }
   });
 
@@ -71955,7 +77378,10 @@ define("tinymce/ui/Throbber", [
 
 expose(["tinymce/dom/EventUtils","tinymce/dom/Sizzle","tinymce/util/Tools","tinymce/Env","tinymce/dom/DomQuery","tinymce/html/Styles","tinymce/dom/TreeWalker","tinymce/dom/Range","tinymce/html/Entities","tinymce/dom/DOMUtils","tinymce/dom/ScriptLoader","tinymce/AddOnManager","tinymce/html/Node","tinymce/html/Schema","tinymce/html/SaxParser","tinymce/html/DomParser","tinymce/html/Writer","tinymce/html/Serializer","tinymce/dom/Serializer","tinymce/dom/TridentSelection","tinymce/util/VK","tinymce/dom/ControlSelection","tinymce/dom/BookmarkManager","tinymce/dom/Selection","tinymce/dom/ElementUtils","tinymce/Formatter","tinymce/UndoManager","tinymce/EnterKey","tinymce/ForceBlocks","tinymce/EditorCommands","tinymce/util/URI","tinymce/util/Class","tinymce/util/EventDispatcher","tinymce/ui/Selector","tinymce/ui/Collection","tinymce/ui/DomUtils","tinymce/ui/Control","tinymce/ui/Factory","tinymce/ui/KeyboardNavigation","tinymce/ui/Container","tinymce/ui/DragHelper","tinymce/ui/Scrollable","tinymce/ui/Panel","tinymce/ui/Movable","tinymce/ui/Resizable","tinymce/ui/FloatPanel","tinymce/ui/Window","tinymce/ui/MessageBox","tinymce/WindowManager","tinymce/util/Quirks","tinymce/util/Observable","tinymce/EditorObservable","tinymce/Shortcuts","tinymce/Editor","tinymce/util/I18n","tinymce/FocusManager","tinymce/EditorManager","tinymce/LegacyInput","tinymce/util/XHR","tinymce/util/JSON","tinymce/util/JSONRequest","tinymce/util/JSONP","tinymce/util/LocalStorage","tinymce/Compat","tinymce/ui/Layout","tinymce/ui/AbsoluteLayout","tinymce/ui/Tooltip","tinymce/ui/Widget","tinymce/ui/Button","tinymce/ui/ButtonGroup","tinymce/ui/Checkbox","tinymce/ui/ComboBox","tinymce/ui/ColorBox","tinymce/ui/PanelButton","tinymce/ui/ColorButton","tinymce/util/Color","tinymce/ui/ColorPicker","tinymce/ui/Path","tinymce/ui/ElementPath","tinymce/ui/FormItem","tinymce/ui/Form","tinymce/ui/FieldSet","tinymce/ui/FilePicker","tinymce/ui/FitLayout","tinymce/ui/FlexLayout","tinymce/ui/FlowLayout","tinymce/ui/FormatControls","tinymce/ui/GridLayout","tinymce/ui/Iframe","tinymce/ui/Label","tinymce/ui/Toolbar","tinymce/ui/MenuBar","tinymce/ui/MenuButton","tinymce/ui/ListBox","tinymce/ui/MenuItem","tinymce/ui/Menu","tinymce/ui/Radio","tinymce/ui/ResizeHandle","tinymce/ui/Spacer","tinymce/ui/SplitButton","tinymce/ui/StackLayout","tinymce/ui/TabPanel","tinymce/ui/TextBox","tinymce/ui/Throbber"]);
 })(this);
-return (function () { this.tinyMCE.DOM.events.domLoaded = true; return this.tinyMCE; }.apply(this, arguments)) || window.tinyMCE;
+return (function () {
+          this.tinyMCE.DOM.events.domLoaded = true;
+          return this.tinyMCE;
+        }.apply(this, arguments)) || window.tinyMCE;
   }).apply(root, arguments);
 });
 }(this));
@@ -72039,6 +77465,7 @@ define('mockup-patterns-autotoc',[
 
   var AutoTOC = Base.extend({
     name: 'autotoc',
+    trigger: '.pat-autotoc',
     defaults: {
       section: 'section',
       levels: 'h1,h2,h3',
@@ -74385,19 +79812,17 @@ define('mockup-patterns-upload',[
   'dropzone',
   'text!mockup-patterns-upload-url/templates/upload.xml',
   'text!mockup-patterns-upload-url/templates/preview.xml',
-  'mockup-i18n'
+  'translate'
 ], function($, _, Base, RelatedItems, Dropzone,
-            UploadTemplate, PreviewTemplate, i18n) {
+            UploadTemplate, PreviewTemplate, _t) {
   
 
   /* we do not want this plugin to auto discover */
   Dropzone.autoDiscover = false;
 
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
-
   var UploadPattern = Base.extend({
     name: 'upload',
+    trigger: '.pat-upload',
     defaults: {
       showTitle: true,
       url: null, // XXX MUST provide url to submit to OR be in a form
@@ -74731,6 +80156,12 @@ define('mockup-patterns-upload',[
       return Math.round(mb / 1024) + ' GB';
     },
 
+    setPath: function(path){
+      var self = this;
+      self.currentPath = path;
+      self.options.url = self.dropzone.options.url = self.getUrl();
+    },
+
     setupRelatedItems: function($input) {
       var self = this;
       var options = self.options.relatedItems;
@@ -74740,12 +80171,11 @@ define('mockup-patterns-upload',[
       var ri = new RelatedItems($input, options);
       ri.$el.on('change', function() {
         var result = $(this).select2('data');
+        var path = null;
         if (result.length > 0){
-          self.currentPath = result[0].path;
-        } else {
-          self.currentPath = null;
+          path = result[0].path;
         }
-        self.options.url = self.dropzone.options.url = self.getUrl();
+        self.setPath(path);
       });
       return ri;
     }
@@ -74757,14 +80187,15 @@ define('mockup-patterns-upload',[
 });
 
 
-define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType internal" data-linkType="internal">\n        <legend>Internal</legend>\n        <div>\n          <div class="form-group main">\n            <!-- this gives the name to the "linkType" -->\n            <input type="text" name="internal" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType upload" data-linkType="upload">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n\n      <fieldset class="linkType external" data-linkType="external">\n        <legend>External</legend>\n        <div class="form-group main">\n          <label for="external"><%- externalText %></label>\n          <input type="text" name="external" />\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType email" data-linkType="email">\n        <legend>Email</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <label><%- emailText %></label>\n            <input type="text" name="email" />\n          </div>\n          <div class="form-group">\n            <label><%- subjectText %></label>\n            <input type="text" name="subject" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType anchor" data-linkType="anchor">\n        <legend>Anchor</legend>\n        <div>\n          <div class="form-group main">\n            <label>Select an anchor</label>\n            <div class="input-wrapper">\n              <select name="anchor" class="pat-select2" data-pat-select2="width:500px" />\n            </div>\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group">\n        <label>Target</label>\n        <select name="target">\n          <% _.each(targetList, function(target){ %>\n            <option value="<%- target.value %>"><%- target.text %></option>\n          <% }); %>\n        </select>\n      </div>\n      <div class="form-group">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n    </div>\n\n    <input type="submit" class="btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="btn btn-primary" name="insert" value="<%- insertBtn %>" />\n  </div>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType internal" data-linkType="internal">\n        <legend>Internal</legend>\n        <div>\n          <div class="form-group main">\n            <!-- this gives the name to the "linkType" -->\n            <input type="text" name="internal" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType upload" data-linkType="upload">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n\n      <fieldset class="linkType external" data-linkType="external">\n        <legend>External</legend>\n        <div class="form-group main">\n          <label for="external"><%- externalText %></label>\n          <input type="text" name="external" />\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType email" data-linkType="email">\n        <legend>Email</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <label><%- emailText %></label>\n            <input type="text" name="email" />\n          </div>\n          <div class="form-group">\n            <label><%- subjectText %></label>\n            <input type="text" name="subject" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType anchor" data-linkType="anchor">\n        <legend>Anchor</legend>\n        <div>\n          <div class="form-group main">\n            <label>Select an anchor</label>\n            <div class="input-wrapper">\n              <select name="anchor" class="pat-select2" data-pat-select2="width:500px" />\n            </div>\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group">\n        <label>Target</label>\n        <select name="target">\n          <% _.each(targetList, function(target){ %>\n            <option value="<%- target.value %>"><%- target.text %></option>\n          <% }); %>\n        </select>\n      </div>\n      <div class="form-group">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n  </div>\n</div>\n';});
 
 
-define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales.split(\',\'), function(scale){ %>\n                  <% var scale = scale.split(\':\'); %>\n                  <option value="<%- scale[1] %>">\n                    <%- scale[0] %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="btn btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales.split(\',\'), function(scale){ %>\n                  <% var scale = scale.split(\':\'); %>\n                  <option value="<%- scale[1] %>">\n                    <%- scale[0] %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
 
 define('mockup-patterns-tinymce-url/js/links',[
   'jquery',
   'underscore',
+  'pat-registry',
   'mockup-patterns-base',
   'mockup-patterns-relateditems',
   'mockup-patterns-modal',
@@ -74772,15 +80203,16 @@ define('mockup-patterns-tinymce-url/js/links',[
   'mockup-patterns-upload',
   'text!mockup-patterns-tinymce-url/templates/link.xml',
   'text!mockup-patterns-tinymce-url/templates/image.xml'
-], function($, _, Base, RelatedItems, Modal, tinymce, Upload,
-            LinkTemplate, ImageTemplate) {
+], function($, _, registry, Base, RelatedItems, Modal, tinymce, Upload, LinkTemplate, ImageTemplate) {
   
 
   var LinkType = Base.extend({
     name: 'linktype',
+    trigger: '.pat-linktype',
     defaults: {
       linkModal: null // required
     },
+
     init: function() {
       this.linkModal = this.options.linkModal;
       this.tinypattern = this.options.tinypattern;
@@ -74788,18 +80220,23 @@ define('mockup-patterns-tinymce-url/js/links',[
       this.dom = this.tiny.dom;
       this.$input = this.$el.find('input');
     },
+
     value: function() {
       return this.$input.val();
     },
+
     toUrl: function() {
       return this.value();
     },
+
     load: function(element) {
       this.$input.attr('value', this.tiny.dom.getAttrib(element, 'data-val'));
     },
+
     set: function(val) {
       this.$input.attr('value', val);
     },
+
     attributes: function() {
       return {
         'data-val': this.value()
@@ -74809,23 +80246,24 @@ define('mockup-patterns-tinymce-url/js/links',[
 
   var InternalLink = LinkType.extend({
     init: function() {
-      var self = this;
-      LinkType.prototype.init.call(self);
-      self.$input.addClass('pat-relateditems');
-      self.createRelatedItems();
+      LinkType.prototype.init.call(this);
+      this.$input.addClass('pat-relateditems');
+      this.createRelatedItems();
     },
+
     createRelatedItems: function() {
       this.relatedItems = new RelatedItems(this.$input,
         this.linkModal.options.relatedItems);
     },
+
     value: function() {
-      var self = this;
-      var val = self.$input.select2('data');
+      var val = this.$input.select2('data');
       if (val && typeof(val) === 'object') {
         val = val[0];
       }
       return val;
     },
+
     toUrl: function() {
       var value = this.value();
       if (value) {
@@ -74839,6 +80277,7 @@ define('mockup-patterns-tinymce-url/js/links',[
         this.set(val);
       }
     },
+
     set: function(val) {
       // kill it and then reinitialize since select2 will load data then
       this.$input.select2('destroy');
@@ -74847,6 +80286,7 @@ define('mockup-patterns-tinymce-url/js/links',[
       this.$input.attr('value', val);
       this.createRelatedItems();
     },
+
     attributes: function() {
       var val = this.value();
       if (val) {
@@ -74856,7 +80296,6 @@ define('mockup-patterns-tinymce-url/js/links',[
       }
       return {};
     }
-
   });
 
   var UploadLink = InternalLink.extend({
@@ -74869,7 +80308,6 @@ define('mockup-patterns-tinymce-url/js/links',[
       }
       return paths.join('/');
     }
-
   });
 
   var ImageLink = InternalLink.extend({
@@ -74893,13 +80331,16 @@ define('mockup-patterns-tinymce-url/js/links',[
       }
       return null;
     },
+
     load: function(element) {
       LinkType.prototype.load.apply(this, [element]);
       this.linkModal.$subject.val(this.tiny.dom.getAttrib(element, 'data-subject'));
     },
+
     getSubject: function() {
       return this.linkModal.$subject.val();
     },
+
     attributes: function() {
       var attribs = LinkType.prototype.attributes.call(this);
       attribs['data-subject'] = this.getSubject();
@@ -74909,21 +80350,21 @@ define('mockup-patterns-tinymce-url/js/links',[
 
   var AnchorLink = LinkType.extend({
     init: function() {
-      var self = this;
-      LinkType.prototype.init.call(self);
-      self.$select = self.$el.find('select');
-      self.anchorNodes = [];
-      self.anchorData = [];
-      self.populate();
+      LinkType.prototype.init.call(this);
+      this.$select = this.$el.find('select');
+      this.anchorNodes = [];
+      this.anchorData = [];
+      this.populate();
     },
+
     value: function() {
-      var self = this;
-      var val = self.$select.select2('data');
+      var val = this.$select.select2('data');
       if (val && typeof(val) === 'object') {
-        val = val['id'];
+        val = val.id;
       }
       return val;
     },
+
     populate: function() {
       var self = this;
       self.$select.find('option').remove();
@@ -74980,23 +80421,23 @@ define('mockup-patterns-tinymce-url/js/links',[
         self.$select.append('<option>No anchors found..</option>');
       }
     },
+
     getIndex: function(name) {
-      var self = this;
-      for (var i = 0; i < self.anchorData.length; i = i + 1) {
-        var data = self.anchorData[i];
+      for (var i = 0; i < this.anchorData.length; i = i + 1) {
+        var data = this.anchorData[i];
         if (data.name === name) {
           return i;
         }
       }
       return 0;
     },
+
     toUrl: function() {
-      var self = this;
-      var val = self.value();
+      var val = this.value();
       if (val) {
         var index = parseInt(val, 10);
-        var node = self.anchorNodes[index];
-        var data = self.anchorData[index];
+        var node = this.anchorNodes[index];
+        var data = this.anchorData[index];
         if (data.newAnchor) {
           node.innerHTML = '<a name="' + data.name + '" class="mce-item-anchor"></a>' + node.innerHTML;
         }
@@ -75004,6 +80445,7 @@ define('mockup-patterns-tinymce-url/js/links',[
       }
       return null;
     },
+
     set: function(val) {
       var anchor = this.getIndex(val);
       this.$select.select2('data', '' + anchor);
@@ -75060,6 +80502,7 @@ define('mockup-patterns-tinymce-url/js/links',[
 
   var LinkModal = Base.extend({
     name: 'linkmodal',
+    trigger: '.pat-linkmodal',
     defaults: {
       anchorSelector: 'h1,h2,h3',
       linkTypes: [
@@ -75115,38 +80558,40 @@ define('mockup-patterns-tinymce-url/js/links',[
       self.dom = self.tiny.dom;
       self.linkType = self.options.initialLinkType;
       self.linkTypes = {};
-      self.modal = new Modal(self.$el, {
+      self.modal = registry.patterns.modal.init(self.$el, {
         html: self.generateModalHtml(),
         content: null,
-        buttons: '.btn'
+        buttons: '.plone-btn'
       });
       self.modal.on('shown', function(e) {
         self.modalShown.apply(self, [e]);
       });
     },
+
     generateModalHtml: function() {
-      var self = this;
-      return self.template({
-        text: self.options.text,
-        insertHeading: self.options.text.insertHeading,
-        linkTypes: self.options.linkTypes,
-        externalText: self.options.text.external,
-        emailText: self.options.text.email,
-        subjectText: self.options.text.subject,
-        targetList: self.options.targetList,
-        titleText: self.options.text.title,
-        externalImageText: self.options.text.externalImage,
-        altText: self.options.text.alt,
-        imageAlignText: self.options.text.imageAlign,
-        scaleText: self.options.text.scale,
-        scales: self.options.scales,
-        cancelBtn: self.options.text.cancelBtn,
-        insertBtn: self.options.text.insertBtn
+      return this.template({
+        text: this.options.text,
+        insertHeading: this.options.text.insertHeading,
+        linkTypes: this.options.linkTypes,
+        externalText: this.options.text.external,
+        emailText: this.options.text.email,
+        subjectText: this.options.text.subject,
+        targetList: this.options.targetList,
+        titleText: this.options.text.title,
+        externalImageText: this.options.text.externalImage,
+        altText: this.options.text.alt,
+        imageAlignText: this.options.text.imageAlign,
+        scaleText: this.options.text.scale,
+        scales: this.options.scales,
+        cancelBtn: this.options.text.cancelBtn,
+        insertBtn: this.options.text.insertBtn
       });
     },
+
     isImageMode: function() {
       return ['image', 'uploadImage', 'externalImage'].indexOf(this.linkType) !== -1;
     },
+
     initElements: function() {
       var self = this;
       self.$target = $('select[name="target"]', self.modal.$modal);
@@ -75177,14 +80622,16 @@ define('mockup-patterns-tinymce-url/js/links',[
         });
       });
     },
+
     getLinkUrl: function() {
       // get the url, only get one uid
-      var self = this;
-      return self.linkTypes[self.linkType].toUrl();
+      return this.linkTypes[this.linkType].toUrl();
     },
+
     getValue: function() {
       return this.linkTypes[this.linkType].value();
     },
+
     updateAnchor: function(href) {
       var self = this;
       var target = self.$target.val();
@@ -75197,12 +80644,13 @@ define('mockup-patterns-tinymce-url/js/links',[
       }, self.linkTypes[self.linkType].attributes());
       self.tiny.execCommand('mceInsertLink', false, data);
     },
+
     focusElement: function(elm) {
-      var self = this;
-      self.tiny.focus();
-      self.tiny.selection.select(elm);
-      self.tiny.nodeChanged();
+      this.tiny.focus();
+      this.tiny.selection.select(elm);
+      this.tiny.nodeChanged();
     },
+
     updateImage: function(src) {
       var self = this;
       var data = $.extend(true, {}, {
@@ -75240,12 +80688,11 @@ define('mockup-patterns-tinymce-url/js/links',[
         self.focusElement(self.imgElm);
       }
     },
+
     modalShown: function(e) {
       var self = this;
-
       self.initElements();
       self.initData();
-
       // upload init
       self.$upload = $('.uploadify-me', self.modal.$modal);
       self.options.upload.relatedItems = self.options.relatedItems;
@@ -75279,18 +80726,19 @@ define('mockup-patterns-tinymce-url/js/links',[
         self.hide();
       });
     },
+
     show: function() {
       this.modal.show();
     },
+
     hide: function() {
       this.modal.hide();
     },
+
     initData: function() {
       var self = this;
-
       self.selection = self.tiny.selection;
       self.tiny.focus();
-
       var selectedElm = self.imgElm = self.selection.getNode();
       self.anchorElm = self.dom.getParent(selectedElm, 'a[href]');
 
@@ -75346,59 +80794,59 @@ define('mockup-patterns-tinymce-url/js/links',[
         }
       }
     },
+
     guessImageLink: function(src) {
-      var self = this;
-      if (src.indexOf(self.options.prependToScalePart) !== -1) {
-        self.linkType = 'image';
-        self.$scale.val(self.tinypattern.getScaleFromUrl(src));
-        self.linkTypes.image.set(self.tinypattern.stripGeneratedUrl(src));
+      if (src.indexOf(this.options.prependToScalePart) !== -1) {
+        this.linkType = 'image';
+        this.$scale.val(this.tinypattern.getScaleFromUrl(src));
+        this.linkTypes.image.set(this.tinypattern.stripGeneratedUrl(src));
       } else {
-        self.linkType = 'externalImage';
-        self.linkTypes.externalImage.set(src);
+        this.linkType = 'externalImage';
+        this.linkTypes.externalImage.set(src);
       }
     },
+
     guessAnchorLink: function(href) {
-      var self = this;
-      if (self.options.prependToUrl &&
-          href.indexOf(self.options.prependToUrl) !== -1) {
+      if (this.options.prependToUrl &&
+          href.indexOf(this.options.prependToUrl) !== -1) {
         // XXX if using default configuration, it gets more difficult
         // here to detect internal urls so this might need to change...
-        self.linkType = 'internal';
-        self.linkTypes.internal.set(self.tinypattern.stripGeneratedUrl(href));
+        this.linkType = 'internal';
+        this.linkTypes.internal.set(this.tinypattern.stripGeneratedUrl(href));
       } else if (href.indexOf('mailto:') !== -1) {
-        self.linkType = 'email';
+        this.linkType = 'email';
         var email = href.substring('mailto:'.length, href.length);
         var split = email.split('?subject=');
-        self.linkTypes.email.set(split[0]);
+        this.linkTypes.email.set(split[0]);
         if (split.length > 1) {
-          self.$subject.val(decodeURIComponent(split[1]));
+          this.$subject.val(decodeURIComponent(split[1]));
         }
       } else if (href[0] === '#') {
-        self.linkType = 'anchor';
-        self.linkTypes.anchor.setRaw(href.substring(1));
+        this.linkType = 'anchor';
+        this.linkTypes.anchor.setRaw(href.substring(1));
       } else {
-        self.linkType = 'external';
-        self.linkTypes.external.setRaw(href);
+        this.linkType = 'external';
+        this.linkTypes.external.setRaw(href);
       }
     },
+
     setSelectElement: function($el, val) {
-      $el.find('option:selected').attr('selected', '');
+      $el.find('option:selected').prop('selected', false);
       if (val) {
         // update
-        $el.find('option[value="' + val + '"]').attr('selected', 'true');
+        $el.find('option[value="' + val + '"]').prop('selected', true);
       }
     },
+
     reinitialize: function() {
       /*
        * This will probably be called before show is run.
        * It will overwrite the base html template given to
        * be able to privde default values for the overlay
        */
-      var self = this;
-      self.modal.options.html = self.generateModalHtml();
+      this.modal.options.html = this.generateModalHtml();
     }
   });
-
   return LinkModal;
 
 });
@@ -89711,31 +95159,54 @@ define('mockup-patterns-tinymce',[
   'text!mockup-patterns-tinymce-url/templates/selection.xml',
   'mockup-utils',
   'mockup-patterns-tinymce-url/js/links',
-  'mockup-i18n',
-  'tinymce-modern-theme', 'tinymce-advlist', 'tinymce-anchor', 'tinymce-autolink',
-  'tinymce-autoresize', 'tinymce-autosave', 'tinymce-bbcode', 'tinymce-charmap',
-  'tinymce-code', 'tinymce-colorpicker', 'tinymce-contextmenu', 'tinymce-directionality',
-  'tinymce-emoticons', 'tinymce-fullpage', 'tinymce-fullscreen', 'tinymce-hr',
-  'tinymce-image', 'tinymce-importcss', 'tinymce-insertdatetime', 'tinymce-layer',
-  'tinymce-legacyoutput', 'tinymce-link', 'tinymce-lists', 'tinymce-media',
-  'tinymce-nonbreaking', 'tinymce-noneditable', 'tinymce-pagebreak', 'tinymce-paste',
-  'tinymce-preview', 'tinymce-print', 'tinymce-save', 'tinymce-searchreplace',
-  'tinymce-spellchecker', 'tinymce-tabfocus', 'tinymce-table', 'tinymce-template',
-  'tinymce-textcolor', 'tinymce-textpattern', 'tinymce-visualblocks', 'tinymce-visualchars',
+  'translate',
+  'tinymce-modern-theme',
+  'tinymce-advlist',
+  'tinymce-anchor',
+  'tinymce-autolink',
+  'tinymce-autoresize',
+  'tinymce-autosave',
+  'tinymce-bbcode',
+  'tinymce-charmap',
+  'tinymce-code',
+  'tinymce-colorpicker',
+  'tinymce-contextmenu',
+  'tinymce-directionality',
+  'tinymce-emoticons',
+  'tinymce-fullpage',
+  'tinymce-fullscreen',
+  'tinymce-hr',
+  'tinymce-image',
+  'tinymce-importcss',
+  'tinymce-insertdatetime',
+  'tinymce-layer',
+  'tinymce-legacyoutput',
+  'tinymce-link',
+  'tinymce-lists',
+  'tinymce-media',
+  'tinymce-nonbreaking',
+  'tinymce-noneditable',
+  'tinymce-pagebreak',
+  'tinymce-paste',
+  'tinymce-preview',
+  'tinymce-print',
+  'tinymce-save',
+  'tinymce-searchreplace',
+  'tinymce-spellchecker',
+  'tinymce-tabfocus',
+  'tinymce-table',
+  'tinymce-template',
+  'tinymce-textcolor',
+  'tinymce-textpattern',
+  'tinymce-visualblocks',
+  'tinymce-visualchars',
   'tinymce-wordcount'
-], function($, _,
-            Base, RelatedItems, Modal, tinymce,
-            AutoTOC, ResultTemplate, SelectionTemplate,
-            utils, LinkModal, i18n) {
+], function($, _, Base, RelatedItems, Modal, tinymce, AutoTOC, ResultTemplate, SelectionTemplate, utils, LinkModal, _t) {
   
-
-
-
-  i18n.loadCatalog('widgets');
-  var _t = i18n.MessageFactory('widgets');
 
   var TinyMCE = Base.extend({
     name: 'tinymce',
+    trigger: '.pat-tinymce',
     defaults: {
       upload: {
         uploadMultiple: false,
@@ -89744,7 +95215,7 @@ define('mockup-patterns-tinymce',[
       },
       relatedItems: {
         // UID attribute is required here since we're working with related items
-        attributes: ['UID', 'Title', 'Description', 'getURL', 'Type', 'path', 'ModificationDate'],
+        attributes: ['UID', 'Title', 'Description', 'getURL', 'Type', 'path', 'ModificationDate', 'getIcon'],
         batchSize: 20,
         basePath: '/',
         vocabularyUrl: null,
@@ -89862,7 +95333,11 @@ define('mockup-patterns-tinymce',[
     generateImageUrl: function(data, scale) {
       var self = this;
       var url = self.generateUrl(data);
-      return url + self.options.prependToScalePart + scale + self.options.appendToScalePart;
+      if (scale !== ""){
+          url = (url + self.options.prependToScalePart + scale +
+                 self.options.appendToScalePart);
+      }
+      return url;
     },
     stripGeneratedUrl: function(url) {
       // to get original attribute back
@@ -90008,13 +95483,14 @@ define('mockup-patterns-tinymce',[
 define('mockup-patterns-textareamimetypeselector',[
   'jquery',
   'mockup-patterns-base',
-  'mockup-registry',
+  'pat-registry',
   'mockup-patterns-tinymce'
 ], function ($, Base, registry, tinymce) {
   
 
   var TextareaMimetypeSelector = Base.extend({
     name: 'textareamimetypeselector',
+    trigger: '.pat-textareamimetypeselector',
     textarea: undefined,
     currentWidget: undefined,
     defaults: {
@@ -90058,16 +95534,18 @@ define('mockup-patterns-textareamimetypeselector',[
 
 define('mockup-bundles-widgets',[
   'jquery',
-  'mockup-registry',
+  'pat-registry',
   'mockup-patterns-base',
+
   'mockup-patterns-select2',
   'mockup-patterns-passwordstrength',
   'mockup-patterns-pickadate',
+  'mockup-patterns-recurrence',
   'mockup-patterns-relateditems',
   'mockup-patterns-querystring',
   'mockup-patterns-textareamimetypeselector',
   'mockup-patterns-tinymce'
-], function($, Registry, Base) {
+], function($, registry, Base) {
   
 
   var PloneWidgets = Base.extend({
@@ -90081,10 +95559,11 @@ define('mockup-bundles-widgets',[
   if (window.parent === window) {
     $(document).ready(function() {
       $('body').addClass('pat-plone-widgets');
-      Registry.scan($('body'));
+      if (!registry.initialized) {
+        registry.init();
+      }
     });
   }
-
   return PloneWidgets;
 });
 
