@@ -749,7 +749,8 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
         args['pattern_options'] = dict_merge(
             get_relateditems_options(self.context, args['value'],
                                      self.separator, vocabulary_name,
-                                     self.vocabulary_view, field_name),
+                                     self.vocabulary_view, field_name,
+                                     widget=self),
             args['pattern_options'])
 
         if not self.vocabulary:  # widget vocab takes precedence over field

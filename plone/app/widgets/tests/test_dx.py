@@ -941,6 +941,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
             .getProperty.return_value = ['SomeType']
         widget = RelatedItemsWidget(self.request)
         widget.context = context
+        widget.selectable_types = ['SomeSelectableType', ]
         widget.update()
         self.assertEqual(
             {
@@ -949,6 +950,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'pattern': 'relateditems',
                 'pattern_options': {
                     'folderTypes': ['SomeType'],
+                    'selectableTypes': ['SomeSelectableType', ],
                     'homeText': u'Home',
                     'searchAllText': u'Entire site',
                     'searchText': u'Search',

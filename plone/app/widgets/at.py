@@ -484,7 +484,7 @@ class RelatedItemsWidget(BaseWidget):
         args['pattern_options'] = dict_merge(
             get_relateditems_options(context, args['value'], self.separator,
                                      self.vocabulary, self.vocabulary_view,
-                                     field.getName()),
+                                     field.getName(), widget=self),
             args['pattern_options'])
 
         return args
