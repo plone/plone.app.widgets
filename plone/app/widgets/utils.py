@@ -327,9 +327,6 @@ def get_tinymce_options(context, field, request):
         config['autoresize_min_height'] = config['theme_advanced_source_editor_height']
 
         args['pattern_options'] = {
-             'relatedItems': {
-                 'vocabularyUrl': config['portal_url'] +
-        args['pattern_options'] = {
             'relatedItems': {
                 'vocabularyUrl': config['portal_url'] +
                 '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
