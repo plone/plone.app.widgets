@@ -321,10 +321,17 @@ def get_tinymce_options(context, field, request):
 
         # respect resizing settings
         config['resize'] = utility.resizing
-        # XXX: the autoresize plugin is loaded always by the mockup pattern
-        # so the checkbox doesn't do anything ... all we do here is to remap
-        # the editor_height to autoresize_min_height
-        config['autoresize_min_height'] = config['theme_advanced_source_editor_height']
+        # XXX: the list of loaded plugins may change in plone-mockup
+        plugins = '-advlist -autolink -lists -charmap -print -preview ' \
+            '-anchor -searchreplace -visualblocks -code -fullscreen ' \
+            '-insertdatetime -media -table -contextmenu -paste ' \
+            '-plonelink -ploneimage'
+
+        if utility.autoresize:
+            plugins += ' -autoresize'
+            config['autoresize_min_height'] = config['theme_advanced_source_editor_height']
+
+        config["plugins"] = plugins
 
         args['pattern_options'] = {
             'relatedItems': {
