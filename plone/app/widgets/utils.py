@@ -187,11 +187,16 @@ def get_tinymce_options(context, field, request):
         # custom plugins such as collective.tinymceplugins.*
         del config['customplugins']
 
-        # remove the plugins selected in the "editor plugins" selection
-        # most of them got replaced in tinymce4 and plugins are not
-        # asynchronously loaded but contained in the mockup bundle anyway
-        del config['plugins']
+        # remove theme settings
         del config['theme']
+
+        # override config plugins settings
+        # XXX: the list of loaded plugins may change in plone-mockup
+        config['plugins'] = \
+            '-advlist -autolink -lists -charmap -print -preview ' \
+            '-anchor -searchreplace -visualblocks -code -fullscreen ' \
+            '-insertdatetime -media -table -contextmenu -paste ' \
+            '-plonelink -ploneimage'
 
         # FIXME: map old names to new names in the configuration for plone5
         # and notify migration-team
@@ -321,17 +326,10 @@ def get_tinymce_options(context, field, request):
 
         # respect resizing settings
         config['resize'] = utility.resizing
-        # XXX: the list of loaded plugins may change in plone-mockup
-        plugins = '-advlist -autolink -lists -charmap -print -preview ' \
-            '-anchor -searchreplace -visualblocks -code -fullscreen ' \
-            '-insertdatetime -media -table -contextmenu -paste ' \
-            '-plonelink -ploneimage'
 
         if utility.autoresize:
-            plugins += ' -autoresize'
+            config['plugins'] += ' -autoresize'
             config['autoresize_min_height'] = config['theme_advanced_source_editor_height']
-
-        config["plugins"] = plugins
 
         args['pattern_options'] = {
             'relatedItems': {
