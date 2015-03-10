@@ -1,16 +1,6 @@
 Changelog
 =========
 
-2.0 (unreleased)
-------------------
-
-- Include the ``plone.mockup`` integration package.
-  [thet]
-
-- Move z3c.form configuration to plone.app.z3cform.
-  [vangheem]
-
-
 1.8.0 (unreleased)
 ------------------
 
