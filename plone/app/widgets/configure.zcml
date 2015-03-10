@@ -15,7 +15,7 @@
   <include package="plone.app.vocabularies" />
   <include package="five.globalrequest" />
 
-  <include package="plone.mockup" />
+  <include package="mockup" />
 
   <utility
     name="ZPublisher.HTTPRequest.FileUpload"
