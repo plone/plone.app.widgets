@@ -36,7 +36,6 @@ setup(
     extras_require={
         'test': [
             'plone.app.robotframework[debug]',
-            'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing>=4.2.4',  # we need ROBOT_TEST_LEVEL
             'mock',
         ],
@@ -48,8 +47,6 @@ setup(
         'dexterity': [
             'pytz',
             'plone.app.dexterity',
-            'plone.app.contenttypes>=1.1b1',
-            'plone.app.event>=1.2',
         ],
     },
     entry_points="""
