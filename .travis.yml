@@ -4,14 +4,17 @@ sudo: false
 cache:
   directories:
   - eggs
-addons:
-  sauce_connect: true
+# addons:
+#   sauce_connect: true
 install:
 - python bootstrap.py
 - bin/buildout annotate
 - bin/buildout -Nq
 before_script:
 - export ROBOT_DESIRED_CAPABILITIES="$BROWSER,tunnel-identifier:$TRAVIS_JOB_NUMBER"
+- export DISPLAY=:99.0
+- sh -e /etc/init.d/xvfb start
+- firefox -v
 script:
 - bin/code-analysis
 - bin/test
@@ -19,24 +22,24 @@ after_success:
 - bin/createcoverage
 - pip install -q coveralls
 - coveralls
-env:
-  matrix:
-    - BROWSER="platform:OS X 10.8,browserName:iphone,version:6.1,device-orientation:portrait"
-    - BROWSER="platform:OS X 10.8,browserName:ipad,version:6.1,device-orientation:portrait"
-    - BROWSER="platform:Linux,browserName:android,version:4.0,device-type:tablet,device-orientation:portrait"
-    - BROWSER="platform:Windows 7,browserName:firefox,version:25"
-    - BROWSER="platform:Windows 7,browserName:chrome,version:31"
-    - BROWSER="platform:Windows 8.1,browserName:internet explorer,version:11"
-    - BROWSER="platform:Windows 7,browserName:internet explorer,version:10"
-    - BROWSER="platform:Windows 7,browserName:internet explorer,version:9"
-    - BROWSER="platform:Windows 7,browserName:internet explorer,version:8"
-    - BROWSER="platform:Windows 7,browserName:opera,version:12"
-    - BROWSER="platform:OS X 10.8,browserName:safari,version:6"
-  global:
-    - secure: "X9AvF9DYKjG/E52ZKQGxxrMe/Z1FsuwJU9jk39NLia3aA3WyFKuE66BotqeZGi9Jk0V2IQWekMgZcAFIcRH6qbvMKcMtnhD+Wr8aiV7uby3wRjmPi2FznTiy+FvYwm8WiNBHw4Ek++nSCDkly0QGBUmJVvfe3zxNHSHSKx5E/yg="
-    - secure: "CvB/BK4EhZIiruAuiIFw/Bn80Wv/5jGiS2tOCaXd54v7lhld2VBxyCfccIcizKlSkIXzDausw24zEF0HV4E6k4z8AB12h1DH/6p31+epbrvDnQOZ1Br2grusOqMbjOutRkJ0w+upI+BTaeSI9bmYXZQdpkLA5mJCv0sBbqi4SPA="
-    - ROBOT_BUILD_NUMBER=plone.app.widgets-travis-$TRAVIS_BUILD_NUMBER
-    - ROBOT_REMOTE_URL=http://$SAUCE_USERNAME:$SAUCE_ACCESS_KEY@ondemand.saucelabs.com:80/wd/hub
+# env:
+#   matrix:
+#     - BROWSER="platform:OS X 10.8,browserName:iphone,version:6.1,device-orientation:portrait"
+#     - BROWSER="platform:OS X 10.8,browserName:ipad,version:6.1,device-orientation:portrait"
+#     - BROWSER="platform:Linux,browserName:android,version:4.0,device-type:tablet,device-orientation:portrait"
+#     - BROWSER="platform:Windows 7,browserName:firefox,version:25"
+#     - BROWSER="platform:Windows 7,browserName:chrome,version:31"
+#     - BROWSER="platform:Windows 8.1,browserName:internet explorer,version:11"
+#     - BROWSER="platform:Windows 7,browserName:internet explorer,version:10"
+#     - BROWSER="platform:Windows 7,browserName:internet explorer,version:9"
+#     - BROWSER="platform:Windows 7,browserName:internet explorer,version:8"
+#     - BROWSER="platform:Windows 7,browserName:opera,version:12"
+#     - BROWSER="platform:OS X 10.8,browserName:safari,version:6"
+#   global:
+#     - secure: "X9AvF9DYKjG/E52ZKQGxxrMe/Z1FsuwJU9jk39NLia3aA3WyFKuE66BotqeZGi9Jk0V2IQWekMgZcAFIcRH6qbvMKcMtnhD+Wr8aiV7uby3wRjmPi2FznTiy+FvYwm8WiNBHw4Ek++nSCDkly0QGBUmJVvfe3zxNHSHSKx5E/yg="
+#     - secure: "CvB/BK4EhZIiruAuiIFw/Bn80Wv/5jGiS2tOCaXd54v7lhld2VBxyCfccIcizKlSkIXzDausw24zEF0HV4E6k4z8AB12h1DH/6p31+epbrvDnQOZ1Br2grusOqMbjOutRkJ0w+upI+BTaeSI9bmYXZQdpkLA5mJCv0sBbqi4SPA="
+#     - ROBOT_BUILD_NUMBER=plone.app.widgets-travis-$TRAVIS_BUILD_NUMBER
+#     - ROBOT_REMOTE_URL=http://$SAUCE_USERNAME:$SAUCE_ACCESS_KEY@ondemand.saucelabs.com:80/wd/hub
 matrix:
   allow_failures:
     - env: BROWSER="platform:OS X 10.8,browserName:iphone,version:6.1,device-orientation:portrait"
