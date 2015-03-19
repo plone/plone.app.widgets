@@ -1,3 +1,0 @@
-[buildout]
-extends =
-    develop.cfg

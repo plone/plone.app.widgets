@@ -1,25 +1,26 @@
 language: python
-python:
-  - 2.7
+python: 2.7
+sudo: false
+cache:
+  directories:
+  - eggs
 addons:
-  sauce_connect:
-    - username: $SAUCE_USERNAME
-    - access_key: $SAUCE_ACCESS_KEY
+  sauce_connect: true
 install:
-  - mkdir -p buildout-cache/downloads
-  - python bootstrap.py -c travis.cfg
-  - bin/buildout -N -t 3 -c travis.cfg
+- python bootstrap.py
+- bin/buildout annotate
+- bin/buildout -Nq
+before_script:
+- export ROBOT_DESIRED_CAPABILITIES="$BROWSER,tunnel-identifier:$TRAVIS_JOB_NUMBER"
 script:
-  - if [ "$BROWSER" != "code-analysis" ]; then export ROBOT_DESIRED_CAPABILITIES="$BROWSER,tunnel-identifier:$TRAVIS_JOB_NUMBER"; fi
-  - if [ "$BROWSER" != "code-analysis" ]; then bin/test -vvv --all; fi
-  - if [ "$BROWSER" == "code-analysis" ]; then bin/flake8 setup.py; fi
-  - if [ "$BROWSER" == "code-analysis" ]; then bin/flake8 plone; fi
-  - if [ "$BROWSER" == "code-analysis" ]; then bin/coverage run --source=plone.app.widgets --omit=plone/app/widgets/at_bbb.py,plone/app/widgets/dx_bbb.py,plone/app/widgets/dx_pac_bbb.py,plone/app/widgets/test\* bin/test --layer=\!PloneAppWidgetsLayer; fi
+- bin/code-analysis
+- bin/test
 after_success:
-  - bin/coveralls
+- bin/createcoverage
+- pip install -q coveralls
+- coveralls
 env:
   matrix:
-    - BROWSER="code-analysis"
     - BROWSER="platform:OS X 10.8,browserName:iphone,version:6.1,device-orientation:portrait"
     - BROWSER="platform:OS X 10.8,browserName:ipad,version:6.1,device-orientation:portrait"
     - BROWSER="platform:Linux,browserName:android,version:4.0,device-type:tablet,device-orientation:portrait"
@@ -47,3 +48,4 @@ matrix:
     - env: BROWSER="platform:Windows 7,browserName:internet explorer,version:8"
     - env: BROWSER="platform:Windows 7,browserName:opera,version:12"
     - env: BROWSER="platform:OS X 10.8,browserName:safari,version:6"
+  fast_finish: true
