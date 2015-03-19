@@ -173,16 +173,164 @@ def get_tinymce_options(context, field, request):
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
     if utility:
         # Plone 4.3
+        # map Products.TinyMCE settings meant for TinyMCE 3 to version 4
+        # see http://www.tinymce.com/wiki.php/Tutorial:Migration_guide_from_3.x
+        # and https://github.com/plone/plone.app.widgets/issues/72
         config = utility.getConfiguration(context=context,
                                           field=field,
                                           request=request)
 
-        config['content_css'] = config['portal_url'] + '/base.css'
+        if config['content_css'] == "":
+            config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
+
+        # FIXME: this might be needed in order to still load/support
+        # custom plugins such as collective.tinymceplugins.*
         del config['customplugins']
-        del config['plugins']
+
+        # remove theme settings
         del config['theme']
 
-        config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
+        # override config plugins settings
+        # XXX: the list of loaded plugins may change in plone-mockup
+        config['plugins'] = \
+            '-advlist -autolink -lists -charmap -print -preview ' \
+            '-anchor -searchreplace -visualblocks -code -fullscreen ' \
+            '-insertdatetime -media -table -contextmenu -paste ' \
+            '-plonelink -ploneimage'
+
+        # FIXME: map old names to new names in the configuration for plone5
+        # and notify migration-team
+        # http://www.tinymce.com/wiki.php/Controls
+        # also check for buttons no longer available, such as definitionlist
+        all_buttons = ['save', 'cut', 'copy', 'paste', 'pastetext',
+            'pasteword', 'undo', 'redo', 'search', 'replace', 'style', 'bold',
+            'italic', 'underline', 'strikethrough', 'sub', 'sup', 'forecolor',
+            'backcolor', 'justifyleft', 'justifycenter', 'justifyright',
+            'justifyfull', 'bullist', 'numlist', 'definitionlist', 'outdent',
+            'indent', 'tablecontrols', 'link', 'unlink', 'anchor', 'image',
+            'media', 'charmap', 'hr', 'advhr', 'insertdate', 'inserttime',
+            'emotions', 'nonbreaking', 'pagebreak', 'print', 'preview',
+            'spellchecker', 'removeformat', 'cleanup', 'visualaid',
+            'visualchars', 'attribs', 'code', 'fullscreen' ]
+        button_settings = dict()
+        # FIXME: rename buttons in configuration for plone5, these mappings
+        # are only done for plone4
+        mappings = dict(justifyleft='alignleft',
+                        justifycenter='aligncenter',
+                        justifyright='alignright',
+                        justifyfull='alignjustify',
+                        link='plonelink',
+                        tablecontrols='table',
+                        image='ploneimage',
+                        emotions='emoticons',
+                        sub='subscript',
+                        sup='superscript',
+                        visualaid='visualblocks',
+                        )
+        for button in all_buttons:
+            if button in mappings:
+                newname = mappings[button]
+                button_settings[newname] = button in config['buttons'] and newname or ''
+            else:
+                button_settings[button] = button in config['buttons'] and button or ''
+
+        if 'search' in config['buttons'] or 'replace' in config['buttons']:
+            button_settings['searchreplace'] = 'searchreplace'
+        else:
+            button_settings['searchreplace'] = ''
+
+        if 'insertdate' in config['buttons'] or 'inserttime' in config['buttons']:
+            button_settings['insertdatetime'] = 'insertdatetime'
+        else:
+            button_settings['insertdatetime'] = ''
+
+        button_settings['directionality'] = 'attribs' in config['buttons'] and 'ltr rtl' or ''
+        # TODO: mapping for spellchecker after plugin has been fixed
+
+        # FIXME: currently save button does not show up
+        if 'save' in config['buttons'] and getattr(aq_inner(context), 'checkCreationFlag', None):
+            if context.checkCreationFlag():
+                # hide save button on object creation
+                button_settings['save'] = ''
+
+        # these toolbar buttons are not available anymore:
+        # pasteword (cleanup is done by pastetext)
+        # cleanup
+        # definitionlist (plugin missing, might have been plone-specific)
+
+        # these need to be remapped or renamed
+        # FIXME: rename plone5 registry attributes + migration for these
+        # search replace -> searchreplace
+        # insertdate and inserttime -> insertdatetime
+        # attribs (has allowed to add dir="ltr" or lang="en) ->  ltr rtl (directionality plugin)
+        # visualaid -> visualblocks
+        # emotions -> emoticons
+
+        # buttons currently not working (probably plugin not loaded correctly)
+        # nonbreaking, pagebreak - do not show up
+        # emoticons - does not show up
+        # ltr, rtl (directionality plugin) - do not show up
+        # forecolor, backcolor - buttons do not show up
+        # spellchecker - button does not show up
+        # visualblocks - do not show any additional borders/lines around p / h2
+        # visualchars - does not show up
+        # nonbreaking and pagebreak - do not show up
+        toolbar = '{save} {cut} {copy} {paste} {pastetext} | ' \
+            '{undo} {redo} {searchreplace} | styleselect {removeformat} | ' \
+            '{bold} {italic} {underline} {strikethrough} {subscript} {superscript} | ' \
+            '{forecolor} {backcolor} | ' \
+            '{alignleft} {aligncenter} {alignright} {alignjustify} | ' \
+            '{bullist} {numlist} {outdent} {indent} | {table} | ' \
+            '{ploneimage} {unlink} {plonelink} {anchor} | ' \
+            '{charmap} {hr} {insertdatetime} {emoticons} {nonbreaking} {pagebreak} '\
+            '{print} {preview} {visualblocks} {visualchars} {directionality} | ' \
+            '{code} {fullscreen} spellchecker'.format(**button_settings)
+        config['toolbar'] = toolbar
+
+        # contextmenu is no longer available, use this setting for menubar
+        # FIXME: plone5 rename setting
+        # xxx toolbar_external (theme_advanced_toolbar_location not available in tiny 4)
+        if not config['contextmenu']:
+            config['menubar'] = ''
+        else:
+            # TODO: would be great to deactivate menuitems in case toolbar
+            # button has been deactivated
+            # esp makes sense for link and imagedialog, charmap and code-editor
+            config['menubar'] = 'edit {table} format tools view insert'.format(
+                table=button_settings['table'],
+                )
+
+        # map Plone4 TinyMCE "styles" (raw format) to TinyMCE 4 "style_formats"
+        # see http://www.tinymce.com/wiki.php/Configuration:style_formats
+        p_style_formats = []
+        u_styles = utility.styles and utility.styles.strip().split('\n') or []
+        for f in u_styles:
+            f_parts = f.split("|")
+            s_format = dict(title=f_parts[0])
+            # XXX: These node-types need review
+            if f_parts[1].lower() in ["span", "b", "i"]:
+                s_format['inline'] = f_parts[1].lower()
+            elif f_parts[1].lower() in ["tr", "th", "dt", "dd", "ol", "ul", "a"]:
+                s_format['selector'] = f_parts[1].lower()
+            else:
+                s_format['block'] = f_parts[1].lower()
+            if len(f_parts) > 2:
+                s_format['classes'] = f_parts[2]
+            p_style_formats.append(s_format)
+        if p_style_formats:
+            config["style_formats"] = [
+                dict(title=u"Plone Styles", items=p_style_formats),
+            ]
+            # XXX: Maybe there should be an option to merge default styles or not
+            config["style_formats_merge"] = "true"
+
+        # respect resizing settings
+        config['resize'] = utility.resizing
+
+        if utility.autoresize:
+            config['plugins'] += ' -autoresize'
+            config['autoresize_min_height'] = config['theme_advanced_source_editor_height']
+
         args['pattern_options'] = {
             'relatedItems': {
                 'vocabularyUrl': config['portal_url'] +

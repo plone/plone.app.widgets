@@ -4,8 +4,8 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
-- Include TinyMCE languages from mockup.
-  [petschki]
+- Include TinyMCE configuration from plone control panel (unfinished)
+  [frisi, petschki]
 
 - Raise minimum ``Products.CMFPlone`` requirement to 4.3.4 to ensure
   compatibility with jQuery 1.9+. jQuery 1.11.1 is included in recent
