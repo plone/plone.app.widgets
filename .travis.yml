@@ -5,9 +5,7 @@ cache:
   directories:
   - eggs
 addons:
-  sauce_connect:
-    - username: $SAUCE_USERNAME
-    - access_key: $SAUCE_ACCESS_KEY
+  sauce_connect: true
 install:
 - python bootstrap.py
 - bin/buildout annotate
