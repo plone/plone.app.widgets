@@ -4,9 +4,6 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
-- Enable TinyMCE 3 buttons configuration as TinyMCE4 toolbar.
-  [jensens]
-
 - Include TinyMCE languages from mockup.
   [petschki]
 

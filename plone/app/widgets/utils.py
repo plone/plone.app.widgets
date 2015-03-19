@@ -158,16 +158,6 @@ def get_querystring_options(context, querystring_view):
     }
 
 
-tiny_buttons_replacemap = {
-    'justifyleft': 'alignleft',
-    'justifycenter': 'aligncenter',
-    'justifyright': 'alignright',
-    'justifyfull': 'alignjustify',
-    'sub': 'subscript',
-    'sup': 'superscript',
-}
-
-
 def get_tinymce_options(context, field, request):
     args = {'pattern_options': {}}
     folder = context
@@ -192,18 +182,7 @@ def get_tinymce_options(context, field, request):
         del config['plugins']
         del config['theme']
 
-        if 'buttons' in config:
-            # replace v3 to v4
-            config['toolbar'] = []
-            for entry in config['buttons']:
-                config['toolbar'].append(
-                    tiny_buttons_replacemap.get(entry, entry)
-                )
-            config['toolbar'] = ' '.join(config['toolbar'])
-            del config['buttons']
-
-        config['content_css'] = \
-            '++resource++plone.app.widgets-tinymce-content.css'
+        config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
         args['pattern_options'] = {
             'relatedItems': {
                 'vocabularyUrl': config['portal_url'] +
