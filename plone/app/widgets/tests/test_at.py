@@ -22,14 +22,8 @@ from zope.globalrequest import setRequest
 
 import json
 import mock
-
-try:
-    import unittest2 as unittest
-except ImportError:  # pragma: nocover
-    import unittest  # pragma: nocover
-    assert unittest  # pragma: nocover
-
 import plone.uuid
+import unittest
 
 
 class BaseWidgetTests(unittest.TestCase):
