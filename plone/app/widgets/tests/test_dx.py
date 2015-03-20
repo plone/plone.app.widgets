@@ -35,15 +35,11 @@ from zope.schema import Set
 from zope.schema import TextLine
 from zope.schema import Tuple
 
-import mock
 import json
+import mock
 import pytz
+import unittest
 
-try:
-    import unittest2 as unittest
-except ImportError:  # pragma: nocover
-    import unittest  # pragma: nocover
-    assert unittest  # pragma: nocover
 
 try:
     from Products.CMFPlone.factory import _IMREALLYPLONE5  # noqa

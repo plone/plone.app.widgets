@@ -11,14 +11,22 @@ setup(
         open("CHANGES.rst").read(),
     ),
     classifiers=[
-        "Framework :: Plone",
-        "Programming Language :: Python",
+        'Development Status :: 5 - Production/Stable',
+        'Environment :: Web Environment',
+        'Framework :: Plone',
+        'Framework :: Plone :: 4.3',
+        'Intended Audience :: End Users/Desktop',
+        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+        'Operating System :: OS Independent',
+        'Programming Language :: JavaScript',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     keywords='plone widgets z3cform archetypes',
     author='Nathan Van Gheem',
     author_email='vangheem@gmail.com',
     url='https://github.com/plone/plone.app.widgets',
-    license='GPL',
     packages=find_packages(),
     namespace_packages=['plone', 'plone.app'],
     include_package_data=True,
@@ -35,7 +43,6 @@ setup(
     extras_require={
         'test': [
             'plone.app.robotframework[debug]',
-            'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing>=4.2.4',  # we need ROBOT_TEST_LEVEL
             'mock',
         ],
@@ -47,8 +54,6 @@ setup(
         'dexterity': [
             'pytz',
             'plone.app.dexterity',
-            'plone.app.contenttypes>=1.1b1',
-            'plone.app.event>=1.2',
         ],
     },
     entry_points="""

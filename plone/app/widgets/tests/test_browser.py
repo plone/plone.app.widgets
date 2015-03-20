@@ -25,14 +25,9 @@ from zope.interface import noLongerProvides
 
 import json
 import transaction
+import unittest
 
 _dir = os.path.dirname(__file__)
-
-try:
-    import unittest2 as unittest
-except ImportError:  # pragma: nocover
-    import unittest  # pragma: nocover
-    assert unittest  # pragma: nocover
 
 
 class PermissionChecker(object):
