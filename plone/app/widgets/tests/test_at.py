@@ -565,7 +565,6 @@ class TinyMCEWidgetTests(unittest.TestCase):
         self.assertEqual(base_args['value'], 'fieldvalue')
         self.assertEqual(base_args['pattern'], 'tinymce')
 
-    @unittest.skip('FIXME')
     @mock.patch(
         'Products.Archetypes.mimetype_utils.getDefaultContentType',
         new=lambda ctx: 'text/html')
@@ -584,7 +583,6 @@ class TinyMCEWidgetTests(unittest.TestCase):
         self.assertTrue('pat-tinymce' in rendered)
         self.assertTrue('data-pat-tinymce' in rendered)
 
-    @unittest.skip('FIXME')
     @mock.patch(
         'Products.Archetypes.mimetype_utils.getDefaultContentType',
         new=lambda ctx: 'text/html')
