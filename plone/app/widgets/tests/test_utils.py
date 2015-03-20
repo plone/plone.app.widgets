@@ -1,7 +1,11 @@
 from mock import Mock
 from mock import patch
 
-import unittest
+try:
+    import unittest2 as unittest
+except ImportError:  # pragma: nocover
+    import unittest  # pragma: nocover
+    assert unittest  # pragma: nocover
 
 
 class MockTool(Mock):
