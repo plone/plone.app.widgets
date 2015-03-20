@@ -4,11 +4,9 @@ project. It overrides explicit widgets used in dexterity and archetypes to
 provide tested and modularized widgets based on the concept of *patterns*.
 
 .. image:: https://travis-ci.org/plone/plone.app.widgets.png?branch=master
-    :alt: Travis CI badge
     :target: https://travis-ci.org/plone/plone.app.widgets
 
 .. image:: https://coveralls.io/repos/plone/plone.app.widgets/badge.png?branch=master
-    :alt: Coveralls badge
     :target: https://coveralls.io/r/plone/plone.app.widgets?branch=master
 
 .. image:: https://pypip.in/v/plone.app.widgets/badge.png
@@ -35,6 +33,20 @@ Is safe to use this package?
 This package should be safe to install and easy to uninstall (there is also
 uninstall profile). That means its fairly safe to give it a try, but just in
 case don't forget to create backup before testing it.
+
+As of version 1.4.0 there is quite comprehensive unittest coverage of python
+code as well as high coverage of our javascript code. There are also some robot
+tests which are testing integration with Plone, but this will be improved with
+future releases.
+
+This project will be integrated with Plone 5 and will never reach version
+2.0.0. You can monitor progress of `PLIP here`_.
+
+If you wonder why there is no Alpha/Beta marker in version, its because version
+of this package is kept in sync with other projects deriving from `Mockup`_
+(eg. `plone.app.toolbar`_).  Version 1.4.1 would then mean we're using
+`Mockup`_ version 1.4 and there was one bugfix only to the python code. Version
+packaged javascript inside is still in sync with `Mockup`_ project.
 
 
 What is included?
