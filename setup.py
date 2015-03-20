@@ -32,29 +32,33 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'setuptools',
-        # needed because we use bundles
-        'Products.ResourceRegistries>=2.1',
-        # nedded because users vocabulary was added here
-        'plone.app.vocabularies>=2.1.12dev',
-        # needed for compatibility with jQuery 1.9+
+        'five.globalrequest',
+        'plone.app.layout',
+        'plone.app.vocabularies',
+        'plone.namedfile',
         'Products.CMFPlone>=5.0.dev0',
-        'five.globalrequest'
+        'Products.ResourceRegistries',
+        'setuptools',
+        'zope.component',
+        'zope.interface',
+        'zope.schema',
     ],
     extras_require={
         'test': [
-            'plone.app.robotframework[debug]',
-            'plone.app.testing>=4.2.4',  # we need ROBOT_TEST_LEVEL
             'mock',
+            'plone.app.robotframework[debug]',
+            'plone.app.testing',
+            'plone.testing',
+            'robotsuite',
         ],
         'archetypes': [
+            'archetypes.schemaextender',
             'DateTime',
             'Products.Archetypes',
-            'archetypes.schemaextender',
         ],
         'dexterity': [
-            'pytz',
             'plone.app.dexterity',
+            'pytz',
         ],
     },
     entry_points="""
