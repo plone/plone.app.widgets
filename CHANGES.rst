@@ -4,6 +4,9 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Add Plone 5 warning.
+  [gforcada]
+
 - Include TinyMCE languages from mockup.
   [petschki]
 
