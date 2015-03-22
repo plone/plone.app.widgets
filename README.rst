@@ -1,3 +1,10 @@
+Warning
+=======
+In Plone 5,
+``plone.app.widgets`` is **obsolete** because it's merged into `plone.app.z3cform <https://github.com/plone/plone.app.z3cform>`_.
+
+Contents
+========
 The goal of ``plone.app.widgets`` is to provide an implementation for a new set
 of javascript widgets being developed outside Plone as part of `Mockup`_
 project. It overrides explicit widgets used in dexterity and archetypes to
