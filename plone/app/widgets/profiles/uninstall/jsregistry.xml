@@ -10,6 +10,7 @@
     <javascript bundle="default" id="calendar_formfield.js" />
     <javascript bundle="default" id="collapsibleformfields.js" />
     <javascript bundle="default" id="collapsiblesections.js" />
+    <javascript bundle="default" id="form_tabbing.js" />
     <javascript bundle="default" id="jquery.tinymce.js" />
     <javascript bundle="default" id="tiny_mce_gzip.js" />
 
