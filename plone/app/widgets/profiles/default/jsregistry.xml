@@ -13,6 +13,7 @@
     <javascript bundle="deprecated" id="form_tabbing.js" />
     <javascript bundle="deprecated" id="jquery.tinymce.js" />
     <javascript bundle="deprecated" id="tiny_mce_gzip.js" />
+    <javascript bundle="deprecated" id="toc.js" />
 
     <javascript
         id="++resource++plone.app.widgets.js"

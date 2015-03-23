@@ -4,8 +4,8 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
-- Add the ``form_tabbing.js`` script to the deprecated bundles. It's made
-  obsolete by ``mockup-patterns-autotoc``.
+- Add the ``form_tabbing.js`` and ``toc.js`` scripts to the deprecated bundles.
+  They're made obsolete by ``mockup-patterns-autotoc``.
   [thet]
 
 - Include TinyMCE configuration from plone control panel (unfinished)
