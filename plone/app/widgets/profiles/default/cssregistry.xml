@@ -10,8 +10,12 @@
 
 
     <stylesheet
-        cacheable="False" compression="none" cookable="True" enabled="True"
         id="++resource++plone.app.widgets.css"
+        cacheable="True"
+        compression="none"
+        cookable="True"
+        enabled="True"
+        applyPrefix="True"
         />
 
 </object>

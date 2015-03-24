@@ -18,9 +18,9 @@
     <javascript
         id="++resource++plone.app.widgets.js"
         insert-after="++resource++plone.app.jquery.js"
-        cacheable="False"
+        cacheable="True"
         compression="none"
-        cookable="False"
+        cookable="True"
         enabled="True"
         inline="False"
         />

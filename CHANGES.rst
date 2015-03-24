@@ -4,6 +4,10 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Allow the JavaScript and CSS resources to be cachable and cookable. Set
+  applyPrefix for the CSS resource.
+  [thet]
+
 - Add the ``form_tabbing.js`` and ``toc.js`` scripts to the deprecated bundles.
   They're made obsolete by ``mockup-patterns-autotoc``.
   [thet]
