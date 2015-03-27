@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.8.0 (unreleased)
+2.0.0 (2015-03-26)
 ------------------
 
 - Add Plone 5 warning.
