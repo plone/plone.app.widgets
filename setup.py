@@ -31,7 +31,8 @@ setup(
         'plone.app.vocabularies>=2.1.12dev',
         # needed for compatibility with jQuery 1.9+
         'Products.CMFPlone>=5.0.dev0',
-        'five.globalrequest'
+        'five.globalrequest',
+        'plone.app.z3cform'
     ],
     extras_require={
         'test': [
