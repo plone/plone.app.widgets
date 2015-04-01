@@ -160,15 +160,6 @@ def get_querystring_options(context, querystring_view):
 
 def get_tinymce_options(context, field, request):
     args = {'pattern_options': {}}
-    folder = context
-    if not IFolderish.providedBy(context):
-        folder = aq_parent(context)
-    if IPloneSiteRoot.providedBy(folder):
-        initial = None
-    else:
-        initial = IUUID(folder, None)
-    portal_url = get_portal_url(context)
-    current_path = folder.absolute_url()[len(portal_url):]
 
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
     if utility:
@@ -385,6 +376,16 @@ def get_tinymce_options(context, field, request):
             config['plugins'] += ' -autoresize'
             config['autoresize_min_height'] = config[
                 'theme_advanced_source_editor_height']
+
+        folder = context
+        if not IFolderish.providedBy(context):
+            folder = aq_parent(context)
+        if IPloneSiteRoot.providedBy(folder):
+            initial = None
+        else:
+            initial = IUUID(folder, None)
+        portal_url = get_portal_url(context)
+        current_path = folder.absolute_url()[len(portal_url):]
 
         args['pattern_options'] = {
             'relatedItems': {
