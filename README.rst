@@ -1,7 +1,7 @@
 Warning
 =======
-In Plone 5,
-``plone.app.widgets`` is **obsolete** because it's merged into `plone.app.z3cform <https://github.com/plone/plone.app.z3cform>`_.
+
+2.x is only to be used with Plone 5 and 1.x is to be used in Plone 4.3.
 
 Contents
 ========
@@ -27,12 +27,6 @@ provide tested and modularized widgets based on the concept of *patterns*.
 
 
 .. contents::
-
-
-Versions
-========
-
-2.x is only to be used with Plone 5 and 1.x is to be used in Plone 4.3.
 
 Is safe to use this package?
 ============================
