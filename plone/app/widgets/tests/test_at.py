@@ -4,8 +4,6 @@ from Products.Archetypes.atapi import BaseContent
 from Products.Archetypes.atapi import ReferenceField
 from Products.Archetypes.atapi import Schema
 from Products.Archetypes.atapi import StringField
-from Products.Archetypes.mimetype_utils import getAllowedContentTypes
-from Products.Archetypes.mimetype_utils import getDefaultContentType
 from Products.CMFCore.utils import getToolByName
 from datetime import datetime
 from mock import Mock
@@ -19,7 +17,6 @@ from plone.app.widgets.testing import TestRequest
 from plone.testing.zca import ZCML_DIRECTIVES
 from zope.configuration import xmlconfig
 from zope.globalrequest import setRequest
-
 import json
 import mock
 import plone.uuid

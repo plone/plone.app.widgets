@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from AccessControl import ClassSecurityInfo
 from DateTime import DateTime
 from Products.Archetypes.interfaces import IBaseObject
@@ -22,7 +21,6 @@ from plone.app.widgets.utils import get_tinymce_options
 from plone.uuid.interfaces import IUUID
 from zope.interface import implements
 from zope.component import adapts
-
 import json
 
 

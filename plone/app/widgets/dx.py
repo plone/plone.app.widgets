@@ -64,7 +64,6 @@ from zope.schema.interfaces import IField
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import ISequence
 from zope.security.interfaces import IPermission
-
 import pytz
 import json
 
@@ -74,7 +73,6 @@ try:
     HAS_PAC = True
 except ImportError:
     HAS_PAC = False
-
 
 try:
     from z3c.relationfield.interfaces import IRelationChoice

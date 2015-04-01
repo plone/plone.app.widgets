@@ -1,13 +1,12 @@
-from zope.component import adapts
-from zope.interface import implements
-from zope.i18nmessageid import MessageFactory
 from Products.ATContentTypes.interface import IATContentType
-from archetypes.schemaextender.interfaces import ISchemaModifier
 from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
-
-from plone.app.widgets.interfaces import IWidgetsLayer
+from archetypes.schemaextender.interfaces import ISchemaModifier
 from plone.app.widgets import at
+from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.utils import first_weekday
+from zope.component import adapts
+from zope.i18nmessageid import MessageFactory
+from zope.interface import implements
 
 _plone = MessageFactory('plone')
 
@@ -94,13 +93,13 @@ class MetadataExtender(object):
                     description=old.description
                 )
 
-        #if 'customViewFields' in schema:
-        #    field = schema['customViewFields']
-        #    widget = field.widget
-        #    field.widget = ChosenWidget(
-        #        label=widget.label,
-        #        description=widget.description,
-        #        js_options={
-        #            'allow_sortable': True
-        #        }
-        #    )
+        # if 'customViewFields' in schema:
+        #     field = schema['customViewFields']
+        #     widget = field.widget
+        #     field.widget = ChosenWidget(
+        #         label=widget.label,
+        #         description=widget.description,
+        #         js_options={
+        #             'allow_sortable': True
+        #         }
+        #     )

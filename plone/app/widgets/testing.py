@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from doctest import ELLIPSIS
 from doctest import NORMALIZE_WHITESPACE
 from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE

@@ -34,12 +34,10 @@ from zope.schema import List
 from zope.schema import Set
 from zope.schema import TextLine
 from zope.schema import Tuple
-
 import json
 import mock
 import pytz
 import unittest
-
 
 try:
     from Products.CMFPlone.factory import _IMREALLYPLONE5  # noqa

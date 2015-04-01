@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-
 from Acquisition import aq_inner, aq_parent
 from Products.CMFCore.interfaces import ISiteRoot
+from Products.CMFCore.interfaces._content import IFolderish
 from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone.interfaces import IPloneSiteRoot
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
+from plone.uuid.interfaces import IUUID
+from z3c.form.interfaces import IAddForm
+from zope.component import getMultiAdapter
 from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
-from z3c.form.interfaces import IAddForm
-from Products.CMFCore.interfaces._content import IFolderish
-from plone.uuid.interfaces import IUUID
-from Products.CMFPlone.interfaces import IPloneSiteRoot
-from zope.component import getMultiAdapter
 import json
 
 _ = MessageFactory('plone.app.widgets')
@@ -45,6 +44,7 @@ def first_weekday():
 
 
 class NotImplemented(Exception):
+
     """Raised when method/property is not implemented"""
 
 
@@ -132,7 +132,7 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     msgstr = translate(_(u'Entire site'), context=context.REQUEST)
     options.setdefault('searchAllText', msgstr)
     msgstr = translate(_plone('tabs_home',
-                       default=u'Home'),
+                              default=u'Home'),
                        context=context.REQUEST)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
@@ -181,7 +181,7 @@ def get_tinymce_options(context, field, request):
                                           request=request)
 
         if config['content_css'] == "":
-            config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'
+            config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'  # noqa
 
         # FIXME: this might be needed in order to still load/support
         # custom plugins such as collective.tinymceplugins.*
@@ -202,16 +202,60 @@ def get_tinymce_options(context, field, request):
         # and notify migration-team
         # http://www.tinymce.com/wiki.php/Controls
         # also check for buttons no longer available, such as definitionlist
-        all_buttons = ['save', 'cut', 'copy', 'paste', 'pastetext',
-            'pasteword', 'undo', 'redo', 'search', 'replace', 'style', 'bold',
-            'italic', 'underline', 'strikethrough', 'sub', 'sup', 'forecolor',
-            'backcolor', 'justifyleft', 'justifycenter', 'justifyright',
-            'justifyfull', 'bullist', 'numlist', 'definitionlist', 'outdent',
-            'indent', 'tablecontrols', 'link', 'unlink', 'anchor', 'image',
-            'media', 'charmap', 'hr', 'advhr', 'insertdate', 'inserttime',
-            'emotions', 'nonbreaking', 'pagebreak', 'print', 'preview',
-            'spellchecker', 'removeformat', 'cleanup', 'visualaid',
-            'visualchars', 'attribs', 'code', 'fullscreen' ]
+        all_buttons = [
+            'advhr',
+            'anchor',
+            'attribs',
+            'backcolor',
+            'bold',
+            'bullist',
+            'charmap',
+            'cleanup',
+            'code',
+            'copy',
+            'cut',
+            'definitionlist',
+            'emotions',
+            'forecolor',
+            'fullscreen',
+            'hr',
+            'image',
+            'indent',
+            'insertdate',
+            'inserttime',
+            'italic',
+            'justifycenter',
+            'justifyfull',
+            'justifyleft',
+            'justifyright',
+            'link',
+            'media',
+            'nonbreaking',
+            'numlist',
+            'outdent',
+            'pagebreak',
+            'paste',
+            'pastetext',
+            'pasteword',
+            'preview',
+            'print',
+            'redo',
+            'removeformat',
+            'replace',
+            'save',
+            'search',
+            'spellchecker',
+            'strikethrough',
+            'style',
+            'sub',
+            'sup',
+            'tablecontrols',
+            'underline',
+            'undo',
+            'unlink',
+            'visualaid',
+            'visualchars',
+        ]
         button_settings = dict()
         # FIXME: rename buttons in configuration for plone5, these mappings
         # are only done for plone4
@@ -230,25 +274,30 @@ def get_tinymce_options(context, field, request):
         for button in all_buttons:
             if button in mappings:
                 newname = mappings[button]
-                button_settings[newname] = button in config['buttons'] and newname or ''
+                button_settings[newname] = button in config[
+                    'buttons'] and newname or ''
             else:
-                button_settings[button] = button in config['buttons'] and button or ''
+                button_settings[button] = button in config[
+                    'buttons'] and button or ''
 
         if 'search' in config['buttons'] or 'replace' in config['buttons']:
             button_settings['searchreplace'] = 'searchreplace'
         else:
             button_settings['searchreplace'] = ''
 
-        if 'insertdate' in config['buttons'] or 'inserttime' in config['buttons']:
+        if 'insertdate' in config['buttons']\
+                or 'inserttime' in config['buttons']:
             button_settings['insertdatetime'] = 'insertdatetime'
         else:
             button_settings['insertdatetime'] = ''
 
-        button_settings['directionality'] = 'attribs' in config['buttons'] and 'ltr rtl' or ''
+        button_settings['directionality'] = 'attribs' in config[
+            'buttons'] and 'ltr rtl' or ''
         # TODO: mapping for spellchecker after plugin has been fixed
 
         # FIXME: currently save button does not show up
-        if 'save' in config['buttons'] and getattr(aq_inner(context), 'checkCreationFlag', None):
+        if 'save' in config['buttons']\
+                and getattr(aq_inner(context), 'checkCreationFlag', None):
             if context.checkCreationFlag():
                 # hide save button on object creation
                 button_settings['save'] = ''
@@ -262,7 +311,8 @@ def get_tinymce_options(context, field, request):
         # FIXME: rename plone5 registry attributes + migration for these
         # search replace -> searchreplace
         # insertdate and inserttime -> insertdatetime
-        # attribs (has allowed to add dir="ltr" or lang="en) ->  ltr rtl (directionality plugin)
+        # attribs (has allowed to add dir="ltr" or lang="en) ->
+        #   ltr rtl (directionality plugin)
         # visualaid -> visualblocks
         # emotions -> emoticons
 
@@ -289,7 +339,8 @@ def get_tinymce_options(context, field, request):
 
         # contextmenu is no longer available, use this setting for menubar
         # FIXME: plone5 rename setting
-        # xxx toolbar_external (theme_advanced_toolbar_location not available in tiny 4)
+        # xxx toolbar_external (theme_advanced_toolbar_location not available
+        # in tiny 4)
         if not config['contextmenu']:
             config['menubar'] = ''
         else:
@@ -298,7 +349,7 @@ def get_tinymce_options(context, field, request):
             # esp makes sense for link and imagedialog, charmap and code-editor
             config['menubar'] = 'edit {table} format tools view insert'.format(
                 table=button_settings['table'],
-                )
+            )
 
         # map Plone4 TinyMCE "styles" (raw format) to TinyMCE 4 "style_formats"
         # see http://www.tinymce.com/wiki.php/Configuration:style_formats
@@ -310,7 +361,9 @@ def get_tinymce_options(context, field, request):
             # XXX: These node-types need review
             if f_parts[1].lower() in ["span", "b", "i"]:
                 s_format['inline'] = f_parts[1].lower()
-            elif f_parts[1].lower() in ["tr", "th", "dt", "dd", "ol", "ul", "a"]:
+            elif f_parts[1].lower() in [
+                    "tr", "th", "dt", "dd", "ol", "ul", "a"
+            ]:
                 s_format['selector'] = f_parts[1].lower()
             else:
                 s_format['block'] = f_parts[1].lower()
@@ -321,7 +374,8 @@ def get_tinymce_options(context, field, request):
             config["style_formats"] = [
                 dict(title=u"Plone Styles", items=p_style_formats),
             ]
-            # XXX: Maybe there should be an option to merge default styles or not
+            # XXX: Maybe there should be an option to merge default styles or
+            # not
             config["style_formats_merge"] = "true"
 
         # respect resizing settings
@@ -329,7 +383,8 @@ def get_tinymce_options(context, field, request):
 
         if utility.autoresize:
             config['plugins'] += ' -autoresize'
-            config['autoresize_min_height'] = config['theme_advanced_source_editor_height']
+            config['autoresize_min_height'] = config[
+                'theme_advanced_source_editor_height']
 
         args['pattern_options'] = {
             'relatedItems': {
@@ -351,10 +406,10 @@ def get_tinymce_options(context, field, request):
             'prependToUrl': 'resolveuid/',
             'linkAttribute': 'UID',
             'prependToScalePart': '/@@images/image/',
-            'folderTypes': utility.containsobjects.replace('\n', ','),
-            'imageTypes': utility.imageobjects.replace('\n', ','),
+            'folderTypes': utility.containsobjects.split('\n'),
+            'imageTypes': utility.imageobjects.split('\n'),
             'anchorSelector': utility.anchor_selector,
-            'linkableTypes': utility.linkable.replace('\n', ',')
+            'linkableTypes': utility.linkable.split('\n')
         }
     else:
         # Plone 5

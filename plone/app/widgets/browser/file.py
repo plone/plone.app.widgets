@@ -1,9 +1,14 @@
 from Products.CMFCore.utils import getToolByName
 from Products.Five.browser import BrowserView
-
+from plone.app.widgets.interfaces import IATCTFileFactory
+from plone.app.widgets.interfaces import IDXFileFactory
+from plone.uuid.interfaces import IUUID
 import json
-import pkg_resources
+import logging
 import mimetypes
+import os
+import pkg_resources
+
 try:
     pkg_resources.get_distribution('plone.dexterity')
 except pkg_resources.DistributionNotFound:
@@ -11,10 +16,6 @@ except pkg_resources.DistributionNotFound:
 else:
     from plone.dexterity.interfaces import IDexterityFTI
     HAS_DEXTERITY = True
-from plone.app.widgets.interfaces import IATCTFileFactory, IDXFileFactory
-from plone.uuid.interfaces import IUUID
-import os
-import logging
 
 logger = logging.getLogger('plone')
 
