@@ -1,5 +1,5 @@
 /** vim: et:ts=4:sw=4:sts=4
- * @license RequireJS 2.1.16 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
+ * @license RequireJS 2.1.17 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/requirejs for details
  */
@@ -12,7 +12,7 @@ var requirejs, require, define;
 (function (global) {
     var req, s, head, baseElement, dataMain, src,
         interactiveScript, currentlyAddingScript, mainScript, subPath,
-        version = '2.1.16',
+        version = '2.1.17',
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
         jsSuffixRegExp = /\.js$/,
@@ -244,7 +244,7 @@ var requirejs, require, define;
                     // still work when converted to a path, even though
                     // as an ID it is less than ideal. In larger point
                     // releases, may be better to just kick out an error.
-                    if (i === 0 || (i == 1 && ary[2] === '..') || ary[i - 1] === '..') {
+                    if (i === 0 || (i === 1 && ary[2] === '..') || ary[i - 1] === '..') {
                         continue;
                     } else if (i > 0) {
                         ary.splice(i - 1, 2);
@@ -12921,7 +12921,7 @@ define('pat-compat',[],function() {
     {
         Array.prototype.every = function(fun /*, thisp */)
         {
-            
+            "use strict";
 
             if (this === null)
                 throw new TypeError();
@@ -12946,7 +12946,7 @@ define('pat-compat',[],function() {
     // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter (JS 1.6)
     if (!Array.prototype.filter) {
         Array.prototype.filter = function(fun /*, thisp */) {
-            
+            "use strict";
 
             if (this === null)
                 throw new TypeError();
@@ -13037,7 +13037,7 @@ define('pat-compat',[],function() {
     // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf (JS 1.6)
     if (!Array.prototype.indexOf) {
         Array.prototype.indexOf = function (searchElement /*, fromIndex */ ) {
-            
+            "use strict";
             if (this === null) {
                 throw new TypeError();
             }
@@ -13072,7 +13072,7 @@ define('pat-compat',[],function() {
     // https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf (JS 1.6)
     if (!Array.prototype.lastIndexOf) {
         Array.prototype.lastIndexOf = function(searchElement /*, fromIndex*/) {
-            
+            "use strict";
 
             if (this === null)
                 throw new TypeError();
@@ -13212,7 +13212,7 @@ define('pat-compat',[],function() {
     {
         Array.prototype.reduceRight = function(callbackfn /*, initialValue */)
         {
-            
+            "use strict";
 
             if (this === null)
                 throw new TypeError();
@@ -13266,7 +13266,7 @@ define('pat-compat',[],function() {
     {
         Array.prototype.some = function(fun /*, thisp */)
         {
-            
+            "use strict";
 
             if (this === null)
                 throw new TypeError();
@@ -13711,12 +13711,12 @@ define('pat-registry',[
 
     while ((match=disable_re.exec(window.location.search)) !== null) {
         disabled[match[1]] = true;
-        log.info('Pattern disabled via url config:', match[1]);
+        log.info("Pattern disabled via url config:", match[1]);
     }
 
     while ((match=dont_catch_re.exec(window.location.search)) !== null) {
         dont_catch = true;
-        log.info('I will not catch init exceptions');
+        log.info("I will not catch init exceptions");
     }
 
     var registry = {
@@ -13728,14 +13728,20 @@ define('pat-registry',[
         initialized: false,
         init: function registry_init() {
             $(document).ready(function() {
-                log.info('loaded: ' + Object.keys(registry.patterns).sort().join(', '));
+                log.info("loaded: " + Object.keys(registry.patterns).sort().join(", "));
                 registry.scan(document.body);
                 registry.initialized = true;
-                log.info('finished initial scan.');
+                log.info("finished initial scan.");
             });
         },
 
-        scan: function registry_scan(content, patterns, trigger) {
+        clear: function clearRegistry() {
+            // Removes all patterns from the registry. Currently only being
+            // used in tests.
+            this.patterns = {};
+        },
+
+        scan: function registryScan(content, patterns, trigger) {
             var $content = $(content),
                 all = [], allsel,
                 $match, plog;
@@ -13746,7 +13752,7 @@ define('pat-registry',[
             // selector for all patterns
             patterns.forEach(function registry_scan_loop(name) {
                 if (disabled[name]) {
-                    log.debug('Skipping disabled pattern:', name);
+                    log.debug("Skipping disabled pattern:", name);
                     return;
                 }
                 var pattern = registry.patterns[name];
@@ -13765,7 +13771,7 @@ define('pat-registry',[
             // Find all elements that belong to any pattern.
             allsel = all.join(",");
             $match = $content.findInclusive(allsel);
-            $match = $match.filter(function() { return $(this).parents('pre').length === 0; });
+            $match = $match.filter(function() { return $(this).parents("pre").length === 0; });
             $match = $match.filter(":not(.cant-touch-this)");
 
             // walk list backwards and initialize patterns inside-out.
@@ -13788,7 +13794,7 @@ define('pat-registry',[
                     }
                 }
             }, null);
-            $('body').addClass('patterns-loaded');
+            $("body").addClass("patterns-loaded");
         },
 
         register: function registry_register(pattern, name) {
@@ -13838,7 +13844,7 @@ define('pat-registry',[
 define('mockup-parser',[
   'jquery'
 ], function($) {
-  
+  'use strict';
 
   var parser = {
     getOptions: function getOptions($el, patternName, options) {
@@ -13887,7 +13893,7 @@ define('mockup-patterns-base',[
   'mockup-parser',
   "pat-logger"
 ], function($, Registry, mockupParser, logger) {
-  
+  'use strict';
   var log = logger.getLogger("Mockup Base");
 
   var initMockup = function initMockup($el, options, trigger) {
@@ -13895,10 +13901,15 @@ define('mockup-patterns-base',[
     var log = logger.getLogger("pat." + name);
     var pattern = $el.data('pattern-' + name);
     if (pattern === undefined && Registry.patterns[name]) {
+      options = this.prototype.parser === "mockup" ? mockupParser.getOptions($el, name, options) : options;
       try {
-          pattern = new Registry.patterns[name]($el, mockupParser.getOptions($el, name, options));
+          pattern = new Registry.patterns[name]($el, options);
       } catch (e) {
           log.error('Failed while initializing "' + name + '" pattern.');
+          if (window.DEBUG) {
+            // don't swallow errors in DEBUG mode.
+            log.error(e);
+          }
       }
       $el.data('pattern-' + name, pattern);
     }
@@ -13909,7 +13920,7 @@ define('mockup-patterns-base',[
   var Base = function($el, options) {
     this.$el = $el;
     this.options = $.extend(true, {}, this.defaults || {}, options || {});
-    this.init();
+    this.init($el, options);
     this.emit('init');
   };
 
@@ -13960,6 +13971,9 @@ define('mockup-patterns-base',[
     var Surrogate = function() { this.constructor = child; };
     Surrogate.prototype = parent.prototype;
     child.prototype = new Surrogate();
+
+    // Fall back to mockup parser if not specified otherwise.
+    patternProps.parser = patternProps.parser || 'mockup';
 
     // Add pattern's configuration properties (instance properties) to the subclass,
     $.extend(true, child.prototype, patternProps);
@@ -14022,7 +14036,7 @@ the specific language governing permissions and limitations under the Apache Lic
 })(jQuery);
 
 (function ($, undefined) {
-    
+    "use strict";
     /*global document, window, jQuery, console */
 
     if (window.Select2 !== undefined) {
@@ -18282,7 +18296,7 @@ define('mockup-patterns-select2',[
   'jquery.event.drag',
   'jquery.event.drop'
 ], function($, Base) {
-  
+  'use strict';
 
   var Select2 = Base.extend({
     name: 'select2',
@@ -18533,7 +18547,7 @@ define('mockup-patterns-passwordstrength',[
   'jquery',
   'mockup-patterns-base'
 ], function($, Base) {
-  
+  'use strict';
   function loadScript(src) {
        var s, i,
            scripts = document.getElementsByTagName('script');
@@ -21843,7 +21857,7 @@ Picker.extend( 'pickatime', TimePicker )
 define('mockup-i18n',[
   'jquery'
 ], function($) {
-  
+  'use strict';
 
   var I18N = function() {
     var self = this;
@@ -21959,7 +21973,7 @@ define('mockup-i18n',[
 define('translate',[
   'mockup-i18n'
 ], function(i18n) {
-  
+  'use strict';
   i18n.loadCatalog('widgets');
   return i18n.MessageFactory('widgets');
 });
@@ -22057,7 +22071,7 @@ define('mockup-patterns-pickadate',[
   'mockup-patterns-select2',
   'translate'
 ], function($, Base, Picker, PickerDate, PickerTime, Select2, _t) {
-  
+  'use strict';
 
   var PickADate = Base.extend({
     name: 'pickadate',
@@ -26248,7 +26262,7 @@ define('mockup-patterns-recurrence',[
   'mockup-patterns-base',
   'jquery.recurrenceinput'
 ], function($, Base) {
-  
+  'use strict';
 
   var Recurrence = Base.extend({
     name: 'recurrence',
@@ -31259,7 +31273,7 @@ define('mockup-patterns-recurrence',[
 define('mockup-utils',[
   'jquery'
 ], function($) {
-  
+  'use strict';
 
   var QueryHelper = function(options) {
     /* if pattern argument provided, it can implement the interface of:
@@ -31273,7 +31287,7 @@ define('mockup-utils',[
       pattern: null, // must be passed in
       vocabularyUrl: null,
       searchParam: 'SearchableText', // query string param to pass to search url
-      attributes: ['UID','Title', 'Description', 'getURL', 'Type'],
+      attributes: ['UID', 'Title', 'Description', 'getURL', 'portal_type'],
       batchSize: 10, // number of results to retrive
       baseCriteria: [],
       pathDepth: 1
@@ -34677,7 +34691,7 @@ define('mockup-patterns-tree',[
   'mockup-utils',
   'jqtree'
 ], function($, _, Base, utils) {
-  
+  'use strict';
 
   var Tree = Base.extend({
     name: 'tree',
@@ -34733,8 +34747,9 @@ define('mockup-patterns-tree',[
  *
  * Options:
  *    vocabularyUrl(string): This is a URL to a JSON-formatted file used to populate the list (null)
- *    attributes(array): This list is passed to the server during an AJAX request to specify the attributes which should be included on each item. (['UID', 'Title', 'Type', 'path'])
+ *    attributes(array): This list is passed to the server during an AJAX request to specify the attributes which should be included on each item. (['UID', 'Title', 'portal_type', 'path'])
  *    basePath(string): If this is set the widget will start in "Browse" mode and will pass the path to the server to filter the results. ('/')
+ *    mode(string): Possible values: 'search', 'browse'. If set to 'search', the catalog is searched for a searchterm. If set to 'browse', browsing starts at basePath. Default: 'search'.
  *    breadCrumbTemplate(string): Template to use for a single item in the breadcrumbs. ('/<a href="<%= path %>"><%= text %></a>')
  *    breadCrumbTemplateSelector(string): Select an element from the DOM from which to grab the breadCrumbTemplate. (null)
  *    breadCrumbsTemplate(string): Template for element to which breadCrumbs will be appended. ('<span><span class="pattern-relateditems-path-label"><%= searchText %></span><a class="icon-home" href="/"></a><%= items %></span>')
@@ -34810,7 +34825,7 @@ define('mockup-patterns-relateditems',[
   'mockup-patterns-tree',
   'translate'
 ], function($, _, Base, Select2, utils, Tree, _t) {
-  
+  'use strict';
 
   var RelatedItems = Base.extend({
     name: 'relateditems',
@@ -34833,12 +34848,12 @@ define('mockup-patterns-relateditems',[
       homeText: _t('home'),
       folderTypes: ['Folder'],
       selectableTypes: null, // null means everything is selectable, otherwise a list of strings to match types that are selectable
-      attributes: ['UID', 'Title', 'Type', 'path', 'getIcon'],
+      attributes: ['UID', 'Title', 'portal_type', 'path', 'getIcon'],
       dropdownCssClass: 'pattern-relateditems-dropdown',
       maximumSelectionSize: -1,
       resultTemplate: '' +
-        '<div class="pattern-relateditems-result pattern-relateditems-type-<%= Type %> <% if (selected) { %>pattern-relateditems-active<% } %>">' +
-        '  <a href="#" class="pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %> contenttype-<%= Type.toLowerCase() %>">' +
+        '<div class="pattern-relateditems-result pattern-relateditems-type-<%= portal_type %> <% if (selected) { %>pattern-relateditems-active<% } %>">' +
+        '  <a href="#" class="pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %> contenttype-<%= portal_type.toLowerCase() %>">' +
         '    <% if (getIcon) { %><span class="pattern-relateditems-result-icon"><img src="<%= getIcon %>" /></span><% } %>' +
         '    <span class="pattern-relateditems-result-title"><%= Title %></span>' +
         '    <span class="pattern-relateditems-result-path"><%= path %></span>' +
@@ -34851,7 +34866,7 @@ define('mockup-patterns-relateditems',[
         '</div>',
       resultTemplateSelector: null,
       selectionTemplate: '' +
-        '<span class="pattern-relateditems-item pattern-relateditems-type-<%= Type %>">' +
+        '<span class="pattern-relateditems-item pattern-relateditems-type-<%= portal_type %>">' +
         ' <% if (getIcon) { %><span class="pattern-relateditems-result-icon"><img src="<%= getIcon %>" /></span><% } %>' +
         ' <span class="pattern-relateditems-item-title"><%= Title %></span>' +
         ' <span class="pattern-relateditems-item-path"><%= path %></span>' +
@@ -34970,11 +34985,13 @@ define('mockup-patterns-relateditems',[
         dataFilter: function(data) {
           var nodes = [];
           _.each(data.results, function(item) {
-            nodes.push({
+            var node = {
               label: item.Title,
               id: item.UID,
-              path: item.path
-            });
+              path: item.path,
+              folder: self.options.folderTypes.indexOf(item.portal_type) !== -1
+            };
+            nodes.push(node);
           });
           return nodes;
         }
@@ -34984,8 +35001,17 @@ define('mockup-patterns-relateditems',[
         if (node && !node._loaded) {
           self.currentPath = node.path;
           selectedNode = node;
-          treePattern.$el.tree('loadDataFromUrl', self.treeQuery.getUrl(), node);
+          treePattern.$el.tree('loadDataFromUrl', self.treeQuery.getUrl(), node, function(){
+            treePattern.$el.tree('openNode', node);
+          });
           node._loaded = true;
+        }
+      });
+      treePattern.$el.bind('tree.dblclick', function(e){
+        if(e.node){
+          self.currentPath = e.node.path;
+          self.browseTo(self.currentPath);
+          $treeContainer.fadeOut();
         }
       });
       treePattern.$el.bind('tree.refresh', function() {
@@ -35045,7 +35071,7 @@ define('mockup-patterns-relateditems',[
       if (self.options.selectableTypes === null) {
         return true;
       } else {
-        return _.indexOf(self.options.selectableTypes, item.Type) > -1;
+        return _.indexOf(self.options.selectableTypes, item.portal_type) > -1;
       }
     },
     init: function() {
@@ -35058,7 +35084,7 @@ define('mockup-patterns-relateditems',[
         $.extend(true, {}, self.options, {
           pattern: self,
           baseCriteria: [{
-            i: 'Type',
+            i: 'portal_type',
             o: 'plone.app.querystring.operation.list.contains',
             v: self.options.folderTypes
           }]
@@ -35081,7 +35107,7 @@ define('mockup-patterns-relateditems',[
       Select2.prototype.initializeOrdering.call(self);
 
       self.options.formatResult = function(item) {
-        if (!item.Type || _.indexOf(self.options.folderTypes, item.Type) === -1) {
+        if (!item.portal_type || _.indexOf(self.options.folderTypes, item.portal_type) === -1) {
           item.folderish = false;
         } else {
           item.folderish = true;
@@ -35240,7 +35266,7 @@ define('mockup-patterns-querystring',[
   'select2',
   'translate'
 ], function($, Base, Select2, PickADate, undefined, _t) {
-  
+  'use strict';
 
   var Criteria = function() { this.init.apply(this, arguments); };
   Criteria.prototype = {
@@ -35935,7 +35961,7 @@ define('mockup-patterns-backdrop',[
   'jquery',
   'mockup-patterns-base'
 ], function($, Base) {
-  
+  'use strict';
 
   var Backdrop = Base.extend({
     name: 'backdrop',
@@ -37620,7 +37646,7 @@ define('mockup-router',[
   'underscore',
   'backbone'
 ], function($, _, Backbone) {
-  
+  'use strict';
 
   var regexEscape = function(s) {
     return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -37725,7 +37751,7 @@ define('mockup-router',[
 }
 
 (function($) {
-
+"use strict";
 
 /*
     Usage Note:
@@ -39000,7 +39026,7 @@ define('mockup-patterns-modal',[
   'mockup-utils',
   'jquery.form'
 ], function($, _, Base, Backdrop, registry, Router, utils) {
-  
+  'use strict';
 
   var Modal = Base.extend({
     name: 'modal',
@@ -39791,7 +39817,7 @@ define("tinymce", [], function() {
 /*globals $code */
 
 (function(exports, undefined) {
-	
+	"use strict";
 
 	var modules = {};
 
@@ -39886,7 +39912,7 @@ define("tinymce", [], function() {
  * @class tinymce.dom.EventUtils
  */
 define("tinymce/dom/EventUtils", [], function() {
-	
+	"use strict";
 
 	var eventExpandoPrefix = "mce-data-";
 	var mouseEventRe = /^(?:mouse|contextmenu)|click/;
@@ -46212,7 +46238,7 @@ define("tinymce/html/Entities", [
  * @private
  */
 define("tinymce/dom/StyleSheetLoader", [], function() {
-	
+	"use strict";
 
 	return function(document, settings) {
 		var idCount = 0, loadedStates = {}, maxLoadTime;
@@ -60939,7 +60965,7 @@ define("tinymce/util/EventDispatcher", [
 define("tinymce/ui/Selector", [
 	"tinymce/util/Class"
 ], function(Class) {
-	
+	"use strict";
 
 	/**
 	 * Produces an array with a unique set of objects. It will not compare the values
@@ -61293,7 +61319,7 @@ define("tinymce/ui/Collection", [
 	"tinymce/ui/Selector",
 	"tinymce/util/Class"
 ], function(Tools, Selector, Class) {
-	
+	"use strict";
 
 	var Collection, proto, push = Array.prototype.push, slice = Array.prototype.slice;
 
@@ -61716,7 +61742,7 @@ define("tinymce/ui/DomUtils", [
 	"tinymce/util/Tools",
 	"tinymce/dom/DOMUtils"
 ], function(Tools, DOMUtils) {
-	
+	"use strict";
 
 	var count = 0;
 
@@ -61831,7 +61857,7 @@ define("tinymce/ui/Control", [
 	"tinymce/ui/Collection",
 	"tinymce/ui/DomUtils"
 ], function(Class, Tools, EventDispatcher, Collection, DomUtils) {
-	
+	"use strict";
 
 	var hasMouseWheelEventSupport = "onmousewheel" in document;
 	var hasWheelEventSupport = false;
@@ -63309,7 +63335,7 @@ define("tinymce/ui/Control", [
  * @class tinymce.ui.Factory
  */
 define("tinymce/ui/Factory", [], function() {
-	
+	"use strict";
 
 	var types = {}, namespaceInit;
 
@@ -63413,7 +63439,7 @@ define("tinymce/ui/Factory", [], function() {
  */
 define("tinymce/ui/KeyboardNavigation", [
 ], function() {
-	
+	"use strict";
 
 	/**
 	 * This class handles all keyboard navigation for WAI-ARIA support. Each root container
@@ -63825,7 +63851,7 @@ define("tinymce/ui/Container", [
 	"tinymce/util/Tools",
 	"tinymce/ui/DomUtils"
 ], function(Control, Collection, Selector, Factory, KeyboardNavigation, Tools, DomUtils) {
-	
+	"use strict";
 
 	var selectorCache = {};
 
@@ -64325,7 +64351,7 @@ define("tinymce/ui/Container", [
 define("tinymce/ui/DragHelper", [
 	"tinymce/ui/DomUtils"
 ], function(DomUtils) {
-	
+	"use strict";
 
 	function getDocumentSize() {
 		var doc = document, documentElement, body, scrollWidth, clientWidth;
@@ -64453,7 +64479,7 @@ define("tinymce/ui/Scrollable", [
 	"tinymce/ui/DomUtils",
 	"tinymce/ui/DragHelper"
 ], function(DomUtils, DragHelper) {
-	
+	"use strict";
 
 	return {
 		init: function() {
@@ -64607,7 +64633,7 @@ define("tinymce/ui/Panel", [
 	"tinymce/ui/Container",
 	"tinymce/ui/Scrollable"
 ], function(Container, Scrollable) {
-	
+	"use strict";
 
 	return Container.extend({
 		Defaults: {
@@ -64673,7 +64699,7 @@ define("tinymce/ui/Panel", [
 define("tinymce/ui/Movable", [
 	"tinymce/ui/DomUtils"
 ], function(DomUtils) {
-	
+	"use strict";
 
 	function calculateRelativePosition(ctrl, targetElm, rel) {
 		var ctrlElm, pos, x, y, selfW, selfH, targetW, targetH, viewport, size;
@@ -64876,7 +64902,7 @@ define("tinymce/ui/Movable", [
 define("tinymce/ui/Resizable", [
 	"tinymce/ui/DomUtils"
 ], function(DomUtils) {
-	
+	"use strict";
 
 	return {
 		/**
@@ -64954,7 +64980,7 @@ define("tinymce/ui/FloatPanel", [
 	"tinymce/ui/Resizable",
 	"tinymce/ui/DomUtils"
 ], function(Panel, Movable, Resizable, DomUtils) {
-	
+	"use strict";
 
 	var documentClickHandler, documentScrollHandler, windowResizeHandler, visiblePanels = [];
 	var zOrder = [], hasModal;
@@ -65355,7 +65381,7 @@ define("tinymce/ui/Window", [
 	"tinymce/ui/DomUtils",
 	"tinymce/ui/DragHelper"
 ], function(FloatPanel, Panel, DomUtils, DragHelper) {
-	
+	"use strict";
 
 	var Window = FloatPanel.extend({
 		modal: true,
@@ -65738,7 +65764,7 @@ define("tinymce/ui/Window", [
 define("tinymce/ui/MessageBox", [
 	"tinymce/ui/Window"
 ], function(Window) {
-	
+	"use strict";
 
 	var MessageBox = Window.extend({
 		/**
@@ -70063,7 +70089,7 @@ define("tinymce/Editor", [
  * @class tinymce.util.I18n
  */
 define("tinymce/util/I18n", [], function() {
-	
+	"use strict";
 
 	var data = {};
 
@@ -71822,7 +71848,7 @@ define("tinymce/ui/Layout", [
 	"tinymce/util/Class",
 	"tinymce/util/Tools"
 ], function(Class, Tools) {
-	
+	"use strict";
 
 	return Class.extend({
 		Defaults: {
@@ -71941,7 +71967,7 @@ define("tinymce/ui/Layout", [
 define("tinymce/ui/AbsoluteLayout", [
 	"tinymce/ui/Layout"
 ], function(Layout) {
-	
+	"use strict";
 
 	return Layout.extend({
 		Defaults: {
@@ -72095,7 +72121,7 @@ define("tinymce/ui/Widget", [
 	"tinymce/ui/Control",
 	"tinymce/ui/Tooltip"
 ], function(Control, Tooltip) {
-	
+	"use strict";
 
 	var tooltip;
 
@@ -72262,7 +72288,7 @@ define("tinymce/ui/Widget", [
 define("tinymce/ui/Button", [
 	"tinymce/ui/Widget"
 ], function(Widget) {
-	
+	"use strict";
 
 	return Widget.extend({
 		Defaults: {
@@ -72439,7 +72465,7 @@ define("tinymce/ui/Button", [
 define("tinymce/ui/ButtonGroup", [
 	"tinymce/ui/Container"
 ], function(Container) {
-	
+	"use strict";
 
 	return Container.extend({
 		Defaults: {
@@ -72501,7 +72527,7 @@ define("tinymce/ui/ButtonGroup", [
 define("tinymce/ui/Checkbox", [
 	"tinymce/ui/Widget"
 ], function(Widget) {
-	
+	"use strict";
 
 	return Widget.extend({
 		Defaults: {
@@ -72618,7 +72644,7 @@ define("tinymce/ui/ComboBox", [
 	"tinymce/ui/Factory",
 	"tinymce/ui/DomUtils"
 ], function(Widget, Factory, DomUtils) {
-	
+	"use strict";
 
 	return Widget.extend({
 		/**
@@ -72951,7 +72977,7 @@ define("tinymce/ui/ComboBox", [
 define("tinymce/ui/ColorBox", [
 	"tinymce/ui/ComboBox"
 ], function(ComboBox) {
-	
+	"use strict";
 
 	return ComboBox.extend({
 		/**
@@ -73025,7 +73051,7 @@ define("tinymce/ui/PanelButton", [
 	"tinymce/ui/Button",
 	"tinymce/ui/FloatPanel"
 ], function(Button, FloatPanel) {
-	
+	"use strict";
 
 	return Button.extend({
 		/**
@@ -73145,7 +73171,7 @@ define("tinymce/ui/ColorButton", [
 	"tinymce/ui/PanelButton",
 	"tinymce/dom/DOMUtils"
 ], function(PanelButton, DomUtils) {
-	
+	"use strict";
 
 	var DOM = DomUtils.DOM;
 
@@ -73492,7 +73518,7 @@ define("tinymce/ui/ColorPicker", [
 	"tinymce/ui/DomUtils",
 	"tinymce/util/Color"
 ], function(Widget, DragHelper, DomUtils, Color) {
-	
+	"use strict";
 
 	return Widget.extend({
 		Defaults: {
@@ -73698,7 +73724,7 @@ define("tinymce/ui/ColorPicker", [
 define("tinymce/ui/Path", [
 	"tinymce/ui/Widget"
 ], function(Widget) {
-	
+	"use strict";
 
 	return Widget.extend({
 		/**
@@ -73922,7 +73948,7 @@ define("tinymce/ui/ElementPath", [
 define("tinymce/ui/FormItem", [
 	"tinymce/ui/Container"
 ], function(Container) {
-	
+	"use strict";
 
 	return Container.extend({
 		Defaults: {
@@ -73992,7 +74018,7 @@ define("tinymce/ui/Form", [
 	"tinymce/ui/FormItem",
 	"tinymce/util/Tools"
 ], function(Container, FormItem, Tools) {
-	
+	"use strict";
 
 	return Container.extend({
 		Defaults: {
@@ -74154,7 +74180,7 @@ define("tinymce/ui/Form", [
 define("tinymce/ui/FieldSet", [
 	"tinymce/ui/Form"
 ], function(Form) {
-	
+	"use strict";
 
 	return Form.extend({
 		Defaults: {
@@ -74218,7 +74244,7 @@ define("tinymce/ui/FilePicker", [
 	"tinymce/ui/ComboBox",
 	"tinymce/util/Tools"
 ], function(ComboBox, Tools) {
-	
+	"use strict";
 
 	return ComboBox.extend({
 		/**
@@ -74305,7 +74331,7 @@ define("tinymce/ui/FilePicker", [
 define("tinymce/ui/FitLayout", [
 	"tinymce/ui/AbsoluteLayout"
 ], function(AbsoluteLayout) {
-	
+	"use strict";
 
 	return AbsoluteLayout.extend({
 		/**
@@ -74359,7 +74385,7 @@ define("tinymce/ui/FitLayout", [
 define("tinymce/ui/FlexLayout", [
 	"tinymce/ui/AbsoluteLayout"
 ], function(AbsoluteLayout) {
-	
+	"use strict";
 
 	return AbsoluteLayout.extend({
 		/**
@@ -75200,7 +75226,7 @@ define("tinymce/ui/FormatControls", [
 define("tinymce/ui/GridLayout", [
 	"tinymce/ui/AbsoluteLayout"
 ], function(AbsoluteLayout) {
-	
+	"use strict";
 
 	return AbsoluteLayout.extend({
 		/**
@@ -75433,7 +75459,7 @@ define("tinymce/ui/GridLayout", [
 define("tinymce/ui/Iframe", [
 	"tinymce/ui/Widget"
 ], function(Widget) {
-	
+	"use strict";
 
 	return Widget.extend({
 		/**
@@ -75518,7 +75544,7 @@ define("tinymce/ui/Label", [
 	"tinymce/ui/Widget",
 	"tinymce/ui/DomUtils"
 ], function(Widget, DomUtils) {
-	
+	"use strict";
 
 	return Widget.extend({
 		/**
@@ -75643,7 +75669,7 @@ define("tinymce/ui/Label", [
 define("tinymce/ui/Toolbar", [
 	"tinymce/ui/Container"
 ], function(Container) {
-	
+	"use strict";
 
 	return Container.extend({
 		Defaults: {
@@ -75701,7 +75727,7 @@ define("tinymce/ui/Toolbar", [
 define("tinymce/ui/MenuBar", [
 	"tinymce/ui/Toolbar"
 ], function(Toolbar) {
-	
+	"use strict";
 
 	return Toolbar.extend({
 		Defaults: {
@@ -75739,7 +75765,7 @@ define("tinymce/ui/MenuButton", [
 	"tinymce/ui/Factory",
 	"tinymce/ui/MenuBar"
 ], function(Button, Factory, MenuBar) {
-	
+	"use strict";
 
 	// TODO: Maybe add as some global function
 	function isChildOf(node, parent) {
@@ -76000,7 +76026,7 @@ define("tinymce/ui/MenuButton", [
 define("tinymce/ui/ListBox", [
 	"tinymce/ui/MenuButton"
 ], function(MenuButton) {
-	
+	"use strict";
 
 	return MenuButton.extend({
 		/**
@@ -76150,7 +76176,7 @@ define("tinymce/ui/MenuItem", [
 	"tinymce/ui/Factory",
 	"tinymce/Env"
 ], function(Widget, Factory, Env) {
-	
+	"use strict";
 
 	return Widget.extend({
 		Defaults: {
@@ -76449,7 +76475,7 @@ define("tinymce/ui/Menu", [
 	"tinymce/ui/MenuItem",
 	"tinymce/util/Tools"
 ], function(FloatPanel, MenuItem, Tools) {
-	
+	"use strict";
 
 	var Menu = FloatPanel.extend({
 		Defaults: {
@@ -76590,7 +76616,7 @@ define("tinymce/ui/Menu", [
 define("tinymce/ui/Radio", [
 	"tinymce/ui/Checkbox"
 ], function(Checkbox) {
-	
+	"use strict";
 
 	return Checkbox.extend({
 		Defaults: {
@@ -76623,7 +76649,7 @@ define("tinymce/ui/ResizeHandle", [
 	"tinymce/ui/Widget",
 	"tinymce/ui/DragHelper"
 ], function(Widget, DragHelper) {
-	
+	"use strict";
 
 	return Widget.extend({
 		/**
@@ -76711,7 +76737,7 @@ define("tinymce/ui/ResizeHandle", [
 define("tinymce/ui/Spacer", [
 	"tinymce/ui/Widget"
 ], function(Widget) {
-	
+	"use strict";
 
 	return Widget.extend({
 		/**
@@ -76891,7 +76917,7 @@ define("tinymce/ui/SplitButton", [
 define("tinymce/ui/StackLayout", [
 	"tinymce/ui/FlowLayout"
 ], function(FlowLayout) {
-	
+	"use strict";
 
 	return FlowLayout.extend({
 		Defaults: {
@@ -76927,7 +76953,7 @@ define("tinymce/ui/TabPanel", [
 	"tinymce/ui/Panel",
 	"tinymce/ui/DomUtils"
 ], function(Panel, DomUtils) {
-	
+	"use strict";
 
 	return Panel.extend({
 		Defaults: {
@@ -77105,7 +77131,7 @@ define("tinymce/ui/TextBox", [
 	"tinymce/ui/Widget",
 	"tinymce/ui/DomUtils"
 ], function(Widget, DomUtils) {
-	
+	"use strict";
 
 	return Widget.extend({
 		/**
@@ -77321,7 +77347,7 @@ define("tinymce/ui/Throbber", [
 	"tinymce/ui/DomUtils",
 	"tinymce/ui/Control"
 ], function(DomUtils, Control) {
-	
+	"use strict";
 
 	/**
 	 * Constructs a new throbber.
@@ -77461,7 +77487,7 @@ define('mockup-patterns-autotoc',[
   'jquery',
   'mockup-patterns-base'
 ], function($, Base) {
-  
+  'use strict';
 
   var AutoTOC = Base.extend({
     name: 'autotoc',
@@ -77563,7 +77589,7 @@ define('mockup-patterns-autotoc',[
   java, location, Components, FileUtils */
 
 define('text',['module'], function (module) {
-    
+    'use strict';
 
     var text, fs, Cc, Ci, xpcIsWindows,
         progIds = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'],
@@ -77944,10 +77970,10 @@ define('text',['module'], function (module) {
 });
 
 
-define('text!mockup-patterns-tinymce-url/templates/result.xml',[],function () { return '<div class="pattern-relateditems-result pattern-relateditems-type-<%= Type %> <% if (selected) { %>pattern-active<% } %>">\n  <a href="#" class="pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %>">\n    <% if (!folderish) { %>\n    <span class="pattern-relateditems-result-image">\n      <img src="<%= generateImageUrl(_item, \'thumb\') %>" />\n    </span>\n    <% } %>\n    <span class="pattern-relateditems-result-title"><%= Title %></span>\n    <span class="pattern-relateditems-result-path"><%= path %></span>\n  </a>\n  <span class="pattern-relateditems-buttons">\n    <% if (folderish) { %>\n      <a class="pattern-relateditems-result-browse" href="#" data-path="<%= path %>"></a>\n    <% } %>\n  </span>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/result.xml',[],function () { return '<div class="pattern-relateditems-result pattern-relateditems-type-<%= portal_type %> <% if (selected) { %>pattern-active<% } %>">\n  <a href="#" class="pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %>">\n    <% if (!folderish) { %>\n    <span class="pattern-relateditems-result-image">\n      <img src="<%= generateImageUrl(_item, \'thumb\') %>" />\n    </span>\n    <% } %>\n    <span class="pattern-relateditems-result-title"><%= Title %></span>\n    <span class="pattern-relateditems-result-path"><%= path %></span>\n  </a>\n  <span class="pattern-relateditems-buttons">\n    <% if (folderish) { %>\n      <a class="pattern-relateditems-result-browse" href="#" data-path="<%= path %>"></a>\n    <% } %>\n  </span>\n</div>\n';});
 
 
-define('text!mockup-patterns-tinymce-url/templates/selection.xml',[],function () { return '<span class="pattern-relateditems-item pattern-relateditems-type-<%= Type %>">\n <span class="pattern-relateditems-result-image">\n   <img src="<%= generateImageUrl(_item, \'thumb\') %>" />\n </span>\n <span class="pattern-relateditems-item-title"><%= Title %></span>\n <span class="pattern-relateditems-item-path"><%= path %></span>\n</span>\'\n';});
+define('text!mockup-patterns-tinymce-url/templates/selection.xml',[],function () { return '<span class="pattern-relateditems-item pattern-relateditems-type-<%= portal_type %>">\n <span class="pattern-relateditems-result-image">\n   <img src="<%= generateImageUrl(_item, \'thumb\') %>" />\n </span>\n <span class="pattern-relateditems-item-title"><%= Title %></span>\n <span class="pattern-relateditems-item-path"><%= path %></span>\n</span>\'\n';});
 
 // Uses AMD or browser globals to create a jQuery plugin.
 (function (factory) {
@@ -79781,7 +79807,7 @@ define('text!mockup-patterns-upload-url/templates/preview.xml',[],function () { 
  *    autoCleanResults(boolean): condition value for the file preview in div element to fadeout after file upload is completed. (true)
  *    previewsContainer(selector): JavaScript selector for file preview in div element. (.upload-previews)
  *    container(selector): JavaScript selector for where to put upload stuff into in case of form. If not provided it will be place before the first submit button. ('')
- *    relatedItems(object): Related items pattern options. Will only use only if relativePath is used to use correct upload destination ({ attributes: ["UID", "Title", "Description", "getURL", "Type", "path", "ModificationDate"], batchSize: 20, basePath: "/", vocabularyUrl: null, width: 500, maximumSelectionSize: 1, placeholder: "Search for item on site..." })
+ *    relatedItems(object): Related items pattern options. Will only use only if relativePath is used to use correct upload destination ({ attributes: ["UID", "Title", "Description", "getURL", "portal_type", "path", "ModificationDate"], batchSize: 20, basePath: "/", vocabularyUrl: null, width: 500, maximumSelectionSize: 1, placeholder: "Search for item on site..." })
  *
  * Documentation:
  *
@@ -79815,7 +79841,7 @@ define('mockup-patterns-upload',[
   'translate'
 ], function($, _, Base, RelatedItems, Dropzone,
             UploadTemplate, PreviewTemplate, _t) {
-  
+  'use strict';
 
   /* we do not want this plugin to auto discover */
   Dropzone.autoDiscover = false;
@@ -79845,7 +79871,7 @@ define('mockup-patterns-upload',[
 
       relatedItems: {
         // UID attribute is required here since we're working with related items
-        attributes: ['UID', 'Title', 'Description', 'getURL', 'Type', 'path', 'ModificationDate'],
+        attributes: ['UID', 'Title', 'Description', 'getURL', 'portal_type', 'path', 'ModificationDate'],
         batchSize: 20,
         basePath: '/',
         vocabularyUrl: null,
@@ -80187,10 +80213,10 @@ define('mockup-patterns-upload',[
 });
 
 
-define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType internal" data-linkType="internal">\n        <legend>Internal</legend>\n        <div>\n          <div class="form-group main">\n            <!-- this gives the name to the "linkType" -->\n            <input type="text" name="internal" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType upload" data-linkType="upload">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n\n      <fieldset class="linkType external" data-linkType="external">\n        <legend>External</legend>\n        <div class="form-group main">\n          <label for="external"><%- externalText %></label>\n          <input type="text" name="external" />\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType email" data-linkType="email">\n        <legend>Email</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <label><%- emailText %></label>\n            <input type="text" name="email" />\n          </div>\n          <div class="form-group">\n            <label><%- subjectText %></label>\n            <input type="text" name="subject" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType anchor" data-linkType="anchor">\n        <legend>Anchor</legend>\n        <div>\n          <div class="form-group main">\n            <label>Select an anchor</label>\n            <div class="input-wrapper">\n              <select name="anchor" class="pat-select2" data-pat-select2="width:500px" />\n            </div>\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group">\n        <label>Target</label>\n        <select name="target">\n          <% _.each(targetList, function(target){ %>\n            <option value="<%- target.value %>"><%- target.text %></option>\n          <% }); %>\n        </select>\n      </div>\n      <div class="form-group">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n  </div>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(upload){ %>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType internal" data-linkType="internal">\n        <legend>Internal</legend>\n        <div>\n          <div class="form-group main">\n            <!-- this gives the name to the "linkType" -->\n            <input type="text" name="internal" />\n          </div>\n        </div>\n      </fieldset>\n\n      <% if(upload){ %>\n      <fieldset class="linkType upload" data-linkType="upload">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <fieldset class="linkType external" data-linkType="external">\n        <legend>External</legend>\n        <div class="form-group main">\n          <label for="external"><%- externalText %></label>\n          <input type="text" name="external" />\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType email" data-linkType="email">\n        <legend>Email</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <label><%- emailText %></label>\n            <input type="text" name="email" />\n          </div>\n          <div class="form-group">\n            <label><%- subjectText %></label>\n            <input type="text" name="subject" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType anchor" data-linkType="anchor">\n        <legend>Anchor</legend>\n        <div>\n          <div class="form-group main">\n            <label>Select an anchor</label>\n            <div class="input-wrapper">\n              <select name="anchor" class="pat-select2" data-pat-select2="width:500px" />\n            </div>\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group">\n        <label>Target</label>\n        <select name="target">\n          <% _.each(targetList, function(target){ %>\n            <option value="<%- target.value %>"><%- target.text %></option>\n          <% }); %>\n        </select>\n      </div>\n      <div class="form-group">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n  </div>\n</div>\n';});
 
 
-define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales.split(\',\'), function(scale){ %>\n                  <% var scale = scale.split(\':\'); %>\n                  <option value="<%- scale[1] %>">\n                    <%- scale[0] %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(upload){ %>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales, function(scale){ %>\n                  <option value="<%- scale.part %>">\n                    <%- scale.label %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n\n      <% if(upload){ %>\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
 
 define('mockup-patterns-tinymce-url/js/links',[
   'jquery',
@@ -80204,7 +80230,7 @@ define('mockup-patterns-tinymce-url/js/links',[
   'text!mockup-patterns-tinymce-url/templates/link.xml',
   'text!mockup-patterns-tinymce-url/templates/image.xml'
 ], function($, _, registry, Base, RelatedItems, Modal, tinymce, Upload, LinkTemplate, ImageTemplate) {
-  
+  'use strict';
 
   var LinkType = Base.extend({
     name: 'linktype',
@@ -80570,6 +80596,7 @@ define('mockup-patterns-tinymce-url/js/links',[
 
     generateModalHtml: function() {
       return this.template({
+        upload: this.options.upload,
         text: this.options.text,
         insertHeading: this.options.text.insertHeading,
         linkTypes: this.options.linkTypes,
@@ -80694,15 +80721,17 @@ define('mockup-patterns-tinymce-url/js/links',[
       self.initElements();
       self.initData();
       // upload init
-      self.$upload = $('.uploadify-me', self.modal.$modal);
-      self.options.upload.relatedItems = self.options.relatedItems;
-      self.$upload.addClass('pat-upload').patternUpload(self.options.upload);
-      self.$upload.on('uploadAllCompleted', function(evt, data) {
-        self.$upload.attr({
-          'data-filename': data.files ? data.files[0].name : '',
-          'data-path': data.path
+      if(self.options.upload){
+        self.$upload = $('.uploadify-me', self.modal.$modal);
+        self.options.upload.relatedItems = self.options.relatedItems;
+        self.$upload.addClass('pat-upload').patternUpload(self.options.upload);
+        self.$upload.on('uploadAllCompleted', function(evt, data) {
+          self.$upload.attr({
+            'data-filename': data.files ? data.files[0].name : '',
+            'data-path': data.path
+          });
         });
-      });
+      }
 
       self.$button.off('click').on('click', function(e) {
         e.preventDefault();
@@ -87718,7 +87747,7 @@ define("tinymce-paste", ["tinymce"], function() {
 /*globals $code */
 
 (function(exports, undefined) {
-	
+	"use strict";
 
 	var modules = {};
 
@@ -89082,7 +89111,7 @@ define("tinymce/pasteplugin/Quirks", [
 	"tinymce/pasteplugin/WordFilter",
 	"tinymce/pasteplugin/Utils"
 ], function(Env, Tools, WordFilter, Utils) {
-	
+	"use strict";
 
 	return function(editor) {
 		function addPreProcessFilter(filterFunc) {
@@ -90193,7 +90222,7 @@ define("tinymce-spellchecker", ["tinymce"], function() {
 /*globals $code */
 
 (function(exports, undefined) {
-	
+	"use strict";
 
 	var modules = {};
 
@@ -91326,7 +91355,7 @@ define("tinymce-table", ["tinymce"], function() {
 /*globals $code */
 
 (function(exports, undefined) {
-	
+	"use strict";
 
 	var modules = {};
 
@@ -95102,12 +95131,12 @@ tinymce.PluginManager.add('wordcount', function(editor) {
 /* TinyMCE pattern.
  *
  * Options:
- *    relatedItems(object): Related items pattern options. ({ attributes: ["UID", "Title", "Description", "getURL", "Type", "path", "ModificationDate"], batchSize: 20, basePath: "/", vocabularyUrl: null, width: 500, maximumSelectionSize: 1, placeholder: "Search for item on site..." })
+ *    relatedItems(object): Related items pattern options. ({ attributes: ["UID", "Title", "Description", "getURL", "portal_type", "path", "ModificationDate"], batchSize: 20, basePath: "/", vocabularyUrl: null, width: 500, maximumSelectionSize: 1, placeholder: "Search for item on site..." })
  *    upload(object): Upload pattern options. ({ attributes: look at upload pattern for getting the options list })
  *    text(object): Translation strings ({ insertBtn: "Insert", cancelBtn: "Cancel", insertHeading: "Insert link", title: "Title", internal: "Internal", external: "External", email: "Email", anchor: "Anchor", subject: "Subject" image: "Image", imageAlign: "Align", scale: "Size", alt: "Alternative Text", externalImage: "External Image URI"})
  *    scales(string): TODO: is this even used ('Listing (16x16):listing,Icon (32x32):icon,Tile (64x64):tile,Thumb (128x128):thumb,Mini (200x200):mini,Preview (400x400):preview,Large (768x768):large')
  *    targetList(array): TODO ([ {text: "Open in this window / frame", value: ""}, {text: "Open in new window", value: "_blank"}, {text: "Open in parent window / frame", value: "_parent"}, {text: "Open in top frame (replaces all frames)", value: "_top"}])
- * imageTypes(string): TODO ('Image')
+ *    imageTypes(string): TODO ('Image')
  *    folderTypes(string): TODO ('Folder,Plone Site')
  *    linkableTypes(string): TODO ('Document,Event,File,Folder,Image,News Item,Topic')
  *    tiny(object): TODO ({ plugins: [ "advlist autolink lists charmap print preview anchor", "usearchreplace visualblocks code fullscreen autoresize", "insertdatetime media table contextmenu paste plonelink ploneimage" ], menubar: "edit table format tools view insert",
@@ -95159,6 +95188,7 @@ define('mockup-patterns-tinymce',[
   'text!mockup-patterns-tinymce-url/templates/selection.xml',
   'mockup-utils',
   'mockup-patterns-tinymce-url/js/links',
+  "mockup-i18n",
   'translate',
   'tinymce-modern-theme',
   'tinymce-advlist',
@@ -95201,8 +95231,11 @@ define('mockup-patterns-tinymce',[
   'tinymce-visualblocks',
   'tinymce-visualchars',
   'tinymce-wordcount'
-], function($, _, Base, RelatedItems, Modal, tinymce, AutoTOC, ResultTemplate, SelectionTemplate, utils, LinkModal, _t) {
-  
+], function($, _,
+            Base, RelatedItems, Modal, tinymce,
+            AutoTOC, ResultTemplate, SelectionTemplate,
+            utils, LinkModal, i18n, _t) {
+  'use strict';
 
   var TinyMCE = Base.extend({
     name: 'tinymce',
@@ -95215,7 +95248,7 @@ define('mockup-patterns-tinymce',[
       },
       relatedItems: {
         // UID attribute is required here since we're working with related items
-        attributes: ['UID', 'Title', 'Description', 'getURL', 'Type', 'path', 'ModificationDate', 'getIcon'],
+        attributes: ['UID', 'Title', 'Description', 'getURL', 'portal_type', 'path', 'ModificationDate', 'getIcon'],
         batchSize: 20,
         basePath: '/',
         vocabularyUrl: null,
@@ -95246,6 +95279,7 @@ define('mockup-patterns-tinymce',[
       linkAttribute: 'path', // attribute to get link value from data
       prependToScalePart: '/imagescale/', // some value here is required to be able to parse scales back
       appendToScalePart: '',
+      appendToOriginalScalePart: '',
       scales: _t('Listing (16x16):listing,Icon (32x32):icon,Tile (64x64):tile,' +
               'Thumb (128x128):thumb,Mini (200x200):mini,Preview (400x400):preview,' +
               'Large (768x768):large'),
@@ -95256,38 +95290,37 @@ define('mockup-patterns-tinymce',[
         {text: _t('Open in top frame (replaces all frames)'), value: '_top'}
       ],
       imageTypes: 'Image',
-      folderTypes: 'Folder,Plone Site',
+      folderTypes: ['Folder', 'Plone Site'],
       linkableTypes: 'Document,Event,File,Folder,Image,News Item,Topic',
       tiny: {
-        'content_css': '../../../bower_components/tinymce-builded/js/tinymce/skins/lightgray/content.min.css',
+        'content_css': '++resource++plone.app.widgets-tinymce-content.min.css',
         theme: '-modern',
         plugins: [
-          '-advlist -autolink -lists -charmap -print -preview -anchor ' +
-          '-searchreplace -visualblocks -code -fullscreen -autoresize ' +
-          '-insertdatetime -media -table -contextmenu -paste -plonelink -ploneimage'
+          'advlist autolink lists charmap print preview anchor ' +
+          'searchreplace visualblocks code fullscreen ' +
+          'insertdatetime media table contextmenu paste plonelink ploneimage'
         ],
         menubar: 'edit table format tools view insert',
         toolbar: 'undo redo | styleselect | bold italic | ' +
                  'alignleft aligncenter alignright alignjustify | ' +
                  'bullist numlist outdent indent | ' +
                  'unlink plonelink ploneimage',
-        'autoresize_max_height': 1500
+        //'autoresize_max_height': 900,
+        'height': 400
       }
     },
     addLinkClicked: function() {
       var self = this;
       if (self.linkModal === null) {
         var $el = $('<div/>').insertAfter(self.$el);
+        var linkTypes = ['internal', 'upload', 'external', 'email', 'anchor'];
+        if(!self.options.upload){
+          linkTypes.splice(1, 1);
+        }
         self.linkModal = new LinkModal($el,
           $.extend(true, {}, self.options, {
             tinypattern: self,
-            linkTypes: [
-              'internal',
-              'upload',
-              'external',
-              'email',
-              'anchor'
-            ]
+            linkTypes: linkTypes
           })
         );
         self.linkModal.show();
@@ -95299,20 +95332,24 @@ define('mockup-patterns-tinymce',[
     addImageClicked: function() {
       var self = this;
       if (self.imageModal === null) {
+        var linkTypes = ['image', 'uploadImage', 'externalImage'];
+        if(!self.options.upload){
+          linkTypes.splice(1, 1);
+        }
         var options = $.extend(true, {}, self.options, {
           tinypattern: self,
-          linkTypes: ['image', 'uploadImage', 'externalImage'],
+          linkTypes: linkTypes,
           initialLinkType: 'image',
           text: {
             insertHeading: _t('Insert Image')
           },
           relatedItems: {
             baseCriteria: [{
-              i: 'Type',
+              i: 'portal_type',
               o: 'plone.app.querystring.operation.list.contains',
-              v: self.options.imageTypes.split(',').concat(self.options.folderTypes.split(','))
+              v: self.options.imageTypes.concat(self.options.folderTypes)
             }],
-            selectableTypes: self.options.imageTypes.split(','),
+            selectableTypes: self.options.imageTypes,
             resultTemplate: ResultTemplate,
             selectionTemplate: SelectionTemplate
           }
@@ -95330,12 +95367,20 @@ define('mockup-patterns-tinymce',[
       var part = data[self.options.linkAttribute];
       return self.options.prependToUrl + part + self.options.appendToUrl;
     },
-    generateImageUrl: function(data, scale) {
+    generateImageUrl: function(data, scale_name) {
       var self = this;
       var url = self.generateUrl(data);
-      if (scale !== ""){
-          url = (url + self.options.prependToScalePart + scale +
-                 self.options.appendToScalePart);
+      if (scale_name !== ""){
+        var part = scale_name;
+        for(var i=0; i<self.options.scales.length; i++){
+          if(self.options.scales[i].name == scale_name){
+            part = self.options.scales[i].part;
+          }
+        }
+        url = (url + self.options.prependToScalePart + part +
+               self.options.appendToScalePart);
+      }else{
+        url = url + self.options.appendToOriginalScalePart;
       }
       return url;
     },
@@ -95371,6 +95416,43 @@ define('mockup-patterns-tinymce',[
       }
       return url;
     },
+    initLanguage: function(call_back){
+      var self = this;
+      var lang = i18n.currentLanguage;
+      if (lang != 'en' && self.options.tiny.language !== 'en') {
+        tinymce.baseURL = self.options.loadingBaseUrl;
+        // does the expected language exist?
+        $.ajax({
+          url: tinymce.baseURL + "/langs/" + lang + ".js",
+          type:'HEAD',
+          success: function() {
+            self.options.tiny.language = lang;
+            call_back();
+          },
+          error: function() {
+            // expected lang not available, let's fallback to closest one
+            if (lang.split("_") > 1){
+              lang = lang.split("_")[0];
+            } else {
+              lang = lang + "_" + lang.toUpperCase();
+            }
+            $.ajax({
+              url: tinymce.baseURL + "/langs/" + lang + ".js",
+              type:'HEAD',
+              success: function() {
+                self.options.tiny.language = lang;
+                call_back();
+              },
+              error: function() {
+                call_back();
+              }
+            });
+          }
+        });
+      } else {
+        call_back();
+      }
+    },
     init: function() {
       var self = this;
       self.linkModal = self.imageModal = self.uploadModal = null;
@@ -95387,7 +95469,6 @@ define('mockup-patterns-tinymce',[
       // XXX: disabled skin means it wont load css files which we already
       // include in widgets.min.css
       tinyOptions.skin = false;
-
       self.options.relatedItems.generateImageUrl = function(data, scale) {
         // this is so, in our result and selection template, we can
         // access getting actual urls from related items
@@ -95399,18 +95480,34 @@ define('mockup-patterns-tinymce',[
           self.tiny = editor;
         }
       };
-      if (tinyOptions.language !== 'en') {
-        tinymce.baseURL = self.options.loadingBaseUrl;
-      }
 
-      tinymce.init(tinyOptions);
-      self.tiny = tinymce.get(id);
+      self.initLanguage(function() {
+        if(typeof(self.options.scales) === 'string'){
+          self.options.scales = _.map(self.options.scales.split(','), function(scale){
+            var scale = scale.split(':');
+            return {
+              part: scale[1],
+              name: scale[1],
+              label: scale[0]
+            }
+          });
+        }
+        if(typeof(self.options.folderTypes) === 'string'){
+          self.options.folderTypes = self.options.folderTypes.split(',');
+        }
+        if(typeof(self.options.imageTypes) === 'string'){
+          self.options.imageTypes = self.options.imageTypes.split(',');
+        }
 
-      /* tiny really should be doing this by default
-       * but this fixes overlays not saving data */
-      var $form = self.$el.parents('form');
-      $form.on('submit', function() {
-        self.tiny.save();
+        tinymce.init(tinyOptions);
+        self.tiny = tinymce.get(id);
+
+        /* tiny really should be doing this by default
+         * but this fixes overlays not saving data */
+        var $form = self.$el.parents('form');
+        $form.on('submit', function() {
+          self.tiny.save();
+        });
       });
     },
     destroy: function() {
@@ -95486,7 +95583,7 @@ define('mockup-patterns-textareamimetypeselector',[
   'pat-registry',
   'mockup-patterns-tinymce'
 ], function ($, Base, registry, tinymce) {
-  
+  'use strict';
 
   var TextareaMimetypeSelector = Base.extend({
     name: 'textareamimetypeselector',
@@ -95546,7 +95643,7 @@ define('mockup-bundles-widgets',[
   'mockup-patterns-textareamimetypeselector',
   'mockup-patterns-tinymce'
 ], function($, registry, Base) {
-  
+  'use strict';
 
   var PloneWidgets = Base.extend({
     name: 'plone-widgets',

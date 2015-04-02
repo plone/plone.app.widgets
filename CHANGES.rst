@@ -4,6 +4,9 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Update the mockup widget bundle.
+  [thet]
+
 - Allow the JavaScript and CSS resources to be cachable and cookable. Set
   applyPrefix for the CSS resource.
   [thet]
