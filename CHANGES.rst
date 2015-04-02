@@ -4,6 +4,14 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Change TinyMCE pattern options: Add the folderTypes list to the RelatedItems
+  widget in TinyMCE (fixes issues with the tinymce configuration option
+  ``containsobjects`` not being respected), set the RelatedItems widget mode to
+  browse and set the basePath to the current folder (starts the RelatedItems
+  widget in the insert link and image dialogs from the current folder, where
+  one can browse down the content tree).
+  [thet]
+
 - Update the mockup widget bundle.
   [thet]
 

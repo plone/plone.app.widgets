@@ -385,16 +385,22 @@ def get_tinymce_options(context, field, request):
         else:
             initial = IUUID(folder, None)
         portal_url = get_portal_url(context)
-        current_path = folder.absolute_url()[len(portal_url):]
+        folder_path = '/'.join(folder.getPhysicalPath())
+        folder_url_relative = folder.absolute_url()[len(portal_url):]
 
         args['pattern_options'] = {
             'relatedItems': {
-                'vocabularyUrl': config['portal_url'] +
-                '/@@getVocabulary?name=plone.app.vocabularies.Catalog'
+                'vocabularyUrl': '{0}/{1}'.format(
+                    config['portal_url'],
+                    '@@getVocabulary?name=plone.app.vocabularies.Catalog'
+                ),
+                'mode': 'browse',
+                'basePath': folder_path,
+                'folderTypes': utility.containsobjects.split('\n')
             },
             'upload': {
                 'initialFolder': initial,
-                'currentPath': current_path,
+                'currentPath': folder_url_relative,
                 'baseUrl': config['document_base_url'],
                 'relativePath': '@@fileUpload',
                 'uploadMultiple': False,
