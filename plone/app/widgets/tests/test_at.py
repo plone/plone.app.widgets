@@ -574,6 +574,7 @@ class TinyMCEWidgetTests(unittest.TestCase):
         """
         from plone.app.widgets.at import TinyMCEWidget
         widget = TinyMCEWidget()
+        self.field.widget = widget
         rendered = widget.edit(self.portal, self.field, self.request)
 
         self.assertTrue('<select' not in rendered)
@@ -593,6 +594,7 @@ class TinyMCEWidgetTests(unittest.TestCase):
         """
         from plone.app.widgets.at import TinyMCEWidget
         widget = TinyMCEWidget()
+        self.field.widget = widget
         rendered = widget.edit(self.portal, self.field, self.request)
 
         self.assertTrue('<select' in rendered)
