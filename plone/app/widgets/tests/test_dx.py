@@ -34,12 +34,10 @@ from zope.schema import List
 from zope.schema import Set
 from zope.schema import TextLine
 from zope.schema import Tuple
-
 import json
 import mock
 import pytz
 import unittest
-
 
 try:
     from Products.CMFPlone.factory import _IMREALLYPLONE5  # noqa
@@ -1133,6 +1131,21 @@ class RichTextWidgetTests(unittest.TestCase):
         self.assertEqual(
             base_args['pattern_options']['upload']['relativePath'],
             '@@fileUpload')
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['mode'],
+            'browse'
+        )
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone'
+        )
+        # Next, we're only testing for the existance of folderTypes parameter.
+        # Values can either be set via GenericSetup (tinymce.xml) or
+        # plone.app.registry.
+        self.assertTrue(
+            'folderTypes' in base_args['pattern_options']['relatedItems']
+        )
 
         if not PLONE50:
             self.assertEqual(base_args['pattern_options']['anchorSelector'],

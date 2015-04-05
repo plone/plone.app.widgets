@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
 from mock import Mock
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
@@ -22,8 +21,8 @@ from zope.globalrequest import setRequest
 from zope.interface import Interface
 from zope.interface import alsoProvides
 from zope.interface import noLongerProvides
-
 import json
+import os
 import transaction
 import unittest
 

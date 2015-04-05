@@ -1,6 +1,5 @@
 from mock import Mock
 from mock import patch
-
 import unittest
 
 
@@ -19,8 +18,8 @@ class UtilsTests(unittest.TestCase):
             'plone.app.event': mock.module.module,
             'plone.app.event.base': mock.module.module.module,
         }
-        with patch('Products.CMFCore.utils.getToolByName', new=MockTool), \
-             patch.dict('sys.modules', modules):
+        with patch('Products.CMFCore.utils.getToolByName', new=MockTool),\
+                patch.dict('sys.modules', modules):
             # test for plone.app.event installed
             from plone.app.event import base
             base.first_weekday = lambda: 0

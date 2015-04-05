@@ -1,18 +1,19 @@
-import transaction
+from Products.Archetypes.event import ObjectInitializedEvent
+from Products.CMFCore.interfaces._content import IFolderish
+from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone import utils as ploneutils
+from plone.app.widgets.interfaces import IATCTFileFactory
+from plone.app.widgets.interfaces import IDXFileFactory
+from plone.i18n.normalizer.interfaces import IFileNameNormalizer
 from thread import allocate_lock
-
-from zope.component import getUtility
 from zope.component import adapts
+from zope.component import getUtility
 from zope.container.interfaces import INameChooser
-from zope.lifecycleevent import ObjectModifiedEvent
 from zope.event import notify
 from zope.interface import implements
-
-from Products.Archetypes.event import ObjectInitializedEvent
-from Products.CMFCore.utils import getToolByName
-from Products.CMFCore.interfaces._content import IFolderish
-from Products.CMFPlone import utils as ploneutils
-
+from zope.lifecycleevent import ObjectModifiedEvent
+import pkg_resources
+import transaction
 
 try:
     from plone.namedfile.file import NamedBlobImage
@@ -25,12 +26,6 @@ except ImportError:  # pragma: no cover
 
     class IStorage(Interface):
         pass
-from plone.i18n.normalizer.interfaces import IFileNameNormalizer
-from plone.app.widgets.interfaces import IATCTFileFactory, IDXFileFactory
-
-upload_lock = allocate_lock()
-
-import pkg_resources
 
 try:
     pkg_resources.get_distribution('plone.dexterity')
@@ -39,6 +34,8 @@ except pkg_resources.DistributionNotFound:
 else:
     from plone.dexterity.utils import createContentInContainer
     HAS_DEXTERITY = True
+
+upload_lock = allocate_lock()
 
 
 class ATCTFileFactory(object):
