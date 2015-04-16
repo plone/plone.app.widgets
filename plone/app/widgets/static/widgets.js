@@ -21861,8 +21861,8 @@ define('mockup-i18n',[
 
   var I18N = function() {
     var self = this;
-
     self.baseUrl = $('body').attr('data-i18ncatalogurl');
+
     if (!self.baseUrl) {
       self.baseUrl = '/plonejsi18n';
     }
@@ -35220,10 +35220,6 @@ define('mockup-patterns-relateditems',[
  *    indexOptionsUrl(string): URL to grab index option data from. Must contain "sortable_indexes" and "indexes" data in JSON object. (null)
  *    previewURL(string): URL used to pass in a plone.app.querystring-formatted HTTP querystring and get an HTML list of results ('portal_factory/@@querybuilder_html_results')
  *    previewCountURL(string): URL used to pass in a plone.app.querystring-formatted HTTP querystring and get an HTML string of the total number of records found with the query ('portal_factory/@@querybuildernumberofresults')
- *    sorttxt(string): Text to use to label the sort dropdown ('Sort On')
- *    reversetxt(string): Text to use to label the sort order checkbox ('Reversed Order')
- *    previewTitle(string): Title for the preview area ('Preview')
- *    previewDescription(string): Description for the preview area ('Preview of at most 10 items')
  *    classWrapperName(string): CSS class to apply to the wrapper element ('querystring-wrapper')
  *    classSortLabelName(string): CSS class to apply to the sort on label ('querystring-sort-label')
  *    classSortReverseName(string): CSS class to apply to the sort order label and checkbox container ('querystring-sortreverse')
@@ -35264,19 +35260,15 @@ define('mockup-patterns-querystring',[
   'mockup-patterns-select2',
   'mockup-patterns-pickadate',
   'select2',
-  'translate'
-], function($, Base, Select2, PickADate, undefined, _t) {
+  'mockup-i18n'
+], function($, Base, Select2, PickADate, undefined, i18n) {
   'use strict';
 
   var Criteria = function() { this.init.apply(this, arguments); };
   Criteria.prototype = {
     defaults: {
       indexWidth: '20em',
-      placeholder: _t('Select criteria'),
       remove: '',
-      results: _t(' items matching your search.'),
-      days: _t('days'),
-      betweendt: _t('to'),
       classBetweenDtName: 'querystring-criteria-betweendt',
       classWrapperName: 'querystring-criteria-wrapper',
       classIndexName: 'querystring-criteria-index',
@@ -35288,6 +35280,9 @@ define('mockup-patterns-querystring',[
     },
     init: function($el, options, indexes, index, operator, value) {
       var self = this;
+
+      i18n.loadCatalog('widgets');
+      self._t = i18n.MessageFactory('widgets');
 
       self.options = $.extend(true, {}, self.defaults, options);
       self.indexes = indexes;
@@ -35308,7 +35303,7 @@ define('mockup-patterns-querystring',[
 
       // Index selection
       self.$index = $('<select><option></option></select>')
-          .attr('placeholder', self.options.placeholder);
+          .attr('placeholder', self._t('Select criteria'));
 
       // list of indexes
       $.each(self.indexes, function(value, options) {
@@ -35337,7 +35332,7 @@ define('mockup-patterns-querystring',[
       self.$index
         .patternSelect2({
           width: self.options.indexWidth,
-          placeholder: self.options.placeholder
+          placeholder: self._t('Select criteria')
         })
         .on('change', function(e) {
           self.removeValue();
@@ -35436,7 +35431,7 @@ define('mockup-patterns-querystring',[
           });
         $wrapper.append(
           $('<span/>')
-            .html(self.options.betweendt)
+            .html(self._t('to'))
             .addClass(self.options.classBetweenDtName)
         );
         var endwrap = $('<span/>').appendTo($wrapper);
@@ -35455,7 +35450,7 @@ define('mockup-patterns-querystring',[
 
       } else if (widget === 'RelativeDateWidget') {
         self.$value = $('<input type="text"/>')
-                .after($('<span/>').html(self.options.days))
+                .after($('<span/>').html(self._t('days')))
                 .addClass(self.options.classValueName + '-' + widget)
                 .appendTo($wrapper)
                 .change(function() {
@@ -35640,10 +35635,6 @@ define('mockup-patterns-querystring',[
       indexOptionsUrl: null,
       previewURL: 'portal_factory/@@querybuilder_html_results', // base url to use to request preview information from
       previewCountURL: 'portal_factory/@@querybuildernumberofresults',
-      sorttxt: _t('Sort On'),
-      reversetxt: _t('Reversed Order'),
-      previewTitle: _t('Preview'),
-      previewDescription: _t('Preview of at most 10 items'),
       classSortLabelName: 'querystring-sort-label',
       classSortReverseName: 'querystring-sortreverse',
       classSortReverseLabelName: 'querystring-sortreverse-label',
@@ -35658,6 +35649,9 @@ define('mockup-patterns-querystring',[
     },
     init: function() {
       var self = this;
+
+      i18n.loadCatalog('widgets');
+      self._t = i18n.MessageFactory('widgets');
 
       // hide input element
       self.$el.hide();
@@ -35706,11 +35700,11 @@ define('mockup-patterns-querystring',[
         // preview title and description
         $('<div/>')
           .addClass(self.options.classPreviewTitleName)
-          .html(self.options.previewTitle)
+          .html(self._t('Preview'))
           .appendTo(self.$previewWrapper);
         $('<div/>')
           .addClass(self.options.classPreviewDescriptionName)
-          .html(self.options.previewDescription)
+          .html(self._t('Preview of at most 10 items'))
           .appendTo(self.$previewWrapper);
       }
 
@@ -35787,7 +35781,7 @@ define('mockup-patterns-querystring',[
 
       $('<span/>')
         .addClass(self.options.classSortLabelName)
-        .html(self.options.sorttxt)
+        .html(self._t('Sort on'))
         .appendTo(self.$sortWrapper);
       self.$sortOn = $('<select/>')
         .attr('name', 'sort_on')
@@ -35824,7 +35818,7 @@ define('mockup-patterns-querystring',[
         .append(self.$sortOrder)
         .append(
           $('<span/>')
-            .html(self.options.reversetxt)
+            .html(self._t('Reserved Order'))
             .addClass(self.options.classSortReverseLabelName)
         );
 
@@ -79783,7 +79777,7 @@ Emitter.prototype.hasListeners = function(event){
     return module.exports;
 }));
 
-define('text!mockup-patterns-upload-url/templates/upload.xml',[],function () { return '<div class="upload-container upload-multiple">\n    <h2 class="title">Upload stuff here</h2>\n    <p class="help">\n        Just drag N drop stuff on the area below\n        or press "upload" button.\n    </p>\n    <div class="upload-area">\n        <div class="fallback">\n            <input name="file" type="file" multiple />\n        </div>\n        <div class="dz-message"><p><%-_t("Drop files here...")%></p></div>\n        <div class="row">\n            <div class="col-md-9">\n                <input\n                    id="fakeUploadFile"\n                    placeholder="Choose File"\n                    disabled="disabled"\n                    />\n            </div>\n            <div class="col-md-3">\n                <button\n                    type="button"\n                    class="btn btn-primary browse">\n                    Browse\n                </button>\n            </div>\n        </div>\n        <div class="upload-queue">\n            <div class="previews">\n            </div>\n            <div class="controls">\n                <div class="path">\n                    <label>Upload to...</label>\n                    <p class="form-help">\n                        If nothing selected files we be added to current context.\n                    </p>\n                    <input\n                        type="text"\n                        name="location"\n                        />\n                </div>\n                <div class="actions row">\n                    <div class="col-md-9">\n                        <div class="progress progress-striped active">\n                            <div class="progress-bar progress-bar-success"\n                                 role="progressbar"\n                                 aria-valuenow="0"\n                                 aria-valuemin="0"\n                                 aria-valuemax="100"\n                                 style="width: 0%">\n                                <span class="sr-only">40% Complete (success)</span>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="col-md-3 align-right">\n                        <button\n                            type="button"\n                            class="btn btn-primary upload-all">\n                            Upload\n                        </button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';});
+define('text!mockup-patterns-upload-url/templates/upload.xml',[],function () { return '<div class="upload-container upload-multiple">\n    <h2 class="title"><%- _t("Upload stuff here") %></h2>\n    <p class="help">\n        <%- _t(\'Just drag N drop stuff on the area below or press "upload" button.\') %>\n    </p>\n    <div class="upload-area">\n        <div class="fallback">\n            <input name="file" type="file" multiple />\n        </div>\n        <div class="dz-message"><p><%-_t("Drop files here...")%></p></div>\n        <div class="row">\n            <div class="col-md-9">\n                <input\n                    id="fakeUploadFile"\n                    placeholder="<%- _t("Choose File") %>"\n                    disabled="disabled"\n                    />\n            </div>\n            <div class="col-md-3">\n                <button\n                    type="button"\n                    class="btn btn-primary browse">\n                    Browse\n                </button>\n            </div>\n        </div>\n        <div class="upload-queue">\n            <div class="previews">\n            </div>\n            <div class="controls">\n                <div class="path">\n                    <label><%- _t("Upload to...") %></label>\n                    <p class="form-help">\n                        <%- _t("If nothing selected files we be added to current context.") %>\n                    </p>\n                    <input\n                        type="text"\n                        name="location"\n                        />\n                </div>\n                <div class="actions row">\n                    <div class="col-md-9">\n                        <div class="progress progress-striped active">\n                            <div class="progress-bar progress-bar-success"\n                                 role="progressbar"\n                                 aria-valuenow="0"\n                                 aria-valuemin="0"\n                                 aria-valuemax="100"\n                                 style="width: 0%">\n                                <span class="sr-only">40% Complete (success)</span>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="col-md-3 align-right">\n                        <button\n                            type="button"\n                            class="btn btn-primary upload-all">\n                            <%- _t("Upload") %>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';});
 
 
 define('text!mockup-patterns-upload-url/templates/preview.xml',[],function () { return '<div class="row item form-inline">\n    <div class="col-md-1 action">\n        <button\n            type="button"\n            class="btn btn-danger btn-xs remove-item"\n            data-dz-remove=""\n            href="javascript:undefined;">\n            <span class="glyphicon glyphicon-remove"></span>\n        </button>\n    </div>\n    <div class="col-md-8 title">\n        <div class="dz-preview">\n          <div class="dz-details">\n            <div class="dz-filename"><span data-dz-name></span></div>\n          </div>\n          <div class="dz-error-message"><span data-dz-errormessage></span></div>\n        </div>\n        <div class="dz-progress">\n            <span class="dz-upload" data-dz-uploadprogress></span>\n        </div>\n    </div>\n    <div class="col-md-3 info">\n        <div class="dz-size" data-dz-size></div>\n        <img data-dz-thumbnail />\n    </div>\n</div>\n';});
@@ -79838,9 +79832,9 @@ define('mockup-patterns-upload',[
   'dropzone',
   'text!mockup-patterns-upload-url/templates/upload.xml',
   'text!mockup-patterns-upload-url/templates/preview.xml',
-  'translate'
+  'mockup-i18n'
 ], function($, _, Base, RelatedItems, Dropzone,
-            UploadTemplate, PreviewTemplate, _t) {
+            UploadTemplate, PreviewTemplate, i18n) {
   'use strict';
 
   /* we do not want this plugin to auto discover */
@@ -79876,22 +79870,23 @@ define('mockup-patterns-upload',[
         basePath: '/',
         vocabularyUrl: null,
         width: 500,
-        maximumSelectionSize: 1,
-        placeholder: _t('Search for item on site...')
+        maximumSelectionSize: 1
       }
     },
 
-    //placeholder: 'Search for item on site...'
     init: function() {
       var self = this,
           template = UploadTemplate;
+
+      i18n.loadCatalog('widgets');
+      self._t = i18n.MessageFactory('widgets');
 
       // values that will change current processing
       self.currentPath = self.options.currentPath;
       self.numFiles = 0;
       self.currentFile = 0;
 
-      template = _.template(template, {_t: _t});
+      template = _.template(template, {_t: self._t});
       self.$el.addClass(self.options.className);
       self.$el.append(template);
 
@@ -80154,13 +80149,13 @@ define('mockup-patterns-upload',[
         chunkSize: chunkSize
       }).fail(function() {
         if(window.DEBUG){
-          console.alert('Error uploading with TUS resumable uploads');
+          console.alert(self._t('Error uploading with TUS resumable uploads'));
         }
         file.status = Dropzone.ERROR;
       }).progress(function(e, bytesUploaded, bytesTotal) {
         var percentage = (bytesUploaded / bytesTotal * 100);
         self.$progress.attr('aria-valuenow', percentage).css('width', percentage + '%');
-        self.$progress.html(_t('uploading...<br />') +
+        self.$progress.html(self._t('uploading...') + '<br />' +
                             self.formatBytes(bytesUploaded) +
                             ' / ' + self.formatBytes(bytesTotal));
       }).done(function(url, file) {
