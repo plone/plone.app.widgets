@@ -4,6 +4,10 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Change ``getVocabulary`` to work also on non IPloneSiteRoot contexts.
+  [thet]
+
+
 - Implement selectableTypes for the RelatedItems pattern
   [petschki]
 
