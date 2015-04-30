@@ -4,6 +4,9 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Change ``getVocabulary`` to work also on non IPloneSiteRoot contexts.
+  [thet]
+
 - Use widget bundle from mockup's build directory, if mockup is installed. In
   this case, you need to build the widgets bundle in the mockup directory.
   [thet]
