@@ -4,6 +4,10 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Use widget bundle from mockup's build directory, if mockup is installed. In
+  this case, you need to build the widgets bundle in the mockup directory.
+  [thet]
+
 - Implement selectableTypes for the RelatedItems pattern
   [petschki]
 
