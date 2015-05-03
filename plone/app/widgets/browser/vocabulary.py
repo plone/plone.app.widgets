@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from AccessControl import getSecurityManager
 from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.interfaces import IPloneSiteRoot
 from Products.Five import BrowserView
 from logging import getLogger
+from plone.app.layout.navigation.interfaces import INavigationRoot
 from plone.app.querystring import queryparser
 from plone.app.widgets.interfaces import IFieldPermissionChecker
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
@@ -190,7 +190,8 @@ class VocabularyView(BaseVocabularyView):
             raise VocabLookupException('No factory provided.')
         authorized = None
         sm = getSecurityManager()
-        if factory_name in _permissions:
+        if factory_name in _permissions\
+                and INavigationRoot.providedBy(context):
             # Short circuit if permission is in global registry
             authorized = sm.checkPermission(
                 _permissions[factory_name], context
