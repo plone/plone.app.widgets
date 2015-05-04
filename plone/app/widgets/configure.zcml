@@ -39,6 +39,11 @@
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
+      name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.woff2"
+      file="static/widgets-bootstrap-glyphicons-halflings-regular.woff2"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
       name="plone.app.widgets-dropzone-spritemap@2x.png"
       file="static/widgets-dropzone-spritemap@2x.png"
       layer=".interfaces.IWidgetsLayer"
