@@ -18428,7 +18428,7 @@ define('mockup-patterns-select2',[
       var self = this;
       self.$el.select2(self.options);
       self.$select2 = self.$el.parent().find('.select2-container');
-      self.$el.parent().off('close.modal.patterns');
+      self.$el.parent().off('close.plone-modal.patterns');
       if (self.options.orderable) {
         self.$select2.addClass('select2-orderable');
       }
@@ -21958,7 +21958,7 @@ define('mockup-i18n',[
     };
   };
 
-  return new I18N();
+  return I18N;
 });
 
 /* i18n integration.
@@ -21972,10 +21972,21 @@ define('mockup-i18n',[
 
 define('translate',[
   'mockup-i18n'
-], function(i18n) {
+], function(I18N) {
   'use strict';
-  i18n.loadCatalog('widgets');
-  return i18n.MessageFactory('widgets');
+
+  // we're creating a singleton here so we can potentially
+  // delay the initialization of the translate catalog
+  // until after the dom is available
+  var _t = null;
+  return function(msgid, keywords){
+    if(_t === null){
+      var i18n = new I18N();
+      i18n.loadCatalog('widgets');
+      _t = i18n.MessageFactory('widgets');
+    }
+    return _t(msgid, keywords);
+  };
 });
 
 /* PickADate pattern.
@@ -34765,9 +34776,6 @@ define('mockup-patterns-tree',[
  *    orderable(boolean): Whether or not items should be drag-and-drop sortable. (true)
  *    resultTemplate(string): Template for an item in the in the list of results. Refer to source for default. (Refer to source)
  *    resultTemplateSelector(string): Select an element from the DOM from which to grab the resultTemplate. (null)
- *    searchText(string): Text which will be inserted to the left of the
- *    path. (Search)
- *    searchAllText(string): Displays next to the path when the path is set to the root. (All)
  *    selectableTypes(array): If the value is null all types are selectable. Otherwise, provide a list of strings to match item types that are selectable. (null)
  *    selectionTemplate(string): Template for element that will be used to construct a selected item. (Refer to source)
  *    selectionTemplateSelector(string): Select an element from the DOM from which to grab the selectionTemplate. (null)
@@ -34843,8 +34851,6 @@ define('mockup-patterns-relateditems',[
       mode: 'search', // possible values are search and browse
       closeOnSelect: false,
       basePath: '/',
-      searchText: _t('Search:'),
-      searchAllText: _t('entire site'),
       homeText: _t('home'),
       folderTypes: ['Folder'],
       selectableTypes: null, // null means everything is selectable, otherwise a list of strings to match types that are selectable
@@ -34948,11 +34954,11 @@ define('mockup-patterns-relateditems',[
       if (path === '/') {
         var searchText = '';
         if (self.options.mode === 'search') {
-          searchText = '<em>' + self.options.searchAllText + '</em>';
+          searchText = '<em>' + _t('entire site') + '</em>';
         }
         html = self.applyTemplate('breadCrumbs', {
           items: searchText,
-          searchText: self.options.searchText
+          searchText: _t('Search:')
         });
       } else {
         var paths = path.split('/');
@@ -34967,7 +34973,7 @@ define('mockup-patterns-relateditems',[
             itemsHtml = itemsHtml + self.applyTemplate('breadCrumb', item);
           }
         });
-        html = self.applyTemplate('breadCrumbs', {items: itemsHtml, searchText: self.options.searchText});
+        html = self.applyTemplate('breadCrumbs', {items: itemsHtml, searchText: _t('Search:') });
       }
       var $crumbs = $(html);
       $('a.crumb', $crumbs).on('click', function(e) {
@@ -35185,12 +35191,6 @@ define('mockup-patterns-relateditems',[
 
       Select2.prototype.initializeSelect2.call(self);
 
-      // Browsing functionality
-      var browseOpts = {
-        browseText: self.options.browseText,
-        searchText: self.options.searchText
-      };
-
       self.$browsePath = $('<span class="pattern-relateditems-path" />');
       self.$container.prepend(self.$browsePath);
 
@@ -35260,8 +35260,8 @@ define('mockup-patterns-querystring',[
   'mockup-patterns-select2',
   'mockup-patterns-pickadate',
   'select2',
-  'mockup-i18n'
-], function($, Base, Select2, PickADate, undefined, i18n) {
+  'translate'
+], function($, Base, Select2, PickADate, undefined, _t) {
   'use strict';
 
   var Criteria = function() { this.init.apply(this, arguments); };
@@ -35280,9 +35280,6 @@ define('mockup-patterns-querystring',[
     },
     init: function($el, options, indexes, index, operator, value) {
       var self = this;
-
-      i18n.loadCatalog('widgets');
-      self._t = i18n.MessageFactory('widgets');
 
       self.options = $.extend(true, {}, self.defaults, options);
       self.indexes = indexes;
@@ -35303,7 +35300,7 @@ define('mockup-patterns-querystring',[
 
       // Index selection
       self.$index = $('<select><option></option></select>')
-          .attr('placeholder', self._t('Select criteria'));
+          .attr('placeholder', _t('Select criteria'));
 
       // list of indexes
       $.each(self.indexes, function(value, options) {
@@ -35332,7 +35329,7 @@ define('mockup-patterns-querystring',[
       self.$index
         .patternSelect2({
           width: self.options.indexWidth,
-          placeholder: self._t('Select criteria')
+          placeholder: _t('Select criteria')
         })
         .on('change', function(e) {
           self.removeValue();
@@ -35431,7 +35428,7 @@ define('mockup-patterns-querystring',[
           });
         $wrapper.append(
           $('<span/>')
-            .html(self._t('to'))
+            .html(_t('to'))
             .addClass(self.options.classBetweenDtName)
         );
         var endwrap = $('<span/>').appendTo($wrapper);
@@ -35450,7 +35447,7 @@ define('mockup-patterns-querystring',[
 
       } else if (widget === 'RelativeDateWidget') {
         self.$value = $('<input type="text"/>')
-                .after($('<span/>').html(self._t('days')))
+                .after($('<span/>').html(_t('days')))
                 .addClass(self.options.classValueName + '-' + widget)
                 .appendTo($wrapper)
                 .change(function() {
@@ -35650,9 +35647,6 @@ define('mockup-patterns-querystring',[
     init: function() {
       var self = this;
 
-      i18n.loadCatalog('widgets');
-      self._t = i18n.MessageFactory('widgets');
-
       // hide input element
       self.$el.hide();
 
@@ -35700,11 +35694,11 @@ define('mockup-patterns-querystring',[
         // preview title and description
         $('<div/>')
           .addClass(self.options.classPreviewTitleName)
-          .html(self._t('Preview'))
+          .html(_t('Preview'))
           .appendTo(self.$previewWrapper);
         $('<div/>')
           .addClass(self.options.classPreviewDescriptionName)
-          .html(self._t('Preview of at most 10 items'))
+          .html(_t('Preview of at most 10 items'))
           .appendTo(self.$previewWrapper);
       }
 
@@ -35781,7 +35775,7 @@ define('mockup-patterns-querystring',[
 
       $('<span/>')
         .addClass(self.options.classSortLabelName)
-        .html(self._t('Sort on'))
+        .html(_t('Sort on'))
         .appendTo(self.$sortWrapper);
       self.$sortOn = $('<select/>')
         .attr('name', 'sort_on')
@@ -35818,7 +35812,7 @@ define('mockup-patterns-querystring',[
         .append(self.$sortOrder)
         .append(
           $('<span/>')
-            .html(self._t('Reserved Order'))
+            .html(_t('Reserved Order'))
             .addClass(self.options.classSortReverseLabelName)
         );
 
@@ -38970,16 +38964,16 @@ function log() {
  *
  *
  * Example: example-basic
- *    <a href="#modal1" class="plone-btn plone-btn-large plone-btn-primary pat-modal"
- *                      data-pat-modal="width: 400">Modal basic</a>
+ *    <a href="#modal1" class="plone-btn plone-btn-large plone-btn-primary pat-plone-modal"
+ *                      data-pat-plone-modal="width: 400">Modal basic</a>
  *    <div id="modal1" style="display: none">
  *      <h1>Basic modal!</h1>
  *      <p>Indeed. Whoa whoa whoa whoa. Wait.</p>
  *    </div>
  *
  * Example: example-long
- *    <a href="#modal2" class="plone-btn plone-btn-lg plone-btn-primary pat-modal"
- *                      data-pat-modal="width: 500">Modal long scrolling</a>
+ *    <a href="#modal2" class="plone-btn plone-btn-lg plone-btn-primary pat-plone-modal"
+ *                      data-pat-plone-modal="width: 500">Modal long scrolling</a>
  *    <div id="modal2" style="display: none">
  *      <h1>Basic with scrolling</h1>
  *      <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua</p>
@@ -38997,8 +38991,8 @@ function log() {
  *
  *
  * Example: example-tinymce
- *    <a href="#modaltinymce" class="btn btn-lg btn-primary pat-modal"
- *       data-pat-modal="height: 600px;
+ *    <a href="#modaltinymce" class="btn btn-lg btn-primary pat-plone-modal"
+ *       data-pat-plone-modal="height: 600px;
  *                       width: 80%">
  *       Modal with TinyMCE</a>
  *    <div id="modaltinymce" style="display:none">
@@ -39023,8 +39017,8 @@ define('mockup-patterns-modal',[
   'use strict';
 
   var Modal = Base.extend({
-    name: 'modal',
-    trigger: '.pat-modal',
+    name: 'plone-modal',
+    trigger: '.pat-plone-modal',
     createModal: null,
     $model: null,
     defaults: {
@@ -39238,7 +39232,7 @@ define('mockup-patterns-modal',[
             if (options.displayInModal === true) {
               self.redraw(response, patternOptions);
             } else {
-              $action.trigger('destroy.modal.patterns');
+              $action.trigger('destroy.plone-modal.patterns');
               // also calls hide
               if (options.reloadWindowOnClose) {
                 self.reloadWindow();
@@ -39386,7 +39380,7 @@ define('mockup-patterns-modal',[
           .on('click', function(e) {
             e.stopPropagation();
             e.preventDefault();
-            $(e.target).trigger('destroy.modal.patterns');
+            $(e.target).trigger('destroy.plone-modal.patterns');
           });
 
         // cleanup html
@@ -39409,11 +39403,11 @@ define('mockup-patterns-modal',[
             }
             self.$modal.trigger('modal-click');
           })
-          .on('destroy.modal.patterns', function(e) {
+          .on('destroy.plone-modal.patterns', function(e) {
             e.stopPropagation();
             self.hide();
           })
-          .on('resize.modal.patterns', function(e) {
+          .on('resize.plone-modal.patterns', function(e) {
             e.stopPropagation();
             e.preventDefault();
             self.positionModal();
@@ -39749,7 +39743,7 @@ define('mockup-patterns-modal',[
       $('img', self.$modal).load(function() {
         self.positionModal();
       });
-      $(window.parent).on('resize.modal.patterns', function() {
+      $(window.parent).on('resize.plone-modal.patterns', function() {
         self.positionModal();
       });
       self.emit('shown');
@@ -39777,7 +39771,7 @@ define('mockup-patterns-modal',[
         self.$modal.remove();
         self.initModal();
       }
-      $(window.parent).off('resize.modal.patterns');
+      $(window.parent).off('resize.plone-modal.patterns');
       self.emit('hidden');
       $('body').removeClass('plone-modal-open');
     },
@@ -77547,7 +77541,7 @@ define('mockup-patterns-autotoc',[
               }, self.options.scrollDuration, self.options.scrollEasing);
             }
             if (self.$el.parents('.plone-modal').size() !== 0) {
-              self.$el.trigger('resize.modal.patterns');
+              self.$el.trigger('resize.plone-modal.patterns');
             }
             $(this).trigger('clicked');
           });
@@ -77982,171 +77976,6 @@ define('text!mockup-patterns-tinymce-url/templates/selection.xml',[],function ()
     var module = { exports: { } }; // Fake component
 
 
-/**
- * Expose `Emitter`.
- */
-
-module.exports = Emitter;
-
-/**
- * Initialize a new `Emitter`.
- *
- * @api public
- */
-
-function Emitter(obj) {
-  if (obj) return mixin(obj);
-};
-
-/**
- * Mixin the emitter properties.
- *
- * @param {Object} obj
- * @return {Object}
- * @api private
- */
-
-function mixin(obj) {
-  for (var key in Emitter.prototype) {
-    obj[key] = Emitter.prototype[key];
-  }
-  return obj;
-}
-
-/**
- * Listen on the given `event` with `fn`.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.on =
-Emitter.prototype.addEventListener = function(event, fn){
-  this._callbacks = this._callbacks || {};
-  (this._callbacks[event] = this._callbacks[event] || [])
-    .push(fn);
-  return this;
-};
-
-/**
- * Adds an `event` listener that will be invoked a single
- * time then automatically removed.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.once = function(event, fn){
-  var self = this;
-  this._callbacks = this._callbacks || {};
-
-  function on() {
-    self.off(event, on);
-    fn.apply(this, arguments);
-  }
-
-  on.fn = fn;
-  this.on(event, on);
-  return this;
-};
-
-/**
- * Remove the given callback for `event` or all
- * registered callbacks.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.off =
-Emitter.prototype.removeListener =
-Emitter.prototype.removeAllListeners =
-Emitter.prototype.removeEventListener = function(event, fn){
-  this._callbacks = this._callbacks || {};
-
-  // all
-  if (0 == arguments.length) {
-    this._callbacks = {};
-    return this;
-  }
-
-  // specific event
-  var callbacks = this._callbacks[event];
-  if (!callbacks) return this;
-
-  // remove all handlers
-  if (1 == arguments.length) {
-    delete this._callbacks[event];
-    return this;
-  }
-
-  // remove specific handler
-  var cb;
-  for (var i = 0; i < callbacks.length; i++) {
-    cb = callbacks[i];
-    if (cb === fn || cb.fn === fn) {
-      callbacks.splice(i, 1);
-      break;
-    }
-  }
-  return this;
-};
-
-/**
- * Emit `event` with the given args.
- *
- * @param {String} event
- * @param {Mixed} ...
- * @return {Emitter}
- */
-
-Emitter.prototype.emit = function(event){
-  this._callbacks = this._callbacks || {};
-  var args = [].slice.call(arguments, 1)
-    , callbacks = this._callbacks[event];
-
-  if (callbacks) {
-    callbacks = callbacks.slice(0);
-    for (var i = 0, len = callbacks.length; i < len; ++i) {
-      callbacks[i].apply(this, args);
-    }
-  }
-
-  return this;
-};
-
-/**
- * Return array of callbacks for `event`.
- *
- * @param {String} event
- * @return {Array}
- * @api public
- */
-
-Emitter.prototype.listeners = function(event){
-  this._callbacks = this._callbacks || {};
-  return this._callbacks[event] || [];
-};
-
-/**
- * Check if this emitter has `event` handlers.
- *
- * @param {String} event
- * @return {Boolean}
- * @api public
- */
-
-Emitter.prototype.hasListeners = function(event){
-  return !! this.listeners(event).length;
-};
-
-
 /*
  *
  * More info at [www.dropzonejs.com](http://www.dropzonejs.com)
@@ -78174,19 +78003,81 @@ Emitter.prototype.hasListeners = function(event){
  */
 
 (function() {
-  var Dropzone, Em, camelize, contentLoaded, detectVerticalSquash, drawImageIOSFix, noop, without,
+  var Dropzone, Emitter, camelize, contentLoaded, detectVerticalSquash, drawImageIOSFix, noop, without,
+    __slice = [].slice,
     __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __slice = [].slice;
-
-  Em = typeof Emitter !== "undefined" && Emitter !== null ? Emitter : require("emitter");
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   noop = function() {};
 
+  Emitter = (function() {
+    function Emitter() {}
+
+    Emitter.prototype.addEventListener = Emitter.prototype.on;
+
+    Emitter.prototype.on = function(event, fn) {
+      this._callbacks = this._callbacks || {};
+      if (!this._callbacks[event]) {
+        this._callbacks[event] = [];
+      }
+      this._callbacks[event].push(fn);
+      return this;
+    };
+
+    Emitter.prototype.emit = function() {
+      var args, callback, callbacks, event, _i, _len;
+      event = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+      this._callbacks = this._callbacks || {};
+      callbacks = this._callbacks[event];
+      if (callbacks) {
+        for (_i = 0, _len = callbacks.length; _i < _len; _i++) {
+          callback = callbacks[_i];
+          callback.apply(this, args);
+        }
+      }
+      return this;
+    };
+
+    Emitter.prototype.removeListener = Emitter.prototype.off;
+
+    Emitter.prototype.removeAllListeners = Emitter.prototype.off;
+
+    Emitter.prototype.removeEventListener = Emitter.prototype.off;
+
+    Emitter.prototype.off = function(event, fn) {
+      var callback, callbacks, i, _i, _len;
+      if (!this._callbacks || arguments.length === 0) {
+        this._callbacks = {};
+        return this;
+      }
+      callbacks = this._callbacks[event];
+      if (!callbacks) {
+        return this;
+      }
+      if (arguments.length === 1) {
+        delete this._callbacks[event];
+        return this;
+      }
+      for (i = _i = 0, _len = callbacks.length; _i < _len; i = ++_i) {
+        callback = callbacks[i];
+        if (callback === fn) {
+          callbacks.splice(i, 1);
+          break;
+        }
+      }
+      return this;
+    };
+
+    return Emitter;
+
+  })();
+
   Dropzone = (function(_super) {
-    var extend;
+    var extend, resolveOption;
 
     __extends(Dropzone, _super);
+
+    Dropzone.prototype.Emitter = Emitter;
 
 
     /*
@@ -78197,7 +78088,7 @@ Emitter.prototype.hasListeners = function(event){
         dropzone.on("dragEnter", function() { });
      */
 
-    Dropzone.prototype.events = ["drop", "dragstart", "dragend", "dragenter", "dragover", "dragleave", "addedfile", "removedfile", "thumbnail", "error", "errormultiple", "processing", "processingmultiple", "uploadprogress", "totaluploadprogress", "sending", "sendingmultiple", "success", "successmultiple", "canceled", "canceledmultiple", "complete", "completemultiple", "reset", "maxfilesexceeded", "maxfilesreached"];
+    Dropzone.prototype.events = ["drop", "dragstart", "dragend", "dragenter", "dragover", "dragleave", "addedfile", "removedfile", "thumbnail", "error", "errormultiple", "processing", "processingmultiple", "uploadprogress", "totaluploadprogress", "sending", "sendingmultiple", "success", "successmultiple", "canceled", "canceledmultiple", "complete", "completemultiple", "reset", "maxfilesexceeded", "maxfilesreached", "queuecomplete"];
 
     Dropzone.prototype.defaultOptions = {
       url: null,
@@ -78209,9 +78100,11 @@ Emitter.prototype.hasListeners = function(event){
       paramName: "file",
       createImageThumbnails: true,
       maxThumbnailFilesize: 10,
-      thumbnailWidth: 100,
-      thumbnailHeight: 100,
+      thumbnailWidth: 120,
+      thumbnailHeight: 120,
+      filesizeBase: 1000,
       maxFiles: null,
+      filesizeBase: 1000,
       params: {},
       clickable: true,
       ignoreHiddenFiles: true,
@@ -78221,6 +78114,7 @@ Emitter.prototype.hasListeners = function(event){
       autoQueue: true,
       addRemoveLinks: false,
       previewsContainer: null,
+      capture: null,
       dictDefaultMessage: "Drop files here to upload",
       dictFallbackMessage: "Your browser does not support drag'n'drop file uploads.",
       dictFallbackText: "Please use the fallback form below to upload your files like in the olden days.",
@@ -78387,18 +78281,20 @@ Emitter.prototype.hasListeners = function(event){
         return this._updateMaxFilesReachedClass();
       },
       thumbnail: function(file, dataUrl) {
-        var thumbnailElement, _i, _len, _ref, _results;
+        var thumbnailElement, _i, _len, _ref;
         if (file.previewElement) {
           file.previewElement.classList.remove("dz-file-preview");
-          file.previewElement.classList.add("dz-image-preview");
           _ref = file.previewElement.querySelectorAll("[data-dz-thumbnail]");
-          _results = [];
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             thumbnailElement = _ref[_i];
             thumbnailElement.alt = file.name;
-            _results.push(thumbnailElement.src = dataUrl);
+            thumbnailElement.src = dataUrl;
           }
-          return _results;
+          return setTimeout(((function(_this) {
+            return function() {
+              return file.previewElement.classList.add("dz-image-preview");
+            };
+          })(this)), 1);
         }
       },
       error: function(file, message) {
@@ -78434,7 +78330,11 @@ Emitter.prototype.hasListeners = function(event){
           _results = [];
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             node = _ref[_i];
-            _results.push(node.style.width = "" + progress + "%");
+            if (node.nodeName === 'PROGRESS') {
+              _results.push(node.value = progress);
+            } else {
+              _results.push(node.style.width = "" + progress + "%");
+            }
           }
           return _results;
         }
@@ -78454,13 +78354,17 @@ Emitter.prototype.hasListeners = function(event){
       canceledmultiple: noop,
       complete: function(file) {
         if (file._removeLink) {
-          return file._removeLink.textContent = this.options.dictRemoveFile;
+          file._removeLink.textContent = this.options.dictRemoveFile;
+        }
+        if (file.previewElement) {
+          return file.previewElement.classList.add("dz-complete");
         }
       },
       completemultiple: noop,
       maxfilesexceeded: noop,
       maxfilesreached: noop,
-      previewTemplate: "<div class=\"dz-preview dz-file-preview\">\n  <div class=\"dz-details\">\n    <div class=\"dz-filename\"><span data-dz-name></span></div>\n    <div class=\"dz-size\" data-dz-size></div>\n    <img data-dz-thumbnail />\n  </div>\n  <div class=\"dz-progress\"><span class=\"dz-upload\" data-dz-uploadprogress></span></div>\n  <div class=\"dz-success-mark\"><span>✔</span></div>\n  <div class=\"dz-error-mark\"><span>✘</span></div>\n  <div class=\"dz-error-message\"><span data-dz-errormessage></span></div>\n</div>"
+      queuecomplete: noop,
+      previewTemplate: "<div class=\"dz-preview dz-file-preview\">\n  <div class=\"dz-image\"><img data-dz-thumbnail /></div>\n  <div class=\"dz-details\">\n    <div class=\"dz-size\"><span data-dz-size></span></div>\n    <div class=\"dz-filename\"><span data-dz-name></span></div>\n  </div>\n  <div class=\"dz-progress\"><span class=\"dz-upload\" data-dz-uploadprogress></span></div>\n  <div class=\"dz-error-message\"><span data-dz-errormessage></span></div>\n  <div class=\"dz-success-mark\">\n    <svg width=\"54px\" height=\"54px\" viewBox=\"0 0 54 54\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:sketch=\"http://www.bohemiancoding.com/sketch/ns\">\n      <title>Check</title>\n      <defs></defs>\n      <g id=\"Page-1\" stroke=\"none\" stroke-width=\"1\" fill=\"none\" fill-rule=\"evenodd\" sketch:type=\"MSPage\">\n        <path d=\"M23.5,31.8431458 L17.5852419,25.9283877 C16.0248253,24.3679711 13.4910294,24.366835 11.9289322,25.9289322 C10.3700136,27.4878508 10.3665912,30.0234455 11.9283877,31.5852419 L20.4147581,40.0716123 C20.5133999,40.1702541 20.6159315,40.2626649 20.7218615,40.3488435 C22.2835669,41.8725651 24.794234,41.8626202 26.3461564,40.3106978 L43.3106978,23.3461564 C44.8771021,21.7797521 44.8758057,19.2483887 43.3137085,17.6862915 C41.7547899,16.1273729 39.2176035,16.1255422 37.6538436,17.6893022 L23.5,31.8431458 Z M27,53 C41.3594035,53 53,41.3594035 53,27 C53,12.6405965 41.3594035,1 27,1 C12.6405965,1 1,12.6405965 1,27 C1,41.3594035 12.6405965,53 27,53 Z\" id=\"Oval-2\" stroke-opacity=\"0.198794158\" stroke=\"#747474\" fill-opacity=\"0.816519475\" fill=\"#FFFFFF\" sketch:type=\"MSShapeGroup\"></path>\n      </g>\n    </svg>\n  </div>\n  <div class=\"dz-error-mark\">\n    <svg width=\"54px\" height=\"54px\" viewBox=\"0 0 54 54\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns:sketch=\"http://www.bohemiancoding.com/sketch/ns\">\n      <title>Error</title>\n      <defs></defs>\n      <g id=\"Page-1\" stroke=\"none\" stroke-width=\"1\" fill=\"none\" fill-rule=\"evenodd\" sketch:type=\"MSPage\">\n        <g id=\"Check-+-Oval-2\" sketch:type=\"MSLayerGroup\" stroke=\"#747474\" stroke-opacity=\"0.198794158\" fill=\"#FFFFFF\" fill-opacity=\"0.816519475\">\n          <path d=\"M32.6568542,29 L38.3106978,23.3461564 C39.8771021,21.7797521 39.8758057,19.2483887 38.3137085,17.6862915 C36.7547899,16.1273729 34.2176035,16.1255422 32.6538436,17.6893022 L27,23.3431458 L21.3461564,17.6893022 C19.7823965,16.1255422 17.2452101,16.1273729 15.6862915,17.6862915 C14.1241943,19.2483887 14.1228979,21.7797521 15.6893022,23.3461564 L21.3431458,29 L15.6893022,34.6538436 C14.1228979,36.2202479 14.1241943,38.7516113 15.6862915,40.3137085 C17.2452101,41.8726271 19.7823965,41.8744578 21.3461564,40.3106978 L27,34.6568542 L32.6538436,40.3106978 C34.2176035,41.8744578 36.7547899,41.8726271 38.3137085,40.3137085 C39.8758057,38.7516113 39.8771021,36.2202479 38.3106978,34.6538436 L32.6568542,29 Z M27,53 C41.3594035,53 53,41.3594035 53,27 C53,12.6405965 41.3594035,1 27,1 C12.6405965,1 1,12.6405965 1,27 C1,41.3594035 12.6405965,53 27,53 Z\" id=\"Oval-2\" sketch:type=\"MSShapeGroup\"></path>\n        </g>\n      </g>\n    </svg>\n  </div>\n</div>"
     };
 
     extend = function() {
@@ -78616,6 +78520,9 @@ Emitter.prototype.hasListeners = function(event){
             _this.hiddenFileInput.className = "dz-hidden-input";
             if (_this.options.acceptedFiles != null) {
               _this.hiddenFileInput.setAttribute("accept", _this.options.acceptedFiles);
+            }
+            if (_this.options.capture != null) {
+              _this.hiddenFileInput.setAttribute("capture", _this.options.capture);
             }
             _this.hiddenFileInput.style.visibility = "hidden";
             _this.hiddenFileInput.style.position = "absolute";
@@ -78883,24 +78790,20 @@ Emitter.prototype.hasListeners = function(event){
     };
 
     Dropzone.prototype.filesize = function(size) {
-      var string;
-      if (size >= 1024 * 1024 * 1024 * 1024 / 10) {
-        size = size / (1024 * 1024 * 1024 * 1024 / 10);
-        string = "TiB";
-      } else if (size >= 1024 * 1024 * 1024 / 10) {
-        size = size / (1024 * 1024 * 1024 / 10);
-        string = "GiB";
-      } else if (size >= 1024 * 1024 / 10) {
-        size = size / (1024 * 1024 / 10);
-        string = "MiB";
-      } else if (size >= 1024 / 10) {
-        size = size / (1024 / 10);
-        string = "KiB";
-      } else {
-        size = size * 10;
-        string = "b";
+      var cutoff, i, selectedSize, selectedUnit, unit, units, _i, _len;
+      units = ['TB', 'GB', 'MB', 'KB', 'b'];
+      selectedSize = selectedUnit = null;
+      for (i = _i = 0, _len = units.length; _i < _len; i = ++_i) {
+        unit = units[i];
+        cutoff = Math.pow(this.options.filesizeBase, 4 - i) / 10;
+        if (size >= cutoff) {
+          selectedSize = size / Math.pow(this.options.filesizeBase, 4 - i);
+          selectedUnit = unit;
+          break;
+        }
       }
-      return "<strong>" + (Math.round(size) / 10) + "</strong> " + string;
+      selectedSize = Math.round(10 * selectedSize) / 10;
+      return "<strong>" + selectedSize + "</strong> " + selectedUnit;
     };
 
     Dropzone.prototype._updateMaxFilesReachedClass = function() {
@@ -79128,34 +79031,50 @@ Emitter.prototype.hasListeners = function(event){
       fileReader = new FileReader;
       fileReader.onload = (function(_this) {
         return function() {
-          var img;
-          img = document.createElement("img");
-          img.onload = function() {
-            var canvas, ctx, resizeInfo, thumbnail, _ref, _ref1, _ref2, _ref3;
-            file.width = img.width;
-            file.height = img.height;
-            resizeInfo = _this.options.resize.call(_this, file);
-            if (resizeInfo.trgWidth == null) {
-              resizeInfo.trgWidth = resizeInfo.optWidth;
-            }
-            if (resizeInfo.trgHeight == null) {
-              resizeInfo.trgHeight = resizeInfo.optHeight;
-            }
-            canvas = document.createElement("canvas");
-            ctx = canvas.getContext("2d");
-            canvas.width = resizeInfo.trgWidth;
-            canvas.height = resizeInfo.trgHeight;
-            drawImageIOSFix(ctx, img, (_ref = resizeInfo.srcX) != null ? _ref : 0, (_ref1 = resizeInfo.srcY) != null ? _ref1 : 0, resizeInfo.srcWidth, resizeInfo.srcHeight, (_ref2 = resizeInfo.trgX) != null ? _ref2 : 0, (_ref3 = resizeInfo.trgY) != null ? _ref3 : 0, resizeInfo.trgWidth, resizeInfo.trgHeight);
-            thumbnail = canvas.toDataURL("image/png");
-            _this.emit("thumbnail", file, thumbnail);
+          if (file.type === "image/svg+xml") {
+            _this.emit("thumbnail", file, fileReader.result);
             if (callback != null) {
-              return callback();
+              callback();
             }
-          };
-          return img.src = fileReader.result;
+            return;
+          }
+          return _this.createThumbnailFromUrl(file, fileReader.result, callback);
         };
       })(this);
       return fileReader.readAsDataURL(file);
+    };
+
+    Dropzone.prototype.createThumbnailFromUrl = function(file, imageUrl, callback) {
+      var img;
+      img = document.createElement("img");
+      img.onload = (function(_this) {
+        return function() {
+          var canvas, ctx, resizeInfo, thumbnail, _ref, _ref1, _ref2, _ref3;
+          file.width = img.width;
+          file.height = img.height;
+          resizeInfo = _this.options.resize.call(_this, file);
+          if (resizeInfo.trgWidth == null) {
+            resizeInfo.trgWidth = resizeInfo.optWidth;
+          }
+          if (resizeInfo.trgHeight == null) {
+            resizeInfo.trgHeight = resizeInfo.optHeight;
+          }
+          canvas = document.createElement("canvas");
+          ctx = canvas.getContext("2d");
+          canvas.width = resizeInfo.trgWidth;
+          canvas.height = resizeInfo.trgHeight;
+          drawImageIOSFix(ctx, img, (_ref = resizeInfo.srcX) != null ? _ref : 0, (_ref1 = resizeInfo.srcY) != null ? _ref1 : 0, resizeInfo.srcWidth, resizeInfo.srcHeight, (_ref2 = resizeInfo.trgX) != null ? _ref2 : 0, (_ref3 = resizeInfo.trgY) != null ? _ref3 : 0, resizeInfo.trgWidth, resizeInfo.trgHeight);
+          thumbnail = canvas.toDataURL("image/png");
+          _this.emit("thumbnail", file, thumbnail);
+          if (callback != null) {
+            return callback();
+          }
+        };
+      })(this);
+      if (callback != null) {
+        img.onerror = callback;
+      }
+      return img.src = imageUrl;
     };
 
     Dropzone.prototype.processQueue = function() {
@@ -79245,18 +79164,29 @@ Emitter.prototype.hasListeners = function(event){
       }
     };
 
+    resolveOption = function() {
+      var args, option;
+      option = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+      if (typeof option === 'function') {
+        return option.apply(this, args);
+      }
+      return option;
+    };
+
     Dropzone.prototype.uploadFile = function(file) {
       return this.uploadFiles([file]);
     };
 
     Dropzone.prototype.uploadFiles = function(files) {
-      var file, formData, handleError, headerName, headerValue, headers, i, input, inputName, inputType, key, option, progressObj, response, updateProgress, value, xhr, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+      var file, formData, handleError, headerName, headerValue, headers, i, input, inputName, inputType, key, method, option, progressObj, response, updateProgress, url, value, xhr, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
       xhr = new XMLHttpRequest();
       for (_i = 0, _len = files.length; _i < _len; _i++) {
         file = files[_i];
         file.xhr = xhr;
       }
-      xhr.open(this.options.method, this.options.url, true);
+      method = resolveOption(this.options.method, files);
+      url = resolveOption(this.options.url, files);
+      xhr.open(method, url, true);
       xhr.withCredentials = !!this.options.withCredentials;
       response = null;
       handleError = (function(_this) {
@@ -79430,9 +79360,9 @@ Emitter.prototype.hasListeners = function(event){
 
     return Dropzone;
 
-  })(Em);
+  })(Emitter);
 
-  Dropzone.version = "3.10.2";
+  Dropzone.version = "4.0.1";
 
   Dropzone.options = {};
 
@@ -79832,9 +79762,9 @@ define('mockup-patterns-upload',[
   'dropzone',
   'text!mockup-patterns-upload-url/templates/upload.xml',
   'text!mockup-patterns-upload-url/templates/preview.xml',
-  'mockup-i18n'
+  'translate'
 ], function($, _, Base, RelatedItems, Dropzone,
-            UploadTemplate, PreviewTemplate, i18n) {
+            UploadTemplate, PreviewTemplate, _t) {
   'use strict';
 
   /* we do not want this plugin to auto discover */
@@ -79878,15 +79808,12 @@ define('mockup-patterns-upload',[
       var self = this,
           template = UploadTemplate;
 
-      i18n.loadCatalog('widgets');
-      self._t = i18n.MessageFactory('widgets');
-
       // values that will change current processing
       self.currentPath = self.options.currentPath;
       self.numFiles = 0;
       self.currentFile = 0;
 
-      template = _.template(template, {_t: self._t});
+      template = _.template(template, {_t: _t});
       self.$el.addClass(self.options.className);
       self.$el.append(template);
 
@@ -79954,6 +79881,16 @@ define('mockup-patterns-upload',[
         if (self.dropzone.files.length < 1) {
           self.hideControls();
         }
+      });
+
+      self.dropzone.on('success', function(e, response){
+        // Trigger event 'uploadAllCompleted' and pass the server's reponse and
+        // the path uid. This event can be listened to by patterns using the
+        // upload pattern, e.g. the TinyMCE pattern's link plugin.
+        self.$el.trigger('uploadAllCompleted', {
+          'data': response,
+          'path_uid': self.$pathInput.val()
+        });
       });
 
       if (self.options.autoCleanResults) {
@@ -80149,13 +80086,13 @@ define('mockup-patterns-upload',[
         chunkSize: chunkSize
       }).fail(function() {
         if(window.DEBUG){
-          console.alert(self._t('Error uploading with TUS resumable uploads'));
+          console.alert(_t('Error uploading with TUS resumable uploads'));
         }
         file.status = Dropzone.ERROR;
       }).progress(function(e, bytesUploaded, bytesTotal) {
         var percentage = (bytesUploaded / bytesTotal * 100);
         self.$progress.attr('aria-valuenow', percentage).css('width', percentage + '%');
-        self.$progress.html(self._t('uploading...') + '<br />' +
+        self.$progress.html(_t('uploading...') + '<br />' +
                             self.formatBytes(bytesUploaded) +
                             ' / ' + self.formatBytes(bytesTotal));
       }).done(function(url, file) {
@@ -80211,7 +80148,7 @@ define('mockup-patterns-upload',[
 define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(upload){ %>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType internal" data-linkType="internal">\n        <legend>Internal</legend>\n        <div>\n          <div class="form-group main">\n            <!-- this gives the name to the "linkType" -->\n            <input type="text" name="internal" />\n          </div>\n        </div>\n      </fieldset>\n\n      <% if(upload){ %>\n      <fieldset class="linkType upload" data-linkType="upload">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <fieldset class="linkType external" data-linkType="external">\n        <legend>External</legend>\n        <div class="form-group main">\n          <label for="external"><%- externalText %></label>\n          <input type="text" name="external" />\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType email" data-linkType="email">\n        <legend>Email</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <label><%- emailText %></label>\n            <input type="text" name="email" />\n          </div>\n          <div class="form-group">\n            <label><%- subjectText %></label>\n            <input type="text" name="subject" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType anchor" data-linkType="anchor">\n        <legend>Anchor</legend>\n        <div>\n          <div class="form-group main">\n            <label>Select an anchor</label>\n            <div class="input-wrapper">\n              <select name="anchor" class="pat-select2" data-pat-select2="width:500px" />\n            </div>\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group">\n        <label>Target</label>\n        <select name="target">\n          <% _.each(targetList, function(target){ %>\n            <option value="<%- target.value %>"><%- target.text %></option>\n          <% }); %>\n        </select>\n      </div>\n      <div class="form-group">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n  </div>\n</div>\n';});
 
 
-define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(upload){ %>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales, function(scale){ %>\n                  <option value="<%- scale.part %>">\n                    <%- scale.label %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n\n      <% if(upload){ %>\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(upload){ %>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales, function(scale){ %>\n                  <option value="<%- scale.part %>" <% if(scale.name === options.defaultScale){ %>selected<% } %> >\n                    <%- scale.label %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n\n      <% if(upload){ %>\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
 
 define('mockup-patterns-tinymce-url/js/links',[
   'jquery',
@@ -80321,13 +80258,9 @@ define('mockup-patterns-tinymce-url/js/links',[
 
   var UploadLink = InternalLink.extend({
     toUrl: function() {
-      var filename = $('.pat-upload').data('filename');
-      var path = $('.pat-upload').data('path');
-      var paths = [path, filename];
-      if (path){
-        paths.unshift(''); // add root node
-      }
-      return paths.join('/');
+      // Make a URL from the servers uuid of the uploaded file.
+      var upload_data = $('.pat-upload').data('uploaddata');
+      return 'resolveuid/' + upload_data.UID;
     }
   });
 
@@ -80579,7 +80512,7 @@ define('mockup-patterns-tinymce-url/js/links',[
       self.dom = self.tiny.dom;
       self.linkType = self.options.initialLinkType;
       self.linkTypes = {};
-      self.modal = registry.patterns.modal.init(self.$el, {
+      self.modal = registry.patterns['plone-modal'].init(self.$el, {
         html: self.generateModalHtml(),
         content: null,
         buttons: '.plone-btn'
@@ -80591,6 +80524,7 @@ define('mockup-patterns-tinymce-url/js/links',[
 
     generateModalHtml: function() {
       return this.template({
+        options: this.options,
         upload: this.options.upload,
         text: this.options.text,
         insertHeading: this.options.text.insertHeading,
@@ -80721,9 +80655,10 @@ define('mockup-patterns-tinymce-url/js/links',[
         self.options.upload.relatedItems = self.options.relatedItems;
         self.$upload.addClass('pat-upload').patternUpload(self.options.upload);
         self.$upload.on('uploadAllCompleted', function(evt, data) {
+          // Add upload data and path_uid to the upload node's data attributes.
           self.$upload.attr({
-            'data-filename': data.files ? data.files[0].name : '',
-            'data-path': data.path
+            'data-uploaddata': data.data,
+            'data-path': data.path_uid
           });
         });
       }
@@ -80847,10 +80782,10 @@ define('mockup-patterns-tinymce-url/js/links',[
         }
       } else if (href[0] === '#') {
         this.linkType = 'anchor';
-        this.linkTypes.anchor.setRaw(href.substring(1));
+        this.linkTypes.anchor.set(href.substring(1));
       } else {
         this.linkType = 'external';
-        this.linkTypes.external.setRaw(href);
+        this.linkTypes.external.set(href);
       }
     },
 
@@ -95141,6 +95076,7 @@ toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignrig
  *    prependToScalePart(string): Text to prepend to generated image scale url part. ('/imagescale/')
  *    appendToScalePart(string): Text to append to generated image scale url part. ('')
  *    linkAttribute(string): Ajax response data attribute to use for url. ('path')
+ *    defaultScale(string): Scale name to default to. ('Original')
  *
  * Documentation:
  *    # Default
@@ -95229,7 +95165,7 @@ define('mockup-patterns-tinymce',[
 ], function($, _,
             Base, RelatedItems, Modal, tinymce,
             AutoTOC, ResultTemplate, SelectionTemplate,
-            utils, LinkModal, i18n, _t) {
+            utils, LinkModal, I18n, _t) {
   'use strict';
 
   var TinyMCE = Base.extend({
@@ -95275,6 +95211,7 @@ define('mockup-patterns-tinymce',[
       prependToScalePart: '/imagescale/', // some value here is required to be able to parse scales back
       appendToScalePart: '',
       appendToOriginalScalePart: '',
+      defaultScale: 'large',
       scales: _t('Listing (16x16):listing,Icon (32x32):icon,Tile (64x64):tile,' +
               'Thumb (128x128):thumb,Mini (200x200):mini,Preview (400x400):preview,' +
               'Large (768x768):large'),
@@ -95413,12 +95350,13 @@ define('mockup-patterns-tinymce',[
     },
     initLanguage: function(call_back){
       var self = this;
+      var i18n = new I18n();
       var lang = i18n.currentLanguage;
-      if (lang != 'en' && self.options.tiny.language !== 'en') {
+      if (lang !== 'en' && self.options.tiny.language !== 'en') {
         tinymce.baseURL = self.options.loadingBaseUrl;
         // does the expected language exist?
         $.ajax({
-          url: tinymce.baseURL + "/langs/" + lang + ".js",
+          url: tinymce.baseURL + '/langs/' + lang + '.js',
           type:'HEAD',
           success: function() {
             self.options.tiny.language = lang;
@@ -95426,13 +95364,13 @@ define('mockup-patterns-tinymce',[
           },
           error: function() {
             // expected lang not available, let's fallback to closest one
-            if (lang.split("_") > 1){
-              lang = lang.split("_")[0];
+            if (lang.split('_') > 1){
+              lang = lang.split('_')[0];
             } else {
-              lang = lang + "_" + lang.toUpperCase();
+              lang = lang + '_' + lang.toUpperCase();
             }
             $.ajax({
-              url: tinymce.baseURL + "/langs/" + lang + ".js",
+              url: tinymce.baseURL + '/langs/' + lang + '.js',
               type:'HEAD',
               success: function() {
                 self.options.tiny.language = lang;
@@ -95484,7 +95422,7 @@ define('mockup-patterns-tinymce',[
               part: scale[1],
               name: scale[1],
               label: scale[0]
-            }
+            };
           });
         }
         if(typeof(self.options.folderTypes) === 'string'){
