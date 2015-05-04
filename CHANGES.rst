@@ -4,6 +4,10 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Allow ``getVocabulary`` calls without a fieldname on INavigationRoot instead
+  of IPloneSiteRoot. This adds compatibility for Lineage based subsites.
+  [thet]
+
 - Use widget bundle from mockup's build directory, if mockup is installed. In
   this case, you need to build the widgets bundle in the mockup directory.
   [thet]
