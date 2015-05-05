@@ -44,16 +44,6 @@
       layer=".interfaces.IWidgetsLayer"
       />
   <browser:resource
-      name="plone.app.widgets-dropzone-spritemap@2x.png"
-      file="static/widgets-dropzone-spritemap@2x.png"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
-      name="plone.app.widgets-dropzone-spritemap.png"
-      file="static/widgets-dropzone-spritemap.png"
-      layer=".interfaces.IWidgetsLayer"
-      />
-  <browser:resource
       name="plone.app.widgets-jqtree-jqtree-circle.png"
       file="static/widgets-jqtree-jqtree-circle.png"
       layer=".interfaces.IWidgetsLayer"
