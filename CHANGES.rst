@@ -4,6 +4,10 @@ Changelog
 1.8.0 (unreleased)
 ------------------
 
+- Register the ``plonejsi18n`` view for all contexts, so that it can be called
+  also on the Zope root. If no base url is found, it's called on "/".
+  [thet]
+
 - Allow ``getVocabulary`` calls without a fieldname on INavigationRoot instead
   of IPloneSiteRoot. This adds compatibility for Lineage based subsites.
   [thet]
