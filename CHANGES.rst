@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.8.0 (unreleased)
+1.8.0 (2015-05-25)
 ------------------
 
 - Register the ``plonejsi18n`` view for all contexts, so that it can be called
