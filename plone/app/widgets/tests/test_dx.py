@@ -1079,10 +1079,7 @@ def add_mock_fti(portal):
     fti.klass = 'plone.dexterity.content.Item'
     fti.schema = 'plone.app.widgets.tests.test_dx.IMockSchema'
     fti.filter_content_types = False
-    fti.behaviors = (
-        'plone.app.dexterity.behaviors.metadata.IBasic',
-        'plone.app.dexterity.behaviors.metadata.ICategorization'
-    )
+    fti.behaviors = ('plone.app.dexterity.behaviors.metadata.IBasic',)
 
 
 def _custom_field_widget(field, request):
