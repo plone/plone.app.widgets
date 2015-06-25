@@ -190,8 +190,8 @@ class BrowserTest(unittest.TestCase):
         results = json.loads(results)
         result = results['results'][0]
 
-        self.assertTrue(result['text'], test_val)
-        self.assertTrue(result['id'], test_val)
+        self.assertEquals(result['text'], test_val)
+        self.assertEquals(result['id'], test_val)
 
     def testVocabularyUnauthorized(self):
         setRoles(self.portal, TEST_USER_ID, [])
