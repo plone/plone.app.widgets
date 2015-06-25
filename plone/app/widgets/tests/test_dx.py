@@ -20,6 +20,7 @@ from z3c.form.interfaces import IFieldWidget, IFormLayer
 from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
 from zope import schema
+from zope.component import getMultiAdapter
 from zope.component import getUtility
 from zope.component import provideAdapter
 from zope.component import provideUtility
@@ -1079,7 +1080,10 @@ def add_mock_fti(portal):
     fti.klass = 'plone.dexterity.content.Item'
     fti.schema = 'plone.app.widgets.tests.test_dx.IMockSchema'
     fti.filter_content_types = False
-    fti.behaviors = ('plone.app.dexterity.behaviors.metadata.IBasic',)
+    fti.behaviors = (
+        'plone.app.dexterity.behaviors.metadata.IBasic',
+        'plone.app.dexterity.behaviors.metadata.ICategorization'
+    )
 
 
 def _custom_field_widget(field, request):
@@ -1378,3 +1382,40 @@ class DexterityVocabularyPermissionTests(unittest.TestCase):
         data = json.loads(view())
         self.assertEquals(data['error'], 'Vocabulary lookup not allowed')
         _disable_custom_widget(IMockSchema['adapted_widget_field'])
+
+
+class VocabularyTests(unittest.TestCase):
+
+    layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
+
+    def setUp(self):
+        self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
+        setRequest(self.request)
+        self.portal = self.layer['portal']
+
+        login(self.portal, TEST_USER_NAME)
+        setRoles(self.portal, TEST_USER_ID, ['Manager'])
+
+        add_mock_fti(self.portal)
+        self.portal.invokeFactory('dx_mock', 'test_dx')
+
+    def test_vocabulary_encoding(self):
+        """The vocabulary should not return the binary encoded token
+        ("N=C3=A5=C3=B8=C3=AF"), but instead the value as the id in the result
+        set. Fixes an encoding problem. See:
+        https://github.com/plone/Products.CMFPlone/issues/650
+        """
+        test_val = u'Nåøï'
+        self.portal.test_dx.subject = (test_val,)
+        self.portal.test_dx.reindexObject(idxs=['Subject'])
+
+        self.request.form['name'] = 'plone.app.vocabularies.Keywords'
+        results = getMultiAdapter(
+            (self.portal, self.request),
+            name='getVocabulary'
+        )()
+        results = json.loads(results)
+        result = results['results'][0]
+
+        self.assertTrue(result['text'], test_val)
+        self.assertTrue(result['id'], test_val)

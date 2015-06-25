@@ -4,7 +4,12 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Let ``@@getVocabulary`` return the vocabulary's value instead of the token
+  for the id in the result set. The token is binary encoded and leads to
+  encoding errors when selecting a value with non-ASCII data from vocabulary
+  list in a select2 based widget.
+  Fixes: https://github.com/plone/Products.CMFPlone/issues/650
+  [thet]
 
 
 1.8.0 (2015-05-25)
