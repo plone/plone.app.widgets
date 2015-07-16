@@ -4,6 +4,10 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- Change the interval of the time widget of pickadate to 5 minutes instead of
+  30. Aligns with old Plone behavior and Plone 5.
+  [thet]
+
 - Let ``@@getVocabulary`` return the vocabulary's value instead of the token
   for the id in the result set. The token is binary encoded and leads to
   encoding errors when selecting a value with non-ASCII data from vocabulary

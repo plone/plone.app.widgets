@@ -84,6 +84,7 @@ def get_datetime_options(request):
             context=request),
         'placeholder': translate(_plone('Enter time...'), context=request),
         'today': translate(_plone(u"Today"), context=request),
+        'interval': 5,
     }
     return options
 
