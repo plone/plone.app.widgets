@@ -4,9 +4,9 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
-- Change the interval of the time widget of pickadate to 5 minutes instead of
-  30. Aligns with old Plone behavior and Plone 5.
-  [thet]
+- Change the past/future years and time interval of pickadate to the
+  registry settings
+  [petschki]
 
 - Let ``@@getVocabulary`` return the vocabulary's value instead of the token
   for the id in the result set. The token is binary encoded and leads to

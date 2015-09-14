@@ -231,6 +231,7 @@ class DatetimeWidgetTests(unittest.TestCase):
                                         u'Nov', u'Dec']
                     },
                     'time': {
+                        'interval': 5,
                         'placeholder': u'Enter time...',
                         'today': u'Today',
                         'format': 'h:i a'

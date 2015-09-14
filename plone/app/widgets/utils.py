@@ -5,6 +5,7 @@ from Products.CMFCore.interfaces._content import IFolderish
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.interfaces import IPloneSiteRoot
 from datetime import datetime
+from plone import api
 from plone.app.layout.navigation.root import getNavigationRootObject
 from plone.uuid.interfaces import IUUID
 from z3c.form.interfaces import IAddForm
@@ -51,6 +52,14 @@ class NotImplemented(Exception):
 def get_date_options(request):
     calendar = request.locale.dates.calendars['gregorian']
     today = datetime.today()
+    try:
+        past_years = int(api.portal.get_registry_record(
+            'plone.app.widgets.date_options.past_years'))
+        future_years = int(api.portal.get_registry_record(
+            'plone.app.widgets.date_options.future_years'))
+    except:
+        past_years = 100
+        future_years = 20
     return {
         'time': False,
         'date': {
@@ -64,8 +73,8 @@ def get_date_options(request):
             'monthsFull': calendar.getMonthNames(),
             'monthsShort': calendar.getMonthAbbreviations(),
             'selectYears': 200,
-            'min': [today.year - 100, 1, 1],
-            'max': [today.year + 20, 1, 1],
+            'min': [today.year - past_years, 1, 1],
+            'max': [today.year + future_years, 1, 1],
             'format': translate(
                 _('pickadate_date_format', default='mmmm d, yyyy'),
                 context=request),
@@ -77,6 +86,13 @@ def get_date_options(request):
 
 
 def get_datetime_options(request):
+    try:
+        _int = api.portal.get_registry_record(
+            'plone.app.widgets.datetime_options.interval')
+    except:
+        # if missing registry
+        _int = 5
+
     options = get_date_options(request)
     options['time'] = {
         'format': translate(
@@ -84,7 +100,7 @@ def get_datetime_options(request):
             context=request),
         'placeholder': translate(_plone('Enter time...'), context=request),
         'today': translate(_plone(u"Today"), context=request),
-        'interval': 5,
+        'interval': _int,
     }
     return options
 

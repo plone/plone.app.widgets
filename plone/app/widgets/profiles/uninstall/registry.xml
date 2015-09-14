@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<registry xmlns:i18n="http://xml.zope.org/namespaces/i18n">
+
+    <record name="plone.app.widgets.date_options.past_years" remove="true" />
+    <record name="plone.app.widgets.date_options.future_years" remove="true" />
+    <record name="plone.app.widgets.datetime_options.interval" remove="true" />
+
+</registry>
