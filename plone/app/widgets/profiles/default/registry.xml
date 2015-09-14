@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<registry xmlns:i18n="http://xml.zope.org/namespaces/i18n">
+
+    <record name="plone.app.widgets.date_options.past_years">
+        <field type="plone.registry.field.TextLine">
+            <title>Past years</title>
+            <description>How many years to show backward in the date selector</description>
+        </field>
+        <value>100</value>
+    </record>
+
+    <record name="plone.app.widgets.date_options.future_years">
+        <field type="plone.registry.field.TextLine">
+            <title>Future years</title>
+            <description>How many years to show forward in the date selector</description>
+        </field>
+        <value>20</value>
+    </record>
+
+    <record name="plone.app.widgets.datetime_options.interval">
+        <field type="plone.registry.field.TextLine">
+            <title>Time Interval</title>
+            <description>set the interval for time selector in minutes</description>
+        </field>
+        <value>5</value>
+    </record>
+
+</registry>

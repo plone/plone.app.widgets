@@ -1,5 +1,8 @@
 from mock import Mock
 from mock import patch
+from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
+from plone.registry.interfaces import IRegistry
+from zope.component import getUtility
 import unittest
 
 
@@ -18,7 +21,7 @@ class UtilsTests(unittest.TestCase):
             'plone.app.event': mock.module.module,
             'plone.app.event.base': mock.module.module.module,
         }
-        with patch('Products.CMFCore.utils.getToolByName', new=MockTool),\
+        with patch('Products.CMFCore.utils.getToolByName', new=MockTool), \
                 patch.dict('sys.modules', modules):
             # test for plone.app.event installed
             from plone.app.event import base
@@ -42,3 +45,23 @@ class UtilsTests(unittest.TestCase):
         # restore original state
         utils.HAS_PAE = orig_HAS_PAE
         reload(utils)
+
+
+class RegistryTests(unittest.TestCase):
+
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
+
+    def setUp(self):
+        self.portal = self.layer['portal']
+
+    def test_registry_options(self):
+        registry = getUtility(IRegistry)
+        self.assertEqual(
+            int(registry.get('plone.app.widgets.date_options.past_years')),
+            100)
+        self.assertEqual(
+            int(registry.get('plone.app.widgets.date_options.future_years')),
+            20)
+        self.assertEqual(
+            int(registry.get('plone.app.widgets.datetime_options.interval')),
+            5)

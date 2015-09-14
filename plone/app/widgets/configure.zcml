@@ -345,4 +345,14 @@
       <depends name="cssregistry"/>
   </genericsetup:importStep>
 
+  <genericsetup:upgradeDepends
+      title="Import registry settings"
+      description="Add datetime options to registry settings"
+      source="1"
+      destination="2"
+      profile="plone.app.widgets:default"
+      import_steps="plone.app.registry"
+      purge="False"
+      run_deps="False" />
+
 </configure>
