@@ -4,6 +4,9 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- Allow time options to be customized for DatetimeWidget.
+  [thet]
+
 - Change the interval of the time widget of pickadate to 5 minutes instead of
   30. Aligns with old Plone behavior and Plone 5.
   [thet]

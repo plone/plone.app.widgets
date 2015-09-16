@@ -217,7 +217,11 @@ class DatetimeWidget(DateWidget):
 
         args.setdefault('pattern_options', {})
         if 'time' in args['pattern_options']:
+            # Time gets set in parent class to false. Remove.
             del args['pattern_options']['time']
+        if 'time' in self.pattern_options:
+            # Re-apply custom set time options.
+            args['pattern_options']['time'] = self.pattern_options['time']
         args['pattern_options'] = dict_merge(
             get_datetime_options(request),
             args['pattern_options'])
