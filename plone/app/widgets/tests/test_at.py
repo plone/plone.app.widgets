@@ -164,7 +164,8 @@ class DatetimeWidgetTests(unittest.TestCase):
                     'time': {
                         'placeholder': u'Enter time...',
                         'today': u'Today',
-                        'format': 'h:i a'
+                        'format': 'h:i a',
+                        'interval': 5
                     }
                 }
             },
