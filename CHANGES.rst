@@ -4,7 +4,8 @@ Changelog
 2.0.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Pull types_link_to_folder_contents values from the configuration registry.
+  [esteele]
 
 
 2.0.0 (2015-03-26)
