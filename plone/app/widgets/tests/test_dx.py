@@ -238,7 +238,8 @@ class DatetimeWidgetTests(unittest.TestCase):
                         'interval': 5,
                         'placeholder': u'Enter time...',
                         'today': u'Today',
-                        'format': 'h:i a'
+                        'format': 'h:i a',
+                        'interval': 5
                     }
                 }
             },
