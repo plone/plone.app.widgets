@@ -3,6 +3,7 @@ from mock import patch
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.registry.interfaces import IRegistry
 from zope.component import getUtility
+import json
 import unittest
 
 
@@ -54,14 +55,10 @@ class RegistryTests(unittest.TestCase):
     def setUp(self):
         self.portal = self.layer['portal']
 
-    def test_registry_options(self):
+    def test_pickadate_options(self):
         registry = getUtility(IRegistry)
-        self.assertEqual(
-            int(registry.get('plone.app.widgets.date_options.past_years')),
-            100)
-        self.assertEqual(
-            int(registry.get('plone.app.widgets.date_options.future_years')),
-            20)
-        self.assertEqual(
-            int(registry.get('plone.app.widgets.datetime_options.interval')),
-            5)
+        p_options = json.loads(
+            registry.get('plone.patternoptions').get('pickadate'))
+        self.assertEqual(int(p_options.get('date').get('min')), 100)
+        self.assertEqual(int(p_options.get('date').get('max')), 20)
+        self.assertEqual(int(p_options.get('time').get('interval')), 5)

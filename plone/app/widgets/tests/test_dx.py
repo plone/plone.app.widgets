@@ -100,6 +100,8 @@ class BaseWidgetTests(unittest.TestCase):
 
 class DateWidgetTests(unittest.TestCase):
 
+    layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
+
     def setUp(self):
         from plone.app.widgets.dx import DateWidget
 
@@ -191,6 +193,8 @@ class DateWidgetTests(unittest.TestCase):
 
 
 class DatetimeWidgetTests(unittest.TestCase):
+
+    layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
 
     def setUp(self):
         from plone.app.widgets.dx import DatetimeWidget
