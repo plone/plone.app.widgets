@@ -134,6 +134,10 @@ class DatetimeWidgetTests(unittest.TestCase):
         )
         self.field.getName.return_value = 'fieldname'
         self.widget = DatetimeWidget()
+        self.widget.pattern_options = {
+            'date': {'firstDay': 0},
+            'time': {'interval': 5}
+        }
 
     def test_widget(self):
         current_year = datetime.today().year
@@ -169,8 +173,7 @@ class DatetimeWidgetTests(unittest.TestCase):
                         'interval': 5,
                         'placeholder': u'Enter time...',
                         'today': u'Today',
-                        'format': 'h:i a',
-                        'interval': 5
+                        'format': 'h:i a'
                     }
                 }
             },
