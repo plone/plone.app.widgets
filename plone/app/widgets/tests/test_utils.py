@@ -1,5 +1,9 @@
 from mock import Mock
 from mock import patch
+from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
+from plone.registry.interfaces import IRegistry
+from zope.component import getUtility
+import json
 import unittest
 
 
@@ -18,7 +22,7 @@ class UtilsTests(unittest.TestCase):
             'plone.app.event': mock.module.module,
             'plone.app.event.base': mock.module.module.module,
         }
-        with patch('Products.CMFCore.utils.getToolByName', new=MockTool),\
+        with patch('Products.CMFCore.utils.getToolByName', new=MockTool), \
                 patch.dict('sys.modules', modules):
             # test for plone.app.event installed
             from plone.app.event import base
@@ -42,3 +46,19 @@ class UtilsTests(unittest.TestCase):
         # restore original state
         utils.HAS_PAE = orig_HAS_PAE
         reload(utils)
+
+
+class RegistryTests(unittest.TestCase):
+
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
+
+    def setUp(self):
+        self.portal = self.layer['portal']
+
+    def test_pickadate_options(self):
+        registry = getUtility(IRegistry)
+        p_options = json.loads(
+            registry.get('plone.patternoptions').get('pickadate'))
+        self.assertEqual(int(p_options.get('date').get('min')), 100)
+        self.assertEqual(int(p_options.get('date').get('max')), 20)
+        self.assertEqual(int(p_options.get('time').get('interval')), 5)

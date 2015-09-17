@@ -6,9 +6,11 @@ from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.interfaces import IPloneSiteRoot
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
+from plone.registry.interfaces import IRegistry
 from plone.uuid.interfaces import IUUID
 from z3c.form.interfaces import IAddForm
 from zope.component import getMultiAdapter
+from zope.component import getUtility
 from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
@@ -48,9 +50,18 @@ class NotImplemented(Exception):
     """Raised when method/property is not implemented"""
 
 
+def pickadate_options():
+    registry = getUtility(IRegistry)
+    options = registry.get('plone.patternoptions', {}).get('pickadate', u'{}')
+    return json.loads(options)
+
+
 def get_date_options(request):
     calendar = request.locale.dates.calendars['gregorian']
     today = datetime.today()
+    d_options = pickadate_options().get('date', {})
+    y_min = d_options.get('min', 100)
+    y_max = d_options.get('max', 20)
     return {
         'time': False,
         'date': {
@@ -63,9 +74,9 @@ def get_date_options(request):
                 for t in (7, 1, 2, 3, 4, 5, 6)],
             'monthsFull': calendar.getMonthNames(),
             'monthsShort': calendar.getMonthAbbreviations(),
-            'selectYears': 200,
-            'min': [today.year - 100, 1, 1],
-            'max': [today.year + 20, 1, 1],
+            'selectYears': d_options.get('selectYears', 200),
+            'min': [today.year - y_min, 1, 1],
+            'max': [today.year + y_max, 1, 1],
             'format': translate(
                 _('pickadate_date_format', default='mmmm d, yyyy'),
                 context=request),
@@ -77,6 +88,9 @@ def get_date_options(request):
 
 
 def get_datetime_options(request):
+    t_options = pickadate_options().get('time', {})
+    interval = t_options.get('interval', 5)
+
     options = get_date_options(request)
     options['time'] = {
         'format': translate(
@@ -84,7 +98,7 @@ def get_datetime_options(request):
             context=request),
         'placeholder': translate(_plone('Enter time...'), context=request),
         'today': translate(_plone(u"Today"), context=request),
-        'interval': 5,
+        'interval': interval,
     }
     return options
 

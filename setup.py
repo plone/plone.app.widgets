@@ -38,7 +38,8 @@ setup(
         # nedded because users vocabulary was added here
         'plone.app.vocabularies>=2.1.12dev',
         # needed for compatibility with jQuery 1.9+
-        'Products.CMFPlone>=4.3.4'
+        'Products.CMFPlone>=4.3.4',
+        'plone.app.registry',
     ],
     extras_require={
         'test': [

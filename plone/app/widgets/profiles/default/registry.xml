@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<registry xmlns:i18n="http://xml.zope.org/namespaces/i18n">
+
+    <record name="plone.patternoptions">
+      <field type="plone.registry.field.Dict">
+        <title>Patterns configuration</title>
+        <description>Base pattern configuration options</description>
+        <key_type type="plone.registry.field.ASCIILine" />
+        <value_type type="plone.registry.field.Text" />
+      </field>
+      <value>
+        <element key="pickadate">{"date": {"selectYears": 200, "min": 100, "max": 20}, "time": {"interval": 5 } }</element>
+      </value>
+    </record>
+
+</registry>

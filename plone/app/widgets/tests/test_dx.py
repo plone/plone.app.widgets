@@ -100,6 +100,8 @@ class BaseWidgetTests(unittest.TestCase):
 
 class DateWidgetTests(unittest.TestCase):
 
+    layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
+
     def setUp(self):
         from plone.app.widgets.dx import DateWidget
 
@@ -192,6 +194,8 @@ class DateWidgetTests(unittest.TestCase):
 
 class DatetimeWidgetTests(unittest.TestCase):
 
+    layer = PLONEAPPWIDGETS_DX_INTEGRATION_TESTING
+
     def setUp(self):
         from plone.app.widgets.dx import DatetimeWidget
 
@@ -200,7 +204,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         self.widget = DatetimeWidget(self.request)
         self.widget.pattern_options = {
             'date': {'firstDay': 0},
-            'time': {'interval': 15}
+            'time': {'interval': 5}
         }
 
     def test_widget(self):
@@ -234,10 +238,11 @@ class DatetimeWidgetTests(unittest.TestCase):
                                         u'Nov', u'Dec']
                     },
                     'time': {
+                        'interval': 5,
                         'placeholder': u'Enter time...',
                         'today': u'Today',
                         'format': 'h:i a',
-                        'interval': 15
+                        'interval': 5
                     }
                 }
             },

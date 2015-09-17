@@ -7,9 +7,9 @@ Changelog
 - Allow time options to be customized for DatetimeWidget.
   [thet]
 
-- Change the interval of the time widget of pickadate to 5 minutes instead of
-  30. Aligns with old Plone behavior and Plone 5.
-  [thet]
+- add registry settings for pickadate options (Taken from Plone 5.0
+  plone.patternoptions)
+  [petschki]
 
 - Let ``@@getVocabulary`` return the vocabulary's value instead of the token
   for the id in the result set. The token is binary encoded and leads to
