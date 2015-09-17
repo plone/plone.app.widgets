@@ -62,6 +62,8 @@ class BaseWidgetTests(unittest.TestCase):
 
 class DateWidgetTests(unittest.TestCase):
 
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
+
     def setUp(self):
         from plone.app.widgets.at import DateWidget
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
@@ -119,6 +121,8 @@ class DateWidgetTests(unittest.TestCase):
 
 
 class DatetimeWidgetTests(unittest.TestCase):
+
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
 
     def setUp(self):
         from plone.app.widgets.at import DatetimeWidget
