@@ -2,7 +2,6 @@
 
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.interfaces import ITypesSchema
 from plone.registry.interfaces import IRegistry
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
@@ -138,10 +137,9 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                        context=request)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
-
     registry = getUtility(IRegistry)
-    settings = registry.forInterface(ITypesSchema, prefix="plone")
-    options['folderTypes'] = settings.types_link_to_folder_contents
+    options['folderTypes'] = registry.get(
+        'plone.types_link_to_folder_contents', [])
 
     return options
 
