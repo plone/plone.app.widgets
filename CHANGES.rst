@@ -1,7 +1,7 @@
 Changelog
 =========
 
-2.0.1 (unreleased)
+2.0.1 (2015-09-21)
 ------------------
 
 - Pull types_link_to_folder_contents values from the configuration registry.
