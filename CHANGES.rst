@@ -4,6 +4,9 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- ignore missing/broken RelationValues in RelatedItemsWidget
+  [petschki]
+
 - Change the past/future years and time interval of pickadate to the
   registry settings
   [petschki]
