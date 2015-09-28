@@ -42,3 +42,5 @@ class IFieldPermissionChecker(Interface):
         permission.  Raises and AttributeError if the field cannot be
         found.
         """
+class IVocabularyCatalog(Interface):
+    """ Marker interface for vocabularyCatalog """

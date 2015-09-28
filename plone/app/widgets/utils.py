@@ -17,6 +17,8 @@ from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
+
+from plone.app.widgets.interfaces import IVocabularyCatalog
 import json
 
 _ = MessageFactory('plone.app.widgets')
@@ -117,7 +119,8 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
                 options['initialValues'] = {}
                 vocabulary = vocabulary(context)
                 # Catalog
-                if vocabulary_name == 'plone.app.vocabularies.Catalog':
+                if vocabulary_name == 'plone.app.vocabularies.Catalog' or \
+                        IVocabularyCatalog.providedBy(vocabulary):
                     uids = value.split(separator)
                     try:
                         catalog = getToolByName(context, 'portal_catalog')
