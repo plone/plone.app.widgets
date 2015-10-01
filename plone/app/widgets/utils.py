@@ -2,12 +2,10 @@
 
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
-from plone.registry.interfaces import IRegistry
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
 from zope.component import providedBy
 from zope.component import queryUtility
-from zope.component import getUtility
 from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
@@ -137,8 +135,6 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                        context=request)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
-    registry = getUtility(IRegistry)
-
     return options
 
 
