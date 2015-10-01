@@ -138,8 +138,6 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
     registry = getUtility(IRegistry)
-    options['folderTypes'] = registry.get(
-        'plone.types_link_to_folder_contents', [])
 
     return options
 

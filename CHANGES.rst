@@ -4,7 +4,8 @@ Changelog
 2.0.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Removed code for unused types_link_to_folder_contents.
+  [maurits]
 
 
 2.0.1 (2015-09-21)
