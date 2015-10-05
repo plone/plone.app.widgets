@@ -4,6 +4,10 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- Fix vocabulary item path. This fixes issues when browsing through
+  collective.lineage subsites.
+  [petschki]
+
 - ignore missing/broken RelationValues in RelatedItemsWidget
   [petschki]
 
