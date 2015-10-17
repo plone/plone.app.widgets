@@ -1,5 +1,5 @@
 /** vim: et:ts=4:sw=4:sts=4
- * @license RequireJS 2.1.17 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
+ * @license RequireJS 2.1.20 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/requirejs for details
  */
@@ -12,7 +12,7 @@ var requirejs, require, define;
 (function (global) {
     var req, s, head, baseElement, dataMain, src,
         interactiveScript, currentlyAddingScript, mainScript, subPath,
-        version = '2.1.17',
+        version = '2.1.20',
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
         jsSuffixRegExp = /\.js$/,
@@ -21,7 +21,6 @@ var requirejs, require, define;
         ostring = op.toString,
         hasOwn = op.hasOwnProperty,
         ap = Array.prototype,
-        apsp = ap.splice,
         isBrowser = !!(typeof window !== 'undefined' && typeof navigator !== 'undefined' && window.document),
         isWebWorker = !isBrowser && typeof importScripts !== 'undefined',
         //PS3 indicates loaded and complete, but need to wait for complete
@@ -554,11 +553,13 @@ var requirejs, require, define;
         function takeGlobalQueue() {
             //Push all the globalDefQueue items into the context's defQueue
             if (globalDefQueue.length) {
-                //Array splice in the values since the context code has a
-                //local var ref to defQueue, so cannot just reassign the one
-                //on context.
-                apsp.apply(defQueue,
-                           [defQueue.length, 0].concat(globalDefQueue));
+                each(globalDefQueue, function(queueItem) {
+                    var id = queueItem[0];
+                    if (typeof id === 'string') {
+                        context.defQueueMap[id] = true;
+                    }
+                    defQueue.push(queueItem);
+                });
                 globalDefQueue = [];
             }
         }
@@ -589,7 +590,7 @@ var requirejs, require, define;
                         id: mod.map.id,
                         uri: mod.map.url,
                         config: function () {
-                            return  getOwn(config.config, mod.map.id) || {};
+                            return getOwn(config.config, mod.map.id) || {};
                         },
                         exports: mod.exports || (mod.exports = {})
                     });
@@ -845,7 +846,10 @@ var requirejs, require, define;
                     factory = this.factory;
 
                 if (!this.inited) {
-                    this.fetch();
+                    // Only fetch if not already in the defQueue.
+                    if (!hasProp(context.defQueueMap, id)) {
+                        this.fetch();
+                    }
                 } else if (this.error) {
                     this.emit('error', this.error);
                 } else if (!this.defining) {
@@ -1117,6 +1121,9 @@ var requirejs, require, define;
                         this.depCount += 1;
 
                         on(depMap, 'defined', bind(this, function (depExports) {
+                            if (this.undefed) {
+                                return;
+                            }
                             this.defineDep(i, depExports);
                             this.check();
                         }));
@@ -1233,13 +1240,15 @@ var requirejs, require, define;
             while (defQueue.length) {
                 args = defQueue.shift();
                 if (args[0] === null) {
-                    return onError(makeError('mismatch', 'Mismatched anonymous define() module: ' + args[args.length - 1]));
+                    return onError(makeError('mismatch', 'Mismatched anonymous define() module: ' +
+                        args[args.length - 1]));
                 } else {
                     //args are id, deps, factory. Should be normalized by the
                     //define() function.
                     callGetModule(args);
                 }
             }
+            context.defQueueMap = {};
         }
 
         context = {
@@ -1249,6 +1258,7 @@ var requirejs, require, define;
             defined: defined,
             urlFetched: urlFetched,
             defQueue: defQueue,
+            defQueueMap: {},
             Module: Module,
             makeModuleMap: makeModuleMap,
             nextTick: req.nextTick,
@@ -1320,7 +1330,7 @@ var requirejs, require, define;
                     each(cfg.packages, function (pkgObj) {
                         var location, name;
 
-                        pkgObj = typeof pkgObj === 'string' ? { name: pkgObj } : pkgObj;
+                        pkgObj = typeof pkgObj === 'string' ? {name: pkgObj} : pkgObj;
 
                         name = pkgObj.name;
                         location = pkgObj.location;
@@ -1347,7 +1357,7 @@ var requirejs, require, define;
                     //late to modify them, and ignore unnormalized ones
                     //since they are transient.
                     if (!mod.inited && !mod.map.unnormalized) {
-                        mod.map = makeModuleMap(id);
+                        mod.map = makeModuleMap(id, null, true);
                     }
                 });
 
@@ -1483,6 +1493,7 @@ var requirejs, require, define;
                         var map = makeModuleMap(id, relMap, true),
                             mod = getOwn(registry, id);
 
+                        mod.undefed = true;
                         removeScript(id);
 
                         delete defined[id];
@@ -1493,10 +1504,11 @@ var requirejs, require, define;
                         //in array so that the splices do not
                         //mess up the iteration.
                         eachReverse(defQueue, function(args, i) {
-                            if(args[0] === id) {
+                            if (args[0] === id) {
                                 defQueue.splice(i, 1);
                             }
                         });
+                        delete context.defQueueMap[id];
 
                         if (mod) {
                             //Hold on to listeners in case the
@@ -1558,6 +1570,7 @@ var requirejs, require, define;
 
                     callGetModule(args);
                 }
+                context.defQueueMap = {};
 
                 //Do this after the cycle of callGetModule in case the result
                 //of those calls/init calls changes the registry.
@@ -1852,6 +1865,9 @@ var requirejs, require, define;
         if (isBrowser) {
             //In the browser so use a script tag
             node = req.createNode(config, moduleName, url);
+            if (config.onNodeCreated) {
+                config.onNodeCreated(node, config, moduleName, url);
+            }
 
             node.setAttribute('data-requirecontext', context.contextName);
             node.setAttribute('data-requiremodule', moduleName);
@@ -1980,7 +1996,7 @@ var requirejs, require, define;
                 //like a module name.
                 mainScript = mainScript.replace(jsSuffixRegExp, '');
 
-                 //If mainScript is still a path, fall back to dataMain
+                //If mainScript is still a path, fall back to dataMain
                 if (req.jsExtRegExp.test(mainScript)) {
                     mainScript = dataMain;
                 }
@@ -2059,13 +2075,17 @@ var requirejs, require, define;
         //where the module name is not known until the script onload event
         //occurs. If no context, use the global queue, and get it processed
         //in the onscript load callback.
-        (context ? context.defQueue : globalDefQueue).push([name, deps, callback]);
+        if (context) {
+            context.defQueue.push([name, deps, callback]);
+            context.defQueueMap[name] = true;
+        } else {
+            globalDefQueue.push([name, deps, callback]);
+        }
     };
 
     define.amd = {
         jQuery: true
     };
-
 
     /**
      * Executes the text. Normally just uses eval, but can be modified
@@ -12436,6 +12456,1555 @@ return jQuery;
 
 }));
 
+//     Underscore.js 1.8.3
+//     http://underscorejs.org
+//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+//     Underscore may be freely distributed under the MIT license.
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `exports` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push             = ArrayProto.push,
+    slice            = ArrayProto.slice,
+    toString         = ObjProto.toString,
+    hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind,
+    nativeCreate       = Object.create;
+
+  // Naked function reference for surrogate-prototype-swapping.
+  var Ctor = function(){};
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) {
+    if (obj instanceof _) return obj;
+    if (!(this instanceof _)) return new _(obj);
+    this._wrapped = obj;
+  };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root._ = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.8.3';
+
+  // Internal function that returns an efficient (for current engines) version
+  // of the passed-in callback, to be repeatedly applied in other Underscore
+  // functions.
+  var optimizeCb = function(func, context, argCount) {
+    if (context === void 0) return func;
+    switch (argCount == null ? 3 : argCount) {
+      case 1: return function(value) {
+        return func.call(context, value);
+      };
+      case 2: return function(value, other) {
+        return func.call(context, value, other);
+      };
+      case 3: return function(value, index, collection) {
+        return func.call(context, value, index, collection);
+      };
+      case 4: return function(accumulator, value, index, collection) {
+        return func.call(context, accumulator, value, index, collection);
+      };
+    }
+    return function() {
+      return func.apply(context, arguments);
+    };
+  };
+
+  // A mostly-internal function to generate callbacks that can be applied
+  // to each element in a collection, returning the desired result — either
+  // identity, an arbitrary callback, a property matcher, or a property accessor.
+  var cb = function(value, context, argCount) {
+    if (value == null) return _.identity;
+    if (_.isFunction(value)) return optimizeCb(value, context, argCount);
+    if (_.isObject(value)) return _.matcher(value);
+    return _.property(value);
+  };
+  _.iteratee = function(value, context) {
+    return cb(value, context, Infinity);
+  };
+
+  // An internal function for creating assigner functions.
+  var createAssigner = function(keysFunc, undefinedOnly) {
+    return function(obj) {
+      var length = arguments.length;
+      if (length < 2 || obj == null) return obj;
+      for (var index = 1; index < length; index++) {
+        var source = arguments[index],
+            keys = keysFunc(source),
+            l = keys.length;
+        for (var i = 0; i < l; i++) {
+          var key = keys[i];
+          if (!undefinedOnly || obj[key] === void 0) obj[key] = source[key];
+        }
+      }
+      return obj;
+    };
+  };
+
+  // An internal function for creating a new object that inherits from another.
+  var baseCreate = function(prototype) {
+    if (!_.isObject(prototype)) return {};
+    if (nativeCreate) return nativeCreate(prototype);
+    Ctor.prototype = prototype;
+    var result = new Ctor;
+    Ctor.prototype = null;
+    return result;
+  };
+
+  var property = function(key) {
+    return function(obj) {
+      return obj == null ? void 0 : obj[key];
+    };
+  };
+
+  // Helper for collection methods to determine whether a collection
+  // should be iterated as an array or as an object
+  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
+  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
+  var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
+  var getLength = property('length');
+  var isArrayLike = function(collection) {
+    var length = getLength(collection);
+    return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
+  };
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles raw objects in addition to array-likes. Treats all
+  // sparse array-likes as if they were dense.
+  _.each = _.forEach = function(obj, iteratee, context) {
+    iteratee = optimizeCb(iteratee, context);
+    var i, length;
+    if (isArrayLike(obj)) {
+      for (i = 0, length = obj.length; i < length; i++) {
+        iteratee(obj[i], i, obj);
+      }
+    } else {
+      var keys = _.keys(obj);
+      for (i = 0, length = keys.length; i < length; i++) {
+        iteratee(obj[keys[i]], keys[i], obj);
+      }
+    }
+    return obj;
+  };
+
+  // Return the results of applying the iteratee to each element.
+  _.map = _.collect = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length,
+        results = Array(length);
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      results[index] = iteratee(obj[currentKey], currentKey, obj);
+    }
+    return results;
+  };
+
+  // Create a reducing function iterating left or right.
+  function createReduce(dir) {
+    // Optimized iterator function as using arguments.length
+    // in the main function will deoptimize the, see #1991.
+    function iterator(obj, iteratee, memo, keys, index, length) {
+      for (; index >= 0 && index < length; index += dir) {
+        var currentKey = keys ? keys[index] : index;
+        memo = iteratee(memo, obj[currentKey], currentKey, obj);
+      }
+      return memo;
+    }
+
+    return function(obj, iteratee, memo, context) {
+      iteratee = optimizeCb(iteratee, context, 4);
+      var keys = !isArrayLike(obj) && _.keys(obj),
+          length = (keys || obj).length,
+          index = dir > 0 ? 0 : length - 1;
+      // Determine the initial value if none is provided.
+      if (arguments.length < 3) {
+        memo = obj[keys ? keys[index] : index];
+        index += dir;
+      }
+      return iterator(obj, iteratee, memo, keys, index, length);
+    };
+  }
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`.
+  _.reduce = _.foldl = _.inject = createReduce(1);
+
+  // The right-associative version of reduce, also known as `foldr`.
+  _.reduceRight = _.foldr = createReduce(-1);
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, predicate, context) {
+    var key;
+    if (isArrayLike(obj)) {
+      key = _.findIndex(obj, predicate, context);
+    } else {
+      key = _.findKey(obj, predicate, context);
+    }
+    if (key !== void 0 && key !== -1) return obj[key];
+  };
+
+  // Return all the elements that pass a truth test.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    predicate = cb(predicate, context);
+    _.each(obj, function(value, index, list) {
+      if (predicate(value, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, _.negate(cb(predicate)), context);
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (!predicate(obj[currentKey], currentKey, obj)) return false;
+    }
+    return true;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Aliased as `any`.
+  _.some = _.any = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (predicate(obj[currentKey], currentKey, obj)) return true;
+    }
+    return false;
+  };
+
+  // Determine if the array or object contains a given item (using `===`).
+  // Aliased as `includes` and `include`.
+  _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
+    if (!isArrayLike(obj)) obj = _.values(obj);
+    if (typeof fromIndex != 'number' || guard) fromIndex = 0;
+    return _.indexOf(obj, item, fromIndex) >= 0;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    var isFunc = _.isFunction(method);
+    return _.map(obj, function(value) {
+      var func = isFunc ? method : value[method];
+      return func == null ? func : func.apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // Convenience version of a common use case of `filter`: selecting only objects
+  // containing specific `key:value` pairs.
+  _.where = function(obj, attrs) {
+    return _.filter(obj, _.matcher(attrs));
+  };
+
+  // Convenience version of a common use case of `find`: getting the first object
+  // containing specific `key:value` pairs.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matcher(attrs));
+  };
+
+  // Return the maximum element (or element-based computation).
+  _.max = function(obj, iteratee, context) {
+    var result = -Infinity, lastComputed = -Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value > result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iteratee, context) {
+    var result = Infinity, lastComputed = Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value < result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed < lastComputed || computed === Infinity && result === Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Shuffle a collection, using the modern version of the
+  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  _.shuffle = function(obj) {
+    var set = isArrayLike(obj) ? obj : _.values(obj);
+    var length = set.length;
+    var shuffled = Array(length);
+    for (var index = 0, rand; index < length; index++) {
+      rand = _.random(0, index);
+      if (rand !== index) shuffled[index] = shuffled[rand];
+      shuffled[rand] = set[index];
+    }
+    return shuffled;
+  };
+
+  // Sample **n** random values from a collection.
+  // If **n** is not specified, returns a single random element.
+  // The internal `guard` argument allows it to work with `map`.
+  _.sample = function(obj, n, guard) {
+    if (n == null || guard) {
+      if (!isArrayLike(obj)) obj = _.values(obj);
+      return obj[_.random(obj.length - 1)];
+    }
+    return _.shuffle(obj).slice(0, Math.max(0, n));
+  };
+
+  // Sort the object's values by a criterion produced by an iteratee.
+  _.sortBy = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value: value,
+        index: index,
+        criteria: iteratee(value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria;
+      var b = right.criteria;
+      if (a !== b) {
+        if (a > b || a === void 0) return 1;
+        if (a < b || b === void 0) return -1;
+      }
+      return left.index - right.index;
+    }), 'value');
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(behavior) {
+    return function(obj, iteratee, context) {
+      var result = {};
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index) {
+        var key = iteratee(value, index, obj);
+        behavior(result, value, key);
+      });
+      return result;
+    };
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
+  });
+
+  // Indexes the object's values by a criterion, similar to `groupBy`, but for
+  // when you know that your index values will be unique.
+  _.indexBy = group(function(result, value, key) {
+    result[key] = value;
+  });
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key]++; else result[key] = 1;
+  });
+
+  // Safely create a real, live array from anything iterable.
+  _.toArray = function(obj) {
+    if (!obj) return [];
+    if (_.isArray(obj)) return slice.call(obj);
+    if (isArrayLike(obj)) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    if (obj == null) return 0;
+    return isArrayLike(obj) ? obj.length : _.keys(obj).length;
+  };
+
+  // Split a collection into two arrays: one whose elements all satisfy the given
+  // predicate, and one whose elements all do not satisfy the predicate.
+  _.partition = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var pass = [], fail = [];
+    _.each(obj, function(value, key, obj) {
+      (predicate(value, key, obj) ? pass : fail).push(value);
+    });
+    return [pass, fail];
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[0];
+    return _.initial(array, array.length - n);
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array.
+  _.last = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[array.length - 1];
+    return _.rest(array, Math.max(0, array.length - n));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array.
+  _.rest = _.tail = _.drop = function(array, n, guard) {
+    return slice.call(array, n == null || guard ? 1 : n);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, _.identity);
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, strict, startIndex) {
+    var output = [], idx = 0;
+    for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
+      var value = input[i];
+      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
+        //flatten current level of array or arguments object
+        if (!shallow) value = flatten(value, shallow, strict);
+        var j = 0, len = value.length;
+        output.length += len;
+        while (j < len) {
+          output[idx++] = value[j++];
+        }
+      } else if (!strict) {
+        output[idx++] = value;
+      }
+    }
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, false);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
+    if (!_.isBoolean(isSorted)) {
+      context = iteratee;
+      iteratee = isSorted;
+      isSorted = false;
+    }
+    if (iteratee != null) iteratee = cb(iteratee, context);
+    var result = [];
+    var seen = [];
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var value = array[i],
+          computed = iteratee ? iteratee(value, i, array) : value;
+      if (isSorted) {
+        if (!i || seen !== computed) result.push(value);
+        seen = computed;
+      } else if (iteratee) {
+        if (!_.contains(seen, computed)) {
+          seen.push(computed);
+          result.push(value);
+        }
+      } else if (!_.contains(result, value)) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(flatten(arguments, true, true));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    var result = [];
+    var argsLength = arguments.length;
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var item = array[i];
+      if (_.contains(result, item)) continue;
+      for (var j = 1; j < argsLength; j++) {
+        if (!_.contains(arguments[j], item)) break;
+      }
+      if (j === argsLength) result.push(item);
+    }
+    return result;
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = flatten(arguments, true, true, 1);
+    return _.filter(array, function(value){
+      return !_.contains(rest, value);
+    });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    return _.unzip(arguments);
+  };
+
+  // Complement of _.zip. Unzip accepts an array of arrays and groups
+  // each array's elements on shared indices
+  _.unzip = function(array) {
+    var length = array && _.max(array, getLength).length || 0;
+    var result = Array(length);
+
+    for (var index = 0; index < length; index++) {
+      result[index] = _.pluck(array, index);
+    }
+    return result;
+  };
+
+  // Converts lists into objects. Pass either a single array of `[key, value]`
+  // pairs, or two parallel arrays of the same length -- one of keys, and one of
+  // the corresponding values.
+  _.object = function(list, values) {
+    var result = {};
+    for (var i = 0, length = getLength(list); i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // Generator function to create the findIndex and findLastIndex functions
+  function createPredicateIndexFinder(dir) {
+    return function(array, predicate, context) {
+      predicate = cb(predicate, context);
+      var length = getLength(array);
+      var index = dir > 0 ? 0 : length - 1;
+      for (; index >= 0 && index < length; index += dir) {
+        if (predicate(array[index], index, array)) return index;
+      }
+      return -1;
+    };
+  }
+
+  // Returns the first index on an array-like that passes a predicate test
+  _.findIndex = createPredicateIndexFinder(1);
+  _.findLastIndex = createPredicateIndexFinder(-1);
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iteratee, context) {
+    iteratee = cb(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0, high = getLength(array);
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
+    }
+    return low;
+  };
+
+  // Generator function to create the indexOf and lastIndexOf functions
+  function createIndexFinder(dir, predicateFind, sortedIndex) {
+    return function(array, item, idx) {
+      var i = 0, length = getLength(array);
+      if (typeof idx == 'number') {
+        if (dir > 0) {
+            i = idx >= 0 ? idx : Math.max(idx + length, i);
+        } else {
+            length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+        }
+      } else if (sortedIndex && idx && length) {
+        idx = sortedIndex(array, item);
+        return array[idx] === item ? idx : -1;
+      }
+      if (item !== item) {
+        idx = predicateFind(slice.call(array, i, length), _.isNaN);
+        return idx >= 0 ? idx + i : -1;
+      }
+      for (idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
+        if (array[idx] === item) return idx;
+      }
+      return -1;
+    };
+  }
+
+  // Return the position of the first occurrence of an item in an array,
+  // or -1 if the item is not included in the array.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+  _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (stop == null) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = step || 1;
+
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var range = Array(length);
+
+    for (var idx = 0; idx < length; idx++, start += step) {
+      range[idx] = start;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Determines whether to execute a function as a constructor
+  // or a normal function with the provided arguments
+  var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
+    if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
+    var self = baseCreate(sourceFunc.prototype);
+    var result = sourceFunc.apply(self, args);
+    if (_.isObject(result)) return result;
+    return self;
+  };
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  _.bind = function(func, context) {
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
+    var args = slice.call(arguments, 2);
+    var bound = function() {
+      return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
+    };
+    return bound;
+  };
+
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder, allowing any combination of arguments to be pre-filled.
+  _.partial = function(func) {
+    var boundArgs = slice.call(arguments, 1);
+    var bound = function() {
+      var position = 0, length = boundArgs.length;
+      var args = Array(length);
+      for (var i = 0; i < length; i++) {
+        args[i] = boundArgs[i] === _ ? arguments[position++] : boundArgs[i];
+      }
+      while (position < arguments.length) args.push(arguments[position++]);
+      return executeBound(func, bound, this, this, args);
+    };
+    return bound;
+  };
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var i, length = arguments.length, key;
+    if (length <= 1) throw new Error('bindAll must be passed function names');
+    for (i = 1; i < length; i++) {
+      key = arguments[i];
+      obj[key] = _.bind(obj[key], obj);
+    }
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memoize = function(key) {
+      var cache = memoize.cache;
+      var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+      if (!_.has(cache, address)) cache[address] = func.apply(this, arguments);
+      return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){
+      return func.apply(null, args);
+    }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = _.partial(_.delay, _, 1);
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    if (!options) options = {};
+    var later = function() {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    };
+    return function() {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0 || remaining > wait) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        previous = now;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout, args, context, timestamp, result;
+
+    var later = function() {
+      var last = _.now() - timestamp;
+
+      if (last < wait && last >= 0) {
+        timeout = setTimeout(later, wait - last);
+      } else {
+        timeout = null;
+        if (!immediate) {
+          result = func.apply(context, args);
+          if (!timeout) context = args = null;
+        }
+      }
+    };
+
+    return function() {
+      context = this;
+      args = arguments;
+      timestamp = _.now();
+      var callNow = immediate && !timeout;
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (callNow) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+
+      return result;
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return _.partial(wrapper, func);
+  };
+
+  // Returns a negated version of the passed-in predicate.
+  _.negate = function(predicate) {
+    return function() {
+      return !predicate.apply(this, arguments);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var args = arguments;
+    var start = args.length - 1;
+    return function() {
+      var i = start;
+      var result = args[start].apply(this, arguments);
+      while (i--) result = args[i].call(this, result);
+      return result;
+    };
+  };
+
+  // Returns a function that will only be executed on and after the Nth call.
+  _.after = function(times, func) {
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Returns a function that will only be executed up to (but not including) the Nth call.
+  _.before = function(times, func) {
+    var memo;
+    return function() {
+      if (--times > 0) {
+        memo = func.apply(this, arguments);
+      }
+      if (times <= 1) func = null;
+      return memo;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = _.partial(_.before, 2);
+
+  // Object Functions
+  // ----------------
+
+  // Keys in IE < 9 that won't be iterated by `for key in ...` and thus missed.
+  var hasEnumBug = !{toString: null}.propertyIsEnumerable('toString');
+  var nonEnumerableProps = ['valueOf', 'isPrototypeOf', 'toString',
+                      'propertyIsEnumerable', 'hasOwnProperty', 'toLocaleString'];
+
+  function collectNonEnumProps(obj, keys) {
+    var nonEnumIdx = nonEnumerableProps.length;
+    var constructor = obj.constructor;
+    var proto = (_.isFunction(constructor) && constructor.prototype) || ObjProto;
+
+    // Constructor is a special case.
+    var prop = 'constructor';
+    if (_.has(obj, prop) && !_.contains(keys, prop)) keys.push(prop);
+
+    while (nonEnumIdx--) {
+      prop = nonEnumerableProps[nonEnumIdx];
+      if (prop in obj && obj[prop] !== proto[prop] && !_.contains(keys, prop)) {
+        keys.push(prop);
+      }
+    }
+  }
+
+  // Retrieve the names of an object's own properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    if (nativeKeys) return nativeKeys(obj);
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve all the property names of an object.
+  _.allKeys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    var keys = [];
+    for (var key in obj) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var values = Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // Returns the results of applying the iteratee to each element of the object
+  // In contrast to _.map it returns an object
+  _.mapObject = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys =  _.keys(obj),
+          length = keys.length,
+          results = {},
+          currentKey;
+      for (var index = 0; index < length; index++) {
+        currentKey = keys[index];
+        results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
+      }
+      return results;
+  };
+
+  // Convert an object into a list of `[key, value]` pairs.
+  _.pairs = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var pairs = Array(length);
+    for (var i = 0; i < length; i++) {
+      pairs[i] = [keys[i], obj[keys[i]]];
+    }
+    return pairs;
+  };
+
+  // Invert the keys and values of an object. The values must be serializable.
+  _.invert = function(obj) {
+    var result = {};
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      result[obj[keys[i]]] = keys[i];
+    }
+    return result;
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = createAssigner(_.allKeys);
+
+  // Assigns a given object with all the own properties in the passed-in object(s)
+  // (https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)
+  _.extendOwn = _.assign = createAssigner(_.keys);
+
+  // Returns the first key on an object that passes a predicate test
+  _.findKey = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = _.keys(obj), key;
+    for (var i = 0, length = keys.length; i < length; i++) {
+      key = keys[i];
+      if (predicate(obj[key], key, obj)) return key;
+    }
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(object, oiteratee, context) {
+    var result = {}, obj = object, iteratee, keys;
+    if (obj == null) return result;
+    if (_.isFunction(oiteratee)) {
+      keys = _.allKeys(obj);
+      iteratee = optimizeCb(oiteratee, context);
+    } else {
+      keys = flatten(arguments, false, false, 1);
+      iteratee = function(value, key, obj) { return key in obj; };
+      obj = Object(obj);
+    }
+    for (var i = 0, length = keys.length; i < length; i++) {
+      var key = keys[i];
+      var value = obj[key];
+      if (iteratee(value, key, obj)) result[key] = value;
+    }
+    return result;
+  };
+
+   // Return a copy of the object without the blacklisted properties.
+  _.omit = function(obj, iteratee, context) {
+    if (_.isFunction(iteratee)) {
+      iteratee = _.negate(iteratee);
+    } else {
+      var keys = _.map(flatten(arguments, false, false, 1), String);
+      iteratee = function(value, key) {
+        return !_.contains(keys, key);
+      };
+    }
+    return _.pick(obj, iteratee, context);
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = createAssigner(_.allKeys, true);
+
+  // Creates an object that inherits from the given prototype object.
+  // If additional properties are provided then they will be added to the
+  // created object.
+  _.create = function(prototype, props) {
+    var result = baseCreate(prototype);
+    if (props) _.extendOwn(result, props);
+    return result;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Returns whether an object has a given set of `key:value` pairs.
+  _.isMatch = function(object, attrs) {
+    var keys = _.keys(attrs), length = keys.length;
+    if (object == null) return !length;
+    var obj = Object(object);
+    for (var i = 0; i < length; i++) {
+      var key = keys[i];
+      if (attrs[key] !== obj[key] || !(key in obj)) return false;
+    }
+    return true;
+  };
+
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, aStack, bStack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    if (a === b) return a !== 0 || 1 / a === 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a instanceof _) a = a._wrapped;
+    if (b instanceof _) b = b._wrapped;
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className !== toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+      case '[object RegExp]':
+      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return '' + a === '' + b;
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive.
+        // Object(NaN) is equivalent to NaN
+        if (+a !== +a) return +b !== +b;
+        // An `egal` comparison is performed for other numeric values.
+        return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a === +b;
+    }
+
+    var areArrays = className === '[object Array]';
+    if (!areArrays) {
+      if (typeof a != 'object' || typeof b != 'object') return false;
+
+      // Objects with different constructors are not equivalent, but `Object`s or `Array`s
+      // from different frames are.
+      var aCtor = a.constructor, bCtor = b.constructor;
+      if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
+                               _.isFunction(bCtor) && bCtor instanceof bCtor)
+                          && ('constructor' in a && 'constructor' in b)) {
+        return false;
+      }
+    }
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+
+    // Initializing stack of traversed objects.
+    // It's done here since we only need them for objects and arrays comparison.
+    aStack = aStack || [];
+    bStack = bStack || [];
+    var length = aStack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (aStack[length] === a) return bStack[length] === b;
+    }
+
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+
+    // Recursively compare objects and arrays.
+    if (areArrays) {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      length = a.length;
+      if (length !== b.length) return false;
+      // Deep compare the contents, ignoring non-numeric properties.
+      while (length--) {
+        if (!eq(a[length], b[length], aStack, bStack)) return false;
+      }
+    } else {
+      // Deep compare objects.
+      var keys = _.keys(a), key;
+      length = keys.length;
+      // Ensure that both objects contain the same number of properties before comparing deep equality.
+      if (_.keys(b).length !== length) return false;
+      while (length--) {
+        // Deep compare each member
+        key = keys[length];
+        if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+    return true;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
+    return _.keys(obj).length === 0;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType === 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) === '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj;
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError.
+  _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) === '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE < 9), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return _.has(obj, 'callee');
+    };
+  }
+
+  // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
+  // IE 11 (#1621), and in Safari 8 (#1929).
+  if (typeof /./ != 'function' && typeof Int8Array != 'object') {
+    _.isFunction = function(obj) {
+      return typeof obj == 'function' || false;
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return isFinite(obj) && !isNaN(parseFloat(obj));
+  };
+
+  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && obj !== +obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return obj != null && hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iteratees.
+  _.identity = function(value) {
+    return value;
+  };
+
+  // Predicate-generating functions. Often useful outside of Underscore.
+  _.constant = function(value) {
+    return function() {
+      return value;
+    };
+  };
+
+  _.noop = function(){};
+
+  _.property = property;
+
+  // Generates a function for a given object that returns a given property.
+  _.propertyOf = function(obj) {
+    return obj == null ? function(){} : function(key) {
+      return obj[key];
+    };
+  };
+
+  // Returns a predicate for checking whether an object has a given set of
+  // `key:value` pairs.
+  _.matcher = _.matches = function(attrs) {
+    attrs = _.extendOwn({}, attrs);
+    return function(obj) {
+      return _.isMatch(obj, attrs);
+    };
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iteratee, context) {
+    var accum = Array(Math.max(0, n));
+    iteratee = optimizeCb(iteratee, context, 1);
+    for (var i = 0; i < n; i++) accum[i] = iteratee(i);
+    return accum;
+  };
+
+  // Return a random integer between min and max (inclusive).
+  _.random = function(min, max) {
+    if (max == null) {
+      max = min;
+      min = 0;
+    }
+    return min + Math.floor(Math.random() * (max - min + 1));
+  };
+
+  // A (possibly faster) way to get the current timestamp as an integer.
+  _.now = Date.now || function() {
+    return new Date().getTime();
+  };
+
+   // List of HTML entities for escaping.
+  var escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '`': '&#x60;'
+  };
+  var unescapeMap = _.invert(escapeMap);
+
+  // Functions for escaping and unescaping strings to/from HTML interpolation.
+  var createEscaper = function(map) {
+    var escaper = function(match) {
+      return map[match];
+    };
+    // Regexes for identifying a key that needs to be escaped
+    var source = '(?:' + _.keys(map).join('|') + ')';
+    var testRegexp = RegExp(source);
+    var replaceRegexp = RegExp(source, 'g');
+    return function(string) {
+      string = string == null ? '' : '' + string;
+      return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+    };
+  };
+  _.escape = createEscaper(escapeMap);
+  _.unescape = createEscaper(unescapeMap);
+
+  // If the value of the named `property` is a function then invoke it with the
+  // `object` as context; otherwise, return it.
+  _.result = function(object, property, fallback) {
+    var value = object == null ? void 0 : object[property];
+    if (value === void 0) {
+      value = fallback;
+    }
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /(.)^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    "'":      "'",
+    '\\':     '\\',
+    '\r':     'r',
+    '\n':     'n',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
+
+  var escapeChar = function(match) {
+    return '\\' + escapes[match];
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  // NB: `oldSettings` only exists for backwards compatibility.
+  _.template = function(text, settings, oldSettings) {
+    if (!settings && oldSettings) settings = oldSettings;
+    settings = _.defaults({}, settings, _.templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset).replace(escaper, escapeChar);
+      index = offset + match.length;
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      } else if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      } else if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+
+      // Adobe VMs need the match returned to produce the correct offest.
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + 'return __p;\n';
+
+    try {
+      var render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled source as a convenience for precompilation.
+    var argument = settings.variable || 'obj';
+    template.source = 'function(' + argument + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function. Start chaining a wrapped Underscore object.
+  _.chain = function(obj) {
+    var instance = _(obj);
+    instance._chain = true;
+    return instance;
+  };
+
+  // OOP
+  // ---------------
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(instance, obj) {
+    return instance._chain ? _(obj).chain() : obj;
+  };
+
+  // Add your own custom functions to the Underscore object.
+  _.mixin = function(obj) {
+    _.each(_.functions(obj), function(name) {
+      var func = _[name] = obj[name];
+      _.prototype[name] = function() {
+        var args = [this._wrapped];
+        push.apply(args, arguments);
+        return result(this, func.apply(_, args));
+      };
+    });
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
+      return result(this, obj);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  _.each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      return result(this, method.apply(this._wrapped, arguments));
+    };
+  });
+
+  // Extracts the result from a wrapped and chained object.
+  _.prototype.value = function() {
+    return this._wrapped;
+  };
+
+  // Provide unwrapping proxy for some methods used in engine operations
+  // such as arithmetic and JSON stringification.
+  _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
+
+  _.prototype.toString = function() {
+    return '' + this._wrapped;
+  };
+
+  // AMD registration happens at the end for compatibility with AMD loaders
+  // that may not enforce next-turn semantics on modules. Even though general
+  // practice for AMD registration is to be anonymous, underscore registers
+  // as a named module because, like jQuery, it is a base library that is
+  // popular enough to be bundled in a third party lib, but not be part of
+  // an AMD load request. Those cases could generate an error when an
+  // anonymous define() is called outside of a loader request.
+  if (typeof define === 'function' && define.amd) {
+    define('underscore', [], function() {
+      return _;
+    });
+  }
+}.call(this));
+
 /**
  * Patterns logging - minimal logging framework
  *
@@ -12694,6 +14263,67 @@ define('pat-utils',[
     "jquery"
 ], function($) {
 
+    $.fn.safeClone = function () {
+        var $clone = this.clone();
+        // IE BUG : Placeholder text becomes actual value after deep clone on textarea
+        // https://connect.microsoft.com/IE/feedback/details/781612/placeholder-text-becomes-actual-value-after-deep-clone-on-textarea
+        if ($.browser.msie !== undefined && true) {
+            $clone.findInclusive(':input[placeholder]').each(function(i, item) {
+                var $item = $(item);
+                if ($item.attr('placeholder') === $item.val()) {
+                    $item.val('');
+                }
+            });
+        }
+        return $clone;
+    };
+
+    // Production steps of ECMA-262, Edition 5, 15.4.4.18
+    // Reference: http://es5.github.io/#x15.4.4.18
+    if (!Array.prototype.forEach) {
+        Array.prototype.forEach = function(callback, thisArg) {
+            var T, k;
+            if (this === null) {
+                throw new TypeError(' this is null or not defined');
+            }
+            // 1. Let O be the result of calling ToObject passing the |this| value as the argument.
+            var O = Object(this);
+            // 2. Let lenValue be the result of calling the Get internal method of O with the argument "length".
+            // 3. Let len be ToUint32(lenValue).
+            var len = O.length >>> 0;
+            // 4. If IsCallable(callback) is false, throw a TypeError exception.
+            // See: http://es5.github.com/#x9.11
+            if (typeof callback !== "function") {
+                throw new TypeError(callback + ' is not a function');
+            }
+            // 5. If thisArg was supplied, let T be thisArg; else let T be undefined.
+            if (arguments.length > 1) {
+                T = thisArg;
+            }
+            // 6. Let k be 0
+            k = 0;
+            // 7. Repeat, while k < len
+            while (k < len) {
+                var kValue;
+                // a. Let Pk be ToString(k).
+                //   This is implicit for LHS operands of the in operator
+                // b. Let kPresent be the result of calling the HasProperty internal method of O with argument Pk.
+                //   This step can be combined with c
+                // c. If kPresent is true, then
+                if (k in O) {
+                    // i. Let kValue be the result of calling the Get internal method of O with argument Pk.
+                    kValue = O[k];
+                    // ii. Call the Call internal method of callback with T as the this value and
+                    // argument list containing kValue, k, and O.
+                    callback.call(T, kValue, k, O);
+                }
+                // d. Increase k by 1.
+                k++;
+            }
+            // 8. return undefined
+        };
+    }
+
     var singleBoundJQueryPlugin = function (pattern, method, options) {
         /* This is a jQuery plugin for patterns which are invoked ONCE FOR EACH
          * matched element in the DOM.
@@ -12817,20 +14447,23 @@ define('pat-utils',[
     }
 
     function findLabel(input) {
-        for (var label=input.parentNode; label && label.nodeType!==11; label=label.parentNode)
-            if (label.tagName==="LABEL")
-                return label;
-
         var $label;
-
-        if (input.id)
-            $label = $("label[for="+input.id+"]");
-        if ($label && $label.length===0 && input.form)
-            $label = $("label[for="+input.name+"]", input.form);
-        if ($label && $label.length)
+        for (var label=input.parentNode; label && label.nodeType!==11; label=label.parentNode) {
+            if (label.tagName==="LABEL") {
+                return label;
+            }
+        }
+        if (input.id) {
+            $label = $("label[for=\""+input.id+"\"]");
+        }
+        if ($label && $label.length===0 && input.form) {
+            $label = $("label[for=\""+input.name+"\"]", input.form);
+        }
+        if ($label && $label.length) {
             return $label[0];
-        else
+        } else {
             return null;
+        }
     }
 
     // Taken from http://stackoverflow.com/questions/123999/how-to-tell-if-a-dom-element-is-visible-in-the-current-viewport
@@ -13727,6 +15360,7 @@ define('pat-jquery-ext',["jquery"], function($) {
  * Copyright 2012-2013 Florian Friesdorf
  * Copyright 2013 Marko Durkovic
  * Copyright 2013 Rok Garbas
+ * Copyright 2014-2015 Syslab.com GmBH, JC Brand
  */
 
 /*
@@ -13739,12 +15373,15 @@ define('pat-jquery-ext',["jquery"], function($) {
  */
 define('pat-registry',[
     "jquery",
+    "underscore",
     "pat-logger",
     "pat-utils",
     // below here modules that are only loaded
     "pat-compat",
     "pat-jquery-ext"
-], function($, logger, utils) {
+], function($, _, logger, utils) {
+    var TEXT_NODE = 3;
+    var COMMENT_NODE = 8;
     var log = logger.getLogger("registry");
 
     var disable_re = /patterns-disable=([^&]+)/g,
@@ -13784,59 +15421,77 @@ define('pat-registry',[
             this.patterns = {};
         },
 
-        scan: function registryScan(content, patterns, trigger) {
-            var $content = $(content),
-                all = [], allsel,
-                $match, plog;
-
-            // If no list of patterns was specified, we scan for all patterns
-            patterns = patterns || Object.keys(registry.patterns);
-
-            // selector for all patterns
-            patterns.forEach(function registry_scan_loop(name) {
-                if (disabled[name]) {
-                    log.debug("Skipping disabled pattern:", name);
-                    return;
+        transformPattern: function(name, content) {
+            /* Call the transform method on the pattern with the given name, if
+             * it exists.
+             */
+            if (disabled[name]) {
+                log.debug("Skipping disabled pattern:", name);
+                return;
+            }
+            var pattern = registry.patterns[name];
+            if (pattern.transform) {
+                try {
+                    pattern.transform($(content));
+                } catch (e) {
+                    if (dont_catch) { throw(e); }
+                    log.error("Transform error for pattern" + name, e);
                 }
-                var pattern = registry.patterns[name];
-                if (pattern.transform) {
+            }
+        },
+
+        initPattern: function(name, el, trigger) {
+            /* Initialize the pattern with the provided name and in the context
+             * of the passed in DOM element.
+             */
+            var $el = $(el);
+            var pattern = registry.patterns[name];
+            if (pattern.init) {
+                plog = logger.getLogger("pat." + name);
+                if ($el.is(pattern.trigger)) {
+                    plog.debug("Initialising:", $el);
                     try {
-                        pattern.transform($content);
+                        pattern.init($el, null, trigger);
+                        plog.debug("done.");
                     } catch (e) {
                         if (dont_catch) { throw(e); }
-                        log.error("Transform error for pattern" + name, e);
+                        plog.error("Caught error:", e);
                     }
                 }
+            }
+        },
+
+        orderPatterns: function (patterns) {
+            // XXX: Bit of a hack. We need the validation pattern to be
+            // parsed and initiated before the inject pattern. So we make
+            // sure here, that it appears first. Not sure what would be
+            // the best solution. Perhaps some kind of way to register
+            // patterns "before" or "after" other patterns.
+            if (_.contains(patterns, "validation") && _.contains(patterns, "inject")) {
+                patterns.splice(patterns.indexOf("validation"), 1);
+                patterns.unshift("validation");
+            }
+            return patterns;
+        },
+
+        scan: function registryScan(content, patterns, trigger) {
+            var selectors = [], $match, plog;
+            patterns = this.orderPatterns(patterns || Object.keys(registry.patterns));
+            patterns.forEach(_.partial(this.transformPattern, _, content));
+            patterns = _.each(patterns, function (name) {
+                var pattern = registry.patterns[name];
                 if (pattern.trigger) {
-                    all.push(pattern.trigger);
+                    selectors.unshift(pattern.trigger);
                 }
             });
-            // Find all elements that belong to any pattern.
-            allsel = all.join(",");
-            $match = $content.findInclusive(allsel);
+            $match = $(content).findInclusive(selectors.join(",")); // Find all DOM elements belonging to a pattern
             $match = $match.filter(function() { return $(this).parents("pre").length === 0; });
             $match = $match.filter(":not(.cant-touch-this)");
 
             // walk list backwards and initialize patterns inside-out.
-            $match.toArray().reduceRight(function registry_pattern_init(acc, el) {
-                var pattern, $el = $(el);
-                for (var name in registry.patterns) {
-                    pattern = registry.patterns[name];
-                    if (pattern.init) {
-                        plog = logger.getLogger("pat." + name);
-                        if ($el.is(pattern.trigger)) {
-                            plog.debug("Initialising:", $el);
-                            try {
-                                pattern.init($el, null, trigger);
-                                plog.debug("done.");
-                            } catch (e) {
-                                if (dont_catch) { throw(e); }
-                                plog.error("Caught error:", e);
-                            }
-                        }
-                    }
-                }
-            }, null);
+            $match.toArray().reduceRight(function registryInitPattern(acc, el) {
+                patterns.forEach(_.partial(this.initPattern, _, el, trigger));
+            }.bind(this), null);
             $("body").addClass("patterns-loaded");
         },
 
@@ -13863,7 +15518,7 @@ define('pat-registry',[
                         });
                 $.fn[plugin_name] = utils.jqueryPlugin(pattern);
                 // BBB 2012-12-10 and also for Mockup patterns.
-                $.fn[plugin_name.replace(/^pat/, "pattern")] = utils.jqueryPlugin(pattern);
+                $.fn[plugin_name.replace(/^pat/, "pattern")] = $.fn[plugin_name];
             }
             log.debug("Registered pattern:", name, pattern);
             if (registry.initialized) {
@@ -13874,170 +15529,186 @@ define('pat-registry',[
     };
 
     $(document).on("patterns-injected.patterns",
-            function registry_onInject(ev, inject_config, inject_trigger) {
-                registry.scan(ev.target, null, {type: "injection", element: inject_trigger});
-                $(ev.target).trigger("patterns-injected-scanned");
-            });
-
+        function registry_onInject(ev, config, trigger_el, injected_el) {
+            if (injected_el.nodeType !== TEXT_NODE && injected_el !== COMMENT_NODE) {
+                registry.scan(injected_el, null, {type: "injection", element: trigger_el});
+                $(injected_el).trigger("patterns-injected-scanned");
+            }
+        }
+    );
     return registry;
 });
 // jshint indent: 4, browser: true, jquery: true, quotmark: double
 // vim: sw=4 expandtab
 ;
-define('mockup-parser',[
-  'jquery'
+define('pat-mockup-parser',[
+    'jquery'
 ], function($) {
-  'use strict';
+    'use strict';
 
-  var parser = {
-    getOptions: function getOptions($el, patternName, options) {
-      /* This is the Mockup parser. It parses a DOM element for pattern
-      * configuration options.
-      */
-      options = options || {};
-      // get options from parent element first, stop if element tag name is 'body'
-      if ($el.length !== 0 && !$.nodeName($el[0], 'body')) {
-        options = getOptions($el.parent(), patternName, options);
-      }
-      // collect all options from element
-      var elOptions = {};
-      if ($el.length !== 0) {
-        elOptions = $el.data('pat-' + patternName);
-        if (elOptions) {
-          // parse options if string
-          if (typeof(elOptions) === 'string') {
-              var tmpOptions = {};
-              $.each(elOptions.split(';'), function(i, item) {
-                  item = item.split(':');
-                  item.reverse();
-                  var key = item.pop();
-                  key = key.replace(/^\s+|\s+$/g, '');  // trim
-                  item.reverse();
-                  var value = item.join(':');
-                  value = value.replace(/^\s+|\s+$/g, '');  // trim
-                  tmpOptions[key] = value;
-              });
-              elOptions = tmpOptions;
-          }
+    var parser = {
+        getOptions: function getOptions($el, patternName, options) {
+            /* This is the Mockup parser. An alternative parser for Patternslib
+             * patterns.
+             *
+             * NOTE: Use of the Mockup parser is discouraged and is added here for
+             * legacy support for the Plone Mockup project.
+             *
+             * It parses a DOM element for pattern configuration options.
+             */
+            options = options || {};
+            // get options from parent element first, stop if element tag name is 'body'
+            if ($el.length !== 0 && !$.nodeName($el[0], 'body')) {
+                options = getOptions($el.parent(), patternName, options);
+            }
+            // collect all options from element
+            var elOptions = {};
+            if ($el.length !== 0) {
+                elOptions = $el.data('pat-' + patternName);
+                if (elOptions) {
+                    // parse options if string
+                    if (typeof(elOptions) === 'string') {
+                        var tmpOptions = {};
+                        $.each(elOptions.split(';'),
+                            function(i, item) {
+                                item = item.split(':');
+                                item.reverse();
+                                var key = item.pop();
+                                key = key.replace(/^\s+|\s+$/g, '');    // trim
+                                item.reverse();
+                                var value = item.join(':');
+                                value = value.replace(/^\s+|\s+$/g, '');    // trim
+                                tmpOptions[key] = value;
+                            }
+                        );
+                        elOptions = tmpOptions;
+                    }
+                }
+            }
+            return $.extend(true, {}, options, elOptions);
         }
-      }
-      return $.extend(true, {}, options, elOptions);
-    }
-  };
-  return parser;
+    };
+    return parser;
 });
 
-/* Base Pattern
+/**
+ * A Base pattern for creating scoped patterns. It's similar to Backbone's
+ * Model class. The advantage of this approach is that each instance of a
+ * pattern has its own local scope (closure).
+ *
+ * A new instance is created for each DOM element on which a pattern applies.
+ *
+ * You can assign values, such as $el, to `this` for an instance and they
+ * will remain unique to that instance.
+ *
+ * Older Patternslib patterns on the other hand have a single global scope for
+ * all DOM elements.
  */
 
-define('mockup-patterns-base',[
-  'jquery',
-  'pat-registry',
-  'mockup-parser',
+define('pat-base',[
+  "jquery",
+  "pat-registry",
+  "pat-mockup-parser",
   "pat-logger"
 ], function($, Registry, mockupParser, logger) {
-  'use strict';
-  var log = logger.getLogger("Mockup Base");
+    "use strict";
+    var log = logger.getLogger("Patternslib Base");
 
-  var initMockup = function initMockup($el, options, trigger) {
-    var name = this.prototype.name;
-    var log = logger.getLogger("pat." + name);
-    var pattern = $el.data('pattern-' + name);
-    if (pattern === undefined && Registry.patterns[name]) {
-      options = this.prototype.parser === "mockup" ? mockupParser.getOptions($el, name, options) : options;
-      try {
-          pattern = new Registry.patterns[name]($el, options);
-      } catch (e) {
-          log.error('Failed while initializing "' + name + '" pattern.');
-          if (window.DEBUG) {
-            // don't swallow errors in DEBUG mode.
-            log.error(e);
-          }
-      }
-      $el.data('pattern-' + name, pattern);
-    }
-    return pattern;
-  };
+    var initBasePattern = function initBasePattern($el, options, trigger) {
+        var name = this.prototype.name;
+        var log = logger.getLogger("pat." + name);
+        var pattern = $el.data("pattern-" + name);
+        if (pattern === undefined && Registry.patterns[name]) {
+            try {
+                options = this.prototype.parser  === "mockup" ? mockupParser.getOptions($el, name, options) : options;
+                pattern = new Registry.patterns[name]($el, options, trigger);
+            } catch (e) {
+                log.error("Failed while initializing '" + name + "' pattern.", e);
+            }
+            $el.data("pattern-" + name, pattern);
+        }
+        return pattern;
+    };
 
-  // Base Pattern
-  var Base = function($el, options) {
-    this.$el = $el;
-    this.options = $.extend(true, {}, this.defaults || {}, options || {});
-    this.init($el, options);
-    this.emit('init');
-  };
+    var Base = function($el, options, trigger) {
+        this.$el = $el;
+        this.options = $.extend(true, {}, this.defaults || {}, options || {});
+        this.init($el, options, trigger);
+        this.emit("init");
+    };
 
-  Base.prototype = {
-    constructor: Base,
-    on: function(eventName, eventCallback) {
-      this.$el.on(eventName + '.' + this.name + '.patterns', eventCallback);
-    },
-    emit: function(eventName, args) {
-      // args should be a list
-      if (args === undefined) {
-        args = [];
-      }
-      this.$el.trigger(eventName + '.' + this.name + '.patterns', args);
-    }
-  };
+    Base.prototype = {
+        constructor: Base,
+        on: function(eventName, eventCallback) {
+            this.$el.on(eventName + "." + this.name + ".patterns", eventCallback);
+        },
+        emit: function(eventName, args) {
+            // args should be a list
+            if (args === undefined) {
+                args = [];
+            }
+            this.$el.trigger(eventName + "." + this.name + ".patterns", args);
+        }
+    };
 
-  Base.extend = function(patternProps) {
-    /* Helper function to correctly set up the prototype chain for new patterns.
-     */
-    var parent = this;
-    var child;
+    Base.extend = function(patternProps) {
+        /* Helper function to correctly set up the prototype chain for new patterns.
+        */
+        var parent = this;
+        var child;
 
-    // Check that the required configuration properties are given.
-    if (!patternProps) {
-      throw new Error("Pattern configuration properties required when calling Base.extend");
-    }
+        // Check that the required configuration properties are given.
+        if (!patternProps) {
+            throw new Error("Pattern configuration properties required when calling Base.extend");
+        }
 
-    // The constructor function for the new subclass is either defined by you
-    // (the "constructor" property in your `extend` definition), or defaulted
-    // by us to simply call the parent's constructor.
-    if (patternProps.hasOwnProperty('constructor')) {
-      child = patternProps.constructor;
-    } else {
-      child = function() { parent.apply(this, arguments); };
-    }
+        // The constructor function for the new subclass is either defined by you
+        // (the "constructor" property in your `extend` definition), or defaulted
+        // by us to simply call the parent's constructor.
+        if (patternProps.hasOwnProperty("constructor")) {
+            child = patternProps.constructor;
+        } else {
+            child = function() { parent.apply(this, arguments); };
+        }
 
-    // Allow patterns to be extended indefinitely
-    child.extend = Base.extend;
+        // Allow patterns to be extended indefinitely
+        child.extend = Base.extend;
 
-    // Static properties required by the Patternslib registry 
-    child.init = initMockup;
-    child.jquery_plugin = true;
-    child.trigger = patternProps.trigger;
+        // Static properties required by the Patternslib registry 
+        child.init = initBasePattern;
+        child.jquery_plugin = true;
+        child.trigger = patternProps.trigger;
 
-    // Set the prototype chain to inherit from `parent`, without calling
-    // `parent`'s constructor function.
-    var Surrogate = function() { this.constructor = child; };
-    Surrogate.prototype = parent.prototype;
-    child.prototype = new Surrogate();
+        // Set the prototype chain to inherit from `parent`, without calling
+        // `parent`'s constructor function.
+        var Surrogate = function() { this.constructor = child; };
+        Surrogate.prototype = parent.prototype;
+        child.prototype = new Surrogate();
 
-    // Fall back to mockup parser if not specified otherwise.
-    patternProps.parser = patternProps.parser || 'mockup';
+        // Add pattern's configuration properties (instance properties) to the subclass,
+        $.extend(true, child.prototype, patternProps);
 
-    // Add pattern's configuration properties (instance properties) to the subclass,
-    $.extend(true, child.prototype, patternProps);
+        // Set a convenience property in case the parent's prototype is needed
+        // later.
+        child.__super__ = parent.prototype;
 
-    // Set a convenience property in case the parent's prototype is needed
-    // later.
-    child.__super__ = parent.prototype;
-
-    // Register the pattern in the Patternslib registry.
-    if (!patternProps.name) {
-      log.warn("This mockup pattern without a name attribute will not be registered!");
-    } else if (!patternProps.trigger) {
-      log.warn("The mockup pattern '"+patternProps.name+"' does not have a trigger attribute, it will not be registered.");
-    } else {
-      Registry.register(child, patternProps.name);
-    }
-    return child;
-  };
-  return Base;
+        // Register the pattern in the Patternslib registry.
+        if (!patternProps.name) {
+            log.warn("This pattern without a name attribute will not be registered!");
+        } else if (!patternProps.trigger) {
+            log.warn("The pattern '"+patternProps.name+"' does not " +
+                     "have a trigger attribute, it will not be registered.");
+        } else {
+            Registry.register(child, patternProps.name);
+        }
+        return child;
+    };
+    return Base;
 });
 
+(function(root) {
+define("select2", ["jquery"], function() {
+  return (function() {
 /*
 Copyright 2012 Igor Vaynberg
 
@@ -17547,7 +19218,10 @@ the specific language governing permissions and limitations under the Apache Lic
 
 }(jQuery));
 
-define("select2", function(){});
+
+  }).apply(root, arguments);
+});
+}(this));
 
 (function(root) {
 define("jquery.event.drag", ["jquery"], function() {
@@ -18276,6 +19950,7 @@ return $.drop;
  *    separator(string): Analagous to the separator constructor parameter from Select2. Defines a custom separator used to distinguish the tag values. Ex: a value of ";" will allow tags and initialValues to have values separated by ";" instead of the default ",". (',')
  *    initialValues(string): This can be a json encoded string, or a list of id:text values. Ex: Red:The Color Red,Orange:The Color Orange  This is used inside the initSelection method, if AJAX options are NOT set. (null)
  *    vocabularyUrl(string): This is a URL to a JSON-formatted file used to populate the list (null)
+ *    allowNewItems(string): All new items to be entered into the widget(true)
  *    OTHER OPTIONS(): For more options on select2 go to http://ivaynberg.github.io/select2/#documentation ()
  *
  * Documentation:
@@ -18334,7 +20009,7 @@ return $.drop;
 
 define('mockup-patterns-select2',[
   'jquery',
-  'mockup-patterns-base',
+  'pat-base',
   'select2',
   'jquery.event.drag',
   'jquery.event.drop'
@@ -18344,6 +20019,7 @@ define('mockup-patterns-select2',[
   var Select2 = Base.extend({
     name: 'select2',
     trigger: '.pat-select2',
+    parser: 'mockup',
     defaults: {
       separator: ','
     },
@@ -18522,11 +20198,9 @@ define('mockup-patterns-select2',[
                 results.push({id: queryTerm, text: queryTerm});
               }
 
-              if (haveResult || self.options.allowNewItems) {
-                $.each(data.results, function(i, item) {
-                  results.push(item);
-                });
-              }
+              $.each(data.results, function(i, item) {
+                results.push(item);
+              });
             }
             return { results: results };
           }
@@ -18586,7 +20260,7 @@ define('mockup-patterns-select2',[
 
 define('mockup-patterns-passwordstrength',[
   'jquery',
-  'mockup-patterns-base'
+  'pat-base'
 ], function($, Base) {
   'use strict';
   function loadScript(src) {
@@ -18615,6 +20289,7 @@ define('mockup-patterns-passwordstrength',[
   var PasswordStrength = Base.extend({
     name: 'passwordstrength',
     trigger: '.pat-passwordstrength',
+    parser: 'mockup',
     defaults: {
         zxcvbn: '//cdnjs.cloudflare.com/ajax/libs/zxcvbn/1.0/zxcvbn.js'
     },
@@ -18661,9 +20336,8 @@ define('mockup-patterns-passwordstrength',[
   return PasswordStrength;
 });
 
-
 /*!
- * pickadate.js v3.4.0, 2014/02/15
+ * pickadate.js v3.5.6, 2015/04/20
  * By Amsul, http://amsul.ca
  * Hosted on http://amsul.github.io/pickadate.js
  * Licensed under MIT
@@ -18671,16 +20345,23 @@ define('mockup-patterns-passwordstrength',[
 
 (function ( factory ) {
 
-    // Register as an anonymous module.
-    if ( typeof define === 'function' && define.amd )
+    // AMD.
+    if ( typeof define == 'function' && define.amd )
         define( 'picker', ['jquery'], factory )
 
-    // Or using browser globals.
+    // Node.js/browserify.
+    else if ( typeof exports == 'object' )
+        module.exports = factory( require('jquery') )
+
+    // Browser globals.
     else this.Picker = factory( jQuery )
 
 }(function( $ ) {
 
+var $window = $( window )
 var $document = $( document )
+var $html = $( document.documentElement )
+var supportsTransitions = document.documentElement.style.transition != null
 
 
 /**
@@ -18693,6 +20374,9 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
 
     var
+        IS_DEFAULT_THEME = false,
+
+
         // The state of the picker.
         STATE = {
             id: ELEMENT.id || 'P' + Math.abs( ~~(Math.random() * new Date()) )
@@ -18743,19 +20427,26 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                 // Confirm focus state, convert into text input to remove UA stylings,
                 // and set as readonly to prevent keyboard popup.
-                ELEMENT.autofocus = ELEMENT == document.activeElement
-                ELEMENT.type = 'text'
+                ELEMENT.autofocus = ELEMENT == getActiveElement()
                 ELEMENT.readOnly = !SETTINGS.editable
                 ELEMENT.id = ELEMENT.id || STATE.id
+                if ( ELEMENT.type != 'text' ) {
+                    ELEMENT.type = 'text'
+                }
 
 
                 // Create a new picker component with the settings.
                 P.component = new COMPONENT(P, SETTINGS)
 
 
-                // Create the picker root with a holder and then prepare it.
-                P.$root = $( PickerConstructor._.node('div', createWrappedComponent(), CLASSES.picker, 'id="' + ELEMENT.id + '_root"') )
+                // Create the picker root and then prepare it.
+                P.$root = $( '<div class="' + CLASSES.picker + '" id="' + ELEMENT.id + '_root" />' )
                 prepareElementRoot()
+
+
+                // Create the picker holder and then prepare it.
+                P.$holder = $( createWrappedComponent() ).appendTo( P.$root )
+                prepareElementHolder()
 
 
                 // If there’s a format for the hidden input element, create the element.
@@ -18766,6 +20457,11 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                 // Prepare the input element.
                 prepareElement()
+
+
+                // Insert the hidden input as specified in the settings.
+                if ( SETTINGS.containerHidden ) $( SETTINGS.containerHidden ).append( P._hidden )
+                else $ELEMENT.after( P._hidden )
 
 
                 // Insert the root as specified in the settings.
@@ -18791,6 +20487,10 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                 })
 
 
+                // Once we’re all set, check the theme in use.
+                IS_DEFAULT_THEME = isUsingDefaultTheme( P.$holder[0] )
+
+
                 // If the element has autofocus, open the picker.
                 if ( ELEMENT.autofocus ) {
                     P.open()
@@ -18808,7 +20508,11 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
             render: function( entireComponent ) {
 
                 // Insert a new component holder in the root or box.
-                if ( entireComponent ) P.$root.html( createWrappedComponent() )
+                if ( entireComponent ) {
+                    P.$holder = $( createWrappedComponent() )
+                    prepareElementHolder()
+                    P.$root.html( P.$holder )
+                }
                 else P.$root.find( '.' + CLASSES.box ).html( P.component.nodes( STATE.open ) )
 
                 // Trigger the queued “render” events.
@@ -18857,7 +20561,7 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
             }, //stop
 
 
-            /*
+            /**
              * Open up the picker
              */
             open: function( dontGiveFocus ) {
@@ -18869,9 +20573,16 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                 $ELEMENT.addClass( CLASSES.active )
                 aria( ELEMENT, 'expanded', true )
 
-                // Add the “opened” class to the picker root.
-                P.$root.addClass( CLASSES.opened )
-                aria( P.$root[0], 'hidden', false )
+                // * A Firefox bug, when `html` has `overflow:hidden`, results in
+                //   killing transitions :(. So add the “opened” state on the next tick.
+                //   Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=625289
+                setTimeout( function() {
+
+                    // Add the “opened” class to the picker root.
+                    P.$root.addClass( CLASSES.opened )
+                    aria( P.$root[0], 'hidden', false )
+
+                }, 0 )
 
                 // If we have to give focus, bind the element and doc events.
                 if ( dontGiveFocus !== false ) {
@@ -18879,8 +20590,15 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                     // Set it as open.
                     STATE.open = true
 
-                    // Pass focus to the element’s jQuery object.
-                    $ELEMENT.trigger( 'focus' )
+                    // Prevent the page from scrolling.
+                    if ( IS_DEFAULT_THEME ) {
+                        $html.
+                            css( 'overflow', 'hidden' ).
+                            css( 'padding-right', '+=' + getScrollbarWidth() )
+                    }
+
+                    // Pass focus to the root element’s jQuery object.
+                    focusPickerOnceOpened()
 
                     // Bind the document events.
                     $document.on( 'click.' + STATE.id + ' focusin.' + STATE.id, function( event ) {
@@ -18898,7 +20616,7 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                             // If the target was the holder that covers the screen,
                             // keep the element focused to maintain tabindex.
-                            P.close( target === P.$root.children()[0] )
+                            P.close( target === P.$holder[0] )
                         }
 
                     }).on( 'keydown.' + STATE.id, function( event ) {
@@ -18921,7 +20639,7 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
 
                         // Check if there is a key movement or “enter” keypress on the element.
-                        else if ( target == ELEMENT && ( keycodeToMove || keycode == 13 ) ) {
+                        else if ( target == P.$holder[0] && ( keycodeToMove || keycode == 13 ) ) {
 
                             // Prevent the default action to stop page movement.
                             event.preventDefault()
@@ -18933,7 +20651,10 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                             // On “enter”, if the highlighted item isn’t disabled, set the value and close.
                             else if ( !P.$root.find( '.' + CLASSES.highlighted ).hasClass( CLASSES.disabled ) ) {
-                                P.set( 'select', P.component.item.highlight ).close()
+                                P.set( 'select', P.component.item.highlight )
+                                if ( SETTINGS.closeOnSelect ) {
+                                    P.close( true )
+                                }
                             }
                         }
 
@@ -18959,29 +20680,47 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                 // If we need to give focus, do it before changing states.
                 if ( giveFocus ) {
-                    // ....ah yes! It would’ve been incomplete without a crazy workaround for IE :|
-                    // The focus is triggered *after* the close has completed - causing it
-                    // to open again. So unbind and rebind the event at the next tick.
-                    $ELEMENT.off( 'focus.' + STATE.id ).trigger( 'focus' )
-                    setTimeout( function() {
-                        $ELEMENT.on( 'focus.' + STATE.id, focusToOpen )
-                    }, 0 )
+                    if ( SETTINGS.editable ) {
+                        ELEMENT.focus()
+                    }
+                    else {
+                        // ....ah yes! It would’ve been incomplete without a crazy workaround for IE :|
+                        // The focus is triggered *after* the close has completed - causing it
+                        // to open again. So unbind and rebind the event at the next tick.
+                        P.$holder.off( 'focus.toOpen' ).focus()
+                        setTimeout( function() {
+                            P.$holder.on( 'focus.toOpen', handleFocusToOpenEvent )
+                        }, 0 )
+                    }
                 }
 
                 // Remove the “active” class.
                 $ELEMENT.removeClass( CLASSES.active )
                 aria( ELEMENT, 'expanded', false )
 
-                // Remove the “opened” and “focused” class from the picker root.
-                P.$root.removeClass( CLASSES.opened + ' ' + CLASSES.focused )
-                aria( P.$root[0], 'hidden', true )
-                aria( P.$root[0], 'selected', false )
+                // * A Firefox bug, when `html` has `overflow:hidden`, results in
+                //   killing transitions :(. So remove the “opened” state on the next tick.
+                //   Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=625289
+                setTimeout( function() {
+
+                    // Remove the “opened” and “focused” class from the picker root.
+                    P.$root.removeClass( CLASSES.opened + ' ' + CLASSES.focused )
+                    aria( P.$root[0], 'hidden', true )
+
+                }, 0 )
 
                 // If it’s already closed, do nothing more.
                 if ( !STATE.open ) return P
 
                 // Set it as closed.
                 STATE.open = false
+
+                // Allow the page to scroll.
+                if ( IS_DEFAULT_THEME ) {
+                    $html.
+                        css( 'overflow', '' ).
+                        css( 'padding-right', '-=' + getScrollbarWidth() )
+                }
 
                 // Unbind the document events.
                 $document.off( '.' + STATE.id )
@@ -18994,8 +20733,8 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
             /**
              * Clear the values
              */
-            clear: function() {
-                return P.set( 'clear' )
+            clear: function( options ) {
+                return P.set( 'clear', null, options )
             }, //clear
 
 
@@ -19009,7 +20748,7 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                     thingObject = thingIsObject ? thing : {}
 
                 // Make sure we have usable options.
-                options = thingIsObject && $.isPlainObject( value ) ? value : options || {}
+                options = thingIsObject && $.isPlainObject( value ) ? value : options || {}
 
                 if ( thing ) {
 
@@ -19026,14 +20765,15 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                         // First, if the item exists and there’s a value, set it.
                         if ( thingItem in P.component.item ) {
+                            if ( thingValue === undefined ) thingValue = null
                             P.component.set( thingItem, thingValue, options )
                         }
 
                         // Then, check to update the element value and broadcast a change.
                         if ( thingItem == 'select' || thingItem == 'clear' ) {
-                            $ELEMENT.val( thingItem == 'clear' ?
-                                '' : P.get( thingItem, SETTINGS.format )
-                            ).trigger( 'change' )
+                            $ELEMENT.
+                                val( thingItem == 'clear' ? '' : P.get( thingItem, SETTINGS.format ) ).
+                                trigger( 'change' )
                         }
                     }
 
@@ -19059,6 +20799,14 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                     return STATE[ thing ]
                 }
 
+                // Return the submission value, if that.
+                if ( thing == 'valueSubmit' ) {
+                    if ( P._hidden ) {
+                        return P._hidden.value
+                    }
+                    thing = 'value'
+                }
+
                 // Return the value, if that.
                 if ( thing == 'value' ) {
                     return ELEMENT.value
@@ -19067,11 +20815,13 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                 // Check if a component item exists, return that.
                 if ( thing in P.component.item ) {
                     if ( typeof format == 'string' ) {
-                        return PickerConstructor._.trigger(
-                            P.component.formats.toString,
-                            P.component,
-                            [ format, P.component.get( thing ) ]
-                        )
+                        var thingValue = P.component.get( thing )
+                        return thingValue ?
+                            PickerConstructor._.trigger(
+                                P.component.formats.toString,
+                                P.component,
+                                [ format, thingValue ]
+                            ) : ''
                     }
                     return P.component.get( thing )
                 }
@@ -19082,7 +20832,7 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
             /**
              * Bind events on the things.
              */
-            on: function( thing, method ) {
+            on: function( thing, method, internal ) {
 
                 var thingName, thingMethod,
                     thingIsObject = $.isPlainObject( thing ),
@@ -19100,6 +20850,11 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                         // Grab the method of the thing.
                         thingMethod = thingObject[ thingName ]
+
+                        // If it was an internal binding, prefix it.
+                        if ( internal ) {
+                            thingName = '_' + thingName
+                        }
 
                         // Make sure the thing methods collection exists.
                         STATE.methods[ thingName ] = STATE.methods[ thingName ] || []
@@ -19134,12 +20889,16 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
              * Fire off method events.
              */
             trigger: function( name, data ) {
-                var methodList = STATE.methods[ name ]
-                if ( methodList ) {
-                    methodList.map( function( method ) {
-                        PickerConstructor._.trigger( method, P, [ data ] )
-                    })
+                var _trigger = function( name ) {
+                    var methodList = STATE.methods[ name ]
+                    if ( methodList ) {
+                        methodList.map( function( method ) {
+                            PickerConstructor._.trigger( method, P, [ data ] )
+                        })
+                    }
                 }
+                _trigger( '_' + name )
+                _trigger( name )
                 return P
             } //trigger
         } //PickerInstance.prototype
@@ -19178,7 +20937,9 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
             ),
 
             // Picker holder class
-            CLASSES.holder
+            CLASSES.holder,
+
+            'tabindex="-1"'
         ) //endreturn
     } //createWrappedComponent
 
@@ -19201,42 +20962,22 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
             val( $ELEMENT.data('value') ?
                 P.get('select', SETTINGS.format) :
                 ELEMENT.value
-            ).
-
-            // On focus/click, open the picker and adjust the root “focused” state.
-            on('focus.' + STATE.id + ' click.' + STATE.id, focusToOpen)
+            )
 
 
         // Only bind keydown events if the element isn’t editable.
         if ( !SETTINGS.editable ) {
 
-            // Handle keyboard event based on the picker being opened or not.
-            $ELEMENT.on('keydown.' + STATE.id, function(event) {
+            $ELEMENT.
 
-                var keycode = event.keyCode,
-
-                    // Check if one of the delete keys was pressed.
-                    isKeycodeDelete = /^(8|46)$/.test(keycode)
-
-                // For some reason IE clears the input value on “escape”.
-                if ( keycode == 27 ) {
-                    P.close()
-                    return false
-                }
-
-                // Check if `space` or `delete` was pressed or the picker is closed with a key movement.
-                if ( keycode == 32 || isKeycodeDelete || !STATE.open && P.component.key[keycode] ) {
-
-                    // Prevent it from moving the page and bubbling to doc.
+                // On focus/click, open the picker.
+                on( 'focus.' + STATE.id + ' click.' + STATE.id, function(event) {
                     event.preventDefault()
-                    event.stopPropagation()
+                    P.open()
+                }).
 
-                    // If `delete` was pressed, clear the values and close the picker.
-                    // Otherwise open the picker.
-                    if ( isKeycodeDelete ) { P.clear().close() }
-                    else { P.open() }
-                }
-            })
+                // Handle keyboard event based on the picker being opened or not.
+                on( 'keydown.' + STATE.id, handleKeydownEvent )
         }
 
 
@@ -19245,7 +20986,7 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
             haspopup: true,
             expanded: false,
             readonly: false,
-            owns: ELEMENT.id + '_root' + (P._hidden ? ' ' + P._hidden.id : '')
+            owns: ELEMENT.id + '_root'
         })
     }
 
@@ -19254,27 +20995,44 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
      * Prepare the root picker element with all bindings.
      */
     function prepareElementRoot() {
+        aria( P.$root[0], 'hidden', true )
+    }
 
-        P.$root.
+
+     /**
+      * Prepare the holder picker element with all bindings.
+      */
+    function prepareElementHolder() {
+
+        P.$holder.
 
             on({
 
-                // When something within the root is focused, stop from bubbling
+                // For iOS8.
+                keydown: handleKeydownEvent,
+
+                'focus.toOpen': handleFocusToOpenEvent,
+
+                blur: function() {
+                    // Remove the “target” class.
+                    $ELEMENT.removeClass( CLASSES.target )
+                },
+
+                // When something within the holder is focused, stop from bubbling
                 // to the doc and remove the “focused” state from the root.
                 focusin: function( event ) {
                     P.$root.removeClass( CLASSES.focused )
-                    aria( P.$root[0], 'selected', false )
                     event.stopPropagation()
                 },
 
-                // When something within the root holder is clicked, stop it
+                // When something within the holder is clicked, stop it
                 // from bubbling to the doc.
                 'mousedown click': function( event ) {
 
                     var target = event.target
 
                     // Make sure the target isn’t the root holder so it can bubble up.
-                    if ( target != P.$root.children()[ 0 ] ) {
+                    if ( target != P.$holder[0] ) {
 
                         event.stopPropagation()
 
@@ -19282,20 +21040,21 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                         //   prevent cases where focus is shifted onto external elements
                         //   when using things like jQuery mobile or MagnificPopup (ref: #249 & #120).
                         //   Also, for Firefox, don’t prevent action on the `option` element.
-                        if ( event.type == 'mousedown' && !$( target ).is( ':input' ) && target.nodeName != 'OPTION' ) {
+                        if ( event.type == 'mousedown' && !$( target ).is( 'input, select, textarea, button, option' )) {
 
                             event.preventDefault()
 
-                            // Re-focus onto the element so that users can click away
+                            // Re-focus onto the holder so that users can click away
                             // from elements focused within the picker.
-                            ELEMENT.focus()
+                            P.$holder[0].focus()
                         }
                     }
                 }
+
             }).
 
             // If there’s a click on an actionable element, carry out the actions.
-            on( 'click', '[data-pick], [data-nav], [data-clear]', function() {
+            on( 'click', '[data-pick], [data-nav], [data-clear], [data-close]', function() {
 
                 var $target = $( this ),
                     targetData = $target.data(),
@@ -19303,31 +21062,41 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
 
                     // * For IE, non-focusable elements can be active elements as well
                     //   (http://stackoverflow.com/a/2684561).
-                    activeElement = document.activeElement
-                    activeElement = activeElement && ( activeElement.type || activeElement.href ) && activeElement
+                    activeElement = getActiveElement()
+                    activeElement = activeElement && ( activeElement.type || activeElement.href )
 
                 // If it’s disabled or nothing inside is actively focused, re-focus the element.
                 if ( targetDisabled || activeElement && !$.contains( P.$root[0], activeElement ) ) {
-                    ELEMENT.focus()
+                    P.$holder[0].focus()
                 }
 
                 // If something is superficially changed, update the `highlight` based on the `nav`.
-                if ( targetData.nav && !targetDisabled ) {
+                if ( !targetDisabled && targetData.nav ) {
                     P.set( 'highlight', P.component.item.highlight, { nav: targetData.nav } )
                 }
 
                 // If something is picked, set `select` then close with focus.
-                else if ( PickerConstructor._.isInteger( targetData.pick ) && !targetDisabled ) {
-                    P.set( 'select', targetData.pick ).close( true )
+                else if ( !targetDisabled && 'pick' in targetData ) {
+                    P.set( 'select', targetData.pick )
+                    if ( SETTINGS.closeOnSelect ) {
+                        P.close( true )
+                    }
                 }
 
                 // If a “clear” button is pressed, empty the values and close with focus.
                 else if ( targetData.clear ) {
-                    P.clear().close( true )
+                    P.clear()
+                    if ( SETTINGS.closeOnClear ) {
+                        P.close( true )
+                    }
                 }
-            }) //P.$root
 
-        aria( P.$root[0], 'hidden', true )
+                else if ( targetData.close ) {
+                    P.close( true )
+                }
+
+            }) //P.$holder
+
     }
 
 
@@ -19336,19 +21105,26 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
       */
     function prepareElementHidden() {
 
-        var id = [
-            typeof SETTINGS.hiddenPrefix == 'string' ? SETTINGS.hiddenPrefix : '',
-            typeof SETTINGS.hiddenSuffix == 'string' ? SETTINGS.hiddenSuffix : '_submit'
-        ]
+        var name
+
+        if ( SETTINGS.hiddenName === true ) {
+            name = ELEMENT.name
+            ELEMENT.name = ''
+        }
+        else {
+            name = [
+                typeof SETTINGS.hiddenPrefix == 'string' ? SETTINGS.hiddenPrefix : '',
+                typeof SETTINGS.hiddenSuffix == 'string' ? SETTINGS.hiddenSuffix : '_submit'
+            ]
+            name = name[0] + ELEMENT.name + name[1]
+        }
 
         P._hidden = $(
             '<input ' +
             'type=hidden ' +
 
-            // Create the name and ID by using the original
-            // input’s with a prefix and suffix.
-            'name="' + id[0] + ELEMENT.name + id[1] + '"' +
-            'id="' + id[0] + ELEMENT.id + id[1] + '"' +
+            // Create the name using the original input’s with a prefix and suffix.
+            'name="' + name + '"' +
 
             // If the element has a value, set the hidden value as well.
             (
@@ -19366,27 +21142,67 @@ function PickerConstructor( ELEMENT, NAME, COMPONENT, OPTIONS ) {
                 P._hidden.value = ELEMENT.value ?
                     P.get('select', SETTINGS.formatSubmit) :
                     ''
-            }).
-
-            // Insert the hidden input after the element.
-            after(P._hidden)
+            })
     }
 
 
-    // Separated for IE
-    function focusToOpen( event ) {
+    // Wait for transitions to end before focusing the holder. Otherwise, while
+    // using the `container` option, the view jumps to the container.
+    function focusPickerOnceOpened() {
+
+        if (IS_DEFAULT_THEME && supportsTransitions) {
+            P.$holder.find('.' + CLASSES.frame).one('transitionend', function() {
+                P.$holder[0].focus()
+            })
+        }
+        else {
+            P.$holder[0].focus()
+        }
+    }
+
+
+    function handleFocusToOpenEvent(event) {
 
         // Stop the event from propagating to the doc.
         event.stopPropagation()
 
-        // If it’s a focus event, add the “focused” class to the root.
-        if ( event.type == 'focus' ) {
-            P.$root.addClass( CLASSES.focused )
-            aria( P.$root[0], 'selected', true )
-        }
+        // Add the “target” class.
+        $ELEMENT.addClass( CLASSES.target )
+
+        // Add the “focused” class to the root.
+        P.$root.addClass( CLASSES.focused )
 
         // And then finally open the picker.
         P.open()
+    }
+
+
+    // For iOS8.
+    function handleKeydownEvent( event ) {
+
+        var keycode = event.keyCode,
+
+            // Check if one of the delete keys was pressed.
+            isKeycodeDelete = /^(8|46)$/.test(keycode)
+
+        // For some reason IE clears the input value on “escape”.
+        if ( keycode == 27 ) {
+            P.close( true )
+            return false
+        }
+
+        // Check if `space` or `delete` was pressed or the picker is closed with a key movement.
+        if ( keycode == 32 || isKeycodeDelete || !STATE.open && P.component.key[keycode] ) {
+
+            // Prevent it from moving the page and bubbling to doc.
+            event.preventDefault()
+            event.stopPropagation()
+
+            // If `delete` was pressed, clear the values and close the picker.
+            // Otherwise open the picker.
+            if ( isKeycodeDelete ) { P.clear().close() }
+            else { P.open() }
+        }
     }
 
 
@@ -19409,6 +21225,7 @@ PickerConstructor.klasses = function( prefix ) {
 
         input: prefix + '__input',
         active: prefix + '__input--active',
+        target: prefix + '__input--target',
 
         holder: prefix + '__holder',
 
@@ -19418,6 +21235,63 @@ PickerConstructor.klasses = function( prefix ) {
         box: prefix + '__box'
     }
 } //PickerConstructor.klasses
+
+
+
+/**
+ * Check if the default theme is being used.
+ */
+function isUsingDefaultTheme( element ) {
+
+    var theme,
+        prop = 'position'
+
+    // For IE.
+    if ( element.currentStyle ) {
+        theme = element.currentStyle[prop]
+    }
+
+    // For normal browsers.
+    else if ( window.getComputedStyle ) {
+        theme = getComputedStyle( element )[prop]
+    }
+
+    return theme == 'fixed'
+}
+
+
+
+/**
+ * Get the width of the browser’s scrollbar.
+ * Taken from: https://github.com/VodkaBears/Remodal/blob/master/src/jquery.remodal.js
+ */
+function getScrollbarWidth() {
+
+    if ( $html.height() <= $window.height() ) {
+        return 0
+    }
+
+    var $outer = $( '<div style="visibility:hidden;width:100px" />' ).
+        appendTo( 'body' )
+
+    // Get the width without scrollbars.
+    var widthWithoutScroll = $outer[0].offsetWidth
+
+    // Force adding scrollbars.
+    $outer.css( 'overflow', 'scroll' )
+
+    // Add the inner div.
+    var $inner = $( '<div style="width:100%" />' ).appendTo( $outer )
+
+    // Get the width with scrollbars.
+    var widthWithScroll = $inner[0].offsetWidth
+
+    // Remove the divs.
+    $outer.remove()
+
+    // Return the difference between the widths.
+    return widthWithoutScroll - widthWithScroll
+}
 
 
 
@@ -19559,8 +21433,7 @@ PickerConstructor.extend = function( name, Component ) {
 
         // If the component data exists and `options` is a string, carry out the action.
         if ( componentData && typeof options == 'string' ) {
-            PickerConstructor._.trigger( componentData[ options ], componentData, [ action ] )
-            return this
+            return PickerConstructor._.trigger( componentData[ options ], componentData, [ action ] )
         }
 
         // Otherwise go through each matched element and if the component
@@ -19592,21 +21465,28 @@ function aria(element, attribute, value) {
 }
 function ariaSet(element, attribute, value) {
     element.setAttribute(
-        (attribute == 'role' ? '' : 'aria-') + attribute,
+        (attribute == 'role' ? '' : 'aria-') + attribute,
         value
     )
 }
 function ariaAttr(attribute, data) {
     if ( !$.isPlainObject(attribute) ) {
-        attribute = { attribute: data }
+        attribute = { attribute: data }
     }
     data = ''
     for ( var key in attribute ) {
-        var attr = (key == 'role' ? '' : 'aria-') + key,
+        var attr = (key == 'role' ? '' : 'aria-') + key,
             attrVal = attribute[key]
         data += attrVal == null ? '' : attr + '="' + attribute[key] + '"'
     }
     return data
+}
+
+// IE8 bug throws an error for activeElements within iframes.
+function getActiveElement() {
+    try {
+        return document.activeElement
+    } catch ( err ) { }
 }
 
 
@@ -19620,19 +21500,22 @@ return PickerConstructor
 
 
 
-
 /*!
- * Date picker for pickadate.js v3.4.0
+ * Date picker for pickadate.js v3.5.6
  * http://amsul.github.io/pickadate.js/date.htm
  */
 
 (function ( factory ) {
 
-    // Register as an anonymous module.
+    // AMD.
     if ( typeof define == 'function' && define.amd )
-        define( 'picker.date',['picker','jquery'], factory )
+        define( 'picker.date',['picker', 'jquery'], factory )
 
-    // Or using browser globals.
+    // Node.js/browserify.
+    else if ( typeof exports == 'object' )
+        module.exports = factory( require('./picker.js'), require('jquery') )
+
+    // Browser globals.
     else factory( Picker, jQuery )
 
 }(function( Picker, $ ) {
@@ -19653,12 +21536,20 @@ var DAYS_IN_WEEK = 7,
 function DatePicker( picker, settings ) {
 
     var calendar = this,
-        elementValue = picker.$node[ 0 ].value,
+        element = picker.$node[ 0 ],
+        elementValue = element.value,
         elementDataValue = picker.$node.data( 'value' ),
         valueString = elementDataValue || elementValue,
         formatString = elementDataValue ? settings.formatSubmit : settings.format,
         isRTL = function() {
-            return getComputedStyle( picker.$root[0] ).direction === 'rtl'
+
+            return element.currentStyle ?
+
+                // For IE.
+                element.currentStyle.direction == 'rtl' :
+
+                // For normal browsers.
+                getComputedStyle( picker.$root[0] ).direction == 'rtl'
         }
 
     calendar.settings = settings
@@ -19679,6 +21570,7 @@ function DatePicker( picker, settings ) {
     // The component's item object.
     calendar.item = {}
 
+    calendar.item.clear = null
     calendar.item.disable = ( settings.disable || [] ).slice( 0 )
     calendar.item.enable = -(function( collectionDisabled ) {
         return collectionDisabled[ 0 ] === true ? collectionDisabled.shift() : -1
@@ -19694,7 +21586,7 @@ function DatePicker( picker, settings ) {
     if ( valueString ) {
         calendar.set( 'select', valueString, {
             format: formatString,
-            fromValue: !!elementValue
+            defaultValue: true
         })
     }
 
@@ -19717,7 +21609,7 @@ function DatePicker( picker, settings ) {
                 targetDate = new Date( highlightedObject.year, highlightedObject.month, highlightedObject.date + timeChange )
             calendar.set(
                 'highlight',
-                [ targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() ],
+                targetDate,
                 { interval: timeChange }
             )
             this.render()
@@ -19742,13 +21634,17 @@ function DatePicker( picker, settings ) {
                     picker.$root.find( '.' + settings.klass.selectYear ).trigger( 'focus' )
                 }
             })
-        }).
+        }, 1 ).
         on( 'open', function() {
-            picker.$root.find( 'button, select' ).attr( 'disabled', false )
-        }).
+            var includeToday = ''
+            if ( calendar.disabled( calendar.get('now') ) ) {
+                includeToday = ':not(.' + settings.klass.buttonToday + ')'
+            }
+            picker.$root.find( 'button' + includeToday + ', select' ).attr( 'disabled', false )
+        }, 1 ).
         on( 'close', function() {
             picker.$root.find( 'button, select' ).attr( 'disabled', true )
-        })
+        }, 1 )
 
 } //DatePicker
 
@@ -19763,6 +21659,7 @@ DatePicker.prototype.set = function( type, value, options ) {
 
     // If the value is `null` just set it immediately.
     if ( value === null ) {
+        if ( type == 'clear' ) type = 'select'
         calendarItem[ type ] = value
         return calendar
     }
@@ -19912,7 +21809,7 @@ DatePicker.prototype.overlapRanges = function( one, two ) {
     one = calendar.createRange( one.from, one.to )
     two = calendar.createRange( two.from, two.to )
 
-    return calendar.withinRange( one, two.from ) || calendar.withinRange( one, two.to ) ||
+    return calendar.withinRange( one, two.from ) || calendar.withinRange( one, two.to ) ||
         calendar.withinRange( two, one.from ) || calendar.withinRange( two, one.to )
 }
 
@@ -20002,9 +21899,14 @@ DatePicker.prototype.measure = function( type, value/*, options*/ ) {
 
     var calendar = this
 
-    // If it's anything false-y, remove the limits.
+    // If it’s anything false-y, remove the limits.
     if ( !value ) {
         value = type == 'min' ? -Infinity : Infinity
+    }
+
+    // If it’s a string, parse it.
+    else if ( typeof value == 'string' ) {
+        value = calendar.parse( type, value )
     }
 
     // If it's an integer, get a date relative to today.
@@ -20078,7 +21980,7 @@ DatePicker.prototype.validate = function( type, dateObject, options ) {
     // • Not inverted and date enabled.
     // • Inverted and all dates disabled.
     // • ..and anything else.
-    if ( !options || !options.nav ) if (
+    if ( !options || (!options.nav && !options.defaultValue) ) if (
         /* 1 */ ( !isFlippedBase && calendar.disabled( dateObject ) ) ||
         /* 2 */ ( isFlippedBase && calendar.disabled( dateObject ) && ( hasEnabledWeekdays || hasEnabledBeforeTarget || hasEnabledAfterTarget ) ) ||
         /* 3 */ ( !isFlippedBase && (dateObject.pick <= minLimitObject.pick || dateObject.pick >= maxLimitObject.pick) )
@@ -20112,12 +22014,20 @@ DatePicker.prototype.validate = function( type, dateObject, options ) {
             if ( dateObject.pick <= minLimitObject.pick ) {
                 reachedMin = true
                 interval = 1
-                dateObject = calendar.create([ minLimitObject.year, minLimitObject.month, minLimitObject.date - 1 ])
+                dateObject = calendar.create([
+                    minLimitObject.year,
+                    minLimitObject.month,
+                    minLimitObject.date + (dateObject.pick === minLimitObject.pick ? 0 : -1)
+                ])
             }
             else if ( dateObject.pick >= maxLimitObject.pick ) {
                 reachedMax = true
                 interval = -1
-                dateObject = calendar.create([ maxLimitObject.year, maxLimitObject.month, maxLimitObject.date + 1 ])
+                dateObject = calendar.create([
+                    maxLimitObject.year,
+                    maxLimitObject.month,
+                    maxLimitObject.date + (dateObject.pick === maxLimitObject.pick ? 0 : 1)
+                ])
             }
 
 
@@ -20187,10 +22097,10 @@ DatePicker.prototype.disabled = function( dateToVerify ) {
 DatePicker.prototype.parse = function( type, value, options ) {
 
     var calendar = this,
-        parsingObject = {},
-        monthIndex
+        parsingObject = {}
 
-    if ( !value || _.isInteger( value ) || $.isArray( value ) || _.isDate( value ) || $.isPlainObject( value ) && _.isInteger( value.pick ) ) {
+    // If it’s already parsed, we’re good.
+    if ( !value || typeof value != 'string' ) {
         return value
     }
 
@@ -20199,9 +22109,6 @@ DatePicker.prototype.parse = function( type, value, options ) {
         options = options || {}
         options.format = calendar.settings.format
     }
-
-    // Calculate the month index to adjust with.
-    monthIndex = typeof value == 'string' && !options.fromValue ? 1 : 0
 
     // Convert the format into an array and then map through it.
     calendar.formats.toArray( options.format ).map( function( label ) {
@@ -20224,10 +22131,10 @@ DatePicker.prototype.parse = function( type, value, options ) {
         value = value.substr( formatLength )
     })
 
-    // If it’s parsing a user provided month value, compensate for month 0index.
+    // Compensate for month 0index.
     return [
         parsingObject.yyyy || parsingObject.yy,
-        +( parsingObject.mm || parsingObject.m ) - monthIndex,
+        +( parsingObject.mm || parsingObject.m ) - 1,
         parsingObject.dd || parsingObject.d
     ]
 } //DatePicker.prototype.parse
@@ -20242,11 +22149,12 @@ DatePicker.prototype.formats = (function() {
     function getWordLengthFromCollection( string, collection, dateObject ) {
 
         // Grab the first word from the string.
-        var word = string.match( /\w+/ )[ 0 ]
+        // Regex pattern from http://stackoverflow.com/q/150033
+        var word = string.match( /[^\x00-\x7F]+|\w+/ )[ 0 ]
 
         // If there's no month index, add it to the date object
         if ( !dateObject.mm && !dateObject.m ) {
-            dateObject.m = collection.indexOf( word )
+            dateObject.m = collection.indexOf( word ) + 1
         }
 
         // Return the length of the word.
@@ -20378,13 +22286,16 @@ DatePicker.prototype.isDateExact = function( one, two ) {
  */
 DatePicker.prototype.isDateOverlap = function( one, two ) {
 
-    var calendar = this
+    var calendar = this,
+        firstDay = calendar.settings.firstDay ? 1 : 0
 
     // When we’re working with a weekday index, compare the days.
     if ( _.isInteger( one ) && ( _.isDate( two ) || $.isArray( two ) ) ) {
+        one = one % 7 + firstDay
         return one === calendar.create( two ).day + 1
     }
     if ( _.isInteger( two ) && ( _.isDate( one ) || $.isArray( one ) ) ) {
+        two = two % 7 + firstDay
         return two === calendar.create( one ).day + 1
     }
 
@@ -20577,11 +22488,12 @@ DatePicker.prototype.nodes = function( isOpen ) {
 
         // Create the calendar table head using a copy of weekday labels collection.
         // * We do a copy so we don't mutate the original array.
-        tableHead = (function( collection ) {
+        tableHead = (function( collection, fullCollection ) {
 
             // If the first day should be Monday, move Sunday to the end.
             if ( settings.firstDay ) {
                 collection.push( collection.shift() )
+                fullCollection.push( fullCollection.shift() )
             }
 
             // Create and return the table head group.
@@ -20597,13 +22509,14 @@ DatePicker.prototype.nodes = function( isOpen ) {
                         item: function( counter ) {
                             return [
                                 collection[ counter ],
-                                settings.klass.weekdays
+                                settings.klass.weekdays,
+                                'scope=col title="' + fullCollection[ counter ] + '"'
                             ]
                         }
                     })
                 )
             ) //endreturn
-        })( ( settings.showWeekdaysFull ? settings.weekdaysFull : settings.weekdaysShort ).slice( 0 ) ), //tableHead
+        })( ( settings.showWeekdaysFull ? settings.weekdaysFull : settings.weekdaysShort ).slice( 0 ), settings.weekdaysFull.slice( 0 ) ), //tableHead
 
 
         // Create the nav for next/prev month.
@@ -20620,42 +22533,55 @@ DatePicker.prototype.nodes = function( isOpen ) {
                     ( !next && viewsetObject.year <= minLimitObject.year && viewsetObject.month <= minLimitObject.month ) ?
                     ' ' + settings.klass.navDisabled : ''
                 ),
-                'data-nav=' + ( next || -1 )
+                'data-nav=' + ( next || -1 ) + ' ' +
+                _.ariaAttr({
+                    role: 'button',
+                    controls: calendar.$node[0].id + '_table'
+                }) + ' ' +
+                'title="' + (next ? settings.labelMonthNext : settings.labelMonthPrev ) + '"'
             ) //endreturn
         }, //createMonthNav
 
 
         // Create the month label.
-        createMonthLabel = function( monthsCollection ) {
+        createMonthLabel = function() {
+
+            var monthsCollection = settings.showMonthsShort ? settings.monthsShort : settings.monthsFull
 
             // If there are months to select, add a dropdown menu.
             if ( settings.selectMonths ) {
 
-                return _.node( 'select', _.group({
-                    min: 0,
-                    max: 11,
-                    i: 1,
-                    node: 'option',
-                    item: function( loopedMonth ) {
+                return _.node( 'select',
+                    _.group({
+                        min: 0,
+                        max: 11,
+                        i: 1,
+                        node: 'option',
+                        item: function( loopedMonth ) {
 
-                        return [
+                            return [
 
-                            // The looped month and no classes.
-                            monthsCollection[ loopedMonth ], 0,
+                                // The looped month and no classes.
+                                monthsCollection[ loopedMonth ], 0,
 
-                            // Set the value and selected index.
-                            'value=' + loopedMonth +
-                            ( viewsetObject.month == loopedMonth ? ' selected' : '' ) +
-                            (
+                                // Set the value and selected index.
+                                'value=' + loopedMonth +
+                                ( viewsetObject.month == loopedMonth ? ' selected' : '' ) +
                                 (
-                                    ( viewsetObject.year == minLimitObject.year && loopedMonth < minLimitObject.month ) ||
-                                    ( viewsetObject.year == maxLimitObject.year && loopedMonth > maxLimitObject.month )
-                                ) ?
-                                ' disabled' : ''
-                            )
-                        ]
-                    }
-                }), settings.klass.selectMonth, isOpen ? '' : 'disabled' )
+                                    (
+                                        ( viewsetObject.year == minLimitObject.year && loopedMonth < minLimitObject.month ) ||
+                                        ( viewsetObject.year == maxLimitObject.year && loopedMonth > maxLimitObject.month )
+                                    ) ?
+                                    ' disabled' : ''
+                                )
+                            ]
+                        }
+                    }),
+                    settings.klass.selectMonth,
+                    ( isOpen ? '' : 'disabled' ) + ' ' +
+                    _.ariaAttr({ controls: calendar.$node[0].id + '_table' }) + ' ' +
+                    'title="' + settings.labelMonthSelect + '"'
+                )
             }
 
             // If there's a need for a month selector
@@ -20700,22 +22626,27 @@ DatePicker.prototype.nodes = function( isOpen ) {
                     highestYear = maxYear
                 }
 
-                return _.node( 'select', _.group({
-                    min: lowestYear,
-                    max: highestYear,
-                    i: 1,
-                    node: 'option',
-                    item: function( loopedYear ) {
-                        return [
+                return _.node( 'select',
+                    _.group({
+                        min: lowestYear,
+                        max: highestYear,
+                        i: 1,
+                        node: 'option',
+                        item: function( loopedYear ) {
+                            return [
 
-                            // The looped year and no classes.
-                            loopedYear, 0,
+                                // The looped year and no classes.
+                                loopedYear, 0,
 
-                            // Set the value and selected index.
-                            'value=' + loopedYear + ( focusedYear == loopedYear ? ' selected' : '' )
-                        ]
-                    }
-                }), settings.klass.selectYear, isOpen ? '' : 'disabled' )
+                                // Set the value and selected index.
+                                'value=' + loopedYear + ( focusedYear == loopedYear ? ' selected' : '' )
+                            ]
+                        }
+                    }),
+                    settings.klass.selectYear,
+                    ( isOpen ? '' : 'disabled' ) + ' ' + _.ariaAttr({ controls: calendar.$node[0].id + '_table' }) + ' ' +
+                    'title="' + settings.labelYearSelect + '"'
+                )
             }
 
             // Otherwise just return the year focused
@@ -20726,9 +22657,8 @@ DatePicker.prototype.nodes = function( isOpen ) {
     // Create and return the entire calendar.
     return _.node(
         'div',
-        createMonthNav() + createMonthNav( 1 ) +
-        createMonthLabel( settings.showMonthsShort ? settings.monthsShort : settings.monthsFull ) +
-        createYearLabel(),
+        ( settings.selectYears ? createYearLabel() + createMonthLabel() : createMonthLabel() + createYearLabel() ) +
+        createMonthNav() + createMonthNav( 1 ),
         settings.klass.header
     ) + _.node(
         'table',
@@ -20760,7 +22690,8 @@ DatePicker.prototype.nodes = function( isOpen ) {
 
                                 var isSelected = selectedObject && selectedObject.pick == targetDate.pick,
                                     isHighlighted = highlightedObject && highlightedObject.pick == targetDate.pick,
-                                    isDisabled = disabledCollection && calendar.disabled( targetDate ) || targetDate.pick < minLimitObject.pick || targetDate.pick > maxLimitObject.pick
+                                    isDisabled = disabledCollection && calendar.disabled( targetDate ) || targetDate.pick < minLimitObject.pick || targetDate.pick > maxLimitObject.pick,
+                                    formattedDate = _.trigger( calendar.formats.toString, calendar, [ settings.format, targetDate ] )
 
                                 return [
                                     _.node(
@@ -20794,17 +22725,15 @@ DatePicker.prototype.nodes = function( isOpen ) {
                                             return klasses.join( ' ' )
                                         })([ settings.klass.day ]),
                                         'data-pick=' + targetDate.pick + ' ' + _.ariaAttr({
-                                            role: 'button',
-                                            controls: calendar.$node[0].id,
-                                            checked: isSelected && calendar.$node.val() === _.trigger(
-                                                    calendar.formats.toString,
-                                                    calendar,
-                                                    [ settings.format, targetDate ]
-                                                ) ? true : null,
+                                            role: 'gridcell',
+                                            label: formattedDate,
+                                            selected: isSelected && calendar.$node.val() === formattedDate ? true : null,
                                             activedescendant: isHighlighted ? true : null,
                                             disabled: isDisabled ? true : null
                                         })
-                                    )
+                                    ),
+                                    '',
+                                    _.ariaAttr({ role: 'presentation' })
                                 ] //endreturn
                             }
                         })
@@ -20812,14 +22741,29 @@ DatePicker.prototype.nodes = function( isOpen ) {
                 }
             })
         ),
-        settings.klass.table
+        settings.klass.table,
+        'id="' + calendar.$node[0].id + '_table' + '" ' + _.ariaAttr({
+            role: 'grid',
+            controls: calendar.$node[0].id,
+            readonly: true
+        })
     ) +
 
     // * For Firefox forms to submit, make sure to set the buttons’ `type` attributes as “button”.
     _.node(
         'div',
-        _.node( 'button', settings.today, settings.klass.buttonToday, 'type=button data-pick=' + nowObject.pick + ( isOpen ? '' : ' disabled' ) ) +
-        _.node( 'button', settings.clear, settings.klass.buttonClear, 'type=button data-clear=1' + ( isOpen ? '' : ' disabled' ) ),
+        _.node( 'button', settings.today, settings.klass.buttonToday,
+            'type=button data-pick=' + nowObject.pick +
+            ( isOpen && !calendar.disabled(nowObject) ? '' : ' disabled' ) + ' ' +
+            _.ariaAttr({ controls: calendar.$node[0].id }) ) +
+        _.node( 'button', settings.clear, settings.klass.buttonClear,
+            'type=button data-clear=1' +
+            ( isOpen ? '' : ' disabled' ) + ' ' +
+            _.ariaAttr({ controls: calendar.$node[0].id }) ) +
+        _.node('button', settings.close, settings.klass.buttonClose,
+            'type=button data-close=true ' +
+            ( isOpen ? '' : ' disabled' ) + ' ' +
+            _.ariaAttr({ controls: calendar.$node[0].id }) ),
         settings.klass.footer
     ) //endreturn
 } //DatePicker.prototype.nodes
@@ -20834,6 +22778,14 @@ DatePicker.defaults = (function( prefix ) {
 
     return {
 
+        // The title label to use for the month nav buttons
+        labelMonthNext: 'Next month',
+        labelMonthPrev: 'Previous month',
+
+        // The title label to use for the dropdown selectors
+        labelMonthSelect: 'Select a month',
+        labelYearSelect: 'Select a year',
+
         // Months and weekdays
         monthsFull: [ 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December' ],
         monthsShort: [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ],
@@ -20843,6 +22795,11 @@ DatePicker.defaults = (function( prefix ) {
         // Today and clear
         today: 'Today',
         clear: 'Clear',
+        close: 'Close',
+
+        // Picker close behavior
+        closeOnSelect: true,
+        closeOnClear: true,
 
         // The format to show on the `input` element
         format: 'd mmmm, yyyy',
@@ -20877,7 +22834,8 @@ DatePicker.defaults = (function( prefix ) {
             footer: prefix + 'footer',
 
             buttonClear: prefix + 'button--clear',
-            buttonToday: prefix + 'button--today'
+            buttonToday: prefix + 'button--today',
+            buttonClose: prefix + 'button--close'
         }
     }
 })( Picker.klasses().picker + '__' )
@@ -20897,19 +22855,22 @@ Picker.extend( 'pickadate', DatePicker )
 
 
 
-
 /*!
- * Time picker for pickadate.js v3.4.0
+ * Time picker for pickadate.js v3.5.6
  * http://amsul.github.io/pickadate.js/time.htm
  */
 
 (function ( factory ) {
 
-    // Register as an anonymous module.
+    // AMD.
     if ( typeof define == 'function' && define.amd )
-        define( 'picker.time',['picker','jquery'], factory )
+        define( 'picker.time',['picker', 'jquery'], factory )
 
-    // Or using browser globals.
+    // Node.js/browserify.
+    else if ( typeof exports == 'object' )
+        module.exports = factory( require('./picker.js'), require('jquery') )
+
+    // Browser globals.
     else factory( Picker, jQuery )
 
 }(function( Picker, $ ) {
@@ -20956,6 +22917,7 @@ function TimePicker( picker, settings ) {
     // The component's item object.
     clock.item = {}
 
+    clock.item.clear = null
     clock.item.interval = settings.interval || 30
     clock.item.disable = ( settings.disable || [] ).slice( 0 )
     clock.item.enable = -(function( collectionDisabled ) {
@@ -20971,8 +22933,7 @@ function TimePicker( picker, settings ) {
     // also sets the `highlight` and `view`.
     if ( valueString ) {
         clock.set( 'select', valueString, {
-            format: formatString,
-            fromValue: !!elementValue
+            format: formatString
         })
     }
 
@@ -21004,17 +22965,32 @@ function TimePicker( picker, settings ) {
     picker.
         on( 'render', function() {
             var $pickerHolder = picker.$root.children(),
-                $viewset = $pickerHolder.find( '.' + settings.klass.viewset )
+                $viewset = $pickerHolder.find( '.' + settings.klass.viewset ),
+                vendors = function( prop ) {
+                    return ['webkit', 'moz', 'ms', 'o', ''].map(function( vendor ) {
+                        return ( vendor ? '-' + vendor + '-' : '' ) + prop
+                    })
+                },
+                animations = function( $el, state ) {
+                    vendors( 'transform' ).map(function( prop ) {
+                        $el.css( prop, state )
+                    })
+                    vendors( 'transition' ).map(function( prop ) {
+                        $el.css( prop, state )
+                    })
+                }
             if ( $viewset.length ) {
+                animations( $pickerHolder, 'none' )
                 $pickerHolder[ 0 ].scrollTop = ~~$viewset.position().top - ( $viewset[ 0 ].clientHeight * 2 )
+                animations( $pickerHolder, '' )
             }
-        }).
+        }, 1 ).
         on( 'open', function() {
-            picker.$root.find( 'button' ).attr( 'disable', false )
-        }).
+            picker.$root.find( 'button' ).attr( 'disabled', false )
+        }, 1 ).
         on( 'close', function() {
-            picker.$root.find( 'button' ).attr( 'disable', true )
-        })
+            picker.$root.find( 'button' ).attr( 'disabled', true )
+        }, 1 )
 
 } //TimePicker
 
@@ -21029,6 +23005,7 @@ TimePicker.prototype.set = function( type, value, options ) {
 
     // If the value is `null` just set it immediately.
     if ( value === null ) {
+        if ( type == 'clear' ) type = 'select'
         clockItem[ type ] = value
         return clock
     }
@@ -21055,14 +23032,14 @@ TimePicker.prototype.set = function( type, value, options ) {
             set( 'max', clockItem.max, options )
     }
     else if ( type.match( /^(flip|min|max|disable|enable)$/ ) ) {
-        if ( type == 'min' ) {
-            clock.set( 'max', clockItem.max, options )
-        }
         if ( clockItem.select && clock.disabled( clockItem.select ) ) {
-            clock.set( 'select', clockItem.select, options )
+            clock.set( 'select', value, options )
         }
         if ( clockItem.highlight && clock.disabled( clockItem.highlight ) ) {
-            clock.set( 'highlight', clockItem.highlight, options )
+            clock.set( 'highlight', value, options )
+        }
+        if ( type == 'min' ) {
+            clock.set( 'max', clockItem.max, options )
         }
     }
 
@@ -21135,7 +23112,7 @@ TimePicker.prototype.create = function( type, value, options ) {
         time: ( MINUTES_IN_DAY + value ) % MINUTES_IN_DAY,
 
         // Reference to the “relative” value to pick.
-        pick: value
+        pick: value % MINUTES_IN_DAY
     }
 } //TimePicker.prototype.create
 
@@ -21197,7 +23174,7 @@ TimePicker.prototype.overlapRanges = function( one, two ) {
     one = clock.createRange( one.from, one.to )
     two = clock.createRange( two.from, two.to )
 
-    return clock.withinRange( one, two.from ) || clock.withinRange( one, two.to ) ||
+    return clock.withinRange( one, two.from ) || clock.withinRange( one, two.to ) ||
         clock.withinRange( two, one.from ) || clock.withinRange( two, one.to )
 }
 
@@ -21264,6 +23241,11 @@ TimePicker.prototype.measure = function( type, value, options ) {
     // If it’s anything false-y, set it to the default.
     if ( !value ) {
         value = type == 'min' ? [ 0, 0 ] : [ HOURS_IN_DAY - 1, MINUTES_IN_HOUR - 1 ]
+    }
+
+    // If it’s a string, parse it.
+    if ( typeof value == 'string' ) {
+        value = clock.parse( type, value )
     }
 
     // If it’s a literal true, or an integer, make it relative to now.
@@ -21401,7 +23383,8 @@ TimePicker.prototype.parse = function( type, value, options ) {
         clock = this,
         parsingObject = {}
 
-    if ( !value || _.isInteger( value ) || $.isArray( value ) || _.isDate( value ) || $.isPlainObject( value ) && _.isInteger( value.pick ) ) {
+    // If it’s already parsed, we’re good.
+    if ( !value || typeof value != 'string' ) {
         return value
     }
 
@@ -21773,7 +23756,8 @@ TimePicker.prototype.nodes = function( isOpen ) {
                 var timeMinutes = loopedTime.pick,
                     isSelected = selectedObject && selectedObject.pick == timeMinutes,
                     isHighlighted = highlightedObject && highlightedObject.pick == timeMinutes,
-                    isDisabled = disabledCollection && clock.disabled( loopedTime )
+                    isDisabled = disabledCollection && clock.disabled( loopedTime ),
+                    formattedTime = _.trigger( clock.formats.toString, clock, [ settings.format, loopedTime ] )
                 return [
                     _.trigger( clock.formats.toString, clock, [ _.trigger( settings.formatLabel, clock, [ loopedTime ] ) || settings.format, loopedTime ] ),
                     (function( klasses ) {
@@ -21797,13 +23781,9 @@ TimePicker.prototype.nodes = function( isOpen ) {
                         return klasses.join( ' ' )
                     })( [ settings.klass.listItem ] ),
                     'data-pick=' + loopedTime.pick + ' ' + _.ariaAttr({
-                        role: 'button',
-                        controls: clock.$node[0].id,
-                        checked: isSelected && clock.$node.val() === _.trigger(
-                                clock.formats.toString,
-                                clock,
-                                [ settings.format, loopedTime ]
-                            ) ? true : null,
+                        role: 'option',
+                        label: formattedTime,
+                        selected: isSelected && clock.$node.val() === formattedTime ? true : null,
                         activedescendant: isHighlighted ? true : null,
                         disabled: isDisabled ? true : null
                     })
@@ -21818,10 +23798,13 @@ TimePicker.prototype.nodes = function( isOpen ) {
                 'button',
                 settings.clear,
                 settings.klass.buttonClear,
-                'type=button data-clear=1' + ( isOpen ? '' : ' disable' )
-            )
+                'type=button data-clear=1' + ( isOpen ? '' : ' disabled' ) + ' ' +
+                _.ariaAttr({ controls: clock.$node[0].id })
+            ),
+            '', _.ariaAttr({ role: 'presentation' })
         ),
-        settings.klass.list
+        settings.klass.list,
+        _.ariaAttr({ role: 'listbox', controls: clock.$node[0].id })
     )
 } //TimePicker.prototype.nodes
 
@@ -21831,10 +23814,9 @@ TimePicker.prototype.nodes = function( isOpen ) {
 
 
 
-/* ==========================================================================
-   Extend the picker to add the component with the defaults.
-   ========================================================================== */
-
+/**
+ * Extend the picker to add the component with the defaults.
+ */
 TimePicker.defaults = (function( prefix ) {
 
     return {
@@ -21847,6 +23829,10 @@ TimePicker.defaults = (function( prefix ) {
 
         // The interval between each time
         interval: 30,
+
+        // Picker close behavior
+        closeOnSelect: true,
+        closeOnClear: true,
 
         // Classes
         klass: {
@@ -21907,7 +23893,7 @@ define('mockup-i18n',[
     if (!self.baseUrl) {
       self.baseUrl = '/plonejsi18n';
     }
-    self.currentLanguage = $('html').attr('lang') || 'en';
+    self.currentLanguage = $('html').attr('lang') || 'en-us';
     self.storage = null;
     self.catalogs = {};
     self.ttl = 24 * 3600 * 1000;
@@ -21977,7 +23963,6 @@ define('mockup-i18n',[
 
     self.MessageFactory = function (domain, language) {
       language = language || self.currentLanguage;
-
       return function translate (msgid, keywords) {
         var msgstr;
         if ((domain in self.catalogs) && (language in self.catalogs[domain]) && (msgid in self.catalogs[domain][language])) {
@@ -22116,7 +24101,7 @@ define('translate',[
 
 define('mockup-patterns-pickadate',[
   'jquery',
-  'mockup-patterns-base',
+  'pat-base',
   'picker',
   'picker.date',
   'picker.time',
@@ -22128,14 +24113,23 @@ define('mockup-patterns-pickadate',[
   var PickADate = Base.extend({
     name: 'pickadate',
     trigger: '.pat-pickadate',
+    parser: 'mockup',
     defaults: {
       separator: ' ',
       date: {
         selectYears: true,
-        selectMonths: true
+        selectMonths: true,
+        formatSubmit: 'yyyy-mm-dd',
+        format: 'yyyy-mm-dd',
+        clear: _t('Clear'),
+        close: _t('Close'),
+        today: _t('Today'),
+        labelMonthNext: _t('Next month'),
+        labelMonthPrev: _t('Previous month'),
+        labelMonthSelect: _t('Select a month'),
+        labelYearSelect: _t('Select a year')
       },
-      time: {
-      },
+      time: {},
       timezone: null,
       classWrapperName: 'pattern-pickadate-wrapper',
       classSeparatorName: 'pattern-pickadate-separator',
@@ -22176,7 +24170,6 @@ define('mockup-patterns-pickadate',[
             .insertAfter(self.$el);
 
       if (self.options.date !== false) {
-        self.options.date.formatSubmit = 'yyyy-mm-dd';
         self.$date = $('<input type="text"/>')
               .attr('placeholder', self.options.placeholderDate)
               .attr('data-value', dateValue)
@@ -22194,7 +24187,7 @@ define('mockup-patterns-pickadate',[
                     }
                   }
                   if (e.hasOwnProperty('clear')) {
-                    self.$el.removeAttr('value');
+                    self.$el.val('');
                     self.$date.attr('data-value', '');
                   }
                 }
@@ -22228,7 +24221,7 @@ define('mockup-patterns-pickadate',[
                     }
                   }
                   if (e.hasOwnProperty('clear')) {
-                    self.$el.removeAttr('value');
+                    self.$el.val('');
                     self.$time.attr('data-value', '');
                   }
                 }
@@ -22277,8 +24270,9 @@ define('mockup-patterns-pickadate',[
         if (defaultTimezone) {
           var isInList;
           // the timezone list contains the default value
-          self.options.timezone.data.forEach(function(obj) {
+          self.options.timezone.data.some(function(obj) {
             isInList = (obj.text === self.options.timezone.default) ? true : false;
+            return isInList;
           });
           if (isInList) {
             self.$timezone.attr('data-value', defaultTimezone);
@@ -22308,7 +24302,7 @@ define('mockup-patterns-pickadate',[
             dateValue = self.$date.data('pickadate').get('select'),
             formatDate = date.formats.toString;
         if (dateValue) {
-          value += formatDate.apply(date, ['yyyy-mm-dd', dateValue]);
+          value += formatDate.apply(date, [self.options.date.formatSubmit, dateValue]);
         }
       }
 
@@ -22332,7 +24326,7 @@ define('mockup-patterns-pickadate',[
         }
       }
 
-      self.$el.attr('value', value);
+      self.$el.val(value);
 
       self.emit('updated');
     }
@@ -24810,8 +26804,8 @@ define("jquery.recurrenceinput", ["jquery","jquery.tools.overlay","jquery.tools.
     var DISPLAYTMPL = ['<div class="ridisplay">',
         '<div class="rimain">',
             '{{if !readOnly}}',
-                '<a href="#" name="riedit">${i18n.add_rules}</a>',
-                '<a href="#" name="ridelete" style="display:none">${i18n.delete_rules}</a>',
+                '<button name="riedit">${i18n.add_rules}</button>',
+                '<button name="ridelete" style="display:none">${i18n.delete_rules}</button>',
             '{{/if}}',
             '<label class="ridisplay">${i18n.displayUnactivate}</label>',
         '</div>',
@@ -25991,8 +27985,8 @@ define("jquery.recurrenceinput", ["jquery","jquery.tools.overlay","jquery.tools.
             if (startdate !== null) {
                 loadOccurrences(startdate, widgetSaveToRfc5545(form, conf, false).result, 0, true);
             }
-            display.find('a[name="riedit"]').text(conf.i18n.edit_rules);
-            display.find('a[name="ridelete"]').show();
+            display.find('button[name="riedit"]').text(conf.i18n.edit_rules);
+            display.find('button[name="ridelete"]').show();
         }
 
         function recurrenceOff() {
@@ -26000,8 +27994,8 @@ define("jquery.recurrenceinput", ["jquery","jquery.tools.overlay","jquery.tools.
             label.text(conf.i18n.displayUnactivate);
             textarea.val('').change();  // Clear the textarea.
             display.find('.rioccurrences').hide();
-            display.find('a[name="riedit"]').text(conf.i18n.add_rules);
-            display.find('a[name="ridelete"]').hide();
+            display.find('button[name="riedit"]').text(conf.i18n.add_rules);
+            display.find('button[name="ridelete"]').hide();
         }
 
         function checkFields(form) {
@@ -26167,13 +28161,13 @@ define("jquery.recurrenceinput", ["jquery","jquery.tools.overlay","jquery.tools.
         */
 
         // When you click "Delete...", the recurrence rules should be cleared.
-        display.find('a[name=ridelete]').click(function (e) {
+        display.find('button[name=ridelete]').click(function (e) {
             e.preventDefault();
             recurrenceOff();
         });
 
         // Show form overlay when you click on the "Edit..." link
-        display.find('a[name=riedit]').click(
+        display.find('button[name=riedit]').click(
             function (e) {
                 // Load the form to set up the right fields to show, etc.
                 loadData(textarea.val());
@@ -26311,7 +28305,7 @@ define("jquery.recurrenceinput", ["jquery","jquery.tools.overlay","jquery.tools.
 
 define('mockup-patterns-recurrence',[
   'jquery',
-  'mockup-patterns-base',
+  'pat-base',
   'jquery.recurrenceinput'
 ], function($, Base) {
   'use strict';
@@ -26319,6 +28313,7 @@ define('mockup-patterns-recurrence',[
   var Recurrence = Base.extend({
     name: 'recurrence',
     trigger: '.pat-recurrence',
+    parser: 'mockup',
     defaults: {
       // just passed onto the widget
       language: 'en',
@@ -26337,4986 +28332,6 @@ define('mockup-patterns-recurrence',[
   return Recurrence;
 
 });
-
-/**
- * @license
- * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
- * Build: `lodash underscore exports="amd,commonjs,global,node" -o ./dist/lodash.underscore.js`
- * Copyright 2012-2013 The Dojo Foundation <http://dojofoundation.org/>
- * Based on Underscore.js 1.5.2 <http://underscorejs.org/LICENSE>
- * Copyright 2009-2013 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
- * Available under MIT license <http://lodash.com/license>
- */
-;(function() {
-
-  /** Used as a safe reference for `undefined` in pre ES5 environments */
-  var undefined;
-
-  /** Used to generate unique IDs */
-  var idCounter = 0;
-
-  /** Used internally to indicate various things */
-  var indicatorObject = {};
-
-  /** Used to prefix keys to avoid issues with `__proto__` and properties on `Object.prototype` */
-  var keyPrefix = +new Date + '';
-
-  /** Used to match "interpolate" template delimiters */
-  var reInterpolate = /<%=([\s\S]+?)%>/g;
-
-  /** Used to ensure capturing order of template delimiters */
-  var reNoMatch = /($^)/;
-
-  /** Used to match unescaped characters in compiled string literals */
-  var reUnescapedString = /['\n\r\t\u2028\u2029\\]/g;
-
-  /** `Object#toString` result shortcuts */
-  var argsClass = '[object Arguments]',
-      arrayClass = '[object Array]',
-      boolClass = '[object Boolean]',
-      dateClass = '[object Date]',
-      funcClass = '[object Function]',
-      numberClass = '[object Number]',
-      objectClass = '[object Object]',
-      regexpClass = '[object RegExp]',
-      stringClass = '[object String]';
-
-  /** Used to determine if values are of the language type Object */
-  var objectTypes = {
-    'boolean': false,
-    'function': true,
-    'object': true,
-    'number': false,
-    'string': false,
-    'undefined': false
-  };
-
-  /** Used to escape characters for inclusion in compiled string literals */
-  var stringEscapes = {
-    '\\': '\\',
-    "'": "'",
-    '\n': 'n',
-    '\r': 'r',
-    '\t': 't',
-    '\u2028': 'u2028',
-    '\u2029': 'u2029'
-  };
-
-  /** Used as a reference to the global object */
-  var root = (objectTypes[typeof window] && window) || this;
-
-  /** Detect free variable `exports` */
-  var freeExports = objectTypes[typeof exports] && exports && !exports.nodeType && exports;
-
-  /** Detect free variable `module` */
-  var freeModule = objectTypes[typeof module] && module && !module.nodeType && module;
-
-  /** Detect the popular CommonJS extension `module.exports` */
-  var moduleExports = freeModule && freeModule.exports === freeExports && freeExports;
-
-  /** Detect free variable `global` from Node.js or Browserified code and use it as `root` */
-  var freeGlobal = objectTypes[typeof global] && global;
-  if (freeGlobal && (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal)) {
-    root = freeGlobal;
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * The base implementation of `_.indexOf` without support for binary searches
-   * or `fromIndex` constraints.
-   *
-   * @private
-   * @param {Array} array The array to search.
-   * @param {*} value The value to search for.
-   * @param {number} [fromIndex=0] The index to search from.
-   * @returns {number} Returns the index of the matched value or `-1`.
-   */
-  function baseIndexOf(array, value, fromIndex) {
-    var index = (fromIndex || 0) - 1,
-        length = array ? array.length : 0;
-
-    while (++index < length) {
-      if (array[index] === value) {
-        return index;
-      }
-    }
-    return -1;
-  }
-
-  /**
-   * Used by `sortBy` to compare transformed `collection` elements, stable sorting
-   * them in ascending order.
-   *
-   * @private
-   * @param {Object} a The object to compare to `b`.
-   * @param {Object} b The object to compare to `a`.
-   * @returns {number} Returns the sort order indicator of `1` or `-1`.
-   */
-  function compareAscending(a, b) {
-    var ac = a.criteria,
-        bc = b.criteria,
-        index = -1,
-        length = ac.length;
-
-    while (++index < length) {
-      var value = ac[index],
-          other = bc[index];
-
-      if (value !== other) {
-        if (value > other || typeof value == 'undefined') {
-          return 1;
-        }
-        if (value < other || typeof other == 'undefined') {
-          return -1;
-        }
-      }
-    }
-    // Fixes an `Array#sort` bug in the JS engine embedded in Adobe applications
-    // that causes it, under certain circumstances, to return the same value for
-    // `a` and `b`. See https://github.com/jashkenas/underscore/pull/1247
-    //
-    // This also ensures a stable sort in V8 and other engines.
-    // See http://code.google.com/p/v8/issues/detail?id=90
-    return a.index - b.index;
-  }
-
-  /**
-   * Used by `template` to escape characters for inclusion in compiled
-   * string literals.
-   *
-   * @private
-   * @param {string} match The matched character to escape.
-   * @returns {string} Returns the escaped character.
-   */
-  function escapeStringChar(match) {
-    return '\\' + stringEscapes[match];
-  }
-
-  /**
-   * Slices the `collection` from the `start` index up to, but not including,
-   * the `end` index.
-   *
-   * Note: This function is used instead of `Array#slice` to support node lists
-   * in IE < 9 and to ensure dense arrays are returned.
-   *
-   * @private
-   * @param {Array|Object|string} collection The collection to slice.
-   * @param {number} start The start index.
-   * @param {number} end The end index.
-   * @returns {Array} Returns the new array.
-   */
-  function slice(array, start, end) {
-    start || (start = 0);
-    if (typeof end == 'undefined') {
-      end = array ? array.length : 0;
-    }
-    var index = -1,
-        length = end - start || 0,
-        result = Array(length < 0 ? 0 : length);
-
-    while (++index < length) {
-      result[index] = array[start + index];
-    }
-    return result;
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Used for `Array` method references.
-   *
-   * Normally `Array.prototype` would suffice, however, using an array literal
-   * avoids issues in Narwhal.
-   */
-  var arrayRef = [];
-
-  /** Used for native method references */
-  var objectProto = Object.prototype;
-
-  /** Used to restore the original `_` reference in `noConflict` */
-  var oldDash = root._;
-
-  /** Used to resolve the internal [[Class]] of values */
-  var toString = objectProto.toString;
-
-  /** Used to detect if a method is native */
-  var reNative = RegExp('^' +
-    String(toString)
-      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      .replace(/toString| for [^\]]+/g, '.*?') + '$'
-  );
-
-  /** Native method shortcuts */
-  var ceil = Math.ceil,
-      floor = Math.floor,
-      hasOwnProperty = objectProto.hasOwnProperty,
-      push = arrayRef.push,
-      propertyIsEnumerable = objectProto.propertyIsEnumerable;
-
-  /* Native method shortcuts for methods with the same name as other `lodash` methods */
-  var nativeCreate = isNative(nativeCreate = Object.create) && nativeCreate,
-      nativeIsArray = isNative(nativeIsArray = Array.isArray) && nativeIsArray,
-      nativeIsFinite = root.isFinite,
-      nativeIsNaN = root.isNaN,
-      nativeKeys = isNative(nativeKeys = Object.keys) && nativeKeys,
-      nativeMax = Math.max,
-      nativeMin = Math.min,
-      nativeRandom = Math.random;
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Creates a `lodash` object which wraps the given value to enable intuitive
-   * method chaining.
-   *
-   * In addition to Lo-Dash methods, wrappers also have the following `Array` methods:
-   * `concat`, `join`, `pop`, `push`, `reverse`, `shift`, `slice`, `sort`, `splice`,
-   * and `unshift`
-   *
-   * Chaining is supported in custom builds as long as the `value` method is
-   * implicitly or explicitly included in the build.
-   *
-   * The chainable wrapper functions are:
-   * `after`, `assign`, `bind`, `bindAll`, `bindKey`, `chain`, `compact`,
-   * `compose`, `concat`, `countBy`, `create`, `createCallback`, `curry`,
-   * `debounce`, `defaults`, `defer`, `delay`, `difference`, `filter`, `flatten`,
-   * `forEach`, `forEachRight`, `forIn`, `forInRight`, `forOwn`, `forOwnRight`,
-   * `functions`, `groupBy`, `indexBy`, `initial`, `intersection`, `invert`,
-   * `invoke`, `keys`, `map`, `max`, `memoize`, `merge`, `min`, `object`, `omit`,
-   * `once`, `pairs`, `partial`, `partialRight`, `pick`, `pluck`, `pull`, `push`,
-   * `range`, `reject`, `remove`, `rest`, `reverse`, `shuffle`, `slice`, `sort`,
-   * `sortBy`, `splice`, `tap`, `throttle`, `times`, `toArray`, `transform`,
-   * `union`, `uniq`, `unshift`, `unzip`, `values`, `where`, `without`, `wrap`,
-   * and `zip`
-   *
-   * The non-chainable wrapper functions are:
-   * `clone`, `cloneDeep`, `contains`, `escape`, `every`, `find`, `findIndex`,
-   * `findKey`, `findLast`, `findLastIndex`, `findLastKey`, `has`, `identity`,
-   * `indexOf`, `isArguments`, `isArray`, `isBoolean`, `isDate`, `isElement`,
-   * `isEmpty`, `isEqual`, `isFinite`, `isFunction`, `isNaN`, `isNull`, `isNumber`,
-   * `isObject`, `isPlainObject`, `isRegExp`, `isString`, `isUndefined`, `join`,
-   * `lastIndexOf`, `mixin`, `noConflict`, `parseInt`, `pop`, `random`, `reduce`,
-   * `reduceRight`, `result`, `shift`, `size`, `some`, `sortedIndex`, `runInContext`,
-   * `template`, `unescape`, `uniqueId`, and `value`
-   *
-   * The wrapper functions `first` and `last` return wrapped values when `n` is
-   * provided, otherwise they return unwrapped values.
-   *
-   * Explicit chaining can be enabled by using the `_.chain` method.
-   *
-   * @name _
-   * @constructor
-   * @category Chaining
-   * @param {*} value The value to wrap in a `lodash` instance.
-   * @returns {Object} Returns a `lodash` instance.
-   * @example
-   *
-   * var wrapped = _([1, 2, 3]);
-   *
-   * // returns an unwrapped value
-   * wrapped.reduce(function(sum, num) {
-   *   return sum + num;
-   * });
-   * // => 6
-   *
-   * // returns a wrapped value
-   * var squares = wrapped.map(function(num) {
-   *   return num * num;
-   * });
-   *
-   * _.isArray(squares);
-   * // => false
-   *
-   * _.isArray(squares.value());
-   * // => true
-   */
-  function lodash(value) {
-    return (value instanceof lodash)
-      ? value
-      : new lodashWrapper(value);
-  }
-
-  /**
-   * A fast path for creating `lodash` wrapper objects.
-   *
-   * @private
-   * @param {*} value The value to wrap in a `lodash` instance.
-   * @param {boolean} chainAll A flag to enable chaining for all methods
-   * @returns {Object} Returns a `lodash` instance.
-   */
-  function lodashWrapper(value, chainAll) {
-    this.__chain__ = !!chainAll;
-    this.__wrapped__ = value;
-  }
-  // ensure `new lodashWrapper` is an instance of `lodash`
-  lodashWrapper.prototype = lodash.prototype;
-
-  /**
-   * An object used to flag environments features.
-   *
-   * @static
-   * @memberOf _
-   * @type Object
-   */
-  var support = {};
-
-  (function() {
-    var object = { '0': 1, 'length': 1 };
-
-    /**
-     * Detect if `Array#shift` and `Array#splice` augment array-like objects correctly.
-     *
-     * Firefox < 10, IE compatibility mode, and IE < 9 have buggy Array `shift()`
-     * and `splice()` functions that fail to remove the last element, `value[0]`,
-     * of array-like objects even though the `length` property is set to `0`.
-     * The `shift()` method is buggy in IE 8 compatibility mode, while `splice()`
-     * is buggy regardless of mode in IE < 9 and buggy in compatibility mode in IE 9.
-     *
-     * @memberOf _.support
-     * @type boolean
-     */
-    support.spliceObjects = (arrayRef.splice.call(object, 0, 1), !object[0]);
-  }(1));
-
-  /**
-   * By default, the template delimiters used by Lo-Dash are similar to those in
-   * embedded Ruby (ERB). Change the following template settings to use alternative
-   * delimiters.
-   *
-   * @static
-   * @memberOf _
-   * @type Object
-   */
-  lodash.templateSettings = {
-
-    /**
-     * Used to detect `data` property values to be HTML-escaped.
-     *
-     * @memberOf _.templateSettings
-     * @type RegExp
-     */
-    'escape': /<%-([\s\S]+?)%>/g,
-
-    /**
-     * Used to detect code to be evaluated.
-     *
-     * @memberOf _.templateSettings
-     * @type RegExp
-     */
-    'evaluate': /<%([\s\S]+?)%>/g,
-
-    /**
-     * Used to detect `data` property values to inject.
-     *
-     * @memberOf _.templateSettings
-     * @type RegExp
-     */
-    'interpolate': reInterpolate,
-
-    /**
-     * Used to reference the data object in the template text.
-     *
-     * @memberOf _.templateSettings
-     * @type string
-     */
-    'variable': ''
-  };
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * The base implementation of `_.bind` that creates the bound function and
-   * sets its meta data.
-   *
-   * @private
-   * @param {Array} bindData The bind data array.
-   * @returns {Function} Returns the new bound function.
-   */
-  function baseBind(bindData) {
-    var func = bindData[0],
-        partialArgs = bindData[2],
-        thisArg = bindData[4];
-
-    function bound() {
-      // `Function#bind` spec
-      // http://es5.github.io/#x15.3.4.5
-      if (partialArgs) {
-        // avoid `arguments` object deoptimizations by using `slice` instead
-        // of `Array.prototype.slice.call` and not assigning `arguments` to a
-        // variable as a ternary expression
-        var args = slice(partialArgs);
-        push.apply(args, arguments);
-      }
-      // mimic the constructor's `return` behavior
-      // http://es5.github.io/#x13.2.2
-      if (this instanceof bound) {
-        // ensure `new bound` is an instance of `func`
-        var thisBinding = baseCreate(func.prototype),
-            result = func.apply(thisBinding, args || arguments);
-        return isObject(result) ? result : thisBinding;
-      }
-      return func.apply(thisArg, args || arguments);
-    }
-    return bound;
-  }
-
-  /**
-   * The base implementation of `_.create` without support for assigning
-   * properties to the created object.
-   *
-   * @private
-   * @param {Object} prototype The object to inherit from.
-   * @returns {Object} Returns the new object.
-   */
-  function baseCreate(prototype, properties) {
-    return isObject(prototype) ? nativeCreate(prototype) : {};
-  }
-  // fallback for browsers without `Object.create`
-  if (!nativeCreate) {
-    baseCreate = (function() {
-      function Object() {}
-      return function(prototype) {
-        if (isObject(prototype)) {
-          Object.prototype = prototype;
-          var result = new Object;
-          Object.prototype = null;
-        }
-        return result || root.Object();
-      };
-    }());
-  }
-
-  /**
-   * The base implementation of `_.createCallback` without support for creating
-   * "_.pluck" or "_.where" style callbacks.
-   *
-   * @private
-   * @param {*} [func=identity] The value to convert to a callback.
-   * @param {*} [thisArg] The `this` binding of the created callback.
-   * @param {number} [argCount] The number of arguments the callback accepts.
-   * @returns {Function} Returns a callback function.
-   */
-  function baseCreateCallback(func, thisArg, argCount) {
-    if (typeof func != 'function') {
-      return identity;
-    }
-    // exit early for no `thisArg` or already bound by `Function#bind`
-    if (typeof thisArg == 'undefined' || !('prototype' in func)) {
-      return func;
-    }
-    switch (argCount) {
-      case 1: return function(value) {
-        return func.call(thisArg, value);
-      };
-      case 2: return function(a, b) {
-        return func.call(thisArg, a, b);
-      };
-      case 3: return function(value, index, collection) {
-        return func.call(thisArg, value, index, collection);
-      };
-      case 4: return function(accumulator, value, index, collection) {
-        return func.call(thisArg, accumulator, value, index, collection);
-      };
-    }
-    return bind(func, thisArg);
-  }
-
-  /**
-   * The base implementation of `createWrapper` that creates the wrapper and
-   * sets its meta data.
-   *
-   * @private
-   * @param {Array} bindData The bind data array.
-   * @returns {Function} Returns the new function.
-   */
-  function baseCreateWrapper(bindData) {
-    var func = bindData[0],
-        bitmask = bindData[1],
-        partialArgs = bindData[2],
-        partialRightArgs = bindData[3],
-        thisArg = bindData[4],
-        arity = bindData[5];
-
-    var isBind = bitmask & 1,
-        isBindKey = bitmask & 2,
-        isCurry = bitmask & 4,
-        isCurryBound = bitmask & 8,
-        key = func;
-
-    function bound() {
-      var thisBinding = isBind ? thisArg : this;
-      if (partialArgs) {
-        var args = slice(partialArgs);
-        push.apply(args, arguments);
-      }
-      if (partialRightArgs || isCurry) {
-        args || (args = slice(arguments));
-        if (partialRightArgs) {
-          push.apply(args, partialRightArgs);
-        }
-        if (isCurry && args.length < arity) {
-          bitmask |= 16 & ~32;
-          return baseCreateWrapper([func, (isCurryBound ? bitmask : bitmask & ~3), args, null, thisArg, arity]);
-        }
-      }
-      args || (args = arguments);
-      if (isBindKey) {
-        func = thisBinding[key];
-      }
-      if (this instanceof bound) {
-        thisBinding = baseCreate(func.prototype);
-        var result = func.apply(thisBinding, args);
-        return isObject(result) ? result : thisBinding;
-      }
-      return func.apply(thisBinding, args);
-    }
-    return bound;
-  }
-
-  /**
-   * The base implementation of `_.difference` that accepts a single array
-   * of values to exclude.
-   *
-   * @private
-   * @param {Array} array The array to process.
-   * @param {Array} [values] The array of values to exclude.
-   * @returns {Array} Returns a new array of filtered values.
-   */
-  function baseDifference(array, values) {
-    var index = -1,
-        indexOf = getIndexOf(),
-        length = array ? array.length : 0,
-        result = [];
-
-    while (++index < length) {
-      var value = array[index];
-      if (indexOf(values, value) < 0) {
-        result.push(value);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * The base implementation of `_.flatten` without support for callback
-   * shorthands or `thisArg` binding.
-   *
-   * @private
-   * @param {Array} array The array to flatten.
-   * @param {boolean} [isShallow=false] A flag to restrict flattening to a single level.
-   * @param {boolean} [isStrict=false] A flag to restrict flattening to arrays and `arguments` objects.
-   * @param {number} [fromIndex=0] The index to start from.
-   * @returns {Array} Returns a new flattened array.
-   */
-  function baseFlatten(array, isShallow, isStrict, fromIndex) {
-    var index = (fromIndex || 0) - 1,
-        length = array ? array.length : 0,
-        result = [];
-
-    while (++index < length) {
-      var value = array[index];
-
-      if (value && typeof value == 'object' && typeof value.length == 'number'
-          && (isArray(value) || isArguments(value))) {
-        // recursively flatten arrays (susceptible to call stack limits)
-        if (!isShallow) {
-          value = baseFlatten(value, isShallow, isStrict);
-        }
-        var valIndex = -1,
-            valLength = value.length,
-            resIndex = result.length;
-
-        result.length += valLength;
-        while (++valIndex < valLength) {
-          result[resIndex++] = value[valIndex];
-        }
-      } else if (!isStrict) {
-        result.push(value);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * The base implementation of `_.isEqual`, without support for `thisArg` binding,
-   * that allows partial "_.where" style comparisons.
-   *
-   * @private
-   * @param {*} a The value to compare.
-   * @param {*} b The other value to compare.
-   * @param {Function} [callback] The function to customize comparing values.
-   * @param {Function} [isWhere=false] A flag to indicate performing partial comparisons.
-   * @param {Array} [stackA=[]] Tracks traversed `a` objects.
-   * @param {Array} [stackB=[]] Tracks traversed `b` objects.
-   * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
-   */
-  function baseIsEqual(a, b, stackA, stackB) {
-    if (a === b) {
-      return a !== 0 || (1 / a == 1 / b);
-    }
-    var type = typeof a,
-        otherType = typeof b;
-
-    if (a === a &&
-        !(a && objectTypes[type]) &&
-        !(b && objectTypes[otherType])) {
-      return false;
-    }
-    if (a == null || b == null) {
-      return a === b;
-    }
-    var className = toString.call(a),
-        otherClass = toString.call(b);
-
-    if (className != otherClass) {
-      return false;
-    }
-    switch (className) {
-      case boolClass:
-      case dateClass:
-        return +a == +b;
-
-      case numberClass:
-        return a != +a
-          ? b != +b
-          : (a == 0 ? (1 / a == 1 / b) : a == +b);
-
-      case regexpClass:
-      case stringClass:
-        return a == String(b);
-    }
-    var isArr = className == arrayClass;
-    if (!isArr) {
-      var aWrapped = a instanceof lodash,
-          bWrapped = b instanceof lodash;
-
-      if (aWrapped || bWrapped) {
-        return baseIsEqual(aWrapped ? a.__wrapped__ : a, bWrapped ? b.__wrapped__ : b, stackA, stackB);
-      }
-      if (className != objectClass) {
-        return false;
-      }
-      var ctorA = a.constructor,
-          ctorB = b.constructor;
-
-      if (ctorA != ctorB &&
-            !(isFunction(ctorA) && ctorA instanceof ctorA && isFunction(ctorB) && ctorB instanceof ctorB) &&
-            ('constructor' in a && 'constructor' in b)
-          ) {
-        return false;
-      }
-    }
-    stackA || (stackA = []);
-    stackB || (stackB = []);
-
-    var length = stackA.length;
-    while (length--) {
-      if (stackA[length] == a) {
-        return stackB[length] == b;
-      }
-    }
-    var result = true,
-        size = 0;
-
-    stackA.push(a);
-    stackB.push(b);
-
-    if (isArr) {
-      size = b.length;
-      result = size == a.length;
-
-      if (result) {
-        while (size--) {
-          if (!(result = baseIsEqual(a[size], b[size], stackA, stackB))) {
-            break;
-          }
-        }
-      }
-    }
-    else {
-      forIn(b, function(value, key, b) {
-        if (hasOwnProperty.call(b, key)) {
-          size++;
-          return !(result = hasOwnProperty.call(a, key) && baseIsEqual(a[key], value, stackA, stackB)) && indicatorObject;
-        }
-      });
-
-      if (result) {
-        forIn(a, function(value, key, a) {
-          if (hasOwnProperty.call(a, key)) {
-            return !(result = --size > -1) && indicatorObject;
-          }
-        });
-      }
-    }
-    stackA.pop();
-    stackB.pop();
-    return result;
-  }
-
-  /**
-   * The base implementation of `_.random` without argument juggling or support
-   * for returning floating-point numbers.
-   *
-   * @private
-   * @param {number} min The minimum possible value.
-   * @param {number} max The maximum possible value.
-   * @returns {number} Returns a random number.
-   */
-  function baseRandom(min, max) {
-    return min + floor(nativeRandom() * (max - min + 1));
-  }
-
-  /**
-   * The base implementation of `_.uniq` without support for callback shorthands
-   * or `thisArg` binding.
-   *
-   * @private
-   * @param {Array} array The array to process.
-   * @param {boolean} [isSorted=false] A flag to indicate that `array` is sorted.
-   * @param {Function} [callback] The function called per iteration.
-   * @returns {Array} Returns a duplicate-value-free array.
-   */
-  function baseUniq(array, isSorted, callback) {
-    var index = -1,
-        indexOf = getIndexOf(),
-        length = array ? array.length : 0,
-        result = [],
-        seen = callback ? [] : result;
-
-    while (++index < length) {
-      var value = array[index],
-          computed = callback ? callback(value, index, array) : value;
-
-      if (isSorted
-            ? !index || seen[seen.length - 1] !== computed
-            : indexOf(seen, computed) < 0
-          ) {
-        if (callback) {
-          seen.push(computed);
-        }
-        result.push(value);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Creates a function that aggregates a collection, creating an object composed
-   * of keys generated from the results of running each element of the collection
-   * through a callback. The given `setter` function sets the keys and values
-   * of the composed object.
-   *
-   * @private
-   * @param {Function} setter The setter function.
-   * @returns {Function} Returns the new aggregator function.
-   */
-  function createAggregator(setter) {
-    return function(collection, callback, thisArg) {
-      var result = {};
-      callback = createCallback(callback, thisArg, 3);
-
-      var index = -1,
-          length = collection ? collection.length : 0;
-
-      if (typeof length == 'number') {
-        while (++index < length) {
-          var value = collection[index];
-          setter(result, value, callback(value, index, collection), collection);
-        }
-      } else {
-        forOwn(collection, function(value, key, collection) {
-          setter(result, value, callback(value, key, collection), collection);
-        });
-      }
-      return result;
-    };
-  }
-
-  /**
-   * Creates a function that, when called, either curries or invokes `func`
-   * with an optional `this` binding and partially applied arguments.
-   *
-   * @private
-   * @param {Function|string} func The function or method name to reference.
-   * @param {number} bitmask The bitmask of method flags to compose.
-   *  The bitmask may be composed of the following flags:
-   *  1 - `_.bind`
-   *  2 - `_.bindKey`
-   *  4 - `_.curry`
-   *  8 - `_.curry` (bound)
-   *  16 - `_.partial`
-   *  32 - `_.partialRight`
-   * @param {Array} [partialArgs] An array of arguments to prepend to those
-   *  provided to the new function.
-   * @param {Array} [partialRightArgs] An array of arguments to append to those
-   *  provided to the new function.
-   * @param {*} [thisArg] The `this` binding of `func`.
-   * @param {number} [arity] The arity of `func`.
-   * @returns {Function} Returns the new function.
-   */
-  function createWrapper(func, bitmask, partialArgs, partialRightArgs, thisArg, arity) {
-    var isBind = bitmask & 1,
-        isBindKey = bitmask & 2,
-        isCurry = bitmask & 4,
-        isCurryBound = bitmask & 8,
-        isPartial = bitmask & 16,
-        isPartialRight = bitmask & 32;
-
-    if (!isBindKey && !isFunction(func)) {
-      throw new TypeError;
-    }
-    if (isPartial && !partialArgs.length) {
-      bitmask &= ~16;
-      isPartial = partialArgs = false;
-    }
-    if (isPartialRight && !partialRightArgs.length) {
-      bitmask &= ~32;
-      isPartialRight = partialRightArgs = false;
-    }
-    // fast path for `_.bind`
-    var creater = (bitmask == 1 || bitmask === 17) ? baseBind : baseCreateWrapper;
-    return creater([func, bitmask, partialArgs, partialRightArgs, thisArg, arity]);
-  }
-
-  /**
-   * Used by `escape` to convert characters to HTML entities.
-   *
-   * @private
-   * @param {string} match The matched character to escape.
-   * @returns {string} Returns the escaped character.
-   */
-  function escapeHtmlChar(match) {
-    return htmlEscapes[match];
-  }
-
-  /**
-   * Gets the appropriate "indexOf" function. If the `_.indexOf` method is
-   * customized, this method returns the custom method, otherwise it returns
-   * the `baseIndexOf` function.
-   *
-   * @private
-   * @returns {Function} Returns the "indexOf" function.
-   */
-  function getIndexOf() {
-    var result = (result = lodash.indexOf) === indexOf ? baseIndexOf : result;
-    return result;
-  }
-
-  /**
-   * Checks if `value` is a native function.
-   *
-   * @private
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a native function, else `false`.
-   */
-  function isNative(value) {
-    return typeof value == 'function' && reNative.test(value);
-  }
-
-  /**
-   * Used by `unescape` to convert HTML entities to characters.
-   *
-   * @private
-   * @param {string} match The matched character to unescape.
-   * @returns {string} Returns the unescaped character.
-   */
-  function unescapeHtmlChar(match) {
-    return htmlUnescapes[match];
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Checks if `value` is an `arguments` object.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is an `arguments` object, else `false`.
-   * @example
-   *
-   * (function() { return _.isArguments(arguments); })(1, 2, 3);
-   * // => true
-   *
-   * _.isArguments([1, 2, 3]);
-   * // => false
-   */
-  function isArguments(value) {
-    return value && typeof value == 'object' && typeof value.length == 'number' &&
-      toString.call(value) == argsClass || false;
-  }
-  // fallback for browsers that can't detect `arguments` objects by [[Class]]
-  if (!isArguments(arguments)) {
-    isArguments = function(value) {
-      return value && typeof value == 'object' && typeof value.length == 'number' &&
-        hasOwnProperty.call(value, 'callee') && !propertyIsEnumerable.call(value, 'callee') || false;
-    };
-  }
-
-  /**
-   * Checks if `value` is an array.
-   *
-   * @static
-   * @memberOf _
-   * @type Function
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is an array, else `false`.
-   * @example
-   *
-   * (function() { return _.isArray(arguments); })();
-   * // => false
-   *
-   * _.isArray([1, 2, 3]);
-   * // => true
-   */
-  var isArray = nativeIsArray || function(value) {
-    return value && typeof value == 'object' && typeof value.length == 'number' &&
-      toString.call(value) == arrayClass || false;
-  };
-
-  /**
-   * A fallback implementation of `Object.keys` which produces an array of the
-   * given object's own enumerable property names.
-   *
-   * @private
-   * @type Function
-   * @param {Object} object The object to inspect.
-   * @returns {Array} Returns an array of property names.
-   */
-  var shimKeys = function(object) {
-    var index, iterable = object, result = [];
-    if (!iterable) return result;
-    if (!(objectTypes[typeof object])) return result;
-      for (index in iterable) {
-        if (hasOwnProperty.call(iterable, index)) {
-          result.push(index);
-        }
-      }
-    return result
-  };
-
-  /**
-   * Creates an array composed of the own enumerable property names of an object.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Object} object The object to inspect.
-   * @returns {Array} Returns an array of property names.
-   * @example
-   *
-   * _.keys({ 'one': 1, 'two': 2, 'three': 3 });
-   * // => ['one', 'two', 'three'] (property order is not guaranteed across environments)
-   */
-  var keys = !nativeKeys ? shimKeys : function(object) {
-    if (!isObject(object)) {
-      return [];
-    }
-    return nativeKeys(object);
-  };
-
-  /**
-   * Used to convert characters to HTML entities:
-   *
-   * Though the `>` character is escaped for symmetry, characters like `>` and `/`
-   * don't require escaping in HTML and have no special meaning unless they're part
-   * of a tag or an unquoted attribute value.
-   * http://mathiasbynens.be/notes/ambiguous-ampersands (under "semi-related fun fact")
-   */
-  var htmlEscapes = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;'
-  };
-
-  /** Used to convert HTML entities to characters */
-  var htmlUnescapes = invert(htmlEscapes);
-
-  /** Used to match HTML entities and HTML characters */
-  var reEscapedHtml = RegExp('(' + keys(htmlUnescapes).join('|') + ')', 'g'),
-      reUnescapedHtml = RegExp('[' + keys(htmlEscapes).join('') + ']', 'g');
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Assigns own enumerable properties of source object(s) to the destination
-   * object. Subsequent sources will overwrite property assignments of previous
-   * sources. If a callback is provided it will be executed to produce the
-   * assigned values. The callback is bound to `thisArg` and invoked with two
-   * arguments; (objectValue, sourceValue).
-   *
-   * @static
-   * @memberOf _
-   * @type Function
-   * @alias extend
-   * @category Objects
-   * @param {Object} object The destination object.
-   * @param {...Object} [source] The source objects.
-   * @param {Function} [callback] The function to customize assigning values.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns the destination object.
-   * @example
-   *
-   * _.assign({ 'name': 'fred' }, { 'employer': 'slate' });
-   * // => { 'name': 'fred', 'employer': 'slate' }
-   *
-   * var defaults = _.partialRight(_.assign, function(a, b) {
-   *   return typeof a == 'undefined' ? b : a;
-   * });
-   *
-   * var object = { 'name': 'barney' };
-   * defaults(object, { 'name': 'fred', 'employer': 'slate' });
-   * // => { 'name': 'barney', 'employer': 'slate' }
-   */
-  function assign(object) {
-    if (!object) {
-      return object;
-    }
-    for (var argsIndex = 1, argsLength = arguments.length; argsIndex < argsLength; argsIndex++) {
-      var iterable = arguments[argsIndex];
-      if (iterable) {
-        for (var key in iterable) {
-          object[key] = iterable[key];
-        }
-      }
-    }
-    return object;
-  }
-
-  /**
-   * Creates a clone of `value`. If `isDeep` is `true` nested objects will also
-   * be cloned, otherwise they will be assigned by reference. If a callback
-   * is provided it will be executed to produce the cloned values. If the
-   * callback returns `undefined` cloning will be handled by the method instead.
-   * The callback is bound to `thisArg` and invoked with one argument; (value).
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to clone.
-   * @param {boolean} [isDeep=false] Specify a deep clone.
-   * @param {Function} [callback] The function to customize cloning values.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the cloned value.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * var shallow = _.clone(characters);
-   * shallow[0] === characters[0];
-   * // => true
-   *
-   * var deep = _.clone(characters, true);
-   * deep[0] === characters[0];
-   * // => false
-   *
-   * _.mixin({
-   *   'clone': _.partialRight(_.clone, function(value) {
-   *     return _.isElement(value) ? value.cloneNode(false) : undefined;
-   *   })
-   * });
-   *
-   * var clone = _.clone(document.body);
-   * clone.childNodes.length;
-   * // => 0
-   */
-  function clone(value) {
-    return isObject(value)
-      ? (isArray(value) ? slice(value) : assign({}, value))
-      : value;
-  }
-
-  /**
-   * Assigns own enumerable properties of source object(s) to the destination
-   * object for all destination properties that resolve to `undefined`. Once a
-   * property is set, additional defaults of the same property will be ignored.
-   *
-   * @static
-   * @memberOf _
-   * @type Function
-   * @category Objects
-   * @param {Object} object The destination object.
-   * @param {...Object} [source] The source objects.
-   * @param- {Object} [guard] Allows working with `_.reduce` without using its
-   *  `key` and `object` arguments as sources.
-   * @returns {Object} Returns the destination object.
-   * @example
-   *
-   * var object = { 'name': 'barney' };
-   * _.defaults(object, { 'name': 'fred', 'employer': 'slate' });
-   * // => { 'name': 'barney', 'employer': 'slate' }
-   */
-  function defaults(object) {
-    if (!object) {
-      return object;
-    }
-    for (var argsIndex = 1, argsLength = arguments.length; argsIndex < argsLength; argsIndex++) {
-      var iterable = arguments[argsIndex];
-      if (iterable) {
-        for (var key in iterable) {
-          if (typeof object[key] == 'undefined') {
-            object[key] = iterable[key];
-          }
-        }
-      }
-    }
-    return object;
-  }
-
-  /**
-   * Iterates over own and inherited enumerable properties of an object,
-   * executing the callback for each property. The callback is bound to `thisArg`
-   * and invoked with three arguments; (value, key, object). Callbacks may exit
-   * iteration early by explicitly returning `false`.
-   *
-   * @static
-   * @memberOf _
-   * @type Function
-   * @category Objects
-   * @param {Object} object The object to iterate over.
-   * @param {Function} [callback=identity] The function called per iteration.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns `object`.
-   * @example
-   *
-   * function Shape() {
-   *   this.x = 0;
-   *   this.y = 0;
-   * }
-   *
-   * Shape.prototype.move = function(x, y) {
-   *   this.x += x;
-   *   this.y += y;
-   * };
-   *
-   * _.forIn(new Shape, function(value, key) {
-   *   console.log(key);
-   * });
-   * // => logs 'x', 'y', and 'move' (property order is not guaranteed across environments)
-   */
-  var forIn = function(collection, callback) {
-    var index, iterable = collection, result = iterable;
-    if (!iterable) return result;
-    if (!objectTypes[typeof iterable]) return result;
-      for (index in iterable) {
-        if (callback(iterable[index], index, collection) === indicatorObject) return result;
-      }
-    return result
-  };
-
-  /**
-   * Iterates over own enumerable properties of an object, executing the callback
-   * for each property. The callback is bound to `thisArg` and invoked with three
-   * arguments; (value, key, object). Callbacks may exit iteration early by
-   * explicitly returning `false`.
-   *
-   * @static
-   * @memberOf _
-   * @type Function
-   * @category Objects
-   * @param {Object} object The object to iterate over.
-   * @param {Function} [callback=identity] The function called per iteration.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns `object`.
-   * @example
-   *
-   * _.forOwn({ '0': 'zero', '1': 'one', 'length': 2 }, function(num, key) {
-   *   console.log(key);
-   * });
-   * // => logs '0', '1', and 'length' (property order is not guaranteed across environments)
-   */
-  var forOwn = function(collection, callback) {
-    var index, iterable = collection, result = iterable;
-    if (!iterable) return result;
-    if (!objectTypes[typeof iterable]) return result;
-      for (index in iterable) {
-        if (hasOwnProperty.call(iterable, index)) {
-          if (callback(iterable[index], index, collection) === indicatorObject) return result;
-        }
-      }
-    return result
-  };
-
-  /**
-   * Creates a sorted array of property names of all enumerable properties,
-   * own and inherited, of `object` that have function values.
-   *
-   * @static
-   * @memberOf _
-   * @alias methods
-   * @category Objects
-   * @param {Object} object The object to inspect.
-   * @returns {Array} Returns an array of property names that have function values.
-   * @example
-   *
-   * _.functions(_);
-   * // => ['all', 'any', 'bind', 'bindAll', 'clone', 'compact', 'compose', ...]
-   */
-  function functions(object) {
-    var result = [];
-    forIn(object, function(value, key) {
-      if (isFunction(value)) {
-        result.push(key);
-      }
-    });
-    return result.sort();
-  }
-
-  /**
-   * Checks if the specified property name exists as a direct property of `object`,
-   * instead of an inherited property.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Object} object The object to inspect.
-   * @param {string} key The name of the property to check.
-   * @returns {boolean} Returns `true` if key is a direct property, else `false`.
-   * @example
-   *
-   * _.has({ 'a': 1, 'b': 2, 'c': 3 }, 'b');
-   * // => true
-   */
-  function has(object, key) {
-    return object ? hasOwnProperty.call(object, key) : false;
-  }
-
-  /**
-   * Creates an object composed of the inverted keys and values of the given object.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Object} object The object to invert.
-   * @returns {Object} Returns the created inverted object.
-   * @example
-   *
-   * _.invert({ 'first': 'fred', 'second': 'barney' });
-   * // => { 'fred': 'first', 'barney': 'second' }
-   */
-  function invert(object) {
-    var index = -1,
-        props = keys(object),
-        length = props.length,
-        result = {};
-
-    while (++index < length) {
-      var key = props[index];
-      result[object[key]] = key;
-    }
-    return result;
-  }
-
-  /**
-   * Checks if `value` is a boolean value.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a boolean value, else `false`.
-   * @example
-   *
-   * _.isBoolean(null);
-   * // => false
-   */
-  function isBoolean(value) {
-    return value === true || value === false ||
-      value && typeof value == 'object' && toString.call(value) == boolClass || false;
-  }
-
-  /**
-   * Checks if `value` is a date.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a date, else `false`.
-   * @example
-   *
-   * _.isDate(new Date);
-   * // => true
-   */
-  function isDate(value) {
-    return value && typeof value == 'object' && toString.call(value) == dateClass || false;
-  }
-
-  /**
-   * Checks if `value` is a DOM element.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a DOM element, else `false`.
-   * @example
-   *
-   * _.isElement(document.body);
-   * // => true
-   */
-  function isElement(value) {
-    return value && value.nodeType === 1 || false;
-  }
-
-  /**
-   * Checks if `value` is empty. Arrays, strings, or `arguments` objects with a
-   * length of `0` and objects with no own enumerable properties are considered
-   * "empty".
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Array|Object|string} value The value to inspect.
-   * @returns {boolean} Returns `true` if the `value` is empty, else `false`.
-   * @example
-   *
-   * _.isEmpty([1, 2, 3]);
-   * // => false
-   *
-   * _.isEmpty({});
-   * // => true
-   *
-   * _.isEmpty('');
-   * // => true
-   */
-  function isEmpty(value) {
-    if (!value) {
-      return true;
-    }
-    if (isArray(value) || isString(value)) {
-      return !value.length;
-    }
-    for (var key in value) {
-      if (hasOwnProperty.call(value, key)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Performs a deep comparison between two values to determine if they are
-   * equivalent to each other. If a callback is provided it will be executed
-   * to compare values. If the callback returns `undefined` comparisons will
-   * be handled by the method instead. The callback is bound to `thisArg` and
-   * invoked with two arguments; (a, b).
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} a The value to compare.
-   * @param {*} b The other value to compare.
-   * @param {Function} [callback] The function to customize comparing values.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
-   * @example
-   *
-   * var object = { 'name': 'fred' };
-   * var copy = { 'name': 'fred' };
-   *
-   * object == copy;
-   * // => false
-   *
-   * _.isEqual(object, copy);
-   * // => true
-   *
-   * var words = ['hello', 'goodbye'];
-   * var otherWords = ['hi', 'goodbye'];
-   *
-   * _.isEqual(words, otherWords, function(a, b) {
-   *   var reGreet = /^(?:hello|hi)$/i,
-   *       aGreet = _.isString(a) && reGreet.test(a),
-   *       bGreet = _.isString(b) && reGreet.test(b);
-   *
-   *   return (aGreet || bGreet) ? (aGreet == bGreet) : undefined;
-   * });
-   * // => true
-   */
-  function isEqual(a, b) {
-    return baseIsEqual(a, b);
-  }
-
-  /**
-   * Checks if `value` is, or can be coerced to, a finite number.
-   *
-   * Note: This is not the same as native `isFinite` which will return true for
-   * booleans and empty strings. See http://es5.github.io/#x15.1.2.5.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is finite, else `false`.
-   * @example
-   *
-   * _.isFinite(-101);
-   * // => true
-   *
-   * _.isFinite('10');
-   * // => true
-   *
-   * _.isFinite(true);
-   * // => false
-   *
-   * _.isFinite('');
-   * // => false
-   *
-   * _.isFinite(Infinity);
-   * // => false
-   */
-  function isFinite(value) {
-    return nativeIsFinite(value) && !nativeIsNaN(parseFloat(value));
-  }
-
-  /**
-   * Checks if `value` is a function.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a function, else `false`.
-   * @example
-   *
-   * _.isFunction(_);
-   * // => true
-   */
-  function isFunction(value) {
-    return typeof value == 'function';
-  }
-  // fallback for older versions of Chrome and Safari
-  if (isFunction(/x/)) {
-    isFunction = function(value) {
-      return typeof value == 'function' && toString.call(value) == funcClass;
-    };
-  }
-
-  /**
-   * Checks if `value` is the language type of Object.
-   * (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is an object, else `false`.
-   * @example
-   *
-   * _.isObject({});
-   * // => true
-   *
-   * _.isObject([1, 2, 3]);
-   * // => true
-   *
-   * _.isObject(1);
-   * // => false
-   */
-  function isObject(value) {
-    // check if the value is the ECMAScript language type of Object
-    // http://es5.github.io/#x8
-    // and avoid a V8 bug
-    // http://code.google.com/p/v8/issues/detail?id=2291
-    return !!(value && objectTypes[typeof value]);
-  }
-
-  /**
-   * Checks if `value` is `NaN`.
-   *
-   * Note: This is not the same as native `isNaN` which will return `true` for
-   * `undefined` and other non-numeric values. See http://es5.github.io/#x15.1.2.4.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is `NaN`, else `false`.
-   * @example
-   *
-   * _.isNaN(NaN);
-   * // => true
-   *
-   * _.isNaN(new Number(NaN));
-   * // => true
-   *
-   * isNaN(undefined);
-   * // => true
-   *
-   * _.isNaN(undefined);
-   * // => false
-   */
-  function isNaN(value) {
-    // `NaN` as a primitive is the only value that is not equal to itself
-    // (perform the [[Class]] check first to avoid errors with some host objects in IE)
-    return isNumber(value) && value != +value;
-  }
-
-  /**
-   * Checks if `value` is `null`.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is `null`, else `false`.
-   * @example
-   *
-   * _.isNull(null);
-   * // => true
-   *
-   * _.isNull(undefined);
-   * // => false
-   */
-  function isNull(value) {
-    return value === null;
-  }
-
-  /**
-   * Checks if `value` is a number.
-   *
-   * Note: `NaN` is considered a number. See http://es5.github.io/#x8.5.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a number, else `false`.
-   * @example
-   *
-   * _.isNumber(8.4 * 5);
-   * // => true
-   */
-  function isNumber(value) {
-    return typeof value == 'number' ||
-      value && typeof value == 'object' && toString.call(value) == numberClass || false;
-  }
-
-  /**
-   * Checks if `value` is a regular expression.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a regular expression, else `false`.
-   * @example
-   *
-   * _.isRegExp(/fred/);
-   * // => true
-   */
-  function isRegExp(value) {
-    return value && objectTypes[typeof value] && toString.call(value) == regexpClass || false;
-  }
-
-  /**
-   * Checks if `value` is a string.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is a string, else `false`.
-   * @example
-   *
-   * _.isString('fred');
-   * // => true
-   */
-  function isString(value) {
-    return typeof value == 'string' ||
-      value && typeof value == 'object' && toString.call(value) == stringClass || false;
-  }
-
-  /**
-   * Checks if `value` is `undefined`.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {*} value The value to check.
-   * @returns {boolean} Returns `true` if the `value` is `undefined`, else `false`.
-   * @example
-   *
-   * _.isUndefined(void 0);
-   * // => true
-   */
-  function isUndefined(value) {
-    return typeof value == 'undefined';
-  }
-
-  /**
-   * Creates a shallow clone of `object` excluding the specified properties.
-   * Property names may be specified as individual arguments or as arrays of
-   * property names. If a callback is provided it will be executed for each
-   * property of `object` omitting the properties the callback returns truey
-   * for. The callback is bound to `thisArg` and invoked with three arguments;
-   * (value, key, object).
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Object} object The source object.
-   * @param {Function|...string|string[]} [callback] The properties to omit or the
-   *  function called per iteration.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns an object without the omitted properties.
-   * @example
-   *
-   * _.omit({ 'name': 'fred', 'age': 40 }, 'age');
-   * // => { 'name': 'fred' }
-   *
-   * _.omit({ 'name': 'fred', 'age': 40 }, function(value) {
-   *   return typeof value == 'number';
-   * });
-   * // => { 'name': 'fred' }
-   */
-  function omit(object) {
-    var props = [];
-    forIn(object, function(value, key) {
-      props.push(key);
-    });
-    props = baseDifference(props, baseFlatten(arguments, true, false, 1));
-
-    var index = -1,
-        length = props.length,
-        result = {};
-
-    while (++index < length) {
-      var key = props[index];
-      result[key] = object[key];
-    }
-    return result;
-  }
-
-  /**
-   * Creates a two dimensional array of an object's key-value pairs,
-   * i.e. `[[key1, value1], [key2, value2]]`.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Object} object The object to inspect.
-   * @returns {Array} Returns new array of key-value pairs.
-   * @example
-   *
-   * _.pairs({ 'barney': 36, 'fred': 40 });
-   * // => [['barney', 36], ['fred', 40]] (property order is not guaranteed across environments)
-   */
-  function pairs(object) {
-    var index = -1,
-        props = keys(object),
-        length = props.length,
-        result = Array(length);
-
-    while (++index < length) {
-      var key = props[index];
-      result[index] = [key, object[key]];
-    }
-    return result;
-  }
-
-  /**
-   * Creates a shallow clone of `object` composed of the specified properties.
-   * Property names may be specified as individual arguments or as arrays of
-   * property names. If a callback is provided it will be executed for each
-   * property of `object` picking the properties the callback returns truey
-   * for. The callback is bound to `thisArg` and invoked with three arguments;
-   * (value, key, object).
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Object} object The source object.
-   * @param {Function|...string|string[]} [callback] The function called per
-   *  iteration or property names to pick, specified as individual property
-   *  names or arrays of property names.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns an object composed of the picked properties.
-   * @example
-   *
-   * _.pick({ 'name': 'fred', '_userid': 'fred1' }, 'name');
-   * // => { 'name': 'fred' }
-   *
-   * _.pick({ 'name': 'fred', '_userid': 'fred1' }, function(value, key) {
-   *   return key.charAt(0) != '_';
-   * });
-   * // => { 'name': 'fred' }
-   */
-  function pick(object) {
-    var index = -1,
-        props = baseFlatten(arguments, true, false, 1),
-        length = props.length,
-        result = {};
-
-    while (++index < length) {
-      var key = props[index];
-      if (key in object) {
-        result[key] = object[key];
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Creates an array composed of the own enumerable property values of `object`.
-   *
-   * @static
-   * @memberOf _
-   * @category Objects
-   * @param {Object} object The object to inspect.
-   * @returns {Array} Returns an array of property values.
-   * @example
-   *
-   * _.values({ 'one': 1, 'two': 2, 'three': 3 });
-   * // => [1, 2, 3] (property order is not guaranteed across environments)
-   */
-  function values(object) {
-    var index = -1,
-        props = keys(object),
-        length = props.length,
-        result = Array(length);
-
-    while (++index < length) {
-      result[index] = object[props[index]];
-    }
-    return result;
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Checks if a given value is present in a collection using strict equality
-   * for comparisons, i.e. `===`. If `fromIndex` is negative, it is used as the
-   * offset from the end of the collection.
-   *
-   * @static
-   * @memberOf _
-   * @alias include
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {*} target The value to check for.
-   * @param {number} [fromIndex=0] The index to search from.
-   * @returns {boolean} Returns `true` if the `target` element is found, else `false`.
-   * @example
-   *
-   * _.contains([1, 2, 3], 1);
-   * // => true
-   *
-   * _.contains([1, 2, 3], 1, 2);
-   * // => false
-   *
-   * _.contains({ 'name': 'fred', 'age': 40 }, 'fred');
-   * // => true
-   *
-   * _.contains('pebbles', 'eb');
-   * // => true
-   */
-  function contains(collection, target) {
-    var indexOf = getIndexOf(),
-        length = collection ? collection.length : 0,
-        result = false;
-    if (length && typeof length == 'number') {
-      result = indexOf(collection, target) > -1;
-    } else {
-      forOwn(collection, function(value) {
-        return (result = value === target) && indicatorObject;
-      });
-    }
-    return result;
-  }
-
-  /**
-   * Creates an object composed of keys generated from the results of running
-   * each element of `collection` through the callback. The corresponding value
-   * of each key is the number of times the key was returned by the callback.
-   * The callback is bound to `thisArg` and invoked with three arguments;
-   * (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns the composed aggregate object.
-   * @example
-   *
-   * _.countBy([4.3, 6.1, 6.4], function(num) { return Math.floor(num); });
-   * // => { '4': 1, '6': 2 }
-   *
-   * _.countBy([4.3, 6.1, 6.4], function(num) { return this.floor(num); }, Math);
-   * // => { '4': 1, '6': 2 }
-   *
-   * _.countBy(['one', 'two', 'three'], 'length');
-   * // => { '3': 2, '5': 1 }
-   */
-  var countBy = createAggregator(function(result, value, key) {
-    (hasOwnProperty.call(result, key) ? result[key]++ : result[key] = 1);
-  });
-
-  /**
-   * Checks if the given callback returns truey value for **all** elements of
-   * a collection. The callback is bound to `thisArg` and invoked with three
-   * arguments; (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias all
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {boolean} Returns `true` if all elements passed the callback check,
-   *  else `false`.
-   * @example
-   *
-   * _.every([true, 1, null, 'yes']);
-   * // => false
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.every(characters, 'age');
-   * // => true
-   *
-   * // using "_.where" callback shorthand
-   * _.every(characters, { 'age': 36 });
-   * // => false
-   */
-  function every(collection, callback, thisArg) {
-    var result = true;
-    callback = createCallback(callback, thisArg, 3);
-
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    if (typeof length == 'number') {
-      while (++index < length) {
-        if (!(result = !!callback(collection[index], index, collection))) {
-          break;
-        }
-      }
-    } else {
-      forOwn(collection, function(value, index, collection) {
-        return !(result = !!callback(value, index, collection)) && indicatorObject;
-      });
-    }
-    return result;
-  }
-
-  /**
-   * Iterates over elements of a collection, returning an array of all elements
-   * the callback returns truey for. The callback is bound to `thisArg` and
-   * invoked with three arguments; (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias select
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a new array of elements that passed the callback check.
-   * @example
-   *
-   * var evens = _.filter([1, 2, 3, 4, 5, 6], function(num) { return num % 2 == 0; });
-   * // => [2, 4, 6]
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36, 'blocked': false },
-   *   { 'name': 'fred',   'age': 40, 'blocked': true }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.filter(characters, 'blocked');
-   * // => [{ 'name': 'fred', 'age': 40, 'blocked': true }]
-   *
-   * // using "_.where" callback shorthand
-   * _.filter(characters, { 'age': 36 });
-   * // => [{ 'name': 'barney', 'age': 36, 'blocked': false }]
-   */
-  function filter(collection, callback, thisArg) {
-    var result = [];
-    callback = createCallback(callback, thisArg, 3);
-
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    if (typeof length == 'number') {
-      while (++index < length) {
-        var value = collection[index];
-        if (callback(value, index, collection)) {
-          result.push(value);
-        }
-      }
-    } else {
-      forOwn(collection, function(value, index, collection) {
-        if (callback(value, index, collection)) {
-          result.push(value);
-        }
-      });
-    }
-    return result;
-  }
-
-  /**
-   * Iterates over elements of a collection, returning the first element that
-   * the callback returns truey for. The callback is bound to `thisArg` and
-   * invoked with three arguments; (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias detect, findWhere
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the found element, else `undefined`.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'barney',  'age': 36, 'blocked': false },
-   *   { 'name': 'fred',    'age': 40, 'blocked': true },
-   *   { 'name': 'pebbles', 'age': 1,  'blocked': false }
-   * ];
-   *
-   * _.find(characters, function(chr) {
-   *   return chr.age < 40;
-   * });
-   * // => { 'name': 'barney', 'age': 36, 'blocked': false }
-   *
-   * // using "_.where" callback shorthand
-   * _.find(characters, { 'age': 1 });
-   * // =>  { 'name': 'pebbles', 'age': 1, 'blocked': false }
-   *
-   * // using "_.pluck" callback shorthand
-   * _.find(characters, 'blocked');
-   * // => { 'name': 'fred', 'age': 40, 'blocked': true }
-   */
-  function find(collection, callback, thisArg) {
-    callback = createCallback(callback, thisArg, 3);
-
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    if (typeof length == 'number') {
-      while (++index < length) {
-        var value = collection[index];
-        if (callback(value, index, collection)) {
-          return value;
-        }
-      }
-    } else {
-      var result;
-      forOwn(collection, function(value, index, collection) {
-        if (callback(value, index, collection)) {
-          result = value;
-          return indicatorObject;
-        }
-      });
-      return result;
-    }
-  }
-
-  /**
-   * Examines each element in a `collection`, returning the first that
-   * has the given properties. When checking `properties`, this method
-   * performs a deep comparison between values to determine if they are
-   * equivalent to each other.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Object} properties The object of property values to filter by.
-   * @returns {*} Returns the found element, else `undefined`.
-   * @example
-   *
-   * var food = [
-   *   { 'name': 'apple',  'organic': false, 'type': 'fruit' },
-   *   { 'name': 'banana', 'organic': true,  'type': 'fruit' },
-   *   { 'name': 'beet',   'organic': false, 'type': 'vegetable' }
-   * ];
-   *
-   * _.findWhere(food, { 'type': 'vegetable' });
-   * // => { 'name': 'beet', 'organic': false, 'type': 'vegetable' }
-   */
-  function findWhere(object, properties) {
-    return where(object, properties, true);
-  }
-
-  /**
-   * Iterates over elements of a collection, executing the callback for each
-   * element. The callback is bound to `thisArg` and invoked with three arguments;
-   * (value, index|key, collection). Callbacks may exit iteration early by
-   * explicitly returning `false`.
-   *
-   * Note: As with other "Collections" methods, objects with a `length` property
-   * are iterated like arrays. To avoid this behavior `_.forIn` or `_.forOwn`
-   * may be used for object iteration.
-   *
-   * @static
-   * @memberOf _
-   * @alias each
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function} [callback=identity] The function called per iteration.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array|Object|string} Returns `collection`.
-   * @example
-   *
-   * _([1, 2, 3]).forEach(function(num) { console.log(num); }).join(',');
-   * // => logs each number and returns '1,2,3'
-   *
-   * _.forEach({ 'one': 1, 'two': 2, 'three': 3 }, function(num) { console.log(num); });
-   * // => logs each number and returns the object (property order is not guaranteed across environments)
-   */
-  function forEach(collection, callback, thisArg) {
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    callback = callback && typeof thisArg == 'undefined' ? callback : baseCreateCallback(callback, thisArg, 3);
-    if (typeof length == 'number') {
-      while (++index < length) {
-        if (callback(collection[index], index, collection) === indicatorObject) {
-          break;
-        }
-      }
-    } else {
-      forOwn(collection, callback);
-    }
-  }
-
-  /**
-   * This method is like `_.forEach` except that it iterates over elements
-   * of a `collection` from right to left.
-   *
-   * @static
-   * @memberOf _
-   * @alias eachRight
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function} [callback=identity] The function called per iteration.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array|Object|string} Returns `collection`.
-   * @example
-   *
-   * _([1, 2, 3]).forEachRight(function(num) { console.log(num); }).join(',');
-   * // => logs each number from right to left and returns '3,2,1'
-   */
-  function forEachRight(collection, callback) {
-    var length = collection ? collection.length : 0;
-    if (typeof length == 'number') {
-      while (length--) {
-        if (callback(collection[length], length, collection) === false) {
-          break;
-        }
-      }
-    } else {
-      var props = keys(collection);
-      length = props.length;
-      forOwn(collection, function(value, key, collection) {
-        key = props ? props[--length] : --length;
-        return callback(collection[key], key, collection) === false && indicatorObject;
-      });
-    }
-  }
-
-  /**
-   * Creates an object composed of keys generated from the results of running
-   * each element of a collection through the callback. The corresponding value
-   * of each key is an array of the elements responsible for generating the key.
-   * The callback is bound to `thisArg` and invoked with three arguments;
-   * (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns the composed aggregate object.
-   * @example
-   *
-   * _.groupBy([4.2, 6.1, 6.4], function(num) { return Math.floor(num); });
-   * // => { '4': [4.2], '6': [6.1, 6.4] }
-   *
-   * _.groupBy([4.2, 6.1, 6.4], function(num) { return this.floor(num); }, Math);
-   * // => { '4': [4.2], '6': [6.1, 6.4] }
-   *
-   * // using "_.pluck" callback shorthand
-   * _.groupBy(['one', 'two', 'three'], 'length');
-   * // => { '3': ['one', 'two'], '5': ['three'] }
-   */
-  var groupBy = createAggregator(function(result, value, key) {
-    (hasOwnProperty.call(result, key) ? result[key] : result[key] = []).push(value);
-  });
-
-  /**
-   * Creates an object composed of keys generated from the results of running
-   * each element of the collection through the given callback. The corresponding
-   * value of each key is the last element responsible for generating the key.
-   * The callback is bound to `thisArg` and invoked with three arguments;
-   * (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Object} Returns the composed aggregate object.
-   * @example
-   *
-   * var keys = [
-   *   { 'dir': 'left', 'code': 97 },
-   *   { 'dir': 'right', 'code': 100 }
-   * ];
-   *
-   * _.indexBy(keys, 'dir');
-   * // => { 'left': { 'dir': 'left', 'code': 97 }, 'right': { 'dir': 'right', 'code': 100 } }
-   *
-   * _.indexBy(keys, function(key) { return String.fromCharCode(key.code); });
-   * // => { 'a': { 'dir': 'left', 'code': 97 }, 'd': { 'dir': 'right', 'code': 100 } }
-   *
-   * _.indexBy(characters, function(key) { this.fromCharCode(key.code); }, String);
-   * // => { 'a': { 'dir': 'left', 'code': 97 }, 'd': { 'dir': 'right', 'code': 100 } }
-   */
-  var indexBy = createAggregator(function(result, value, key) {
-    result[key] = value;
-  });
-
-  /**
-   * Invokes the method named by `methodName` on each element in the `collection`
-   * returning an array of the results of each invoked method. Additional arguments
-   * will be provided to each invoked method. If `methodName` is a function it
-   * will be invoked for, and `this` bound to, each element in the `collection`.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|string} methodName The name of the method to invoke or
-   *  the function invoked per iteration.
-   * @param {...*} [arg] Arguments to invoke the method with.
-   * @returns {Array} Returns a new array of the results of each invoked method.
-   * @example
-   *
-   * _.invoke([[5, 1, 7], [3, 2, 1]], 'sort');
-   * // => [[1, 5, 7], [1, 2, 3]]
-   *
-   * _.invoke([123, 456], String.prototype.split, '');
-   * // => [['1', '2', '3'], ['4', '5', '6']]
-   */
-  function invoke(collection, methodName) {
-    var args = slice(arguments, 2),
-        index = -1,
-        isFunc = typeof methodName == 'function',
-        length = collection ? collection.length : 0,
-        result = Array(typeof length == 'number' ? length : 0);
-
-    forEach(collection, function(value) {
-      result[++index] = (isFunc ? methodName : value[methodName]).apply(value, args);
-    });
-    return result;
-  }
-
-  /**
-   * Creates an array of values by running each element in the collection
-   * through the callback. The callback is bound to `thisArg` and invoked with
-   * three arguments; (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias collect
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a new array of the results of each `callback` execution.
-   * @example
-   *
-   * _.map([1, 2, 3], function(num) { return num * 3; });
-   * // => [3, 6, 9]
-   *
-   * _.map({ 'one': 1, 'two': 2, 'three': 3 }, function(num) { return num * 3; });
-   * // => [3, 6, 9] (property order is not guaranteed across environments)
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.map(characters, 'name');
-   * // => ['barney', 'fred']
-   */
-  function map(collection, callback, thisArg) {
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    callback = createCallback(callback, thisArg, 3);
-    if (typeof length == 'number') {
-      var result = Array(length);
-      while (++index < length) {
-        result[index] = callback(collection[index], index, collection);
-      }
-    } else {
-      result = [];
-      forOwn(collection, function(value, key, collection) {
-        result[++index] = callback(value, key, collection);
-      });
-    }
-    return result;
-  }
-
-  /**
-   * Retrieves the maximum value of a collection. If the collection is empty or
-   * falsey `-Infinity` is returned. If a callback is provided it will be executed
-   * for each value in the collection to generate the criterion by which the value
-   * is ranked. The callback is bound to `thisArg` and invoked with three
-   * arguments; (value, index, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the maximum value.
-   * @example
-   *
-   * _.max([4, 2, 8, 6]);
-   * // => 8
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * _.max(characters, function(chr) { return chr.age; });
-   * // => { 'name': 'fred', 'age': 40 };
-   *
-   * // using "_.pluck" callback shorthand
-   * _.max(characters, 'age');
-   * // => { 'name': 'fred', 'age': 40 };
-   */
-  function max(collection, callback, thisArg) {
-    var computed = -Infinity,
-        result = computed;
-
-    // allows working with functions like `_.map` without using
-    // their `index` argument as a callback
-    if (typeof callback != 'function' && thisArg && thisArg[callback] === collection) {
-      callback = null;
-    }
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    if (callback == null && typeof length == 'number') {
-      while (++index < length) {
-        var value = collection[index];
-        if (value > result) {
-          result = value;
-        }
-      }
-    } else {
-      callback = createCallback(callback, thisArg, 3);
-
-      forEach(collection, function(value, index, collection) {
-        var current = callback(value, index, collection);
-        if (current > computed) {
-          computed = current;
-          result = value;
-        }
-      });
-    }
-    return result;
-  }
-
-  /**
-   * Retrieves the minimum value of a collection. If the collection is empty or
-   * falsey `Infinity` is returned. If a callback is provided it will be executed
-   * for each value in the collection to generate the criterion by which the value
-   * is ranked. The callback is bound to `thisArg` and invoked with three
-   * arguments; (value, index, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the minimum value.
-   * @example
-   *
-   * _.min([4, 2, 8, 6]);
-   * // => 2
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * _.min(characters, function(chr) { return chr.age; });
-   * // => { 'name': 'barney', 'age': 36 };
-   *
-   * // using "_.pluck" callback shorthand
-   * _.min(characters, 'age');
-   * // => { 'name': 'barney', 'age': 36 };
-   */
-  function min(collection, callback, thisArg) {
-    var computed = Infinity,
-        result = computed;
-
-    // allows working with functions like `_.map` without using
-    // their `index` argument as a callback
-    if (typeof callback != 'function' && thisArg && thisArg[callback] === collection) {
-      callback = null;
-    }
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    if (callback == null && typeof length == 'number') {
-      while (++index < length) {
-        var value = collection[index];
-        if (value < result) {
-          result = value;
-        }
-      }
-    } else {
-      callback = createCallback(callback, thisArg, 3);
-
-      forEach(collection, function(value, index, collection) {
-        var current = callback(value, index, collection);
-        if (current < computed) {
-          computed = current;
-          result = value;
-        }
-      });
-    }
-    return result;
-  }
-
-  /**
-   * Retrieves the value of a specified property from all elements in the collection.
-   *
-   * @static
-   * @memberOf _
-   * @type Function
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {string} property The name of the property to pluck.
-   * @returns {Array} Returns a new array of property values.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * _.pluck(characters, 'name');
-   * // => ['barney', 'fred']
-   */
-  var pluck = map;
-
-  /**
-   * Reduces a collection to a value which is the accumulated result of running
-   * each element in the collection through the callback, where each successive
-   * callback execution consumes the return value of the previous execution. If
-   * `accumulator` is not provided the first element of the collection will be
-   * used as the initial `accumulator` value. The callback is bound to `thisArg`
-   * and invoked with four arguments; (accumulator, value, index|key, collection).
-   *
-   * @static
-   * @memberOf _
-   * @alias foldl, inject
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function} [callback=identity] The function called per iteration.
-   * @param {*} [accumulator] Initial value of the accumulator.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the accumulated value.
-   * @example
-   *
-   * var sum = _.reduce([1, 2, 3], function(sum, num) {
-   *   return sum + num;
-   * });
-   * // => 6
-   *
-   * var mapped = _.reduce({ 'a': 1, 'b': 2, 'c': 3 }, function(result, num, key) {
-   *   result[key] = num * 3;
-   *   return result;
-   * }, {});
-   * // => { 'a': 3, 'b': 6, 'c': 9 }
-   */
-  function reduce(collection, callback, accumulator, thisArg) {
-    if (!collection) return accumulator;
-    var noaccum = arguments.length < 3;
-    callback = createCallback(callback, thisArg, 4);
-
-    var index = -1,
-        length = collection.length;
-
-    if (typeof length == 'number') {
-      if (noaccum) {
-        accumulator = collection[++index];
-      }
-      while (++index < length) {
-        accumulator = callback(accumulator, collection[index], index, collection);
-      }
-    } else {
-      forOwn(collection, function(value, index, collection) {
-        accumulator = noaccum
-          ? (noaccum = false, value)
-          : callback(accumulator, value, index, collection)
-      });
-    }
-    return accumulator;
-  }
-
-  /**
-   * This method is like `_.reduce` except that it iterates over elements
-   * of a `collection` from right to left.
-   *
-   * @static
-   * @memberOf _
-   * @alias foldr
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function} [callback=identity] The function called per iteration.
-   * @param {*} [accumulator] Initial value of the accumulator.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the accumulated value.
-   * @example
-   *
-   * var list = [[0, 1], [2, 3], [4, 5]];
-   * var flat = _.reduceRight(list, function(a, b) { return a.concat(b); }, []);
-   * // => [4, 5, 2, 3, 0, 1]
-   */
-  function reduceRight(collection, callback, accumulator, thisArg) {
-    var noaccum = arguments.length < 3;
-    callback = createCallback(callback, thisArg, 4);
-    forEachRight(collection, function(value, index, collection) {
-      accumulator = noaccum
-        ? (noaccum = false, value)
-        : callback(accumulator, value, index, collection);
-    });
-    return accumulator;
-  }
-
-  /**
-   * The opposite of `_.filter` this method returns the elements of a
-   * collection that the callback does **not** return truey for.
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a new array of elements that failed the callback check.
-   * @example
-   *
-   * var odds = _.reject([1, 2, 3, 4, 5, 6], function(num) { return num % 2 == 0; });
-   * // => [1, 3, 5]
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36, 'blocked': false },
-   *   { 'name': 'fred',   'age': 40, 'blocked': true }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.reject(characters, 'blocked');
-   * // => [{ 'name': 'barney', 'age': 36, 'blocked': false }]
-   *
-   * // using "_.where" callback shorthand
-   * _.reject(characters, { 'age': 36 });
-   * // => [{ 'name': 'fred', 'age': 40, 'blocked': true }]
-   */
-  function reject(collection, callback, thisArg) {
-    callback = createCallback(callback, thisArg, 3);
-    return filter(collection, function(value, index, collection) {
-      return !callback(value, index, collection);
-    });
-  }
-
-  /**
-   * Retrieves a random element or `n` random elements from a collection.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to sample.
-   * @param {number} [n] The number of elements to sample.
-   * @param- {Object} [guard] Allows working with functions like `_.map`
-   *  without using their `index` arguments as `n`.
-   * @returns {Array} Returns the random sample(s) of `collection`.
-   * @example
-   *
-   * _.sample([1, 2, 3, 4]);
-   * // => 2
-   *
-   * _.sample([1, 2, 3, 4], 2);
-   * // => [3, 1]
-   */
-  function sample(collection, n, guard) {
-    if (collection && typeof collection.length != 'number') {
-      collection = values(collection);
-    }
-    if (n == null || guard) {
-      return collection ? collection[baseRandom(0, collection.length - 1)] : undefined;
-    }
-    var result = shuffle(collection);
-    result.length = nativeMin(nativeMax(0, n), result.length);
-    return result;
-  }
-
-  /**
-   * Creates an array of shuffled values, using a version of the Fisher-Yates
-   * shuffle. See http://en.wikipedia.org/wiki/Fisher-Yates_shuffle.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to shuffle.
-   * @returns {Array} Returns a new shuffled collection.
-   * @example
-   *
-   * _.shuffle([1, 2, 3, 4, 5, 6]);
-   * // => [4, 1, 6, 3, 5, 2]
-   */
-  function shuffle(collection) {
-    var index = -1,
-        length = collection ? collection.length : 0,
-        result = Array(typeof length == 'number' ? length : 0);
-
-    forEach(collection, function(value) {
-      var rand = baseRandom(0, ++index);
-      result[index] = result[rand];
-      result[rand] = value;
-    });
-    return result;
-  }
-
-  /**
-   * Gets the size of the `collection` by returning `collection.length` for arrays
-   * and array-like objects or the number of own enumerable properties for objects.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to inspect.
-   * @returns {number} Returns `collection.length` or number of own enumerable properties.
-   * @example
-   *
-   * _.size([1, 2]);
-   * // => 2
-   *
-   * _.size({ 'one': 1, 'two': 2, 'three': 3 });
-   * // => 3
-   *
-   * _.size('pebbles');
-   * // => 7
-   */
-  function size(collection) {
-    var length = collection ? collection.length : 0;
-    return typeof length == 'number' ? length : keys(collection).length;
-  }
-
-  /**
-   * Checks if the callback returns a truey value for **any** element of a
-   * collection. The function returns as soon as it finds a passing value and
-   * does not iterate over the entire collection. The callback is bound to
-   * `thisArg` and invoked with three arguments; (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias any
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {boolean} Returns `true` if any element passed the callback check,
-   *  else `false`.
-   * @example
-   *
-   * _.some([null, 0, 'yes', false], Boolean);
-   * // => true
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36, 'blocked': false },
-   *   { 'name': 'fred',   'age': 40, 'blocked': true }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.some(characters, 'blocked');
-   * // => true
-   *
-   * // using "_.where" callback shorthand
-   * _.some(characters, { 'age': 1 });
-   * // => false
-   */
-  function some(collection, callback, thisArg) {
-    var result;
-    callback = createCallback(callback, thisArg, 3);
-
-    var index = -1,
-        length = collection ? collection.length : 0;
-
-    if (typeof length == 'number') {
-      while (++index < length) {
-        if ((result = callback(collection[index], index, collection))) {
-          break;
-        }
-      }
-    } else {
-      forOwn(collection, function(value, index, collection) {
-        return (result = callback(value, index, collection)) && indicatorObject;
-      });
-    }
-    return !!result;
-  }
-
-  /**
-   * Creates an array of elements, sorted in ascending order by the results of
-   * running each element in a collection through the callback. This method
-   * performs a stable sort, that is, it will preserve the original sort order
-   * of equal elements. The callback is bound to `thisArg` and invoked with
-   * three arguments; (value, index|key, collection).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an array of property names is provided for `callback` the collection
-   * will be sorted by each property value.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Array|Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a new array of sorted elements.
-   * @example
-   *
-   * _.sortBy([1, 2, 3], function(num) { return Math.sin(num); });
-   * // => [3, 1, 2]
-   *
-   * _.sortBy([1, 2, 3], function(num) { return this.sin(num); }, Math);
-   * // => [3, 1, 2]
-   *
-   * var characters = [
-   *   { 'name': 'barney',  'age': 36 },
-   *   { 'name': 'fred',    'age': 40 },
-   *   { 'name': 'barney',  'age': 26 },
-   *   { 'name': 'fred',    'age': 30 }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.map(_.sortBy(characters, 'age'), _.values);
-   * // => [['barney', 26], ['fred', 30], ['barney', 36], ['fred', 40]]
-   *
-   * // sorting by multiple properties
-   * _.map(_.sortBy(characters, ['name', 'age']), _.values);
-   * // = > [['barney', 26], ['barney', 36], ['fred', 30], ['fred', 40]]
-   */
-  function sortBy(collection, callback, thisArg) {
-    var index = -1,
-        length = collection ? collection.length : 0,
-        result = Array(typeof length == 'number' ? length : 0);
-
-    callback = createCallback(callback, thisArg, 3);
-    forEach(collection, function(value, key, collection) {
-      result[++index] = {
-        'criteria': [callback(value, key, collection)],
-        'index': index,
-        'value': value
-      };
-    });
-
-    length = result.length;
-    result.sort(compareAscending);
-    while (length--) {
-      result[length] = result[length].value;
-    }
-    return result;
-  }
-
-  /**
-   * Converts the `collection` to an array.
-   *
-   * @static
-   * @memberOf _
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to convert.
-   * @returns {Array} Returns the new converted array.
-   * @example
-   *
-   * (function() { return _.toArray(arguments).slice(1); })(1, 2, 3, 4);
-   * // => [2, 3, 4]
-   */
-  function toArray(collection) {
-    if (isArray(collection)) {
-      return slice(collection);
-    }
-    if (collection && typeof collection.length == 'number') {
-      return map(collection);
-    }
-    return values(collection);
-  }
-
-  /**
-   * Performs a deep comparison of each element in a `collection` to the given
-   * `properties` object, returning an array of all elements that have equivalent
-   * property values.
-   *
-   * @static
-   * @memberOf _
-   * @type Function
-   * @category Collections
-   * @param {Array|Object|string} collection The collection to iterate over.
-   * @param {Object} props The object of property values to filter by.
-   * @returns {Array} Returns a new array of elements that have the given properties.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36, 'pets': ['hoppy'] },
-   *   { 'name': 'fred',   'age': 40, 'pets': ['baby puss', 'dino'] }
-   * ];
-   *
-   * _.where(characters, { 'age': 36 });
-   * // => [{ 'name': 'barney', 'age': 36, 'pets': ['hoppy'] }]
-   *
-   * _.where(characters, { 'pets': ['dino'] });
-   * // => [{ 'name': 'fred', 'age': 40, 'pets': ['baby puss', 'dino'] }]
-   */
-  function where(collection, properties, first) {
-    return (first && isEmpty(properties))
-      ? undefined
-      : (first ? find : filter)(collection, properties);
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Creates an array with all falsey values removed. The values `false`, `null`,
-   * `0`, `""`, `undefined`, and `NaN` are all falsey.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to compact.
-   * @returns {Array} Returns a new array of filtered values.
-   * @example
-   *
-   * _.compact([0, 1, false, 2, '', 3]);
-   * // => [1, 2, 3]
-   */
-  function compact(array) {
-    var index = -1,
-        length = array ? array.length : 0,
-        result = [];
-
-    while (++index < length) {
-      var value = array[index];
-      if (value) {
-        result.push(value);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Creates an array excluding all values of the provided arrays using strict
-   * equality for comparisons, i.e. `===`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to process.
-   * @param {...Array} [values] The arrays of values to exclude.
-   * @returns {Array} Returns a new array of filtered values.
-   * @example
-   *
-   * _.difference([1, 2, 3, 4, 5], [5, 2, 10]);
-   * // => [1, 3, 4]
-   */
-  function difference(array) {
-    return baseDifference(array, baseFlatten(arguments, true, true, 1));
-  }
-
-  /**
-   * Gets the first element or first `n` elements of an array. If a callback
-   * is provided elements at the beginning of the array are returned as long
-   * as the callback returns truey. The callback is bound to `thisArg` and
-   * invoked with three arguments; (value, index, array).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias head, take
-   * @category Arrays
-   * @param {Array} array The array to query.
-   * @param {Function|Object|number|string} [callback] The function called
-   *  per element or the number of elements to return. If a property name or
-   *  object is provided it will be used to create a "_.pluck" or "_.where"
-   *  style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the first element(s) of `array`.
-   * @example
-   *
-   * _.first([1, 2, 3]);
-   * // => 1
-   *
-   * _.first([1, 2, 3], 2);
-   * // => [1, 2]
-   *
-   * _.first([1, 2, 3], function(num) {
-   *   return num < 3;
-   * });
-   * // => [1, 2]
-   *
-   * var characters = [
-   *   { 'name': 'barney',  'blocked': true,  'employer': 'slate' },
-   *   { 'name': 'fred',    'blocked': false, 'employer': 'slate' },
-   *   { 'name': 'pebbles', 'blocked': true,  'employer': 'na' }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.first(characters, 'blocked');
-   * // => [{ 'name': 'barney', 'blocked': true, 'employer': 'slate' }]
-   *
-   * // using "_.where" callback shorthand
-   * _.pluck(_.first(characters, { 'employer': 'slate' }), 'name');
-   * // => ['barney', 'fred']
-   */
-  function first(array, callback, thisArg) {
-    var n = 0,
-        length = array ? array.length : 0;
-
-    if (typeof callback != 'number' && callback != null) {
-      var index = -1;
-      callback = createCallback(callback, thisArg, 3);
-      while (++index < length && callback(array[index], index, array)) {
-        n++;
-      }
-    } else {
-      n = callback;
-      if (n == null || thisArg) {
-        return array ? array[0] : undefined;
-      }
-    }
-    return slice(array, 0, nativeMin(nativeMax(0, n), length));
-  }
-
-  /**
-   * Flattens a nested array (the nesting can be to any depth). If `isShallow`
-   * is truey, the array will only be flattened a single level. If a callback
-   * is provided each element of the array is passed through the callback before
-   * flattening. The callback is bound to `thisArg` and invoked with three
-   * arguments; (value, index, array).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to flatten.
-   * @param {boolean} [isShallow=false] A flag to restrict flattening to a single level.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a new flattened array.
-   * @example
-   *
-   * _.flatten([1, [2], [3, [[4]]]]);
-   * // => [1, 2, 3, 4];
-   *
-   * _.flatten([1, [2], [3, [[4]]]], true);
-   * // => [1, 2, 3, [[4]]];
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 30, 'pets': ['hoppy'] },
-   *   { 'name': 'fred',   'age': 40, 'pets': ['baby puss', 'dino'] }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.flatten(characters, 'pets');
-   * // => ['hoppy', 'baby puss', 'dino']
-   */
-  function flatten(array, isShallow) {
-    return baseFlatten(array, isShallow);
-  }
-
-  /**
-   * Gets the index at which the first occurrence of `value` is found using
-   * strict equality for comparisons, i.e. `===`. If the array is already sorted
-   * providing `true` for `fromIndex` will run a faster binary search.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to search.
-   * @param {*} value The value to search for.
-   * @param {boolean|number} [fromIndex=0] The index to search from or `true`
-   *  to perform a binary search on a sorted array.
-   * @returns {number} Returns the index of the matched value or `-1`.
-   * @example
-   *
-   * _.indexOf([1, 2, 3, 1, 2, 3], 2);
-   * // => 1
-   *
-   * _.indexOf([1, 2, 3, 1, 2, 3], 2, 3);
-   * // => 4
-   *
-   * _.indexOf([1, 1, 2, 2, 3, 3], 2, true);
-   * // => 2
-   */
-  function indexOf(array, value, fromIndex) {
-    if (typeof fromIndex == 'number') {
-      var length = array ? array.length : 0;
-      fromIndex = (fromIndex < 0 ? nativeMax(0, length + fromIndex) : fromIndex || 0);
-    } else if (fromIndex) {
-      var index = sortedIndex(array, value);
-      return array[index] === value ? index : -1;
-    }
-    return baseIndexOf(array, value, fromIndex);
-  }
-
-  /**
-   * Gets all but the last element or last `n` elements of an array. If a
-   * callback is provided elements at the end of the array are excluded from
-   * the result as long as the callback returns truey. The callback is bound
-   * to `thisArg` and invoked with three arguments; (value, index, array).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to query.
-   * @param {Function|Object|number|string} [callback=1] The function called
-   *  per element or the number of elements to exclude. If a property name or
-   *  object is provided it will be used to create a "_.pluck" or "_.where"
-   *  style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a slice of `array`.
-   * @example
-   *
-   * _.initial([1, 2, 3]);
-   * // => [1, 2]
-   *
-   * _.initial([1, 2, 3], 2);
-   * // => [1]
-   *
-   * _.initial([1, 2, 3], function(num) {
-   *   return num > 1;
-   * });
-   * // => [1]
-   *
-   * var characters = [
-   *   { 'name': 'barney',  'blocked': false, 'employer': 'slate' },
-   *   { 'name': 'fred',    'blocked': true,  'employer': 'slate' },
-   *   { 'name': 'pebbles', 'blocked': true,  'employer': 'na' }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.initial(characters, 'blocked');
-   * // => [{ 'name': 'barney',  'blocked': false, 'employer': 'slate' }]
-   *
-   * // using "_.where" callback shorthand
-   * _.pluck(_.initial(characters, { 'employer': 'na' }), 'name');
-   * // => ['barney', 'fred']
-   */
-  function initial(array, callback, thisArg) {
-    var n = 0,
-        length = array ? array.length : 0;
-
-    if (typeof callback != 'number' && callback != null) {
-      var index = length;
-      callback = createCallback(callback, thisArg, 3);
-      while (index-- && callback(array[index], index, array)) {
-        n++;
-      }
-    } else {
-      n = (callback == null || thisArg) ? 1 : callback || n;
-    }
-    return slice(array, 0, nativeMin(nativeMax(0, length - n), length));
-  }
-
-  /**
-   * Creates an array of unique values present in all provided arrays using
-   * strict equality for comparisons, i.e. `===`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {...Array} [array] The arrays to inspect.
-   * @returns {Array} Returns an array of shared values.
-   * @example
-   *
-   * _.intersection([1, 2, 3], [5, 2, 1, 4], [2, 1]);
-   * // => [1, 2]
-   */
-  function intersection() {
-    var args = [],
-        argsIndex = -1,
-        argsLength = arguments.length;
-
-    while (++argsIndex < argsLength) {
-      var value = arguments[argsIndex];
-       if (isArray(value) || isArguments(value)) {
-         args.push(value);
-       }
-    }
-    var array = args[0],
-        index = -1,
-        indexOf = getIndexOf(),
-        length = array ? array.length : 0,
-        result = [];
-
-    outer:
-    while (++index < length) {
-      value = array[index];
-      if (indexOf(result, value) < 0) {
-        var argsIndex = argsLength;
-        while (--argsIndex) {
-          if (indexOf(args[argsIndex], value) < 0) {
-            continue outer;
-          }
-        }
-        result.push(value);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Gets the last element or last `n` elements of an array. If a callback is
-   * provided elements at the end of the array are returned as long as the
-   * callback returns truey. The callback is bound to `thisArg` and invoked
-   * with three arguments; (value, index, array).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to query.
-   * @param {Function|Object|number|string} [callback] The function called
-   *  per element or the number of elements to return. If a property name or
-   *  object is provided it will be used to create a "_.pluck" or "_.where"
-   *  style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {*} Returns the last element(s) of `array`.
-   * @example
-   *
-   * _.last([1, 2, 3]);
-   * // => 3
-   *
-   * _.last([1, 2, 3], 2);
-   * // => [2, 3]
-   *
-   * _.last([1, 2, 3], function(num) {
-   *   return num > 1;
-   * });
-   * // => [2, 3]
-   *
-   * var characters = [
-   *   { 'name': 'barney',  'blocked': false, 'employer': 'slate' },
-   *   { 'name': 'fred',    'blocked': true,  'employer': 'slate' },
-   *   { 'name': 'pebbles', 'blocked': true,  'employer': 'na' }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.pluck(_.last(characters, 'blocked'), 'name');
-   * // => ['fred', 'pebbles']
-   *
-   * // using "_.where" callback shorthand
-   * _.last(characters, { 'employer': 'na' });
-   * // => [{ 'name': 'pebbles', 'blocked': true, 'employer': 'na' }]
-   */
-  function last(array, callback, thisArg) {
-    var n = 0,
-        length = array ? array.length : 0;
-
-    if (typeof callback != 'number' && callback != null) {
-      var index = length;
-      callback = createCallback(callback, thisArg, 3);
-      while (index-- && callback(array[index], index, array)) {
-        n++;
-      }
-    } else {
-      n = callback;
-      if (n == null || thisArg) {
-        return array ? array[length - 1] : undefined;
-      }
-    }
-    return slice(array, nativeMax(0, length - n));
-  }
-
-  /**
-   * Gets the index at which the last occurrence of `value` is found using strict
-   * equality for comparisons, i.e. `===`. If `fromIndex` is negative, it is used
-   * as the offset from the end of the collection.
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to search.
-   * @param {*} value The value to search for.
-   * @param {number} [fromIndex=array.length-1] The index to search from.
-   * @returns {number} Returns the index of the matched value or `-1`.
-   * @example
-   *
-   * _.lastIndexOf([1, 2, 3, 1, 2, 3], 2);
-   * // => 4
-   *
-   * _.lastIndexOf([1, 2, 3, 1, 2, 3], 2, 3);
-   * // => 1
-   */
-  function lastIndexOf(array, value, fromIndex) {
-    var index = array ? array.length : 0;
-    if (typeof fromIndex == 'number') {
-      index = (fromIndex < 0 ? nativeMax(0, index + fromIndex) : nativeMin(fromIndex, index - 1)) + 1;
-    }
-    while (index--) {
-      if (array[index] === value) {
-        return index;
-      }
-    }
-    return -1;
-  }
-
-  /**
-   * Creates an array of numbers (positive and/or negative) progressing from
-   * `start` up to but not including `end`. If `start` is less than `stop` a
-   * zero-length range is created unless a negative `step` is specified.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {number} [start=0] The start of the range.
-   * @param {number} end The end of the range.
-   * @param {number} [step=1] The value to increment or decrement by.
-   * @returns {Array} Returns a new range array.
-   * @example
-   *
-   * _.range(4);
-   * // => [0, 1, 2, 3]
-   *
-   * _.range(1, 5);
-   * // => [1, 2, 3, 4]
-   *
-   * _.range(0, 20, 5);
-   * // => [0, 5, 10, 15]
-   *
-   * _.range(0, -4, -1);
-   * // => [0, -1, -2, -3]
-   *
-   * _.range(1, 4, 0);
-   * // => [1, 1, 1]
-   *
-   * _.range(0);
-   * // => []
-   */
-  function range(start, end, step) {
-    start = +start || 0;
-    step =  (+step || 1);
-
-    if (end == null) {
-      end = start;
-      start = 0;
-    }
-    // use `Array(length)` so engines like Chakra and V8 avoid slower modes
-    // http://youtu.be/XAqIpGU8ZZk#t=17m25s
-    var index = -1,
-        length = nativeMax(0, ceil((end - start) / step)),
-        result = Array(length);
-
-    while (++index < length) {
-      result[index] = start;
-      start += step;
-    }
-    return result;
-  }
-
-  /**
-   * The opposite of `_.initial` this method gets all but the first element or
-   * first `n` elements of an array. If a callback function is provided elements
-   * at the beginning of the array are excluded from the result as long as the
-   * callback returns truey. The callback is bound to `thisArg` and invoked
-   * with three arguments; (value, index, array).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias drop, tail
-   * @category Arrays
-   * @param {Array} array The array to query.
-   * @param {Function|Object|number|string} [callback=1] The function called
-   *  per element or the number of elements to exclude. If a property name or
-   *  object is provided it will be used to create a "_.pluck" or "_.where"
-   *  style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a slice of `array`.
-   * @example
-   *
-   * _.rest([1, 2, 3]);
-   * // => [2, 3]
-   *
-   * _.rest([1, 2, 3], 2);
-   * // => [3]
-   *
-   * _.rest([1, 2, 3], function(num) {
-   *   return num < 3;
-   * });
-   * // => [3]
-   *
-   * var characters = [
-   *   { 'name': 'barney',  'blocked': true,  'employer': 'slate' },
-   *   { 'name': 'fred',    'blocked': false,  'employer': 'slate' },
-   *   { 'name': 'pebbles', 'blocked': true, 'employer': 'na' }
-   * ];
-   *
-   * // using "_.pluck" callback shorthand
-   * _.pluck(_.rest(characters, 'blocked'), 'name');
-   * // => ['fred', 'pebbles']
-   *
-   * // using "_.where" callback shorthand
-   * _.rest(characters, { 'employer': 'slate' });
-   * // => [{ 'name': 'pebbles', 'blocked': true, 'employer': 'na' }]
-   */
-  function rest(array, callback, thisArg) {
-    if (typeof callback != 'number' && callback != null) {
-      var n = 0,
-          index = -1,
-          length = array ? array.length : 0;
-
-      callback = createCallback(callback, thisArg, 3);
-      while (++index < length && callback(array[index], index, array)) {
-        n++;
-      }
-    } else {
-      n = (callback == null || thisArg) ? 1 : nativeMax(0, callback);
-    }
-    return slice(array, n);
-  }
-
-  /**
-   * Uses a binary search to determine the smallest index at which a value
-   * should be inserted into a given sorted array in order to maintain the sort
-   * order of the array. If a callback is provided it will be executed for
-   * `value` and each element of `array` to compute their sort ranking. The
-   * callback is bound to `thisArg` and invoked with one argument; (value).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to inspect.
-   * @param {*} value The value to evaluate.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {number} Returns the index at which `value` should be inserted
-   *  into `array`.
-   * @example
-   *
-   * _.sortedIndex([20, 30, 50], 40);
-   * // => 2
-   *
-   * // using "_.pluck" callback shorthand
-   * _.sortedIndex([{ 'x': 20 }, { 'x': 30 }, { 'x': 50 }], { 'x': 40 }, 'x');
-   * // => 2
-   *
-   * var dict = {
-   *   'wordToNumber': { 'twenty': 20, 'thirty': 30, 'fourty': 40, 'fifty': 50 }
-   * };
-   *
-   * _.sortedIndex(['twenty', 'thirty', 'fifty'], 'fourty', function(word) {
-   *   return dict.wordToNumber[word];
-   * });
-   * // => 2
-   *
-   * _.sortedIndex(['twenty', 'thirty', 'fifty'], 'fourty', function(word) {
-   *   return this.wordToNumber[word];
-   * }, dict);
-   * // => 2
-   */
-  function sortedIndex(array, value, callback, thisArg) {
-    var low = 0,
-        high = array ? array.length : low;
-
-    // explicitly reference `identity` for better inlining in Firefox
-    callback = callback ? createCallback(callback, thisArg, 1) : identity;
-    value = callback(value);
-
-    while (low < high) {
-      var mid = (low + high) >>> 1;
-      (callback(array[mid]) < value)
-        ? low = mid + 1
-        : high = mid;
-    }
-    return low;
-  }
-
-  /**
-   * Creates an array of unique values, in order, of the provided arrays using
-   * strict equality for comparisons, i.e. `===`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {...Array} [array] The arrays to inspect.
-   * @returns {Array} Returns an array of combined values.
-   * @example
-   *
-   * _.union([1, 2, 3], [5, 2, 1, 4], [2, 1]);
-   * // => [1, 2, 3, 5, 4]
-   */
-  function union() {
-    return baseUniq(baseFlatten(arguments, true, true));
-  }
-
-  /**
-   * Creates a duplicate-value-free version of an array using strict equality
-   * for comparisons, i.e. `===`. If the array is sorted, providing
-   * `true` for `isSorted` will use a faster algorithm. If a callback is provided
-   * each element of `array` is passed through the callback before uniqueness
-   * is computed. The callback is bound to `thisArg` and invoked with three
-   * arguments; (value, index, array).
-   *
-   * If a property name is provided for `callback` the created "_.pluck" style
-   * callback will return the property value of the given element.
-   *
-   * If an object is provided for `callback` the created "_.where" style callback
-   * will return `true` for elements that have the properties of the given object,
-   * else `false`.
-   *
-   * @static
-   * @memberOf _
-   * @alias unique
-   * @category Arrays
-   * @param {Array} array The array to process.
-   * @param {boolean} [isSorted=false] A flag to indicate that `array` is sorted.
-   * @param {Function|Object|string} [callback=identity] The function called
-   *  per iteration. If a property name or object is provided it will be used
-   *  to create a "_.pluck" or "_.where" style callback, respectively.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns a duplicate-value-free array.
-   * @example
-   *
-   * _.uniq([1, 2, 1, 3, 1]);
-   * // => [1, 2, 3]
-   *
-   * _.uniq([1, 1, 2, 2, 3], true);
-   * // => [1, 2, 3]
-   *
-   * _.uniq(['A', 'b', 'C', 'a', 'B', 'c'], function(letter) { return letter.toLowerCase(); });
-   * // => ['A', 'b', 'C']
-   *
-   * _.uniq([1, 2.5, 3, 1.5, 2, 3.5], function(num) { return this.floor(num); }, Math);
-   * // => [1, 2.5, 3]
-   *
-   * // using "_.pluck" callback shorthand
-   * _.uniq([{ 'x': 1 }, { 'x': 2 }, { 'x': 1 }], 'x');
-   * // => [{ 'x': 1 }, { 'x': 2 }]
-   */
-  function uniq(array, isSorted, callback, thisArg) {
-    // juggle arguments
-    if (typeof isSorted != 'boolean' && isSorted != null) {
-      thisArg = callback;
-      callback = (typeof isSorted != 'function' && thisArg && thisArg[isSorted] === array) ? null : isSorted;
-      isSorted = false;
-    }
-    if (callback != null) {
-      callback = createCallback(callback, thisArg, 3);
-    }
-    return baseUniq(array, isSorted, callback);
-  }
-
-  /**
-   * Creates an array excluding all provided values using strict equality for
-   * comparisons, i.e. `===`.
-   *
-   * @static
-   * @memberOf _
-   * @category Arrays
-   * @param {Array} array The array to filter.
-   * @param {...*} [value] The values to exclude.
-   * @returns {Array} Returns a new array of filtered values.
-   * @example
-   *
-   * _.without([1, 2, 1, 0, 3, 1, 4], 0, 1);
-   * // => [2, 3, 4]
-   */
-  function without(array) {
-    return baseDifference(array, slice(arguments, 1));
-  }
-
-  /**
-   * Creates an array of grouped elements, the first of which contains the first
-   * elements of the given arrays, the second of which contains the second
-   * elements of the given arrays, and so on.
-   *
-   * @static
-   * @memberOf _
-   * @alias unzip
-   * @category Arrays
-   * @param {...Array} [array] Arrays to process.
-   * @returns {Array} Returns a new array of grouped elements.
-   * @example
-   *
-   * _.zip(['fred', 'barney'], [30, 40], [true, false]);
-   * // => [['fred', 30, true], ['barney', 40, false]]
-   */
-  function zip() {
-    var index = -1,
-        length = max(pluck(arguments, 'length')),
-        result = Array(length < 0 ? 0 : length);
-
-    while (++index < length) {
-      result[index] = pluck(arguments, index);
-    }
-    return result;
-  }
-
-  /**
-   * Creates an object composed from arrays of `keys` and `values`. Provide
-   * either a single two dimensional array, i.e. `[[key1, value1], [key2, value2]]`
-   * or two arrays, one of `keys` and one of corresponding `values`.
-   *
-   * @static
-   * @memberOf _
-   * @alias object
-   * @category Arrays
-   * @param {Array} keys The array of keys.
-   * @param {Array} [values=[]] The array of values.
-   * @returns {Object} Returns an object composed of the given keys and
-   *  corresponding values.
-   * @example
-   *
-   * _.zipObject(['fred', 'barney'], [30, 40]);
-   * // => { 'fred': 30, 'barney': 40 }
-   */
-  function zipObject(keys, values) {
-    var index = -1,
-        length = keys ? keys.length : 0,
-        result = {};
-
-    if (!values && length && !isArray(keys[0])) {
-      values = [];
-    }
-    while (++index < length) {
-      var key = keys[index];
-      if (values) {
-        result[key] = values[index];
-      } else if (key) {
-        result[key[0]] = key[1];
-      }
-    }
-    return result;
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Creates a function that executes `func`, with  the `this` binding and
-   * arguments of the created function, only after being called `n` times.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {number} n The number of times the function must be called before
-   *  `func` is executed.
-   * @param {Function} func The function to restrict.
-   * @returns {Function} Returns the new restricted function.
-   * @example
-   *
-   * var saves = ['profile', 'settings'];
-   *
-   * var done = _.after(saves.length, function() {
-   *   console.log('Done saving!');
-   * });
-   *
-   * _.forEach(saves, function(type) {
-   *   asyncSave({ 'type': type, 'complete': done });
-   * });
-   * // => logs 'Done saving!', after all saves have completed
-   */
-  function after(n, func) {
-    if (!isFunction(func)) {
-      throw new TypeError;
-    }
-    return function() {
-      if (--n < 1) {
-        return func.apply(this, arguments);
-      }
-    };
-  }
-
-  /**
-   * Creates a function that, when called, invokes `func` with the `this`
-   * binding of `thisArg` and prepends any additional `bind` arguments to those
-   * provided to the bound function.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to bind.
-   * @param {*} [thisArg] The `this` binding of `func`.
-   * @param {...*} [arg] Arguments to be partially applied.
-   * @returns {Function} Returns the new bound function.
-   * @example
-   *
-   * var func = function(greeting) {
-   *   return greeting + ' ' + this.name;
-   * };
-   *
-   * func = _.bind(func, { 'name': 'fred' }, 'hi');
-   * func();
-   * // => 'hi fred'
-   */
-  function bind(func, thisArg) {
-    return arguments.length > 2
-      ? createWrapper(func, 17, slice(arguments, 2), null, thisArg)
-      : createWrapper(func, 1, null, null, thisArg);
-  }
-
-  /**
-   * Binds methods of an object to the object itself, overwriting the existing
-   * method. Method names may be specified as individual arguments or as arrays
-   * of method names. If no method names are provided all the function properties
-   * of `object` will be bound.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Object} object The object to bind and assign the bound methods to.
-   * @param {...string} [methodName] The object method names to
-   *  bind, specified as individual method names or arrays of method names.
-   * @returns {Object} Returns `object`.
-   * @example
-   *
-   * var view = {
-   *   'label': 'docs',
-   *   'onClick': function() { console.log('clicked ' + this.label); }
-   * };
-   *
-   * _.bindAll(view);
-   * jQuery('#docs').on('click', view.onClick);
-   * // => logs 'clicked docs', when the button is clicked
-   */
-  function bindAll(object) {
-    var funcs = arguments.length > 1 ? baseFlatten(arguments, true, false, 1) : functions(object),
-        index = -1,
-        length = funcs.length;
-
-    while (++index < length) {
-      var key = funcs[index];
-      object[key] = createWrapper(object[key], 1, null, null, object);
-    }
-    return object;
-  }
-
-  /**
-   * Creates a function that is the composition of the provided functions,
-   * where each function consumes the return value of the function that follows.
-   * For example, composing the functions `f()`, `g()`, and `h()` produces `f(g(h()))`.
-   * Each function is executed with the `this` binding of the composed function.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {...Function} [func] Functions to compose.
-   * @returns {Function} Returns the new composed function.
-   * @example
-   *
-   * var realNameMap = {
-   *   'pebbles': 'penelope'
-   * };
-   *
-   * var format = function(name) {
-   *   name = realNameMap[name.toLowerCase()] || name;
-   *   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-   * };
-   *
-   * var greet = function(formatted) {
-   *   return 'Hiya ' + formatted + '!';
-   * };
-   *
-   * var welcome = _.compose(greet, format);
-   * welcome('pebbles');
-   * // => 'Hiya Penelope!'
-   */
-  function compose() {
-    var funcs = arguments,
-        length = funcs.length;
-
-    while (length--) {
-      if (!isFunction(funcs[length])) {
-        throw new TypeError;
-      }
-    }
-    return function() {
-      var args = arguments,
-          length = funcs.length;
-
-      while (length--) {
-        args = [funcs[length].apply(this, args)];
-      }
-      return args[0];
-    };
-  }
-
-  /**
-   * Creates a function that will delay the execution of `func` until after
-   * `wait` milliseconds have elapsed since the last time it was invoked.
-   * Provide an options object to indicate that `func` should be invoked on
-   * the leading and/or trailing edge of the `wait` timeout. Subsequent calls
-   * to the debounced function will return the result of the last `func` call.
-   *
-   * Note: If `leading` and `trailing` options are `true` `func` will be called
-   * on the trailing edge of the timeout only if the the debounced function is
-   * invoked more than once during the `wait` timeout.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to debounce.
-   * @param {number} wait The number of milliseconds to delay.
-   * @param {Object} [options] The options object.
-   * @param {boolean} [options.leading=false] Specify execution on the leading edge of the timeout.
-   * @param {number} [options.maxWait] The maximum time `func` is allowed to be delayed before it's called.
-   * @param {boolean} [options.trailing=true] Specify execution on the trailing edge of the timeout.
-   * @returns {Function} Returns the new debounced function.
-   * @example
-   *
-   * // avoid costly calculations while the window size is in flux
-   * var lazyLayout = _.debounce(calculateLayout, 150);
-   * jQuery(window).on('resize', lazyLayout);
-   *
-   * // execute `sendMail` when the click event is fired, debouncing subsequent calls
-   * jQuery('#postbox').on('click', _.debounce(sendMail, 300, {
-   *   'leading': true,
-   *   'trailing': false
-   * });
-   *
-   * // ensure `batchLog` is executed once after 1 second of debounced calls
-   * var source = new EventSource('/stream');
-   * source.addEventListener('message', _.debounce(batchLog, 250, {
-   *   'maxWait': 1000
-   * }, false);
-   */
-  function debounce(func, wait, options) {
-    var args,
-        maxTimeoutId,
-        result,
-        stamp,
-        thisArg,
-        timeoutId,
-        trailingCall,
-        lastCalled = 0,
-        maxWait = false,
-        trailing = true;
-
-    if (!isFunction(func)) {
-      throw new TypeError;
-    }
-    wait = nativeMax(0, wait) || 0;
-    if (options === true) {
-      var leading = true;
-      trailing = false;
-    } else if (isObject(options)) {
-      leading = options.leading;
-      maxWait = 'maxWait' in options && (nativeMax(wait, options.maxWait) || 0);
-      trailing = 'trailing' in options ? options.trailing : trailing;
-    }
-    var delayed = function() {
-      var remaining = wait - (now() - stamp);
-      if (remaining <= 0) {
-        if (maxTimeoutId) {
-          clearTimeout(maxTimeoutId);
-        }
-        var isCalled = trailingCall;
-        maxTimeoutId = timeoutId = trailingCall = undefined;
-        if (isCalled) {
-          lastCalled = now();
-          result = func.apply(thisArg, args);
-          if (!timeoutId && !maxTimeoutId) {
-            args = thisArg = null;
-          }
-        }
-      } else {
-        timeoutId = setTimeout(delayed, remaining);
-      }
-    };
-
-    var maxDelayed = function() {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      maxTimeoutId = timeoutId = trailingCall = undefined;
-      if (trailing || (maxWait !== wait)) {
-        lastCalled = now();
-        result = func.apply(thisArg, args);
-        if (!timeoutId && !maxTimeoutId) {
-          args = thisArg = null;
-        }
-      }
-    };
-
-    return function() {
-      args = arguments;
-      stamp = now();
-      thisArg = this;
-      trailingCall = trailing && (timeoutId || !leading);
-
-      if (maxWait === false) {
-        var leadingCall = leading && !timeoutId;
-      } else {
-        if (!maxTimeoutId && !leading) {
-          lastCalled = stamp;
-        }
-        var remaining = maxWait - (stamp - lastCalled),
-            isCalled = remaining <= 0;
-
-        if (isCalled) {
-          if (maxTimeoutId) {
-            maxTimeoutId = clearTimeout(maxTimeoutId);
-          }
-          lastCalled = stamp;
-          result = func.apply(thisArg, args);
-        }
-        else if (!maxTimeoutId) {
-          maxTimeoutId = setTimeout(maxDelayed, remaining);
-        }
-      }
-      if (isCalled && timeoutId) {
-        timeoutId = clearTimeout(timeoutId);
-      }
-      else if (!timeoutId && wait !== maxWait) {
-        timeoutId = setTimeout(delayed, wait);
-      }
-      if (leadingCall) {
-        isCalled = true;
-        result = func.apply(thisArg, args);
-      }
-      if (isCalled && !timeoutId && !maxTimeoutId) {
-        args = thisArg = null;
-      }
-      return result;
-    };
-  }
-
-  /**
-   * Defers executing the `func` function until the current call stack has cleared.
-   * Additional arguments will be provided to `func` when it is invoked.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to defer.
-   * @param {...*} [arg] Arguments to invoke the function with.
-   * @returns {number} Returns the timer id.
-   * @example
-   *
-   * _.defer(function(text) { console.log(text); }, 'deferred');
-   * // logs 'deferred' after one or more milliseconds
-   */
-  function defer(func) {
-    if (!isFunction(func)) {
-      throw new TypeError;
-    }
-    var args = slice(arguments, 1);
-    return setTimeout(function() { func.apply(undefined, args); }, 1);
-  }
-
-  /**
-   * Executes the `func` function after `wait` milliseconds. Additional arguments
-   * will be provided to `func` when it is invoked.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to delay.
-   * @param {number} wait The number of milliseconds to delay execution.
-   * @param {...*} [arg] Arguments to invoke the function with.
-   * @returns {number} Returns the timer id.
-   * @example
-   *
-   * _.delay(function(text) { console.log(text); }, 1000, 'later');
-   * // => logs 'later' after one second
-   */
-  function delay(func, wait) {
-    if (!isFunction(func)) {
-      throw new TypeError;
-    }
-    var args = slice(arguments, 2);
-    return setTimeout(function() { func.apply(undefined, args); }, wait);
-  }
-
-  /**
-   * Creates a function that memoizes the result of `func`. If `resolver` is
-   * provided it will be used to determine the cache key for storing the result
-   * based on the arguments provided to the memoized function. By default, the
-   * first argument provided to the memoized function is used as the cache key.
-   * The `func` is executed with the `this` binding of the memoized function.
-   * The result cache is exposed as the `cache` property on the memoized function.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to have its output memoized.
-   * @param {Function} [resolver] A function used to resolve the cache key.
-   * @returns {Function} Returns the new memoizing function.
-   * @example
-   *
-   * var fibonacci = _.memoize(function(n) {
-   *   return n < 2 ? n : fibonacci(n - 1) + fibonacci(n - 2);
-   * });
-   *
-   * fibonacci(9)
-   * // => 34
-   *
-   * var data = {
-   *   'fred': { 'name': 'fred', 'age': 40 },
-   *   'pebbles': { 'name': 'pebbles', 'age': 1 }
-   * };
-   *
-   * // modifying the result cache
-   * var get = _.memoize(function(name) { return data[name]; }, _.identity);
-   * get('pebbles');
-   * // => { 'name': 'pebbles', 'age': 1 }
-   *
-   * get.cache.pebbles.name = 'penelope';
-   * get('pebbles');
-   * // => { 'name': 'penelope', 'age': 1 }
-   */
-  function memoize(func, resolver) {
-    var cache = {};
-    return function() {
-      var key = resolver ? resolver.apply(this, arguments) : keyPrefix + arguments[0];
-      return hasOwnProperty.call(cache, key)
-        ? cache[key]
-        : (cache[key] = func.apply(this, arguments));
-    };
-  }
-
-  /**
-   * Creates a function that is restricted to execute `func` once. Repeat calls to
-   * the function will return the value of the first call. The `func` is executed
-   * with the `this` binding of the created function.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to restrict.
-   * @returns {Function} Returns the new restricted function.
-   * @example
-   *
-   * var initialize = _.once(createApplication);
-   * initialize();
-   * initialize();
-   * // `initialize` executes `createApplication` once
-   */
-  function once(func) {
-    var ran,
-        result;
-
-    if (!isFunction(func)) {
-      throw new TypeError;
-    }
-    return function() {
-      if (ran) {
-        return result;
-      }
-      ran = true;
-      result = func.apply(this, arguments);
-
-      // clear the `func` variable so the function may be garbage collected
-      func = null;
-      return result;
-    };
-  }
-
-  /**
-   * Creates a function that, when called, invokes `func` with any additional
-   * `partial` arguments prepended to those provided to the new function. This
-   * method is similar to `_.bind` except it does **not** alter the `this` binding.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to partially apply arguments to.
-   * @param {...*} [arg] Arguments to be partially applied.
-   * @returns {Function} Returns the new partially applied function.
-   * @example
-   *
-   * var greet = function(greeting, name) { return greeting + ' ' + name; };
-   * var hi = _.partial(greet, 'hi');
-   * hi('fred');
-   * // => 'hi fred'
-   */
-  function partial(func) {
-    return createWrapper(func, 16, slice(arguments, 1));
-  }
-
-  /**
-   * Creates a function that, when executed, will only call the `func` function
-   * at most once per every `wait` milliseconds. Provide an options object to
-   * indicate that `func` should be invoked on the leading and/or trailing edge
-   * of the `wait` timeout. Subsequent calls to the throttled function will
-   * return the result of the last `func` call.
-   *
-   * Note: If `leading` and `trailing` options are `true` `func` will be called
-   * on the trailing edge of the timeout only if the the throttled function is
-   * invoked more than once during the `wait` timeout.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {Function} func The function to throttle.
-   * @param {number} wait The number of milliseconds to throttle executions to.
-   * @param {Object} [options] The options object.
-   * @param {boolean} [options.leading=true] Specify execution on the leading edge of the timeout.
-   * @param {boolean} [options.trailing=true] Specify execution on the trailing edge of the timeout.
-   * @returns {Function} Returns the new throttled function.
-   * @example
-   *
-   * // avoid excessively updating the position while scrolling
-   * var throttled = _.throttle(updatePosition, 100);
-   * jQuery(window).on('scroll', throttled);
-   *
-   * // execute `renewToken` when the click event is fired, but not more than once every 5 minutes
-   * jQuery('.interactive').on('click', _.throttle(renewToken, 300000, {
-   *   'trailing': false
-   * }));
-   */
-  function throttle(func, wait, options) {
-    var leading = true,
-        trailing = true;
-
-    if (!isFunction(func)) {
-      throw new TypeError;
-    }
-    if (options === false) {
-      leading = false;
-    } else if (isObject(options)) {
-      leading = 'leading' in options ? options.leading : leading;
-      trailing = 'trailing' in options ? options.trailing : trailing;
-    }
-    options = {};
-    options.leading = leading;
-    options.maxWait = wait;
-    options.trailing = trailing;
-
-    return debounce(func, wait, options);
-  }
-
-  /**
-   * Creates a function that provides `value` to the wrapper function as its
-   * first argument. Additional arguments provided to the function are appended
-   * to those provided to the wrapper function. The wrapper is executed with
-   * the `this` binding of the created function.
-   *
-   * @static
-   * @memberOf _
-   * @category Functions
-   * @param {*} value The value to wrap.
-   * @param {Function} wrapper The wrapper function.
-   * @returns {Function} Returns the new function.
-   * @example
-   *
-   * var p = _.wrap(_.escape, function(func, text) {
-   *   return '<p>' + func(text) + '</p>';
-   * });
-   *
-   * p('Fred, Wilma, & Pebbles');
-   * // => '<p>Fred, Wilma, &amp; Pebbles</p>'
-   */
-  function wrap(value, wrapper) {
-    return createWrapper(wrapper, 16, [value]);
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Produces a callback bound to an optional `thisArg`. If `func` is a property
-   * name the created callback will return the property value for a given element.
-   * If `func` is an object the created callback will return `true` for elements
-   * that contain the equivalent object properties, otherwise it will return `false`.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {*} [func=identity] The value to convert to a callback.
-   * @param {*} [thisArg] The `this` binding of the created callback.
-   * @param {number} [argCount] The number of arguments the callback accepts.
-   * @returns {Function} Returns a callback function.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * // wrap to create custom callback shorthands
-   * _.createCallback = _.wrap(_.createCallback, function(func, callback, thisArg) {
-   *   var match = /^(.+?)__([gl]t)(.+)$/.exec(callback);
-   *   return !match ? func(callback, thisArg) : function(object) {
-   *     return match[2] == 'gt' ? object[match[1]] > match[3] : object[match[1]] < match[3];
-   *   };
-   * });
-   *
-   * _.filter(characters, 'age__gt38');
-   * // => [{ 'name': 'fred', 'age': 40 }]
-   */
-  function createCallback(func, thisArg, argCount) {
-    var type = typeof func;
-    if (func == null || type == 'function') {
-      return baseCreateCallback(func, thisArg, argCount);
-    }
-    // handle "_.pluck" style callback shorthands
-    if (type != 'object') {
-      return property(func);
-    }
-    var props = keys(func);
-    return function(object) {
-      var length = props.length,
-          result = false;
-
-      while (length--) {
-        if (!(result = object[props[length]] === func[props[length]])) {
-          break;
-        }
-      }
-      return result;
-    };
-  }
-
-  /**
-   * Converts the characters `&`, `<`, `>`, `"`, and `'` in `string` to their
-   * corresponding HTML entities.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {string} string The string to escape.
-   * @returns {string} Returns the escaped string.
-   * @example
-   *
-   * _.escape('Fred, Wilma, & Pebbles');
-   * // => 'Fred, Wilma, &amp; Pebbles'
-   */
-  function escape(string) {
-    return string == null ? '' : String(string).replace(reUnescapedHtml, escapeHtmlChar);
-  }
-
-  /**
-   * This method returns the first argument provided to it.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {*} value Any value.
-   * @returns {*} Returns `value`.
-   * @example
-   *
-   * var object = { 'name': 'fred' };
-   * _.identity(object) === object;
-   * // => true
-   */
-  function identity(value) {
-    return value;
-  }
-
-  /**
-   * Adds function properties of a source object to the destination object.
-   * If `object` is a function methods will be added to its prototype as well.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {Function|Object} [object=lodash] object The destination object.
-   * @param {Object} source The object of functions to add.
-   * @param {Object} [options] The options object.
-   * @param {boolean} [options.chain=true] Specify whether the functions added are chainable.
-   * @example
-   *
-   * function capitalize(string) {
-   *   return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
-   * }
-   *
-   * _.mixin({ 'capitalize': capitalize });
-   * _.capitalize('fred');
-   * // => 'Fred'
-   *
-   * _('fred').capitalize().value();
-   * // => 'Fred'
-   *
-   * _.mixin({ 'capitalize': capitalize }, { 'chain': false });
-   * _('fred').capitalize();
-   * // => 'Fred'
-   */
-  function mixin(object) {
-    forEach(functions(object), function(methodName) {
-      var func = lodash[methodName] = object[methodName];
-
-      lodash.prototype[methodName] = function() {
-        var args = [this.__wrapped__];
-        push.apply(args, arguments);
-
-        var result = func.apply(lodash, args);
-        return this.__chain__
-          ? new lodashWrapper(result, true)
-          : result;
-      };
-    });
-  }
-
-  /**
-   * Reverts the '_' variable to its previous value and returns a reference to
-   * the `lodash` function.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @returns {Function} Returns the `lodash` function.
-   * @example
-   *
-   * var lodash = _.noConflict();
-   */
-  function noConflict() {
-    root._ = oldDash;
-    return this;
-  }
-
-  /**
-   * A no-operation function.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @example
-   *
-   * var object = { 'name': 'fred' };
-   * _.noop(object) === undefined;
-   * // => true
-   */
-  function noop() {
-    // no operation performed
-  }
-
-  /**
-   * Gets the number of milliseconds that have elapsed since the Unix epoch
-   * (1 January 1970 00:00:00 UTC).
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @example
-   *
-   * var stamp = _.now();
-   * _.defer(function() { console.log(_.now() - stamp); });
-   * // => logs the number of milliseconds it took for the deferred function to be called
-   */
-  var now = isNative(now = Date.now) && now || function() {
-    return new Date().getTime();
-  };
-
-  /**
-   * Creates a "_.pluck" style function, which returns the `key` value of a
-   * given object.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {string} key The name of the property to retrieve.
-   * @returns {Function} Returns the new function.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'fred',   'age': 40 },
-   *   { 'name': 'barney', 'age': 36 }
-   * ];
-   *
-   * var getName = _.property('name');
-   *
-   * _.map(characters, getName);
-   * // => ['barney', 'fred']
-   *
-   * _.sortBy(characters, getName);
-   * // => [{ 'name': 'barney', 'age': 36 }, { 'name': 'fred',   'age': 40 }]
-   */
-  function property(key) {
-    return function(object) {
-      return object[key];
-    };
-  }
-
-  /**
-   * Produces a random number between `min` and `max` (inclusive). If only one
-   * argument is provided a number between `0` and the given number will be
-   * returned. If `floating` is truey or either `min` or `max` are floats a
-   * floating-point number will be returned instead of an integer.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {number} [min=0] The minimum possible value.
-   * @param {number} [max=1] The maximum possible value.
-   * @param {boolean} [floating=false] Specify returning a floating-point number.
-   * @returns {number} Returns a random number.
-   * @example
-   *
-   * _.random(0, 5);
-   * // => an integer between 0 and 5
-   *
-   * _.random(5);
-   * // => also an integer between 0 and 5
-   *
-   * _.random(5, true);
-   * // => a floating-point number between 0 and 5
-   *
-   * _.random(1.2, 5.2);
-   * // => a floating-point number between 1.2 and 5.2
-   */
-  function random(min, max) {
-    if (min == null && max == null) {
-      max = 1;
-    }
-    min = +min || 0;
-    if (max == null) {
-      max = min;
-      min = 0;
-    } else {
-      max = +max || 0;
-    }
-    return min + floor(nativeRandom() * (max - min + 1));
-  }
-
-  /**
-   * Resolves the value of property `key` on `object`. If `key` is a function
-   * it will be invoked with the `this` binding of `object` and its result returned,
-   * else the property value is returned. If `object` is falsey then `undefined`
-   * is returned.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {Object} object The object to inspect.
-   * @param {string} key The name of the property to resolve.
-   * @returns {*} Returns the resolved value.
-   * @example
-   *
-   * var object = {
-   *   'cheese': 'crumpets',
-   *   'stuff': function() {
-   *     return 'nonsense';
-   *   }
-   * };
-   *
-   * _.result(object, 'cheese');
-   * // => 'crumpets'
-   *
-   * _.result(object, 'stuff');
-   * // => 'nonsense'
-   */
-  function result(object, key) {
-    if (object) {
-      var value = object[key];
-      return isFunction(value) ? object[key]() : value;
-    }
-  }
-
-  /**
-   * A micro-templating method that handles arbitrary delimiters, preserves
-   * whitespace, and correctly escapes quotes within interpolated code.
-   *
-   * Note: In the development build, `_.template` utilizes sourceURLs for easier
-   * debugging. See http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl
-   *
-   * For more information on precompiling templates see:
-   * http://lodash.com/custom-builds
-   *
-   * For more information on Chrome extension sandboxes see:
-   * http://developer.chrome.com/stable/extensions/sandboxingEval.html
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {string} text The template text.
-   * @param {Object} data The data object used to populate the text.
-   * @param {Object} [options] The options object.
-   * @param {RegExp} [options.escape] The "escape" delimiter.
-   * @param {RegExp} [options.evaluate] The "evaluate" delimiter.
-   * @param {Object} [options.imports] An object to import into the template as local variables.
-   * @param {RegExp} [options.interpolate] The "interpolate" delimiter.
-   * @param {string} [sourceURL] The sourceURL of the template's compiled source.
-   * @param {string} [variable] The data object variable name.
-   * @returns {Function|string} Returns a compiled function when no `data` object
-   *  is given, else it returns the interpolated text.
-   * @example
-   *
-   * // using the "interpolate" delimiter to create a compiled template
-   * var compiled = _.template('hello <%= name %>');
-   * compiled({ 'name': 'fred' });
-   * // => 'hello fred'
-   *
-   * // using the "escape" delimiter to escape HTML in data property values
-   * _.template('<b><%- value %></b>', { 'value': '<script>' });
-   * // => '<b>&lt;script&gt;</b>'
-   *
-   * // using the "evaluate" delimiter to generate HTML
-   * var list = '<% _.forEach(people, function(name) { %><li><%- name %></li><% }); %>';
-   * _.template(list, { 'people': ['fred', 'barney'] });
-   * // => '<li>fred</li><li>barney</li>'
-   *
-   * // using the ES6 delimiter as an alternative to the default "interpolate" delimiter
-   * _.template('hello ${ name }', { 'name': 'pebbles' });
-   * // => 'hello pebbles'
-   *
-   * // using the internal `print` function in "evaluate" delimiters
-   * _.template('<% print("hello " + name); %>!', { 'name': 'barney' });
-   * // => 'hello barney!'
-   *
-   * // using a custom template delimiters
-   * _.templateSettings = {
-   *   'interpolate': /{{([\s\S]+?)}}/g
-   * };
-   *
-   * _.template('hello {{ name }}!', { 'name': 'mustache' });
-   * // => 'hello mustache!'
-   *
-   * // using the `imports` option to import jQuery
-   * var list = '<% jq.each(people, function(name) { %><li><%- name %></li><% }); %>';
-   * _.template(list, { 'people': ['fred', 'barney'] }, { 'imports': { 'jq': jQuery } });
-   * // => '<li>fred</li><li>barney</li>'
-   *
-   * // using the `sourceURL` option to specify a custom sourceURL for the template
-   * var compiled = _.template('hello <%= name %>', null, { 'sourceURL': '/basic/greeting.jst' });
-   * compiled(data);
-   * // => find the source of "greeting.jst" under the Sources tab or Resources panel of the web inspector
-   *
-   * // using the `variable` option to ensure a with-statement isn't used in the compiled template
-   * var compiled = _.template('hi <%= data.name %>!', null, { 'variable': 'data' });
-   * compiled.source;
-   * // => function(data) {
-   *   var __t, __p = '', __e = _.escape;
-   *   __p += 'hi ' + ((__t = ( data.name )) == null ? '' : __t) + '!';
-   *   return __p;
-   * }
-   *
-   * // using the `source` property to inline compiled templates for meaningful
-   * // line numbers in error messages and a stack trace
-   * fs.writeFileSync(path.join(cwd, 'jst.js'), '\
-   *   var JST = {\
-   *     "main": ' + _.template(mainText).source + '\
-   *   };\
-   * ');
-   */
-  function template(text, data, options) {
-    var _ = lodash,
-        settings = _.templateSettings;
-
-    text = String(text || '');
-    options = defaults({}, options, settings);
-
-    var index = 0,
-        source = "__p += '",
-        variable = options.variable;
-
-    var reDelimiters = RegExp(
-      (options.escape || reNoMatch).source + '|' +
-      (options.interpolate || reNoMatch).source + '|' +
-      (options.evaluate || reNoMatch).source + '|$'
-    , 'g');
-
-    text.replace(reDelimiters, function(match, escapeValue, interpolateValue, evaluateValue, offset) {
-      source += text.slice(index, offset).replace(reUnescapedString, escapeStringChar);
-      if (escapeValue) {
-        source += "' +\n_.escape(" + escapeValue + ") +\n'";
-      }
-      if (evaluateValue) {
-        source += "';\n" + evaluateValue + ";\n__p += '";
-      }
-      if (interpolateValue) {
-        source += "' +\n((__t = (" + interpolateValue + ")) == null ? '' : __t) +\n'";
-      }
-      index = offset + match.length;
-      return match;
-    });
-
-    source += "';\n";
-    if (!variable) {
-      variable = 'obj';
-      source = 'with (' + variable + ' || {}) {\n' + source + '\n}\n';
-    }
-    source = 'function(' + variable + ') {\n' +
-      "var __t, __p = '', __j = Array.prototype.join;\n" +
-      "function print() { __p += __j.call(arguments, '') }\n" +
-      source +
-      'return __p\n}';
-
-    try {
-      var result = Function('_', 'return ' + source)(_);
-    } catch(e) {
-      e.source = source;
-      throw e;
-    }
-    if (data) {
-      return result(data);
-    }
-    result.source = source;
-    return result;
-  }
-
-  /**
-   * Executes the callback `n` times, returning an array of the results
-   * of each callback execution. The callback is bound to `thisArg` and invoked
-   * with one argument; (index).
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {number} n The number of times to execute the callback.
-   * @param {Function} callback The function called per iteration.
-   * @param {*} [thisArg] The `this` binding of `callback`.
-   * @returns {Array} Returns an array of the results of each `callback` execution.
-   * @example
-   *
-   * var diceRolls = _.times(3, _.partial(_.random, 1, 6));
-   * // => [3, 6, 4]
-   *
-   * _.times(3, function(n) { mage.castSpell(n); });
-   * // => calls `mage.castSpell(n)` three times, passing `n` of `0`, `1`, and `2` respectively
-   *
-   * _.times(3, function(n) { this.cast(n); }, mage);
-   * // => also calls `mage.castSpell(n)` three times
-   */
-  function times(n, callback, thisArg) {
-    n = (n = +n) > -1 ? n : 0;
-    var index = -1,
-        result = Array(n);
-
-    callback = baseCreateCallback(callback, thisArg, 1);
-    while (++index < n) {
-      result[index] = callback(index);
-    }
-    return result;
-  }
-
-  /**
-   * The inverse of `_.escape` this method converts the HTML entities
-   * `&amp;`, `&lt;`, `&gt;`, `&quot;`, and `&#39;` in `string` to their
-   * corresponding characters.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {string} string The string to unescape.
-   * @returns {string} Returns the unescaped string.
-   * @example
-   *
-   * _.unescape('Fred, Barney &amp; Pebbles');
-   * // => 'Fred, Barney & Pebbles'
-   */
-  function unescape(string) {
-    return string == null ? '' : String(string).replace(reEscapedHtml, unescapeHtmlChar);
-  }
-
-  /**
-   * Generates a unique ID. If `prefix` is provided the ID will be appended to it.
-   *
-   * @static
-   * @memberOf _
-   * @category Utilities
-   * @param {string} [prefix] The value to prefix the ID with.
-   * @returns {string} Returns the unique ID.
-   * @example
-   *
-   * _.uniqueId('contact_');
-   * // => 'contact_104'
-   *
-   * _.uniqueId();
-   * // => '105'
-   */
-  function uniqueId(prefix) {
-    var id = ++idCounter + '';
-    return prefix ? prefix + id : id;
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  /**
-   * Creates a `lodash` object that wraps the given value with explicit
-   * method chaining enabled.
-   *
-   * @static
-   * @memberOf _
-   * @category Chaining
-   * @param {*} value The value to wrap.
-   * @returns {Object} Returns the wrapper object.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'barney',  'age': 36 },
-   *   { 'name': 'fred',    'age': 40 },
-   *   { 'name': 'pebbles', 'age': 1 }
-   * ];
-   *
-   * var youngest = _.chain(characters)
-   *     .sortBy('age')
-   *     .map(function(chr) { return chr.name + ' is ' + chr.age; })
-   *     .first()
-   *     .value();
-   * // => 'pebbles is 1'
-   */
-  function chain(value) {
-    value = new lodashWrapper(value);
-    value.__chain__ = true;
-    return value;
-  }
-
-  /**
-   * Invokes `interceptor` with the `value` as the first argument and then
-   * returns `value`. The purpose of this method is to "tap into" a method
-   * chain in order to perform operations on intermediate results within
-   * the chain.
-   *
-   * @static
-   * @memberOf _
-   * @category Chaining
-   * @param {*} value The value to provide to `interceptor`.
-   * @param {Function} interceptor The function to invoke.
-   * @returns {*} Returns `value`.
-   * @example
-   *
-   * _([1, 2, 3, 4])
-   *  .tap(function(array) { array.pop(); })
-   *  .reverse()
-   *  .value();
-   * // => [3, 2, 1]
-   */
-  function tap(value, interceptor) {
-    interceptor(value);
-    return value;
-  }
-
-  /**
-   * Enables explicit method chaining on the wrapper object.
-   *
-   * @name chain
-   * @memberOf _
-   * @category Chaining
-   * @returns {*} Returns the wrapper object.
-   * @example
-   *
-   * var characters = [
-   *   { 'name': 'barney', 'age': 36 },
-   *   { 'name': 'fred',   'age': 40 }
-   * ];
-   *
-   * // without explicit chaining
-   * _(characters).first();
-   * // => { 'name': 'barney', 'age': 36 }
-   *
-   * // with explicit chaining
-   * _(characters).chain()
-   *   .first()
-   *   .pick('age')
-   *   .value();
-   * // => { 'age': 36 }
-   */
-  function wrapperChain() {
-    this.__chain__ = true;
-    return this;
-  }
-
-  /**
-   * Extracts the wrapped value.
-   *
-   * @name valueOf
-   * @memberOf _
-   * @alias value
-   * @category Chaining
-   * @returns {*} Returns the wrapped value.
-   * @example
-   *
-   * _([1, 2, 3]).valueOf();
-   * // => [1, 2, 3]
-   */
-  function wrapperValueOf() {
-    return this.__wrapped__;
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  // add functions that return wrapped values when chaining
-  lodash.after = after;
-  lodash.bind = bind;
-  lodash.bindAll = bindAll;
-  lodash.chain = chain;
-  lodash.compact = compact;
-  lodash.compose = compose;
-  lodash.countBy = countBy;
-  lodash.debounce = debounce;
-  lodash.defaults = defaults;
-  lodash.defer = defer;
-  lodash.delay = delay;
-  lodash.difference = difference;
-  lodash.filter = filter;
-  lodash.flatten = flatten;
-  lodash.forEach = forEach;
-  lodash.functions = functions;
-  lodash.groupBy = groupBy;
-  lodash.indexBy = indexBy;
-  lodash.initial = initial;
-  lodash.intersection = intersection;
-  lodash.invert = invert;
-  lodash.invoke = invoke;
-  lodash.keys = keys;
-  lodash.map = map;
-  lodash.max = max;
-  lodash.memoize = memoize;
-  lodash.min = min;
-  lodash.omit = omit;
-  lodash.once = once;
-  lodash.pairs = pairs;
-  lodash.partial = partial;
-  lodash.pick = pick;
-  lodash.pluck = pluck;
-  lodash.range = range;
-  lodash.reject = reject;
-  lodash.rest = rest;
-  lodash.shuffle = shuffle;
-  lodash.sortBy = sortBy;
-  lodash.tap = tap;
-  lodash.throttle = throttle;
-  lodash.times = times;
-  lodash.toArray = toArray;
-  lodash.union = union;
-  lodash.uniq = uniq;
-  lodash.values = values;
-  lodash.where = where;
-  lodash.without = without;
-  lodash.wrap = wrap;
-  lodash.zip = zip;
-
-  // add aliases
-  lodash.collect = map;
-  lodash.drop = rest;
-  lodash.each = forEach;
-  lodash.extend = assign;
-  lodash.methods = functions;
-  lodash.object = zipObject;
-  lodash.select = filter;
-  lodash.tail = rest;
-  lodash.unique = uniq;
-
-  /*--------------------------------------------------------------------------*/
-
-  // add functions that return unwrapped values when chaining
-  lodash.clone = clone;
-  lodash.contains = contains;
-  lodash.escape = escape;
-  lodash.every = every;
-  lodash.find = find;
-  lodash.has = has;
-  lodash.identity = identity;
-  lodash.indexOf = indexOf;
-  lodash.isArguments = isArguments;
-  lodash.isArray = isArray;
-  lodash.isBoolean = isBoolean;
-  lodash.isDate = isDate;
-  lodash.isElement = isElement;
-  lodash.isEmpty = isEmpty;
-  lodash.isEqual = isEqual;
-  lodash.isFinite = isFinite;
-  lodash.isFunction = isFunction;
-  lodash.isNaN = isNaN;
-  lodash.isNull = isNull;
-  lodash.isNumber = isNumber;
-  lodash.isObject = isObject;
-  lodash.isRegExp = isRegExp;
-  lodash.isString = isString;
-  lodash.isUndefined = isUndefined;
-  lodash.lastIndexOf = lastIndexOf;
-  lodash.mixin = mixin;
-  lodash.noConflict = noConflict;
-  lodash.random = random;
-  lodash.reduce = reduce;
-  lodash.reduceRight = reduceRight;
-  lodash.result = result;
-  lodash.size = size;
-  lodash.some = some;
-  lodash.sortedIndex = sortedIndex;
-  lodash.template = template;
-  lodash.unescape = unescape;
-  lodash.uniqueId = uniqueId;
-
-  // add aliases
-  lodash.all = every;
-  lodash.any = some;
-  lodash.detect = find;
-  lodash.findWhere = findWhere;
-  lodash.foldl = reduce;
-  lodash.foldr = reduceRight;
-  lodash.include = contains;
-  lodash.inject = reduce;
-
-  /*--------------------------------------------------------------------------*/
-
-  // add functions capable of returning wrapped and unwrapped values when chaining
-  lodash.first = first;
-  lodash.last = last;
-  lodash.sample = sample;
-
-  // add aliases
-  lodash.take = first;
-  lodash.head = first;
-
-  /*--------------------------------------------------------------------------*/
-
-  // add functions to `lodash.prototype`
-  mixin(lodash);
-
-  /**
-   * The semantic version number.
-   *
-   * @static
-   * @memberOf _
-   * @type string
-   */
-  lodash.VERSION = '2.4.1';
-
-  // add "Chaining" functions to the wrapper
-  lodash.prototype.chain = wrapperChain;
-  lodash.prototype.value = wrapperValueOf;
-
-    // add `Array` mutator functions to the wrapper
-    forEach(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(methodName) {
-      var func = arrayRef[methodName];
-      lodash.prototype[methodName] = function() {
-        var value = this.__wrapped__;
-        func.apply(value, arguments);
-
-        // avoid array-like object bugs with `Array#shift` and `Array#splice`
-        // in Firefox < 10 and IE < 9
-        if (!support.spliceObjects && value.length === 0) {
-          delete value[0];
-        }
-        return this;
-      };
-    });
-
-    // add `Array` accessor functions to the wrapper
-    forEach(['concat', 'join', 'slice'], function(methodName) {
-      var func = arrayRef[methodName];
-      lodash.prototype[methodName] = function() {
-        var value = this.__wrapped__,
-            result = func.apply(value, arguments);
-
-        if (this.__chain__) {
-          result = new lodashWrapper(result);
-          result.__chain__ = true;
-        }
-        return result;
-      };
-    });
-
-  /*--------------------------------------------------------------------------*/
-
-  // some AMD build optimizers like r.js check for condition patterns like the following:
-  if (typeof define == 'function' && typeof define.amd == 'object' && define.amd) {
-    // Expose Lo-Dash to the global object even when an AMD loader is present in
-    // case Lo-Dash is loaded with a RequireJS shim config.
-    // See http://requirejs.org/docs/api.html#config-shim
-    root._ = lodash;
-
-    // define as an anonymous module so, through path mapping, it can be
-    // referenced as the "underscore" module
-    define('underscore',[],function() {
-      return lodash;
-    });
-  }
-  // check for `exports` after `define` in case a build optimizer adds an `exports` object
-  else if (freeExports && freeModule) {
-    // in Node.js or RingoJS
-    if (moduleExports) {
-      (freeModule.exports = lodash)._ = lodash;
-    }
-    // in Narwhal or Rhino -require
-    else {
-      freeExports._ = lodash;
-    }
-  }
-  else {
-    // in a browser or Rhino
-    root._ = lodash;
-  }
-}.call(this));
 
 /* Pattern utils
  */
@@ -31342,6 +28357,8 @@ define('mockup-utils',[
       attributes: ['UID', 'Title', 'Description', 'getURL', 'portal_type'],
       batchSize: 10, // number of results to retrive
       baseCriteria: [],
+      sort_on: 'is_folderish',
+      sort_order: 'reverse',
       pathDepth: 1
     };
     self.options = $.extend({}, defaults, options);
@@ -31414,7 +28431,13 @@ define('mockup-utils',[
           v: term
         });
       }
-      if (self.pattern.browsing) {
+      if(options.searchPath){
+        criterias.push({
+          i: 'path',
+          o: 'plone.app.querystring.operation.string.path',
+          v: options.searchPath + '::' + self.options.pathDepth
+        });
+      }else if (self.pattern.browsing) {
         criterias.push({
           i: 'path',
           o: 'plone.app.querystring.operation.string.path',
@@ -31464,7 +28487,9 @@ define('mockup-utils',[
     self.getQueryData = function(term, page) {
       var data = {
         query: JSON.stringify({
-          criteria: self.getCriterias(term)
+          criteria: self.getCriterias(term),
+          sort_on: self.options.sort_on,
+          sort_order: self.options.sort_order
         }),
         attributes: JSON.stringify(self.options.attributes)
       };
@@ -31474,9 +28499,12 @@ define('mockup-utils',[
       return data;
     };
 
-    self.search = function(term, operation, value, callback, useBaseCriteria) {
+    self.search = function(term, operation, value, callback, useBaseCriteria, type) {
       if (useBaseCriteria === undefined) {
         useBaseCriteria = true;
+      }
+      if(type === undefined){
+        type = 'GET';
       }
       var criteria = [];
       if (useBaseCriteria) {
@@ -31495,6 +28523,7 @@ define('mockup-utils',[
         url: self.options.vocabularyUrl,
         dataType: 'JSON',
         data: data,
+        type: type,
         success: callback
       });
     };
@@ -31599,7 +28628,32 @@ define('mockup-utils',[
     // provide default loader
     loading: new Loading(),
     getAuthenticator: function() {
-      return $('input[name="_authenticator"]').val();
+      var $el = $('input[name="_authenticator"]');
+      if($el.length === 0){
+        $el = $('a[href*="_authenticator"]');
+        if($el.length > 0){
+          return $el.attr('href').split('_authenticator=')[1];
+        }
+        return '';
+      }else{
+        return $el.val();
+      }
+    },
+    featureSupport: {
+      /*
+        well tested feature support for things we use in mockup.
+        All gathered from: http://diveintohtml5.info/everything.html
+        Alternative to using some form of modernizr.
+      */
+      dragAndDrop: function(){
+        return 'draggable' in document.createElement('span');
+      },
+      fileApi: function(){
+        return typeof FileReader != 'undefined'; // jshint ignore:line
+      },
+      history: function(){
+        return !!(window.history && window.history.pushState);
+      }
     }
   };
 });
@@ -34749,7 +31803,7 @@ define("jqtree", ["jquery"], function() {
 define('mockup-patterns-tree',[
   'jquery',
   'underscore',
-  'mockup-patterns-base',
+  'pat-base',
   'mockup-utils',
   'jqtree'
 ], function($, _, Base, utils) {
@@ -34758,6 +31812,7 @@ define('mockup-patterns-tree',[
   var Tree = Base.extend({
     name: 'tree',
     trigger: '.pat-tree',
+    parser: 'mockup',
     defaults: {
       dragAndDrop: false,
       autoOpen: false,
@@ -34878,7 +31933,7 @@ define('mockup-patterns-tree',[
 define('mockup-patterns-relateditems',[
   'jquery',
   'underscore',
-  'mockup-patterns-base',
+  'pat-base',
   'mockup-patterns-select2',
   'mockup-utils',
   'mockup-patterns-tree',
@@ -34889,6 +31944,7 @@ define('mockup-patterns-relateditems',[
   var RelatedItems = Base.extend({
     name: 'relateditems',
     trigger: '.pat-relateditems',
+    parser: 'mockup',
     browsing: false,
     currentPath: null,
     defaults: {
@@ -34933,10 +31989,13 @@ define('mockup-patterns-relateditems',[
         '<span class="pattern-relateditems-tree">' +
           '<a href="#" class="pattern-relateditems-tree-select"><span class="glyphicon glyphicon-indent-left"></span></a> ' +
           '<div class="tree-container">' +
-            '<span class="select-folder-label">Select folder</span>' +
-            '<a href="#" class="btn close pattern-relateditems-tree-cancel">X</a>' +
+            '<div class="title-container">' +
+              '<a href="#" class="btn close pattern-relateditems-tree-cancel">' +
+                '<span class="glyphicon glyphicon-remove-circle" aria-hidden="true"></span>' +
+              '</a>' +
+              '<span class="select-folder-label">Select folder</span>' +
+            '</div>' +
             '<div class="pat-tree" />' +
-            '<a href="#" class="btn btn-default pattern-relateditems-tree-itemselect">Select</a>' +
           '</div>' +
         '</span>' +
         '<span class="pattern-relateditems-path-label">' +
@@ -34973,7 +32032,7 @@ define('mockup-patterns-relateditems',[
       // let's give all the options possible to the template generation
       var options = $.extend(true, {}, self.options, item);
       options._item = item;
-      return _.template(template, options);
+      return _.template(template)(options);
     },
     activateBrowsing: function() {
       var self = this;
@@ -35051,6 +32110,20 @@ define('mockup-patterns-relateditems',[
             nodes.push(node);
           });
           return nodes;
+        },
+        onCreateLi: function(node, $li) {
+          if(node._loaded){
+            if(node.children.length === 0){
+              $li.find('.jqtree-title').append('<span class="tree-node-empty">' + _t('(empty)') + '</span>');
+            }
+          }
+          $li.append('<span class="pattern-relateditems-buttons"><a class="pattern-relateditems-result-browse" href="#"></a></span>');
+          $li.find('.pattern-relateditems-result-browse').click(function(e){
+            e.preventDefault();
+            self.currentPath = node.path;
+            self.browseTo(self.currentPath);
+            $treeContainer.fadeOut();
+          });
         }
       });
       treePattern.$el.bind('tree.select', function(e) {
@@ -35084,21 +32157,20 @@ define('mockup-patterns-relateditems',[
         return false;
       });
 
-      $('a.pattern-relateditems-tree-itemselect', $treeContainer).click(function(e) {
-        e.preventDefault();
-        self.browseTo(self.currentPath); // just browse to current path since it's set elsewhere
-        $treeContainer.fadeOut();
-        return false;
-      });
-
       $treeSelect.on('click', function(e) {
         e.preventDefault();
         self.browsing = true;
         self.currentPath = '/';
+        self.$el.select2('close');
         $treeContainer.fadeIn();
         treePattern.$el.tree('loadDataFromUrl', self.treeQuery.getUrl());
         return false;
       });
+
+      self.$el.on('select2-opening', function(){
+        $treeContainer.fadeOut();
+      });
+
       self.$browsePath.html($crumbs);
     },
     selectItem: function(item) {
@@ -35307,12 +32379,13 @@ define('mockup-patterns-relateditems',[
 
 define('mockup-patterns-querystring',[
   'jquery',
-  'mockup-patterns-base',
+  'pat-base',
   'mockup-patterns-select2',
   'mockup-patterns-pickadate',
   'select2',
-  'translate'
-], function($, Base, Select2, PickADate, undefined, _t) {
+  'translate',
+  'underscore'
+], function($, Base, Select2, PickADate, undefined, _t, _) {
   'use strict';
 
   var Criteria = function() { this.init.apply(this, arguments); };
@@ -35404,7 +32477,8 @@ define('mockup-patterns-querystring',[
       self.$operator = $('<select/>');
 
       if (self.indexes[index]) {
-        $.each(self.indexes[index].operators, function(value, options) {
+        _.each(self.indexes[index].operations, function(value) {
+          var options = self.indexes[index].operators[value];
           $('<option/>')
               .attr('value', value)
               .html(options.title)
@@ -35458,24 +32532,34 @@ define('mockup-patterns-querystring',[
       } else if (widget === 'DateWidget') {
         self.$value = $('<input type="text"/>')
                 .addClass(self.options.classValueName + '-' + widget)
+                .attr('data-pat-pickadate', '{"time": false, "date": {"format": "dd/mm/yyyy" }}')
+                .val(value)
                 .appendTo($wrapper)
-                .patternPickadate({
-                  time: false,
-                  date: { format: 'dd/mm/yyyy' }
-                })
-                .change(function() {
+                .patternPickadate()
+                .on('updated.pickadate.patterns', function() {
                   self.trigger('value-changed');
                 });
 
+
       } else if (widget === 'DateRangeWidget') {
         var startwrap = $('<span/>').appendTo($wrapper);
+        var val1 = "";
+        var val2 = "";
+
+        if (value) {
+          val1 = value[0]?value[0]:"";
+          val2 = value[1]?value[1]:"";
+        }
+
         var startdt = $('<input type="text"/>')
           .addClass(self.options.classValueName + '-' + widget)
           .addClass(self.options.classValueName + '-' + widget + '-start')
+          .attr('data-pat-pickadate', '{"time": false, "date": {"format": "dd/mm/yyyy" }}')
+          .val(val1)
           .appendTo(startwrap)
-          .patternPickadate({
-            time: false,
-            date: { format: 'dd/mm/yyyy' }
+          .patternPickadate()
+          .on('updated.pickadate.patterns', function() {
+            self.trigger('value-changed');
           });
         $wrapper.append(
           $('<span/>')
@@ -35486,14 +32570,13 @@ define('mockup-patterns-querystring',[
         var enddt = $('<input type="text"/>')
                         .addClass(self.options.classValueName + '-' + widget)
                         .addClass(self.options.classValueName + '-' + widget + '-end')
+                        .attr('data-pat-pickadate', '{"time": false, "date": {"format": "dd/mm/yyyy" }}')
+                        .val(val2)
                         .appendTo(endwrap)
-                        .patternPickadate({
-                          time: false,
-                          date: { format: 'dd/mm/yyyy' }
+                        .patternPickadate()
+                        .on('updated.pickadate.patterns', function() {
+                          self.trigger('value-changed');
                         });
-        $wrapper.find('.picker__input').change(function() {
-          self.trigger('value-changed');
-        });
         self.$value = [startdt, enddt];
 
       } else if (widget === 'RelativeDateWidget') {
@@ -35509,6 +32592,7 @@ define('mockup-patterns-querystring',[
         self.$value = $('<input type="text"/>')
                 .addClass(self.options.classValueName + '-' + widget)
                 .appendTo($wrapper)
+                .patternRelateditems()
                 .change(function() {
                   self.trigger('value-changed');
                 });
@@ -35518,6 +32602,7 @@ define('mockup-patterns-querystring',[
                 .addClass(self.options.classValueName + '-' + widget)
                 .appendTo($wrapper)
                 .val(value)
+                .patternRelateditems()
                 .change(function() {
                   self.trigger('value-changed');
                 });
@@ -35541,7 +32626,14 @@ define('mockup-patterns-querystring',[
       }
 
       if (value !== undefined && typeof self.$value !== 'undefined') {
-        self.$value.select2('val', value);
+        if ($.isArray(self.$value)) {
+          $.each(value, function( i, v ) {
+            self.$value[i].select2('val', v);
+          });
+        }
+        else {
+          self.$value.select2('val', value);
+        }
       }
 
       self.trigger('create-value');
@@ -35621,6 +32713,11 @@ define('mockup-patterns-querystring',[
           vstr.push(vstrlistbase + $(this).parent().find('.picker__input').val());
         });
       }
+      else if ($.isArray(self.$value.val())) { // handles multible values
+        $.each(self.$value.val(), function(i, v) {
+          vstr.push(vstrlistbase + v);
+        });
+      }
       else {
         vstr.push(vstrbase + self.$value.val());
       }
@@ -35646,7 +32743,7 @@ define('mockup-patterns-querystring',[
       var varr = [];
       if ($.isArray(self.$value)) { // handles only datepickers from the 'between' operator right now
         $.each(self.$value, function(i, v) {
-          varr.push($(this).parent().find('.picker__input').val());
+          varr.push($(this).val());
         });
       }
       else if (typeof self.$value !== 'undefined') {
@@ -35654,7 +32751,7 @@ define('mockup-patterns-querystring',[
       }
       var vval;
       if (varr.length > 1) {
-        vval = '[j' + varr.join('","') + '"]';
+        vval = '["' + varr.join('","') + '"]';
       }
       else if (varr.length === 1) {
         vval = JSON.stringify(varr[0]);
@@ -35676,6 +32773,7 @@ define('mockup-patterns-querystring',[
   var QueryString = Base.extend({
     name: 'querystring',
     trigger: '.pat-querystring',
+    parser: 'mockup',
     defaults: {
       indexes: [],
       classWrapperName: 'querystring-wrapper',
@@ -35863,7 +32961,7 @@ define('mockup-patterns-querystring',[
         .append(self.$sortOrder)
         .append(
           $('<span/>')
-            .html(_t('Reserved Order'))
+            .html(_t('Reversed Order'))
             .addClass(self.options.classSortReverseLabelName)
         );
 
@@ -35998,13 +33096,14 @@ define('mockup-patterns-querystring',[
 
 define('mockup-patterns-backdrop',[
   'jquery',
-  'mockup-patterns-base'
+  'pat-base'
 ], function($, Base) {
   'use strict';
 
   var Backdrop = Base.extend({
     name: 'backdrop',
     trigger: '.pat-backdrop',
+    parser: 'mockup',
     defaults: {
       zIndex: null,
       opacity: 0.8,
@@ -39001,7 +36100,7 @@ function log() {
  *    buttons(string): Selector for matching elements, usually buttons, inputs or links, from the modal content to place in the modal footer. The original elements in the content will be hidden. ('.formControls > input[type="submit"]')
  *    automaticallyAddButtonActions(boolean): Automatically create actions for elements matched with the buttons selector. They will use the options provided in actionOptions. (true)
  *    loadLinksWithinModal(boolean): Automatically load links inside of the modal using AJAX. (true)
- *    actions(object): A hash of selector to options. Where options can include any of the defaults from actionOptions. Allows for the binding of events to elements in the content and provides options for handling ajax requests and displaying them in the modal. ({})
+ *    actionOptions(object): A hash of selector to options. Where options can include any of the defaults from actionOptions. Allows for the binding of events to elements in the content and provides options for handling ajax requests and displaying them in the modal. ({})
  *
  *
  * Documentation:
@@ -39055,18 +36154,20 @@ function log() {
 define('mockup-patterns-modal',[
   'jquery',
   'underscore',
-  'mockup-patterns-base',
+  'pat-base',
   'mockup-patterns-backdrop',
   'pat-registry',
   'mockup-router',
   'mockup-utils',
+  'translate',
   'jquery.form'
-], function($, _, Base, Backdrop, registry, Router, utils) {
+], function($, _, Base, Backdrop, registry, Router, utils, _t) {
   'use strict';
 
   var Modal = Base.extend({
     name: 'plone-modal',
     trigger: '.pat-plone-modal',
+    parser: 'mockup',
     createModal: null,
     $model: null,
     defaults: {
@@ -39125,6 +36226,7 @@ define('mockup-patterns-modal',[
       actions: {},
       actionOptions: {
         eventType: 'click',
+        disableAjaxFormSubmit: false,
         target: null,
         ajaxUrl: null, // string, or function($el, options) that returns a string
         modalFunction: null, // String, function name on self to call
@@ -39140,19 +36242,23 @@ define('mockup-patterns-modal',[
         onTimeout: null,
         redirectOnResponse: false,
         redirectToUrl: function($action, response, options) {
-          var baseUrl = '';
-          var reg = /<body.*data-base-url=[\"'](.*)[\"'].*/im.exec(response);
+          var reg;
+          reg = /<body.*data-view-url=[\"'](.*)[\"'].*/im.exec(response);
+          if (reg && reg.length > 1) {
+            // view url as data attribute on body (Plone 5)
+            return reg[1].split('"')[0];
+          }
+          reg = /<body.*data-base-url=[\"'](.*)[\"'].*/im.exec(response);
           if (reg && reg.length > 1) {
             // Base url as data attribute on body (Plone 5)
-            baseUrl = reg[1];
-          } else {
-            reg = /<base.*href=[\"'](.*)[\"'].*/im.exec(response);
-            if (reg && reg.length > 1) {
-              // base tag available (Plone 4)
-              baseUrl = reg[1];
-            }
+            return reg[1].split('"')[0];
           }
-          return baseUrl;
+          reg = /<base.*href=[\"'](.*)[\"'].*/im.exec(response);
+          if (reg && reg.length > 1) {
+              // base tag available (Plone 4)
+              return reg[1];
+          }
+          return '';
         }
       },
       routerOptions: {
@@ -39204,6 +36310,7 @@ define('mockup-patterns-modal',[
       },
       handleFormAction: function($action, options, patternOptions) {
         var self = this;
+
         // pass action that was clicked when submiting form
         var extraData = {};
         extraData[$action.attr('name')] = $action.attr('value');
@@ -39227,6 +36334,13 @@ define('mockup-patterns-modal',[
           url = $action.parents('form').attr('action');
         }
 
+        if(options.disableAjaxFormSubmit){
+          if($action.attr('name') && $action.attr('value')){
+            $form.append($('<input type="hidden" name="' + $action.attr('name') + '" value="' + $action.attr('value') + '" />'));
+          }
+          $form.trigger('submit');
+          return;
+        }
         // We want to trigger the form submit event but NOT use the default
         $form.on('submit', function(e) {
           e.preventDefault();
@@ -39246,6 +36360,7 @@ define('mockup-patterns-modal',[
             } else if (options.onError) {
               options.onError(xhr, textStatus, errorStatus);
             } else {
+              window.alert(_t('There was an error submitting the form.'));
               console.log('error happened do something');
             }
             self.emit('formActionError', [xhr, textStatus, errorStatus]);
@@ -39313,28 +36428,26 @@ define('mockup-patterns-modal',[
 
         // ajax version
         $.ajax({
-          url: url,
-          error: function(xhr, textStatus, errorStatus) {
-            if (textStatus === 'timeout' && options.onTimeout) {
-              options.onTimeout(self.$modal, xhr, errorStatus);
+          url: url
+        }).fail(function(xhr, textStatus, errorStatus) {
+          if (textStatus === 'timeout' && options.onTimeout) {
+            options.onTimeout(self.$modal, xhr, errorStatus);
 
-            // on "error", "abort", and "parsererror"
-            } else if (options.onError) {
-              options.onError(xhr, textStatus, errorStatus);
-            } else {
-              console.log('error happened do something');
-            }
-            self.loading.hide();
-            self.emit('linkActionError', [xhr, textStatus, errorStatus]);
-          },
-          success: function(response, state, xhr) {
-            self.redraw(response, patternOptions);
-            if (options.onSuccess) {
-              options.onSuccess(self, response, state, xhr);
-            }
-            self.loading.hide();
-            self.emit('linkActionSuccess', [response, state, xhr]);
+          // on "error", "abort", and "parsererror"
+          } else if (options.onError) {
+            options.onError(xhr, textStatus, errorStatus);
+          } else {
+            window.alert(_t('There was an error loading modal.'));
           }
+          self.emit('linkActionError', [xhr, textStatus, errorStatus]);
+        }).done(function(response, state, xhr) {
+          self.redraw(response, patternOptions);
+          if (options.onSuccess) {
+            options.onSuccess(self, response, state, xhr);
+          }
+          self.emit('linkActionSuccess', [response, state, xhr]);
+        }).always(function(){
+          self.loading.hide();
         });
       },
       render: function(options) {
@@ -39385,7 +36498,7 @@ define('mockup-patterns-modal',[
         }
 
         // Render html
-        self.$modal = $(_.template(self.options.templateOptions.template, tplObject));
+        self.$modal = $(_.template(self.options.templateOptions.template)(tplObject));
         self.$modalDialog = $('> .' + self.options.templateOptions.classDialog, self.$modal);
         self.$modalContent = $('> .' + self.options.templateOptions.classModal, self.$modalDialog);
 
@@ -39561,7 +36674,7 @@ define('mockup-patterns-modal',[
       }
 
       if (self.$el.is('a')) {
-        if (self.$el.attr('href')) {
+        if (self.$el.attr('href') && !self.options.image) {
           if (!self.options.target && self.$el.attr('href').substr(0, 1) === '#') {
             self.options.target = self.$el.attr('href');
             self.options.content = '';
@@ -39588,10 +36701,22 @@ define('mockup-patterns-modal',[
         type: self.options.ajaxType
       }).done(function(response, textStatus, xhr) {
         self.ajaxXHR = undefined;
-        self.loading.hide();
         self.$raw = $('<div />').append($(utils.parseBodyTag(response)));
         self.emit('after-ajax', self, textStatus, xhr);
         self._show();
+      }).fail(function(xhr, textStatus, errorStatus){
+        var options = self.options.actionOptions;
+        if (textStatus === 'timeout' && options.onTimeout) {
+          options.onTimeout(self.$modal, xhr, errorStatus);
+        } else if (options.onError) {
+          options.onError(xhr, textStatus, errorStatus);
+        } else {
+          window.alert(_t('There was an error loading modal.'));
+          self.hide();
+        }
+        self.emit('linkActionError', [xhr, textStatus, errorStatus]);
+      }).always(function(){
+        self.loading.hide();
       });
     },
 
@@ -39614,6 +36739,15 @@ define('mockup-patterns-modal',[
       self._show();
     },
 
+    createImageModal: function(){
+      var self = this;
+      self.$wrapper.addClass('image-modal');
+      var src = self.$el.attr('href');
+      // XXX aria?
+      self.$raw = $('<div><h1>Image</h1><div id="content"><div class="modal-image"><img src="' + src + '" /></div></div></div>');
+      self._show();
+    },
+
     initModal: function() {
       var self = this;
       if (self.options.ajaxUrl) {
@@ -39622,10 +36756,13 @@ define('mockup-patterns-modal',[
         self.createModal = self.createTargetModal;
       } else if (self.options.html) {
         self.createModal = self.createHtmlModal;
+      } else if (self.options.image){
+        self.createModal = self.createImageModal;
       } else {
         self.createModal = self.createBasicModal;
       }
     },
+
     findPosition: function(horpos, vertpos, margin, modalWidth, modalHeight,
                            wrapperInnerWidth, wrapperInnerHeight) {
       var returnpos = {};
@@ -39802,6 +36939,7 @@ define('mockup-patterns-modal',[
         self.backdrop.hide();
         self.$wrapper.hide();
         self.$wrapper.parent().css('overflow', 'visible');
+        $('body').removeClass('plone-modal-open');
       }
       self.loading.hide();
       self.$el.removeClass(self.options.templateOptions.classActiveName);
@@ -39810,7 +36948,6 @@ define('mockup-patterns-modal',[
         self.initModal();
       }
       $(window.parent).off('resize.plone-modal.patterns');
-      $('body').removeClass('plone-modal-open');
       self.emit('hidden');
     },
     redraw: function(response, options) {
@@ -39833,7 +36970,7 @@ define('mockup-patterns-modal',[
 (function(root) {
 define("tinymce", [], function() {
   return (function() {
-// 4.1.9 (2015-03-10)
+// 4.2.5 (2015-08-31)
 
 /**
  * Compiled inline version. (Library mode)
@@ -39900,10 +37037,12 @@ define("tinymce", [], function() {
 	}
 
 	function expose(ids) {
-		for (var i = 0; i < ids.length; i++) {
-			var target = exports;
-			var id = ids[i];
-			var fragments = id.split(/[.\/]/);
+		var i, target, id, fragments, privateModules;
+
+		for (i = 0; i < ids.length; i++) {
+			target = exports;
+			id = ids[i];
+			fragments = id.split(/[.\/]/);
 
 			for (var fi = 0; fi < fragments.length - 1; ++fi) {
 				if (target[fragments[fi]] === undefined) {
@@ -39915,6 +37054,21 @@ define("tinymce", [], function() {
 
 			target[fragments[fragments.length - 1]] = modules[id];
 		}
+		
+		// Expose private modules for unit tests
+		if (exports.AMDLC_TESTS) {
+			privateModules = exports.privateModules || {};
+
+			for (id in modules) {
+				privateModules[id] = modules[id];
+			}
+
+			for (i = 0; i < ids.length; i++) {
+				delete privateModules[ids[i]];
+			}
+
+			exports.privateModules = privateModules;
+		}
 	}
 
 // Included from: js/tinymce/classes/dom/EventUtils.js
@@ -39922,8 +37076,8 @@ define("tinymce", [], function() {
 /**
  * EventUtils.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -39942,7 +37096,7 @@ define("tinymce/dom/EventUtils", [], function() {
 
 	var eventExpandoPrefix = "mce-data-";
 	var mouseEventRe = /^(?:mouse|contextmenu)|click/;
-	var deprecated = {keyLocation: 1, layerX: 1, layerY: 1, returnValue: 1};
+	var deprecated = {keyLocation: 1, layerX: 1, layerY: 1, returnValue: 1, webkitMovementX: 1, webkitMovementY: 1};
 
 	/**
 	 * Binds a native event to a callback on the speified target.
@@ -40047,6 +37201,11 @@ define("tinymce/dom/EventUtils", [], function() {
 			event.isDefaultPrevented = returnFalse;
 			event.isPropagationStopped = returnFalse;
 			event.isImmediatePropagationStopped = returnFalse;
+		}
+
+		// Add missing metaKey for IE 8
+		if (typeof event.metaKey == 'undefined') {
+			event.metaKey = false;
 		}
 
 		return event;
@@ -40488,8 +37647,8 @@ define("tinymce/dom/EventUtils", [], function() {
 /**
  * Sizzle.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -40498,8 +37657,7 @@ define("tinymce/dom/EventUtils", [], function() {
  */
 
 /*jshint bitwise:false, expr:true, noempty:false, sub:true, eqnull:true, latedef:false, maxlen:255 */
-/*eslint dot-notation:0, no-empty:0, no-cond-assign:0, no-unused-expressions:0, new-cap:0 */
-/*eslint no-nested-ternary:0, func-style:0, no-bitwise:0, max-len:0, brace-style:0, no-return-assign:0, no-multi-spaces:0 */
+/*eslint-disable */
 
 /**
  * Sizzle CSS Selector Engine v@VERSION
@@ -42524,13 +39682,15 @@ if ( !assert(function( div ) {
 return Sizzle;
 });
 
+/*eslint-enable */
+
 // Included from: js/tinymce/classes/Env.js
 
 /**
  * Env.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -42546,7 +39706,7 @@ return Sizzle;
  */
 define("tinymce/Env", [], function() {
 	var nav = navigator, userAgent = nav.userAgent;
-	var opera, webkit, ie, ie11, gecko, mac, iDevice, android;
+	var opera, webkit, ie, ie11, ie12, gecko, mac, iDevice, android, fileApi;
 
 	opera = window.opera && window.opera.buildNumber;
 	android = /Android/.test(userAgent);
@@ -42554,14 +39714,20 @@ define("tinymce/Env", [], function() {
 	ie = !webkit && !opera && (/MSIE/gi).test(userAgent) && (/Explorer/gi).test(nav.appName);
 	ie = ie && /MSIE (\w+)\./.exec(userAgent)[1];
 	ie11 = userAgent.indexOf('Trident/') != -1 && (userAgent.indexOf('rv:') != -1 || nav.appName.indexOf('Netscape') != -1) ? 11 : false;
-	ie = ie || ie11;
+	ie12 = (userAgent.indexOf('Edge/') != -1 && !ie && !ie11) ? 12 : false;
+	ie = ie || ie11 || ie12;
 	gecko = !webkit && !ie11 && /Gecko/.test(userAgent);
 	mac = userAgent.indexOf('Mac') != -1;
 	iDevice = /(iPad|iPhone)/.test(userAgent);
+	fileApi = "FormData" in window && "FileReader" in window && "URL" in window && !!URL.createObjectURL;
+
+	if (ie12) {
+		webkit = false;
+	}
 
 	// Is a iPad/iPhone and not on iOS5 sniff the WebKit version since older iOS WebKit versions
 	// says it has contentEditable support but there is no visible caret.
-	var contentEditable = !iDevice || userAgent.match(/AppleWebKit\/(\d*)/)[1] >= 534;
+	var contentEditable = !iDevice || fileApi || userAgent.match(/AppleWebKit\/(\d*)/)[1] >= 534;
 
 	return {
 		/**
@@ -42668,82 +39834,41 @@ define("tinymce/Env", [], function() {
 		 * @property documentMode
 		 * @type Number
 		 */
-		documentMode: ie ? (document.documentMode || 7) : 10
+		documentMode: ie && !ie12 ? (document.documentMode || 7) : 10,
+
+		/**
+		 * Constant that is true if the browser has a modern file api.
+		 *
+		 * @property fileApi
+		 * @type Boolean
+		 */
+		fileApi: fileApi
 	};
 });
 
-// Included from: js/tinymce/classes/util/Tools.js
+// Included from: js/tinymce/classes/util/Arr.js
 
 /**
- * Tools.js
+ * Arr.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
 /**
- * This class contains various utlity functions. These are also exposed
- * directly on the tinymce namespace.
+ * Array utility class.
  *
- * @class tinymce.util.Tools
+ * @private
+ * @class tinymce.util.Arr
  */
-define("tinymce/util/Tools", [
-	"tinymce/Env"
-], function(Env) {
-	/**
-	 * Removes whitespace from the beginning and end of a string.
-	 *
-	 * @method trim
-	 * @param {String} s String to remove whitespace from.
-	 * @return {String} New string with removed whitespace.
-	 */
-	var whiteSpaceRegExp = /^\s*|\s*$/g;
-
-	function trim(str) {
-		return (str === null || str === undefined) ? '' : ("" + str).replace(whiteSpaceRegExp, '');
-	}
-
-	/**
-	 * Returns true/false if the object is an array or not.
-	 *
-	 * @method isArray
-	 * @param {Object} obj Object to check.
-	 * @return {boolean} true/false state if the object is an array or not.
-	 */
+define("tinymce/util/Arr", [], function() {
 	var isArray = Array.isArray || function(obj) {
 		return Object.prototype.toString.call(obj) === "[object Array]";
 	};
 
-	/**
-	 * Checks if a object is of a specific type for example an array.
-	 *
-	 * @method is
-	 * @param {Object} obj Object to check type of.
-	 * @param {string} type Optional type to check for.
-	 * @return {Boolean} true/false if the object is of the specified type.
-	 */
-	function is(obj, type) {
-		if (!type) {
-			return obj !== undefined;
-		}
-
-		if (type == 'array' && isArray(obj)) {
-			return true;
-		}
-
-		return typeof obj == type;
-	}
-
-	/**
-	 * Converts the specified object into a real JavaScript array.
-	 *
-	 * @method toArray
-	 * @param {Object} obj Object to convert into array.
-	 * @return {Array} Array object based in input.
-	 */
 	function toArray(obj) {
 		var array = obj, i, l;
 
@@ -42757,55 +39882,6 @@ define("tinymce/util/Tools", [
 		return array;
 	}
 
-	/**
-	 * Makes a name/object map out of an array with names.
-	 *
-	 * @method makeMap
-	 * @param {Array/String} items Items to make map out of.
-	 * @param {String} delim Optional delimiter to split string by.
-	 * @param {Object} map Optional map to add items to.
-	 * @return {Object} Name/value map of items.
-	 */
-	function makeMap(items, delim, map) {
-		var i;
-
-		items = items || [];
-		delim = delim || ',';
-
-		if (typeof items == "string") {
-			items = items.split(delim);
-		}
-
-		map = map || {};
-
-		i = items.length;
-		while (i--) {
-			map[items[i]] = {};
-		}
-
-		return map;
-	}
-
-	/**
-	 * Performs an iteration of all items in a collection such as an object or array. This method will execure the
-	 * callback function for each item in the collection, if the callback returns false the iteration will terminate.
-	 * The callback has the following format: cb(value, key_or_index).
-	 *
-	 * @method each
-	 * @param {Object} o Collection to iterate.
-	 * @param {function} cb Callback function to execute for each item.
-	 * @param {Object} s Optional scope to execute the callback in.
-	 * @example
-	 * // Iterate an array
-	 * tinymce.each([1,2,3], function(v, i) {
-	 *     console.debug("Value: " + v + ", Index: " + i);
-	 * });
-	 *
-	 * // Iterate an object
-	 * tinymce.each({a: 1, b: 2, c: 3], function(v, k) {
-	 *     console.debug("Value: " + v + ", Key: " + k);
-	 * });
-	 */
 	function each(o, cb, s) {
 		var n, l;
 
@@ -42836,38 +39912,17 @@ define("tinymce/util/Tools", [
 		return 1;
 	}
 
-	/**
-	 * Creates a new array by the return value of each iteration function call. This enables you to convert
-	 * one array list into another.
-	 *
-	 * @method map
-	 * @param {Array} array Array of items to iterate.
-	 * @param {function} callback Function to call for each item. It's return value will be the new value.
-	 * @return {Array} Array with new values based on function return values.
-	 */
 	function map(array, callback) {
 		var out = [];
 
-		each(array, function(item) {
-			out.push(callback(item));
+		each(array, function(item, index) {
+			out.push(callback(item, index, array));
 		});
 
 		return out;
 	}
 
-	/**
-	 * Filters out items from the input array by calling the specified function for each item.
-	 * If the function returns false the item will be excluded if it returns true it will be included.
-	 *
-	 * @method grep
-	 * @param {Array} a Array of items to loop though.
-	 * @param {function} f Function to call for each item. Include/exclude depends on it's return value.
-	 * @return {Array} New array with values imported and filtered based in input.
-	 * @example
-	 * // Filter out some items, this will return an array with 4 and 5
-	 * var items = tinymce.grep([1,2,3,4,5], function(v) {return v > 3;});
-	 */
-	function grep(a, f) {
+	function filter(a, f) {
 		var o = [];
 
 		each(a, function(v) {
@@ -42877,6 +39932,130 @@ define("tinymce/util/Tools", [
 		});
 
 		return o;
+	}
+
+	function indexOf(a, v) {
+		var i, l;
+
+		if (a) {
+			for (i = 0, l = a.length; i < l; i++) {
+				if (a[i] === v) {
+					return i;
+				}
+			}
+		}
+
+		return -1;
+	}
+
+	function reduce(collection, iteratee, accumulator, thisArg) {
+		var i = 0;
+
+		if (arguments.length < 3) {
+			accumulator = collection[0];
+			i = 1;
+		}
+
+		for (; i < collection.length; i++) {
+			accumulator = iteratee.call(thisArg, accumulator, collection[i], i);
+		}
+
+		return accumulator;
+	}
+
+	return {
+		isArray: isArray,
+		toArray: toArray,
+		each: each,
+		map: map,
+		filter: filter,
+		indexOf: indexOf,
+		reduce: reduce
+	};
+});
+
+// Included from: js/tinymce/classes/util/Tools.js
+
+/**
+ * Tools.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * This class contains various utlity functions. These are also exposed
+ * directly on the tinymce namespace.
+ *
+ * @class tinymce.util.Tools
+ */
+define("tinymce/util/Tools", [
+	"tinymce/Env",
+	"tinymce/util/Arr"
+], function(Env, Arr) {
+	/**
+	 * Removes whitespace from the beginning and end of a string.
+	 *
+	 * @method trim
+	 * @param {String} s String to remove whitespace from.
+	 * @return {String} New string with removed whitespace.
+	 */
+	var whiteSpaceRegExp = /^\s*|\s*$/g;
+
+	function trim(str) {
+		return (str === null || str === undefined) ? '' : ("" + str).replace(whiteSpaceRegExp, '');
+	}
+
+	/**
+	 * Checks if a object is of a specific type for example an array.
+	 *
+	 * @method is
+	 * @param {Object} obj Object to check type of.
+	 * @param {string} type Optional type to check for.
+	 * @return {Boolean} true/false if the object is of the specified type.
+	 */
+	function is(obj, type) {
+		if (!type) {
+			return obj !== undefined;
+		}
+
+		if (type == 'array' && Arr.isArray(obj)) {
+			return true;
+		}
+
+		return typeof obj == type;
+	}
+
+	/**
+	 * Makes a name/object map out of an array with names.
+	 *
+	 * @method makeMap
+	 * @param {Array/String} items Items to make map out of.
+	 * @param {String} delim Optional delimiter to split string by.
+	 * @param {Object} map Optional map to add items to.
+	 * @return {Object} Name/value map of items.
+	 */
+	function makeMap(items, delim, map) {
+		var i;
+
+		items = items || [];
+		delim = delim || ',';
+
+		if (typeof items == "string") {
+			items = items.split(delim);
+		}
+
+		map = map || {};
+
+		i = items.length;
+		while (i--) {
+			map[items[i]] = {};
+		}
+
+		return map;
 	}
 
 	/**
@@ -43011,31 +40190,6 @@ define("tinymce/util/Tools", [
 		});
 	}
 
-	/**
-	 * Returns the index of a value in an array, this method will return -1 if the item wasn't found.
-	 *
-	 * @method inArray
-	 * @param {Array} a Array/Object to search for value in.
-	 * @param {Object} v Value to check for inside the array.
-	 * @return {Number/String} Index of item inside the array inside an object. Or -1 if it wasn't found.
-	 * @example
-	 * // Get index of value in array this will alert 1 since 2 is at that index
-	 * alert(tinymce.inArray([1,2,3], 2));
-	 */
-	function inArray(a, v) {
-		var i, l;
-
-		if (a) {
-			for (i = 0, l = a.length; i < l; i++) {
-				if (a[i] === v) {
-					return i;
-				}
-			}
-		}
-
-		return -1;
-	}
-
 	function extend(obj, ext) {
 		var i, l, name, args = arguments, value;
 
@@ -43072,7 +40226,7 @@ define("tinymce/util/Tools", [
 				o = o[n];
 			}
 
-			each(o, function(o, i) {
+			Arr.each(o, function(o, i) {
 				if (f.call(s, o, i, n) === false) {
 					return false;
 				}
@@ -43162,7 +40316,7 @@ define("tinymce/util/Tools", [
 			return s;
 		}
 
-		return map(s.split(d || ','), trim);
+		return Arr.map(s.split(d || ','), trim);
 	}
 
 	function _addCacheSuffix(url) {
@@ -43177,14 +40331,84 @@ define("tinymce/util/Tools", [
 
 	return {
 		trim: trim,
-		isArray: isArray,
+
+		/**
+		 * Returns true/false if the object is an array or not.
+		 *
+		 * @method isArray
+		 * @param {Object} obj Object to check.
+		 * @return {boolean} true/false state if the object is an array or not.
+		 */
+		isArray: Arr.isArray,
+
 		is: is,
-		toArray: toArray,
+
+		/**
+		 * Converts the specified object into a real JavaScript array.
+		 *
+		 * @method toArray
+		 * @param {Object} obj Object to convert into array.
+		 * @return {Array} Array object based in input.
+		 */
+		toArray: Arr.toArray,
 		makeMap: makeMap,
-		each: each,
-		map: map,
-		grep: grep,
-		inArray: inArray,
+
+		/**
+		 * Performs an iteration of all items in a collection such as an object or array. This method will execure the
+		 * callback function for each item in the collection, if the callback returns false the iteration will terminate.
+		 * The callback has the following format: cb(value, key_or_index).
+		 *
+		 * @method each
+		 * @param {Object} o Collection to iterate.
+		 * @param {function} cb Callback function to execute for each item.
+		 * @param {Object} s Optional scope to execute the callback in.
+		 * @example
+		 * // Iterate an array
+		 * tinymce.each([1,2,3], function(v, i) {
+		 *     console.debug("Value: " + v + ", Index: " + i);
+		 * });
+		 *
+		 * // Iterate an object
+		 * tinymce.each({a: 1, b: 2, c: 3], function(v, k) {
+		 *     console.debug("Value: " + v + ", Key: " + k);
+		 * });
+		 */
+		each: Arr.each,
+
+		/**
+		 * Creates a new array by the return value of each iteration function call. This enables you to convert
+		 * one array list into another.
+		 *
+		 * @method map
+		 * @param {Array} array Array of items to iterate.
+		 * @param {function} callback Function to call for each item. It's return value will be the new value.
+		 * @return {Array} Array with new values based on function return values.
+		 */
+		map: Arr.map,
+
+		/**
+		 * Filters out items from the input array by calling the specified function for each item.
+		 * If the function returns false the item will be excluded if it returns true it will be included.
+		 *
+		 * @method grep
+		 * @param {Array} a Array of items to loop though.
+		 * @param {function} f Function to call for each item. Include/exclude depends on it's return value.
+		 * @return {Array} New array with values imported and filtered based in input.
+		 * @example
+		 * // Filter out some items, this will return an array with 4 and 5
+		 * var items = tinymce.grep([1,2,3,4,5], function(v) {return v > 3;});
+		 */
+		grep: Arr.filter,
+
+		/**
+		 * Returns true/false if the object is an array or not.
+		 *
+		 * @method isArray
+		 * @param {Object} obj Object to check.
+		 * @return {boolean} true/false state if the object is an array or not.
+		 */
+		inArray: Arr.indexOf,
+
 		extend: extend,
 		create: create,
 		walk: walk,
@@ -43200,8 +40424,8 @@ define("tinymce/util/Tools", [
 /**
  * DomQuery.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -43470,9 +40694,9 @@ define("tinymce/dom/DomQuery", [
 			} else {
 				if (context) {
 					return DomQuery(selector).attr(context);
-				} else {
-					self.context = context = document;
 				}
+
+				self.context = context = document;
 			}
 
 			if (isString(selector)) {
@@ -44771,8 +41995,8 @@ define("tinymce/dom/DomQuery", [
 /**
  * Styles.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -45137,8 +42361,8 @@ define("tinymce/html/Styles", [], function() {
 /**
  * TreeWalker.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -45233,13 +42457,19 @@ define("tinymce/dom/TreeWalker", [], function() {
 /**
  * Range.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
+/**
+ * Old IE Range.
+ *
+ * @private
+ * @class tinymce.dom.Range
+ */
 define("tinymce/dom/Range", [
 	"tinymce/util/Tools"
 ], function(Tools) {
@@ -46013,8 +43243,8 @@ define("tinymce/dom/Range", [
 /**
  * Entities.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -46039,7 +43269,7 @@ define("tinymce/html/Entities", [
 		attrsCharsRegExp = /[&<>\"\u0060\u007E-\uD7FF\uE000-\uFFEF]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
 		textCharsRegExp = /[<>&\u007E-\uD7FF\uE000-\uFFEF]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
 		rawCharsRegExp = /[<>&\"\']/g,
-		entityRegExp = /&(#x|#)?([\w]+);/g,
+		entityRegExp = /&#([a-z0-9]+);?|&([a-z0-9]+);/gi,
 		asciiMap = {
 			128: "\u20AC", 130: "\u201A", 131: "\u0192", 132: "\u201E", 133: "\u2026", 134: "\u2020",
 			135: "\u2021", 136: "\u02C6", 137: "\u2030", 138: "\u0160", 139: "\u2039", 140: "\u0152",
@@ -46253,18 +43483,22 @@ define("tinymce/html/Entities", [
 		 * @return {String} Entity decoded string.
 		 */
 		decode: function(text) {
-			return text.replace(entityRegExp, function(all, numeric, value) {
+			return text.replace(entityRegExp, function(all, numeric) {
 				if (numeric) {
-					value = parseInt(value, numeric.length === 2 ? 16 : 10);
+					if (numeric.charAt(0).toLowerCase() === 'x') {
+						numeric = parseInt(numeric.substr(1), 16);
+					} else {
+						numeric = parseInt(numeric, 10);
+					}
 
 					// Support upper UTF
-					if (value > 0xFFFF) {
-						value -= 0x10000;
+					if (numeric > 0xFFFF) {
+						numeric -= 0x10000;
 
-						return String.fromCharCode(0xD800 + (value >> 10), 0xDC00 + (value & 0x3FF));
-					} else {
-						return asciiMap[value] || String.fromCharCode(value);
+						return String.fromCharCode(0xD800 + (numeric >> 10), 0xDC00 + (numeric & 0x3FF));
 					}
+
+					return asciiMap[numeric] || String.fromCharCode(numeric);
 				}
 
 				return reverseEntities[all] || namedEntities[all] || nativeDecode(all);
@@ -46280,8 +43514,8 @@ define("tinymce/html/Entities", [
 /**
  * StyleSheetLoader.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -46453,10 +43687,10 @@ define("tinymce/dom/StyleSheetLoader", [
 					waitForGeckoLinkLoaded();
 					appendToHead(style);
 					return;
-				} else {
-					// Use the id owner on older webkits
-					waitForWebKitLinkLoaded();
 				}
+
+				// Use the id owner on older webkits
+				waitForWebKitLinkLoaded();
 			}
 
 			appendToHead(link);
@@ -46472,8 +43706,8 @@ define("tinymce/dom/StyleSheetLoader", [
 /**
  * DOMUtils.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -47137,7 +44371,7 @@ define("tinymce/dom/DOMUtils", [
 			});
 
 			if (name == 'float') {
-				name = isIE ? 'styleFloat' : 'cssFloat';
+				name = Env.ie && Env.ie < 12 ? 'styleFloat' : 'cssFloat';
 			}
 
 			return elm[0] && elm[0].style ? elm[0].style[name] : undefined;
@@ -48310,8 +45544,8 @@ define("tinymce/dom/DOMUtils", [
 /**
  * ScriptLoader.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -48568,8 +45802,8 @@ define("tinymce/dom/ScriptLoader", [
 /**
  * AddOnManager.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -48605,9 +45839,9 @@ define("tinymce/AddOnManager", [
 		get: function(name) {
 			if (this.lookup[name]) {
 				return this.lookup[name].instance;
-			} else {
-				return undefined;
 			}
+
+			return undefined;
 		},
 
 		dependencies: function(name) {
@@ -48682,9 +45916,9 @@ define("tinymce/AddOnManager", [
 		createUrl: function(baseUrl, dep) {
 			if (typeof dep === "object") {
 				return dep;
-			} else {
-				return {prefix: baseUrl.prefix, resource: dep, suffix: baseUrl.suffix};
 			}
+
+			return {prefix: baseUrl.prefix, resource: dep, suffix: baseUrl.suffix};
 		},
 
 		/**
@@ -48836,8 +46070,8 @@ define("tinymce/AddOnManager", [
 /**
  * RangeUtils.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -48872,6 +46106,7 @@ define("tinymce/dom/RangeUtils", [
 		/**
 		 * Walks the specified range like object and executes the callback for each sibling collection it finds.
 		 *
+		 * @private
 		 * @method walk
 		 * @param {Object} rng Range like object.
 		 * @param {function} callback Callback function to execute for each sibling collection.
@@ -49379,15 +46614,15 @@ define("tinymce/dom/RangeUtils", [
 /**
  * NodeChange.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
 /**
- * This class handles the nodechange event dispatching both manual and though selection change events.
+ * This class handles the nodechange event dispatching both manual and through selection change events.
  *
  * @class tinymce.NodeChange
  * @private
@@ -49489,7 +46724,7 @@ define("tinymce/NodeChange", [
 		});
 
 		/**
-		 * Distpaches out a onNodeChange event to all observers. This method should be called when you
+		 * Dispatches out a onNodeChange event to all observers. This method should be called when you
 		 * need to update the UI states or element path etc.
 		 *
 		 * @method nodeChanged
@@ -49535,8 +46770,8 @@ define("tinymce/NodeChange", [
 /**
  * Node.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -49692,9 +46927,9 @@ define("tinymce/html/Node", [], function() {
 					attrs.map[name] = value;
 
 					return self;
-				} else {
-					return attrs.map[name];
 				}
+
+				return attrs.map[name];
 			}
 		},
 
@@ -50034,8 +47269,8 @@ define("tinymce/html/Node", [], function() {
 /**
  * Schema.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -50166,8 +47401,8 @@ define("tinymce/html/Schema", [
 			globalAttributes.push.apply(globalAttributes, split("contenteditable contextmenu draggable dropzone " +
 				"hidden spellcheck translate"));
 			blockContent.push.apply(blockContent, split("article aside details dialog figure header footer hgroup section nav"));
-			phrasingContent.push.apply(phrasingContent, split("audio canvas command datalist mark meter output progress time wbr " +
-				"video ruby bdi keygen"));
+			phrasingContent.push.apply(phrasingContent, split("audio canvas command datalist mark meter output picture " +
+				"progress time wbr video ruby bdi keygen"));
 		}
 
 		// Add HTML4 elements unless it's html5-strict
@@ -50337,6 +47572,9 @@ define("tinymce/html/Schema", [
 
 		// Caption can't have tables
 		delete schema.caption.children.table;
+
+		// Delete scripts by default due to possible XSS
+		delete schema.script;
 
 		// TODO: LI:s can only have value if parent is OL
 
@@ -50653,6 +47891,9 @@ define("tinymce/html/Schema", [
 		function addValidChildren(validChildren) {
 			var childRuleRegExp = /^([+\-]?)(\w+)\[([^\]]+)\]$/;
 
+			// Invalidate the schema cache if the schema is mutated
+			mapCache[settings.schema] = null;
+
 			if (validChildren) {
 				each(split(validChildren, ','), function(rule) {
 					var matches = childRuleRegExp.exec(rule), parent, prefix;
@@ -50671,10 +47912,6 @@ define("tinymce/html/Schema", [
 
 						each(split(matches[3], '|'), function(child) {
 							if (prefix === '-') {
-								// Clone the element before we delete
-								// things in it to not mess up default schemas
-								children[matches[2]] = parent = extend({}, children[matches[2]]);
-
 								delete parent[child];
 							} else {
 								parent[child] = {};
@@ -51039,8 +48276,8 @@ define("tinymce/html/Schema", [
 /**
  * SaxParser.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -51516,8 +48753,8 @@ define("tinymce/html/SaxParser", [
 /**
  * DomParser.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -51561,11 +48798,12 @@ define("tinymce/html/DomParser", [
 
 		function fixInvalidChildren(nodes) {
 			var ni, node, parent, parents, newParent, currentNode, tempNode, childNode, i;
-			var nonEmptyElements, nonSplitableElements, textBlockElements, sibling, nextNode;
+			var nonEmptyElements, nonSplitableElements, textBlockElements, specialElements, sibling, nextNode;
 
 			nonSplitableElements = makeMap('tr,td,th,tbody,thead,tfoot,table');
 			nonEmptyElements = schema.getNonEmptyElements();
 			textBlockElements = schema.getTextBlockElements();
+			specialElements = schema.getSpecialElements();
 
 			for (ni = 0; ni < nodes.length; ni++) {
 				node = nodes[ni];
@@ -51666,7 +48904,7 @@ define("tinymce/html/DomParser", [
 						node.wrap(self.filterNode(new Node('div', 1)));
 					} else {
 						// We failed wrapping it, then remove or unwrap it
-						if (node.name === 'style' || node.name === 'script') {
+						if (specialElements[node.name]) {
 							node.empty().remove();
 						} else {
 							node.unwrap();
@@ -51868,19 +49106,36 @@ define("tinymce/html/DomParser", [
 			}
 
 			function removeWhitespaceBefore(node) {
-				var textNode, textVal, sibling;
+				var textNode, textNodeNext, textVal, sibling, blockElements = schema.getBlockElements();
 
 				for (textNode = node.prev; textNode && textNode.type === 3;) {
 					textVal = textNode.value.replace(endWhiteSpaceRegExp, '');
 
+					// Found a text node with non whitespace then trim that and break
 					if (textVal.length > 0) {
 						textNode.value = textVal;
-						textNode = textNode.prev;
-					} else {
-						sibling = textNode.prev;
-						textNode.remove();
-						textNode = sibling;
+						return;
 					}
+
+					textNodeNext = textNode.next;
+
+					// Fix for bug #7543 where bogus nodes would produce empty
+					// text nodes and these would be removed if a nested list was before it
+					if (textNodeNext) {
+						if (textNodeNext.type == 3 && textNodeNext.value.length) {
+							textNode = textNode.prev;
+							continue;
+						}
+
+						if (!blockElements[textNodeNext.name] && textNodeNext.name != 'script' && textNodeNext.name != 'style') {
+							textNode = textNode.prev;
+							continue;
+						}
+					}
+
+					sibling = textNode.prev;
+					textNode.remove();
+					textNode = sibling;
 				}
 			}
 
@@ -52323,8 +49578,8 @@ define("tinymce/html/DomParser", [
 /**
  * Writer.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -52478,7 +49733,7 @@ define("tinymce/html/Writer", [
 			 */
 			pi: function(name, text) {
 				if (text) {
-					html.push('<?', name, ' ', text, '?>');
+					html.push('<?', name, ' ', encode(text), '?>');
 				} else {
 					html.push('<?', name, '?>');
 				}
@@ -52525,8 +49780,8 @@ define("tinymce/html/Writer", [
 /**
  * Serializer.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -52684,8 +49939,8 @@ define("tinymce/html/Serializer", [
 /**
  * Serializer.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -53089,8 +50344,8 @@ define("tinymce/dom/Serializer", [
 /**
  * TridentSelection.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -53100,6 +50355,7 @@ define("tinymce/dom/Serializer", [
  * Selection class for old explorer versions. This one fakes the
  * native selection object available on modern browsers.
  *
+ * @private
  * @class tinymce.dom.TridentSelection
  */
 define("tinymce/dom/TridentSelection", [], function() {
@@ -53553,10 +50809,10 @@ define("tinymce/dom/TridentSelection", [], function() {
 							sibling.innerHTML = '';
 						}
 						return;
-					} else {
-						startOffset = dom.nodeIndex(startContainer);
-						startContainer = startContainer.parentNode;
 					}
+
+					startOffset = dom.nodeIndex(startContainer);
+					startContainer = startContainer.parentNode;
 				}
 
 				if (startOffset == endOffset - 1) {
@@ -53598,15 +50854,15 @@ define("tinymce/dom/TridentSelection", [], function() {
 /**
  * VK.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
 /**
- * This file exposes a set of the common KeyCodes for use.  Please grow it as needed.
+ * This file exposes a set of the common KeyCodes for use. Please grow it as needed.
  */
 define("tinymce/util/VK", [
 	"tinymce/Env"
@@ -53638,8 +50894,8 @@ define("tinymce/util/VK", [
 /**
  * ControlSelection.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -53667,10 +50923,10 @@ define("tinymce/dom/ControlSelection", [
 		// Details about each resize handle how to scale etc
 		resizeHandles = {
 			// Name: x multiplier, y multiplier, delta size x, delta size y
-			n: [0.5, 0, 0, -1],
+			/*n: [0.5, 0, 0, -1],
 			e: [1, 0.5, 1, 0],
 			s: [0.5, 1, 0, 1],
-			w: [0, 0.5, -1, 0],
+			w: [0, 0.5, -1, 0],*/
 			nw: [0, 0, -1, -1],
 			ne: [1, 0, 1, -1],
 			se: [1, 1, 1, 1],
@@ -53684,8 +50940,8 @@ define("tinymce/dom/ControlSelection", [
 				'position: absolute;' +
 				'border: 1px solid black;' +
 				'background: #FFF;' +
-				'width: 5px;' +
-				'height: 5px;' +
+				'width: 7px;' +
+				'height: 7px;' +
 				'z-index: 10000' +
 			'}' +
 			rootClass + ' .mce-resizehandle:hover {' +
@@ -53883,7 +51139,7 @@ define("tinymce/dom/ControlSelection", [
 
 			if (isResizable(targetElm) && !e.isDefaultPrevented()) {
 				each(resizeHandles, function(handle, name) {
-					var handleElm, handlerContainerElm;
+					var handleElm;
 
 					function startDrag(e) {
 						startX = e.screenX;
@@ -53940,35 +51196,31 @@ define("tinymce/dom/ControlSelection", [
 
 					// Get existing or render resize handle
 					handleElm = dom.get('mceResizeHandle' + name);
-					if (!handleElm) {
-						handlerContainerElm = rootElement;
-
-						handleElm = dom.add(handlerContainerElm, 'div', {
-							id: 'mceResizeHandle' + name,
-							'data-mce-bogus': 'all',
-							'class': 'mce-resizehandle',
-							unselectable: true,
-							style: 'cursor:' + name + '-resize; margin:0; padding:0'
-						});
-
-						// Hides IE move layer cursor
-						// If we set it on Chrome we get this wounderful bug: #6725
-						if (Env.ie) {
-							handleElm.contentEditable = false;
-						}
-					} else {
-						dom.show(handleElm);
+					if (handleElm) {
+						dom.remove(handleElm);
 					}
 
-					if (!handle.elm) {
-						dom.bind(handleElm, 'mousedown', function(e) {
-							e.stopImmediatePropagation();
-							e.preventDefault();
-							startDrag(e);
-						});
+					handleElm = dom.add(rootElement, 'div', {
+						id: 'mceResizeHandle' + name,
+						'data-mce-bogus': 'all',
+						'class': 'mce-resizehandle',
+						unselectable: true,
+						style: 'cursor:' + name + '-resize; margin:0; padding:0'
+					});
 
-						handle.elm = handleElm;
+					// Hides IE move layer cursor
+					// If we set it on Chrome we get this wounderful bug: #6725
+					if (Env.ie) {
+						handleElm.contentEditable = false;
 					}
+
+					dom.bind(handleElm, 'mousedown', function(e) {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+						startDrag(e);
+					});
+
+					handle.elm = handleElm;
 
 					// Position element
 					dom.setStyles(handleElm, {
@@ -54014,8 +51266,8 @@ define("tinymce/dom/ControlSelection", [
 				}
 			}
 
-			// Ignore all events while resizing
-			if (resizeStarted) {
+			// Ignore all events while resizing or if the editor instance was removed
+			if (resizeStarted || editor.removed) {
 				return;
 			}
 
@@ -54165,14 +51417,20 @@ define("tinymce/dom/ControlSelection", [
 			} else {
 				disableGeckoResize();
 
+				// Sniff sniff, hard to feature detect this stuff
 				if (Env.ie >= 11) {
-					// TODO: Drag/drop doesn't work
-					editor.on('mouseup', function(e) {
+					// Needs to be mousedown for drag/drop to work on IE 11
+					// Needs to be click on Edge to properly select images
+					editor.on('mousedown click', function(e) {
 						var nodeName = e.target.nodeName;
 
 						if (!resizeStarted && /^(TABLE|IMG|HR)$/.test(nodeName)) {
 							editor.selection.select(e.target, nodeName == 'TABLE');
-							editor.nodeChanged();
+
+							// Only fire once since nodeChange is expensive
+							if (e.type == 'mousedown') {
+								editor.nodeChanged();
+							}
 						}
 					});
 
@@ -54192,7 +51450,15 @@ define("tinymce/dom/ControlSelection", [
 				}
 			}
 
-			editor.on('nodechange ResizeEditor', updateResizeRect);
+			editor.on('nodechange ResizeEditor ResizeWindow drop', function(e) {
+				if (window.requestAnimationFrame) {
+					window.requestAnimationFrame(function() {
+						updateResizeRect(e);
+					});
+				} else {
+					updateResizeRect(e);
+				}
+			});
 
 			// Update resize rect while typing in a table
 			editor.on('keydown keyup', function(e) {
@@ -54234,8 +51500,8 @@ define("tinymce/dom/ControlSelection", [
 /**
  * BookmarkManager.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -54626,8 +51892,8 @@ define("tinymce/dom/BookmarkManager", [
 /**
  * Selection.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -54895,21 +52161,21 @@ define("tinymce/dom/Selection", [
 				}
 
 				return startElement;
-			} else {
-				startElement = rng.startContainer;
-
-				if (startElement.nodeType == 1 && startElement.hasChildNodes()) {
-					if (!real || !rng.collapsed) {
-						startElement = startElement.childNodes[Math.min(startElement.childNodes.length - 1, rng.startOffset)];
-					}
-				}
-
-				if (startElement && startElement.nodeType == 3) {
-					return startElement.parentNode;
-				}
-
-				return startElement;
 			}
+
+			startElement = rng.startContainer;
+
+			if (startElement.nodeType == 1 && startElement.hasChildNodes()) {
+				if (!real || !rng.collapsed) {
+					startElement = startElement.childNodes[Math.min(startElement.childNodes.length - 1, rng.startOffset)];
+				}
+			}
+
+			if (startElement && startElement.nodeType == 3) {
+				return startElement.parentNode;
+			}
+
+			return startElement;
 		},
 
 		/**
@@ -54940,22 +52206,22 @@ define("tinymce/dom/Selection", [
 				}
 
 				return endElement;
-			} else {
-				endElement = rng.endContainer;
-				endOffset = rng.endOffset;
-
-				if (endElement.nodeType == 1 && endElement.hasChildNodes()) {
-					if (!real || !rng.collapsed) {
-						endElement = endElement.childNodes[endOffset > 0 ? endOffset - 1 : endOffset];
-					}
-				}
-
-				if (endElement && endElement.nodeType == 3) {
-					return endElement.parentNode;
-				}
-
-				return endElement;
 			}
+
+			endElement = rng.endContainer;
+			endOffset = rng.endOffset;
+
+			if (endElement.nodeType == 1 && endElement.hasChildNodes()) {
+				if (!real || !rng.collapsed) {
+					endElement = endElement.childNodes[endOffset > 0 ? endOffset - 1 : endOffset];
+				}
+			}
+
+			if (endElement && endElement.nodeType == 3) {
+				return endElement.parentNode;
+			}
+
+			return endElement;
 		},
 
 		/**
@@ -55061,7 +52327,7 @@ define("tinymce/dom/Selection", [
 		 * Collapse the selection to start or end of range.
 		 *
 		 * @method collapse
-		 * @param {Boolean} toStart Optional boolean state if to collapse to end or not. Defaults to start.
+		 * @param {Boolean} toStart Optional boolean state if to collapse to end or not. Defaults to false.
 		 */
 		collapse: function(toStart) {
 			var self = this, rng = self.getRng(), node;
@@ -55155,7 +52421,7 @@ define("tinymce/dom/Selection", [
 					// IE will sometimes throw an exception here
 					ieRng = doc.selection.createRange();
 				} catch (ex) {
-
+					// Ignore
 				}
 
 				if (ieRng && ieRng.item) {
@@ -55202,7 +52468,7 @@ define("tinymce/dom/Selection", [
 		 * @param {Range} rng Range to select.
 		 */
 		setRng: function(rng, forward) {
-			var self = this, sel;
+			var self = this, sel, node;
 
 			if (!rng) {
 				return;
@@ -55240,6 +52506,18 @@ define("tinymce/dom/Selection", [
 
 					// adding range isn't always successful so we need to check range count otherwise an exception can occur
 					self.selectedRange = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+				}
+
+				// WebKit egde case selecting images works better using setBaseAndExtent
+				if (!rng.collapsed && rng.startContainer == rng.endContainer && sel.setBaseAndExtent && !Env.ie) {
+					if (rng.endOffset - rng.startOffset < 2) {
+						if (rng.startContainer.hasChildNodes()) {
+							node = rng.startContainer.childNodes[rng.startOffset];
+							if (node && node.tagName == 'IMG') {
+								self.getSel().setBaseAndExtent(node, 0, node, 1);
+							}
+						}
+					}
 				}
 			} else {
 				// Is W3C Range fake range on IE
@@ -55415,7 +52693,8 @@ define("tinymce/dom/Selection", [
 		},
 
 		/**
-		 * Executes callback of the current selection matches the specified selector or not and passes the state and args to the callback.
+		 * Executes callback when the current selection starts/stops matching the specified selector. The current
+		 * state will be passed to the callback as it's first argument.
 		 *
 		 * @method selectorChanged
 		 * @param {String} selector CSS selector to check for.
@@ -55618,8 +52897,8 @@ define("tinymce/dom/Selection", [
 /**
  * ElementUtils.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -55629,6 +52908,7 @@ define("tinymce/dom/Selection", [
  * Utility class for various element specific functions.
  *
  * @private
+ * @class tinymce.dom.ElementUtils
  */
 define("tinymce/dom/ElementUtils", [
 	"tinymce/dom/BookmarkManager",
@@ -55738,8 +53018,8 @@ define("tinymce/dom/ElementUtils", [
 /**
  * Preview.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -55751,8 +53031,8 @@ define("tinymce/dom/ElementUtils", [
  * Example:
  *  Preview.getCssText(editor, 'bold');
  *
- * @class tinymce.fmt.Preview
  * @private
+ * @class tinymce.fmt.Preview
  */
 define("tinymce/fmt/Preview", [
 	"tinymce/util/Tools"
@@ -55892,8 +53172,8 @@ define("tinymce/fmt/Preview", [
 /**
  * Formatter.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -55901,8 +53181,8 @@ define("tinymce/fmt/Preview", [
 
 /**
  * Text formatter engine class. This class is used to apply formats like bold, italic, font size
- * etc to the current selection or specific nodes. This engine was build to replace the browsers
- * default formatting logic for execCommand due to it's inconsistent and buggy behavior.
+ * etc to the current selection or specific nodes. This engine was built to replace the browser's
+ * default formatting logic for execCommand due to its inconsistent and buggy behavior.
  *
  * @class tinymce.Formatter
  * @example
@@ -55958,6 +53238,14 @@ define("tinymce/Formatter", [
 			}
 
 			return !!ed.schema.getTextBlockElements()[name.toLowerCase()];
+		}
+
+		function isTableCell(node) {
+			return /^(TH|TD)$/.test(node.nodeName);
+		}
+
+		function isInlineBlock(node) {
+			return node && /^(IMG)$/.test(node.nodeName);
 		}
 
 		function getParents(node, selector) {
@@ -56077,12 +53365,12 @@ define("tinymce/Formatter", [
 
 			// BlockFormat shortcuts keys
 			for (var i = 1; i <= 6; i++) {
-				ed.addShortcut('meta+shift+' + i, '', ['FormatBlock', false, 'h' + i]);
+				ed.addShortcut('access+' + i, '', ['FormatBlock', false, 'h' + i]);
 			}
 
-			ed.addShortcut('meta+shift+7', '', ['FormatBlock', false, 'p']);
-			ed.addShortcut('meta+shift+8', '', ['FormatBlock', false, 'div']);
-			ed.addShortcut('meta+shift+9', '', ['FormatBlock', false, 'address']);
+			ed.addShortcut('access+7', '', ['FormatBlock', false, 'p']);
+			ed.addShortcut('access+8', '', ['FormatBlock', false, 'div']);
+			ed.addShortcut('access+9', '', ['FormatBlock', false, 'address']);
 		}
 
 		// Public functions
@@ -56692,8 +53980,16 @@ define("tinymce/Formatter", [
 						// Try to adjust endContainer as well if cells on the same row were selected - bug #6410
 						if (commonAncestorContainer &&
 							/^T(HEAD|BODY|FOOT|R)$/.test(commonAncestorContainer.nodeName) &&
-							/^(TH|TD)$/.test(endContainer.nodeName) && endContainer.firstChild) {
+							isTableCell(endContainer) && endContainer.firstChild) {
 							endContainer = endContainer.firstChild || endContainer;
+						}
+
+						if (dom.isChildOf(startContainer, endContainer) && !isBlock(endContainer) &&
+							!isTableCell(startContainer) && !isTableCell(endContainer)) {
+							startContainer = wrap(startContainer, 'span', {id: '_start', 'data-mce-type': 'bookmark'});
+							splitToFormatRoot(startContainer);
+							startContainer = unwrap(TRUE);
+							return;
 						}
 
 						// Wrap start/end nodes in span element since these might be cloned/moved
@@ -58170,6 +55466,12 @@ define("tinymce/Formatter", [
 					offset = rng.startOffset, isAtEndOfText,
 					walker, node, nodes, tmpNode;
 
+			if (rng.startContainer == rng.endContainer) {
+				if (isInlineBlock(rng.startContainer.childNodes[rng.startOffset])) {
+					return;
+				}
+			}
+
 			// Convert text node into index if possible
 			if (container.nodeType == 3 && offset >= container.nodeValue.length) {
 				// Get the parent container location and walk from there
@@ -58214,15 +55516,15 @@ define("tinymce/Formatter", [
 /**
  * UndoManager.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
 /**
- * This class handles the undo/redo history levels for the editor. Since the build in undo/redo has major drawbacks a custom one was needed.
+ * This class handles the undo/redo history levels for the editor. Since the built-in undo/redo has major drawbacks a custom one was needed.
  *
  * @class tinymce.UndoManager
  */
@@ -58278,6 +55580,10 @@ define("tinymce/UndoManager", [
 			return trim(content);
 		}
 
+		function setDirty(state) {
+			editor.isNotDirty = !state;
+		}
+
 		function addNonTypingUndoLevel(e) {
 			self.typing = false;
 			self.add({}, e);
@@ -58327,9 +55633,9 @@ define("tinymce/UndoManager", [
 
 			// Fire a TypingUndo event on the first character entered
 			if (isFirstTypedCharacter && self.typing) {
-				// Make the it dirty if the content was changed after typing the first character
+				// Make it dirty if the content was changed after typing the first character
 				if (!editor.isDirty()) {
-					editor.isNotDirty = !data[0] || getContent() == data[0].content;
+					setDirty(data[0] && getContent() != data[0].content);
 
 					// Fire initial change event
 					if (!editor.isNotDirty) {
@@ -58355,8 +55661,8 @@ define("tinymce/UndoManager", [
 				return;
 			}
 
-			// If key isn't shift,ctrl,alt,capslock,metakey
-			var modKey = VK.modifierPressed(e);
+			// If key isn't Ctrl+Alt/AltGr
+			var modKey = (e.ctrlKey && !e.altKey) || e.metaKey;
 			if ((keyCode < 16 || keyCode > 20) && keyCode != 224 && keyCode != 91 && !self.typing && !modKey) {
 				self.beforeChange();
 				self.typing = true;
@@ -58381,6 +55687,7 @@ define("tinymce/UndoManager", [
 			}
 		});
 
+		/*eslint consistent-this:0 */
 		self = {
 			// Explose for debugging reasons
 			data: data,
@@ -58466,7 +55773,7 @@ define("tinymce/UndoManager", [
 				editor.fire('AddUndo', args);
 
 				if (index > 0) {
-					editor.isNotDirty = false;
+					setDirty(true);
 					editor.fire('change', args);
 				}
 
@@ -58492,7 +55799,7 @@ define("tinymce/UndoManager", [
 
 					// Undo to first index then set dirty state to false
 					if (index === 0) {
-						editor.isNotDirty = true;
+						setDirty(false);
 					}
 
 					editor.setContent(level.content, {format: 'raw'});
@@ -58518,6 +55825,7 @@ define("tinymce/UndoManager", [
 
 					editor.setContent(level.content, {format: 'raw'});
 					editor.selection.moveToBookmark(level.bookmark);
+					setDirty(true);
 
 					editor.fire('redo', {level: level});
 				}
@@ -58590,8 +55898,8 @@ define("tinymce/UndoManager", [
 /**
  * EnterKey.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -58599,6 +55907,9 @@ define("tinymce/UndoManager", [
 
 /**
  * Contains logic for handling the enter key to split/generate block elements.
+ *
+ * @private
+ * @class tinymce.EnterKey
  */
 define("tinymce/EnterKey", [
 	"tinymce/dom/TreeWalker",
@@ -59062,6 +56373,25 @@ define("tinymce/EnterKey", [
 				}
 			}
 
+			function insertNewBlockAfter() {
+				// If the caret is at the end of a header we produce a P tag after it similar to Word unless we are in a hgroup
+				if (/^(H[1-6]|PRE|FIGURE)$/.test(parentBlockName) && containerBlockName != 'HGROUP') {
+					newBlock = createNewBlock(newBlockName);
+				} else {
+					newBlock = createNewBlock();
+				}
+
+				// Split the current container block element if enter is pressed inside an empty inner block element
+				if (settings.end_container_on_empty_block && canSplitBlock(containerBlock) && dom.isEmpty(parentBlock)) {
+					// Split container block for example a BLOCKQUOTE at the current blockParent location for example a P
+					newBlock = dom.split(containerBlock, parentBlock);
+				} else {
+					dom.insertAfter(newBlock, parentBlock);
+				}
+
+				moveToCaretPosition(newBlock);
+			}
+
 			rng = selection.getRng(true);
 
 			// Event is blocked by some other handler for example the lists plugin
@@ -59174,22 +56504,7 @@ define("tinymce/EnterKey", [
 
 			// Insert new block before/after the parent block depending on caret location
 			if (isCaretAtStartOrEndOfBlock()) {
-				// If the caret is at the end of a header we produce a P tag after it similar to Word unless we are in a hgroup
-				if (/^(H[1-6]|PRE|FIGURE)$/.test(parentBlockName) && containerBlockName != 'HGROUP') {
-					newBlock = createNewBlock(newBlockName);
-				} else {
-					newBlock = createNewBlock();
-				}
-
-				// Split the current container block element if enter is pressed inside an empty inner block element
-				if (settings.end_container_on_empty_block && canSplitBlock(containerBlock) && dom.isEmpty(parentBlock)) {
-					// Split container block for example a BLOCKQUOTE at the current blockParent location for example a P
-					newBlock = dom.split(containerBlock, parentBlock);
-				} else {
-					dom.insertAfter(newBlock, parentBlock);
-				}
-
-				moveToCaretPosition(newBlock);
+				insertNewBlockAfter();
 			} else if (isCaretAtStartOrEndOfBlock(true)) {
 				// Insert new block before
 				newBlock = parentBlock.parentNode.insertBefore(createNewBlock(), parentBlock);
@@ -59205,7 +56520,14 @@ define("tinymce/EnterKey", [
 				dom.insertAfter(fragment, parentBlock);
 				trimInlineElementsOnLeftSideOfBlock(newBlock);
 				addBrToBlockIfNeeded(parentBlock);
-				moveToCaretPosition(newBlock);
+
+				// New block might become empty if it's <p><b>a |</b></p>
+				if (dom.isEmpty(newBlock)) {
+					dom.remove(newBlock);
+					insertNewBlockAfter();
+				} else {
+					moveToCaretPosition(newBlock);
+				}
 			}
 
 			dom.setAttrib(newBlock, 'id', ''); // Remove ID since it needs to be document unique
@@ -59231,13 +56553,19 @@ define("tinymce/EnterKey", [
 /**
  * ForceBlocks.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
+/**
+ * Makes sure that everything gets wrapped in paragraphs.
+ *
+ * @private
+ * @class tinymce.ForceBlocks
+ */
 define("tinymce/ForceBlocks", [], function() {
 	return function(editor) {
 		var settings = editor.settings, dom = editor.dom, selection = editor.selection;
@@ -59366,8 +56694,8 @@ define("tinymce/ForceBlocks", [], function() {
 /**
  * EditorCommands.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -59689,7 +57017,7 @@ define("tinymce/EditorCommands", [
 			},
 
 			// Override justify commands to use the text formatter engine
-			'JustifyLeft,JustifyCenter,JustifyRight,JustifyFull': function(command) {
+			'JustifyLeft,JustifyCenter,JustifyRight,JustifyFull,JustifyNone': function(command) {
 				var align = command.substring(7);
 
 				if (align == 'full') {
@@ -59703,8 +57031,10 @@ define("tinymce/EditorCommands", [
 					}
 				});
 
-				toggleFormat('align' + align);
-				execCommand('mceRepaint');
+				if (align != 'none') {
+					toggleFormat('align' + align);
+					execCommand('mceRepaint');
+				}
 			},
 
 			// Override list commands to fix WebKit bug
@@ -59805,7 +57135,7 @@ define("tinymce/EditorCommands", [
 
 			mceInsertContent: function(command, ui, value) {
 				var parser, serializer, parentNode, rootNode, fragment, args;
-				var marker, rng, node, node2, bookmarkHtml, merge;
+				var marker, rng, node, node2, bookmarkHtml, merge, data;
 				var textInlineElements = editor.schema.getTextInlineElements();
 
 				function trimOrPaddLeftRight(html) {
@@ -59889,6 +57219,7 @@ define("tinymce/EditorCommands", [
 
 				if (typeof value != 'string') {
 					merge = value.merge;
+					data = value.data;
 					value = value.content;
 				}
 
@@ -59937,7 +57268,7 @@ define("tinymce/EditorCommands", [
 				parentNode = selection.getNode();
 
 				// Parse the fragment within the context of the parent node
-				var parserArgs = {context: parentNode.nodeName.toLowerCase()};
+				var parserArgs = {context: parentNode.nodeName.toLowerCase(), data: data};
 				fragment = parser.parse(value, parserArgs);
 
 				markInlineFormatElements(fragment);
@@ -60368,8 +57699,8 @@ define("tinymce/EditorCommands", [
 /**
  * URI.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -60758,6 +58089,22 @@ define("tinymce/util/URI", [
 		}
 	};
 
+	URI.parseDataUri = function(uri) {
+		var type, matches;
+
+		uri = decodeURIComponent(uri).split(',');
+
+		matches = /data:([^;]+)/.exec(uri[0]);
+		if (matches) {
+			type = matches[1];
+		}
+
+		return {
+			type: type,
+			data: uri[1]
+		};
+	};
+
 	return URI;
 });
 
@@ -60766,7 +58113,11 @@ define("tinymce/util/URI", [
 /**
  * Class.js
  *
- * Copyright 2003-2012, Moxiecode Systems AB, All rights reserved.
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
  */
 
 /**
@@ -60934,8 +58285,8 @@ define("tinymce/util/Class", [
 /**
  * EventDispatcher.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -61226,13 +58577,424 @@ define("tinymce/util/EventDispatcher", [
 	return Dispatcher;
 });
 
+// Included from: js/tinymce/classes/data/Binding.js
+
+/**
+ * Binding.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * This class gets dynamically extended to provide a binding between two models. This makes it possible to
+ * sync the state of two properties in two models by a layer of abstraction.
+ *
+ * @private
+ * @class tinymce.data.Binding
+ */
+define("tinymce/data/Binding", [], function() {
+	/**
+	 * Constructs a new bidning.
+	 *
+	 * @constructor
+	 * @method Binding
+	 * @param {Object} settings Settings to the binding.
+	 */
+	function Binding(settings) {
+		this.create = settings.create;
+	}
+
+	/**
+	 * Creates a binding for a property on a model.
+	 *
+	 * @method create
+	 * @param {tinymce.data.ObservableObject} model Model to create binding to.
+	 * @param {String} name Name of property to bind.
+	 * @return {tinymce.data.Binding} Binding instance.
+	 */
+	Binding.create = function(model, name) {
+		return new Binding({
+			create: function(otherModel, otherName) {
+				var bindings;
+
+				function fromSelfToOther(e) {
+					otherModel.set(otherName, e.value);
+				}
+
+				function fromOtherToSelf(e) {
+					model.set(name, e.value);
+				}
+
+				otherModel.on('change:' + otherName, fromOtherToSelf);
+				model.on('change:' + name, fromSelfToOther);
+
+				// Keep track of the bindings
+				bindings = otherModel._bindings;
+
+				if (!bindings) {
+					bindings = otherModel._bindings = [];
+
+					otherModel.on('destroy', function() {
+						var i = bindings.length;
+
+						while (i--) {
+							bindings[i]();
+						}
+					});
+				}
+
+				bindings.push(function() {
+					model.off('change:' + name, fromSelfToOther);
+				});
+
+				return model.get(name);
+			}
+		});
+	};
+
+	return Binding;
+});
+
+// Included from: js/tinymce/classes/util/Observable.js
+
+/**
+ * Observable.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * This mixin will add event binding logic to classes.
+ *
+ * @mixin tinymce.util.Observable
+ */
+define("tinymce/util/Observable", [
+	"tinymce/util/EventDispatcher"
+], function(EventDispatcher) {
+	function getEventDispatcher(obj) {
+		if (!obj._eventDispatcher) {
+			obj._eventDispatcher = new EventDispatcher({
+				scope: obj,
+				toggleEvent: function(name, state) {
+					if (EventDispatcher.isNative(name) && obj.toggleNativeEvent) {
+						obj.toggleNativeEvent(name, state);
+					}
+				}
+			});
+		}
+
+		return obj._eventDispatcher;
+	}
+
+	return {
+		/**
+		 * Fires the specified event by name.
+		 *
+		 * @method fire
+		 * @param {String} name Name of the event to fire.
+		 * @param {Object?} args Event arguments.
+		 * @param {Boolean?} bubble True/false if the event is to be bubbled.
+		 * @return {Object} Event args instance passed in.
+		 * @example
+		 * instance.fire('event', {...});
+		 */
+		fire: function(name, args, bubble) {
+			var self = this;
+
+			// Prevent all events except the remove event after the instance has been removed
+			if (self.removed && name !== "remove") {
+				return args;
+			}
+
+			args = getEventDispatcher(self).fire(name, args, bubble);
+
+			// Bubble event up to parents
+			if (bubble !== false && self.parent) {
+				var parent = self.parent();
+				while (parent && !args.isPropagationStopped()) {
+					parent.fire(name, args, false);
+					parent = parent.parent();
+				}
+			}
+
+			return args;
+		},
+
+		/**
+		 * Binds an event listener to a specific event by name.
+		 *
+		 * @method on
+		 * @param {String} name Event name or space separated list of events to bind.
+		 * @param {callback} callback Callback to be executed when the event occurs.
+		 * @param {Boolean} first Optional flag if the event should be prepended. Use this with care.
+		 * @return {Object} Current class instance.
+		 * @example
+		 * instance.on('event', function(e) {
+		 *     // Callback logic
+		 * });
+		 */
+		on: function(name, callback, prepend) {
+			return getEventDispatcher(this).on(name, callback, prepend);
+		},
+
+		/**
+		 * Unbinds an event listener to a specific event by name.
+		 *
+		 * @method off
+		 * @param {String?} name Name of the event to unbind.
+		 * @param {callback?} callback Callback to unbind.
+		 * @return {Object} Current class instance.
+		 * @example
+		 * // Unbind specific callback
+		 * instance.off('event', handler);
+		 *
+		 * // Unbind all listeners by name
+		 * instance.off('event');
+		 *
+		 * // Unbind all events
+		 * instance.off();
+		 */
+		off: function(name, callback) {
+			return getEventDispatcher(this).off(name, callback);
+		},
+
+		/**
+		 * Bind the event callback and once it fires the callback is removed.
+		 *
+		 * @method once
+		 * @param {String} name Name of the event to bind.
+		 * @param {callback} callback Callback to bind only once.
+		 * @return {Object} Current class instance.
+		 */
+		once: function(name, callback) {
+			return getEventDispatcher(this).once(name, callback);
+		},
+
+		/**
+		 * Returns true/false if the object has a event of the specified name.
+		 *
+		 * @method hasEventListeners
+		 * @param {String} name Name of the event to check for.
+		 * @return {Boolean} true/false if the event exists or not.
+		 */
+		hasEventListeners: function(name) {
+			return getEventDispatcher(this).has(name);
+		}
+	};
+});
+
+// Included from: js/tinymce/classes/data/ObservableObject.js
+
+/**
+ * ObservableObject.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * This class is a object that is observable when properties changes a change event gets emitted.
+ *
+ * @private
+ * @class tinymce.data.ObservableObject
+ */
+define("tinymce/data/ObservableObject", [
+	"tinymce/data/Binding",
+	"tinymce/util/Observable",
+	"tinymce/util/Class",
+	"tinymce/util/Tools"
+], function(Binding, Observable, Class, Tools) {
+	function isNode(node) {
+		return node.nodeType > 0;
+	}
+
+	// Todo: Maybe this should be shallow compare since it might be huge object references
+	function isEqual(a, b) {
+		var k, checked;
+
+		// Strict equals
+		if (a === b) {
+			return true;
+		}
+
+		// Compare null
+		if (a === null || b === null) {
+			return a === b;
+		}
+
+		// Compare number, boolean, string, undefined
+		if (typeof a !== "object" || typeof b !== "object") {
+			return a === b;
+		}
+
+		// Compare arrays
+		if (Tools.isArray(b)) {
+			if (a.length !== b.length) {
+				return false;
+			}
+
+			k = a.length;
+			while (k--) {
+				if (!isEqual(a[k], b[k])) {
+					return false;
+				}
+			}
+		}
+
+		// Shallow compare nodes
+		if (isNode(a) || isNode(b)) {
+			return a === b;
+		}
+
+		// Compare objects
+		checked = {};
+		for (k in b) {
+			if (!isEqual(a[k], b[k])) {
+				return false;
+			}
+
+			checked[k] = true;
+		}
+
+		for (k in a) {
+			if (!checked[k] && !isEqual(a[k], b[k])) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	return Class.extend({
+		Mixins: [Observable],
+
+		/**
+		 * Constructs a new observable object instance.
+		 *
+		 * @constructor
+		 * @param {Object} data Initial data for the object.
+		 */
+		init: function(data) {
+			var name, value;
+
+			data = data || {};
+
+			for (name in data) {
+				value = data[name];
+
+				if (value instanceof Binding) {
+					data[name] = value.create(this, name);
+				}
+			}
+
+			this.data = data;
+		},
+
+		/**
+		 * Sets a property on the value this will call
+		 * observers if the value is a change from the current value.
+		 *
+		 * @method set
+		 * @param {String/object} name Name of the property to set or a object of items to set.
+		 * @param {Object} value Value to set for the property.
+		 * @return {tinymce.data.ObservableObject} Observable object instance.
+		 */
+		set: function(name, value) {
+			var key, args, oldValue = this.data[name];
+
+			if (value instanceof Binding) {
+				value = value.create(this, name);
+			}
+
+			if (typeof name === "object") {
+				for (key in name) {
+					this.set(key, name[key]);
+				}
+
+				return this;
+			}
+
+			if (!isEqual(oldValue, value)) {
+				this.data[name] = value;
+
+				args = {
+					target: this,
+					name: name,
+					value: value,
+					oldValue: oldValue
+				};
+
+				this.fire('change:' + name, args);
+				this.fire('change', args);
+			}
+
+			return this;
+		},
+
+		/**
+		 * Gets a property by name.
+		 *
+		 * @method get
+		 * @param {String} name Name of the property to get.
+		 * @return {Object} Object value of propery.
+		 */
+		get: function(name) {
+			return this.data[name];
+		},
+
+		/**
+		 * Returns true/false if the specified property exists.
+		 *
+		 * @method has
+		 * @param {String} name Name of the property to check for.
+		 * @return {Boolean} true/false if the item exists.
+		 */
+		has: function(name) {
+			return name in this.data;
+		},
+
+		/**
+		 * Returns a dynamic property binding for the specified property name. This makes
+		 * it possible to sync the state of two properties in two ObservableObject instances.
+		 *
+		 * @method bind
+		 * @param {String} name Name of the property to sync with the property it's inserted to.
+		 * @return {tinymce.data.Binding} Data binding instance.
+		 */
+		bind: function(name) {
+			return Binding.create(this, name);
+		},
+
+		/**
+		 * Destroys the observable object and fires the "destroy"
+		 * event and clean up any internal resources.
+		 *
+		 * @method destroy
+		 */
+		destroy: function() {
+			this.fire('destroy');
+		}
+	});
+});
+
 // Included from: js/tinymce/classes/ui/Selector.js
 
 /**
  * Selector.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -61346,7 +59108,7 @@ define("tinymce/ui/Selector", [
 						var i = classes.length;
 
 						while (i--) {
-							if (!item.hasClass(classes[i])) {
+							if (!item.classes.contains(classes[i])) {
 								return false;
 							}
 						}
@@ -61390,14 +59152,14 @@ define("tinymce/ui/Selector", [
 								item[name] ? item[name]() :
 								false;
 						};
-					} else {
-						// Compile not expression
-						notSelectors = parseChunks(name[1], []);
-
-						return function(item) {
-							return !match(item, notSelectors);
-						};
 					}
+
+					// Compile not expression
+					notSelectors = parseChunks(name[1], []);
+
+					return function(item) {
+						return !match(item, notSelectors);
+					};
 				}
 			}
 
@@ -61603,8 +59365,8 @@ define("tinymce/ui/Selector", [
 /**
  * Collection.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -61812,7 +59574,7 @@ define("tinymce/ui/Collection", [
 		 * @return {Boolean} true/false state if the class exists or not.
 		 */
 		hasClass: function(cls) {
-			return this[0] ? this[0].hasClass(cls) : false;
+			return this[0] ? this[0].classes.contains(cls) : false;
 		},
 
 		/**
@@ -61878,6 +59640,32 @@ define("tinymce/ui/Collection", [
 			}
 
 			return this;
+		},
+
+		/**
+		 * Adds a class to all items in the collection.
+		 *
+		 * @method addClass
+		 * @param {String} cls Class to add to each item.
+		 * @return {tinymce.ui.Collection} Current collection instance.
+		 */
+		addClass: function(cls) {
+			return this.each(function(item) {
+				item.classes.add(cls);
+			});
+		},
+
+		/**
+		 * Removes the specified class from all items in collection.
+		 *
+		 * @method removeClass
+		 * @param {String} cls Class to remove from each item.
+		 * @return {tinymce.ui.Collection} Current collection instance.
+		 */
+		removeClass: function(cls) {
+			return this.each(function(item) {
+				item.classes.remove(cls);
+			});
 		}
 
 		/**
@@ -61980,28 +59768,10 @@ define("tinymce/ui/Collection", [
 		 * @return {tinymce.ui.Collection} Current collection instance or visible state of the first item on a get operation.
 		 */
 		// visible: function(state) {}, -- Generated by code below
-
-		/**
-		 * Adds a class to all items in the collection.
-		 *
-		 * @method addClass
-		 * @param {String} cls Class to add to each item.
-		 * @return {tinymce.ui.Collection} Current collection instance.
-		 */
-		// addClass: function(cls) {}, -- Generated by code below
-
-		/**
-		 * Removes the specified class from all items in collection.
-		 *
-		 * @method removeClass
-		 * @param {String} cls Class to remove from each item.
-		 * @return {tinymce.ui.Collection} Current collection instance.
-		 */
-		// removeClass: function(cls) {}, -- Generated by code below
 	};
 
 	// Extend tinymce.ui.Collection prototype with some generated control specific methods
-	Tools.each('fire on off show hide addClass removeClass append prepend before after reflow'.split(' '), function(name) {
+	Tools.each('fire on off show hide append prepend before after reflow'.split(' '), function(name) {
 		proto[name] = function() {
 			var args = Tools.toArray(arguments);
 
@@ -62034,15 +59804,21 @@ define("tinymce/ui/Collection", [
 // Included from: js/tinymce/classes/ui/DomUtils.js
 
 /**
- * DOMUtils.js
+ * DomUtils.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
+/**
+ * Private UI DomUtils proxy.
+ *
+ * @private
+ * @class tinymce.ui.DomUtils
+ */
 define("tinymce/ui/DomUtils", [
 	"tinymce/util/Tools",
 	"tinymce/dom/DOMUtils"
@@ -62135,200 +59911,29 @@ define("tinymce/ui/DomUtils", [
 	};
 });
 
-// Included from: js/tinymce/classes/ui/Control.js
+// Included from: js/tinymce/classes/ui/BoxUtils.js
 
 /**
- * Control.js
+ * BoxUtils.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
-/*eslint consistent-this:0 */
-
 /**
- * This is the base class for all controls and containers. All UI control instances inherit
- * from this one as it has the base logic needed by all of them.
+ * Utility class for box parsing and measuing.
  *
- * @class tinymce.ui.Control
+ * @private
+ * @class tinymce.ui.BoxUtils
  */
-define("tinymce/ui/Control", [
-	"tinymce/util/Class",
-	"tinymce/util/Tools",
-	"tinymce/util/EventDispatcher",
-	"tinymce/ui/Collection",
-	"tinymce/ui/DomUtils"
-], function(Class, Tools, EventDispatcher, Collection, DomUtils) {
+define("tinymce/ui/BoxUtils", [
+], function() {
 	"use strict";
 
-	var hasMouseWheelEventSupport = "onmousewheel" in document;
-	var hasWheelEventSupport = false;
-	var classPrefix = "mce-";
-
-	function getEventDispatcher(obj) {
-		if (!obj._eventDispatcher) {
-			obj._eventDispatcher = new EventDispatcher({
-				scope: obj,
-				toggleEvent: function(name, state) {
-					if (state && EventDispatcher.isNative(name)) {
-						if (!obj._nativeEvents) {
-							obj._nativeEvents = {};
-						}
-
-						obj._nativeEvents[name] = true;
-
-						if (obj._rendered) {
-							obj.bindPendingEvents();
-						}
-					}
-				}
-			});
-		}
-
-		return obj._eventDispatcher;
-	}
-
-	var Control = Class.extend({
-		Statics: {
-			classPrefix: classPrefix
-		},
-
-		isRtl: function() {
-			return Control.rtl;
-		},
-
-		/**
-		 * Class/id prefix to use for all controls.
-		 *
-		 * @final
-		 * @field {String} classPrefix
-		 */
-		classPrefix: classPrefix,
-
-		/**
-		 * Constructs a new control instance with the specified settings.
-		 *
-		 * @constructor
-		 * @param {Object} settings Name/value object with settings.
-		 * @setting {String} style Style CSS properties to add.
-		 * @setting {String} border Border box values example: 1 1 1 1
-		 * @setting {String} padding Padding box values example: 1 1 1 1
-		 * @setting {String} margin Margin box values example: 1 1 1 1
-		 * @setting {Number} minWidth Minimal width for the control.
-		 * @setting {Number} minHeight Minimal height for the control.
-		 * @setting {String} classes Space separated list of classes to add.
-		 * @setting {String} role WAI-ARIA role to use for control.
-		 * @setting {Boolean} hidden Is the control hidden by default.
-		 * @setting {Boolean} disabled Is the control disabled by default.
-		 * @setting {String} name Name of the control instance.
-		 */
-		init: function(settings) {
-			var self = this, classes, i;
-
-			self.settings = settings = Tools.extend({}, self.Defaults, settings);
-
-			// Initial states
-			self._id = settings.id || DomUtils.id();
-			self._text = self._name = '';
-			self._width = self._height = 0;
-			self._aria = {role: settings.role};
-			this._elmCache = {};
-
-			// Setup classes
-			classes = settings.classes;
-			if (classes) {
-				classes = classes.split(' ');
-				classes.map = {};
-				i = classes.length;
-				while (i--) {
-					classes.map[classes[i]] = true;
-				}
-			}
-
-			self._classes = classes || [];
-			self.visible(true);
-
-			// Set some properties
-			Tools.each('title text width height name classes visible disabled active value'.split(' '), function(name) {
-				var value = settings[name], undef;
-
-				if (value !== undef) {
-					self[name](value);
-				} else if (self['_' + name] === undef) {
-					self['_' + name] = false;
-				}
-			});
-
-			self.on('click', function() {
-				if (self.disabled()) {
-					return false;
-				}
-			});
-
-			// TODO: Is this needed duplicate code see above?
-			if (settings.classes) {
-				Tools.each(settings.classes.split(' '), function(cls) {
-					self.addClass(cls);
-				});
-			}
-
-			/**
-			 * Name/value object with settings for the current control.
-			 *
-			 * @field {Object} settings
-			 */
-			self.settings = settings;
-
-			self._borderBox = self.parseBox(settings.border);
-			self._paddingBox = self.parseBox(settings.padding);
-			self._marginBox = self.parseBox(settings.margin);
-
-			if (settings.hidden) {
-				self.hide();
-			}
-		},
-
-		// Will generate getter/setter methods for these properties
-		Properties: 'parent,title,text,width,height,disabled,active,name,value',
-
-		// Will generate empty dummy functions for these
-		Methods: 'renderHtml',
-
-		/**
-		 * Returns the root element to render controls into.
-		 *
-		 * @method getContainerElm
-		 * @return {Element} HTML DOM element to render into.
-		 */
-		getContainerElm: function() {
-			return document.body;
-		},
-
-		/**
-		 * Returns a control instance for the current DOM element.
-		 *
-		 * @method getParentCtrl
-		 * @param {Element} elm HTML dom element to get parent control from.
-		 * @return {tinymce.ui.Control} Control instance or undefined.
-		 */
-		getParentCtrl: function(elm) {
-			var ctrl, lookup = this.getRoot().controlIdLookup;
-
-			while (elm && lookup) {
-				ctrl = lookup[elm.id];
-				if (ctrl) {
-					break;
-				}
-
-				elm = elm.parentNode;
-			}
-
-			return ctrl;
-		},
-
+	return {
 		/**
 		 * Parses the specified box value. A box value contains 1-4 properties in clockwise order.
 		 *
@@ -62375,18 +59980,6 @@ define("tinymce/ui/Control", [
 			};
 		},
 
-		borderBox: function() {
-			return this._borderBox;
-		},
-
-		paddingBox: function() {
-			return this._paddingBox;
-		},
-
-		marginBox: function() {
-			return this._marginBox;
-		},
-
 		measureBox: function(elm, prefix) {
 			function getStyle(name) {
 				var defaultView = document.defaultView;
@@ -62415,6 +60008,445 @@ define("tinymce/ui/Control", [
 				bottom: getSide(prefix + "BottomWidth"),
 				left: getSide(prefix + "LeftWidth")
 			};
+		}
+	};
+});
+
+// Included from: js/tinymce/classes/ui/ClassList.js
+
+/**
+ * ClassList.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Handles adding and removal of classes.
+ *
+ * @private
+ * @class tinymce.ui.ClassList
+ */
+define("tinymce/ui/ClassList", [
+	"tinymce/util/Tools"
+], function(Tools) {
+	"use strict";
+
+	function noop() {
+	}
+
+	/**
+	 * Constructs a new class list the specified onchange
+	 * callback will be executed when the class list gets modifed.
+	 *
+	 * @constructor ClassList
+	 * @param {function} onchange Onchange callback to be executed.
+	 */
+	function ClassList(onchange) {
+		this.cls = [];
+		this.cls._map = {};
+		this.onchange = onchange || noop;
+		this.prefix = '';
+	}
+
+	Tools.extend(ClassList.prototype, {
+		/**
+		 * Adds a new class to the class list.
+		 *
+		 * @method add
+		 * @param {String} cls Class to be added.
+		 * @return {tinymce.ui.ClassList} Current class list instance.
+		 */
+		add: function(cls) {
+			if (cls && !this.contains(cls)) {
+				this.cls._map[cls] = true;
+				this.cls.push(cls);
+				this._change();
+			}
+
+			return this;
+		},
+
+		/**
+		 * Removes the specified class from the class list.
+		 *
+		 * @method remove
+		 * @param {String} cls Class to be removed.
+		 * @return {tinymce.ui.ClassList} Current class list instance.
+		 */
+		remove: function(cls) {
+			if (this.contains(cls)) {
+				for (var i = 0; i < this.cls.length; i++) {
+					if (this.cls[i] === cls) {
+						break;
+					}
+				}
+
+				this.cls.splice(i, 1);
+				delete this.cls._map[cls];
+				this._change();
+			}
+
+			return this;
+		},
+
+		/**
+		 * Toggles a class in the class list.
+		 *
+		 * @method toggle
+		 * @param {String} cls Class to be added/removed.
+		 * @param {Boolean} state Optional state if it should be added/removed.
+		 * @return {tinymce.ui.ClassList} Current class list instance.
+		 */
+		toggle: function(cls, state) {
+			var curState = this.contains(cls);
+
+			if (curState !== state) {
+				if (curState) {
+					this.remove(cls);
+				} else {
+					this.add(cls);
+				}
+
+				this._change();
+			}
+
+			return this;
+		},
+
+		/**
+		 * Returns true if the class list has the specified class.
+		 *
+		 * @method contains
+		 * @param {String} cls Class to look for.
+		 * @return {Boolean} true/false if the class exists or not.
+		 */
+		contains: function(cls) {
+			return !!this.cls._map[cls];
+		},
+
+		/**
+		 * Returns a space separated list of classes.
+		 *
+		 * @method toString
+		 * @return {String} Space separated list of classes.
+		 */
+
+		_change: function() {
+			delete this.clsValue;
+			this.onchange.call(this);
+		}
+	});
+
+	// IE 8 compatibility
+	ClassList.prototype.toString = function() {
+		var value;
+
+		if (this.clsValue) {
+			return this.clsValue;
+		}
+
+		value = '';
+		for (var i = 0; i < this.cls.length; i++) {
+			if (i > 0) {
+				value += ' ';
+			}
+
+			value += this.prefix + this.cls[i];
+		}
+
+		return value;
+	};
+
+	return ClassList;
+});
+
+// Included from: js/tinymce/classes/ui/ReflowQueue.js
+
+/**
+ * ReflowQueue.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * This class will automatically reflow controls on the next animation frame within a few milliseconds on older browsers.
+ * If the user manually reflows then the automatic reflow will be cancelled. This class is unsed internally when various control states
+ * changes that triggers a reflow.
+ *
+ * @class tinymce.ui.ReflowQueue
+ * @static
+ */
+define("tinymce/ui/ReflowQueue", [
+], function() {
+	var dirtyCtrls = {}, animationFrameRequested;
+
+	function requestAnimationFrame(callback, element) {
+		var i, requestAnimationFrameFunc = window.requestAnimationFrame, vendors = ['ms', 'moz', 'webkit'];
+
+		function featurefill(callback) {
+			window.setTimeout(callback, 0);
+		}
+
+		for (i = 0; i < vendors.length && !requestAnimationFrameFunc; i++) {
+			requestAnimationFrameFunc = window[vendors[i] + 'RequestAnimationFrame'];
+		}
+
+		if (!requestAnimationFrameFunc) {
+			requestAnimationFrameFunc = featurefill;
+		}
+
+		requestAnimationFrameFunc(callback, element);
+	}
+
+	return {
+		/**
+		 * Adds a control to the next automatic reflow call. This is the control that had a state
+		 * change for example if the control was hidden/shown.
+		 *
+		 * @method add
+		 * @param {tinymce.ui.Control} ctrl Control to add to queue.
+		 */
+		add: function(ctrl) {
+			var parent = ctrl.parent();
+
+			if (parent) {
+				if (!parent._layout || parent._layout.isNative()) {
+					return;
+				}
+
+				if (!dirtyCtrls[parent._id]) {
+					dirtyCtrls[parent._id] = parent;
+				}
+
+				if (!animationFrameRequested) {
+					animationFrameRequested = true;
+
+					requestAnimationFrame(function() {
+						var id, ctrl;
+
+						animationFrameRequested = false;
+
+						for (id in dirtyCtrls) {
+							ctrl = dirtyCtrls[id];
+
+							if (ctrl.state.get('rendered')) {
+								ctrl.reflow();
+							}
+						}
+
+						dirtyCtrls = {};
+					}, document.body);
+				}
+			}
+		},
+
+		/**
+		 * Removes the specified control from the automatic reflow. This will happen when for example the user
+		 * manually triggers a reflow.
+		 *
+		 * @method remove
+		 * @param {tinymce.ui.Control} ctrl Control to remove from queue.
+		 */
+		remove: function(ctrl) {
+			if (dirtyCtrls[ctrl._id]) {
+				delete dirtyCtrls[ctrl._id];
+			}
+		}
+	};
+});
+
+// Included from: js/tinymce/classes/ui/Control.js
+
+/**
+ * Control.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/*eslint consistent-this:0 */
+
+/**
+ * This is the base class for all controls and containers. All UI control instances inherit
+ * from this one as it has the base logic needed by all of them.
+ *
+ * @class tinymce.ui.Control
+ */
+define("tinymce/ui/Control", [
+	"tinymce/util/Class",
+	"tinymce/util/Tools",
+	"tinymce/util/EventDispatcher",
+	"tinymce/data/ObservableObject",
+	"tinymce/ui/Collection",
+	"tinymce/ui/DomUtils",
+	"tinymce/dom/DomQuery",
+	"tinymce/ui/BoxUtils",
+	"tinymce/ui/ClassList",
+	"tinymce/ui/ReflowQueue"
+], function(Class, Tools, EventDispatcher, ObservableObject, Collection, DomUtils, $, BoxUtils, ClassList, ReflowQueue) {
+	"use strict";
+
+	var hasMouseWheelEventSupport = "onmousewheel" in document;
+	var hasWheelEventSupport = false;
+	var classPrefix = "mce-";
+	var Control, idCounter = 0;
+
+	var proto = {
+		Statics: {
+			classPrefix: classPrefix
+		},
+
+		isRtl: function() {
+			return Control.rtl;
+		},
+
+		/**
+		 * Class/id prefix to use for all controls.
+		 *
+		 * @final
+		 * @field {String} classPrefix
+		 */
+		classPrefix: classPrefix,
+
+		/**
+		 * Constructs a new control instance with the specified settings.
+		 *
+		 * @constructor
+		 * @param {Object} settings Name/value object with settings.
+		 * @setting {String} style Style CSS properties to add.
+		 * @setting {String} border Border box values example: 1 1 1 1
+		 * @setting {String} padding Padding box values example: 1 1 1 1
+		 * @setting {String} margin Margin box values example: 1 1 1 1
+		 * @setting {Number} minWidth Minimal width for the control.
+		 * @setting {Number} minHeight Minimal height for the control.
+		 * @setting {String} classes Space separated list of classes to add.
+		 * @setting {String} role WAI-ARIA role to use for control.
+		 * @setting {Boolean} hidden Is the control hidden by default.
+		 * @setting {Boolean} disabled Is the control disabled by default.
+		 * @setting {String} name Name of the control instance.
+		 */
+		init: function(settings) {
+			var self = this, classes, defaultClasses;
+
+			function applyClasses(classes) {
+				var i;
+
+				classes = classes.split(' ');
+				for (i = 0; i < classes.length; i++) {
+					self.classes.add(classes[i]);
+				}
+			}
+
+			self.settings = settings = Tools.extend({}, self.Defaults, settings);
+
+			// Initial states
+			self._id = settings.id || ('mceu_' + (idCounter++));
+			self._aria = {role: settings.role};
+			self._elmCache = {};
+			self.$ = $;
+
+			self.state = new ObservableObject({
+				visible: true,
+				active: false,
+				disabled: false,
+				value: ''
+			});
+
+			self.data = new ObservableObject(settings.data);
+
+			self.classes = new ClassList(function() {
+				if (self.state.get('rendered')) {
+					self.getEl().className = this.toString();
+				}
+			});
+			self.classes.prefix = self.classPrefix;
+
+			// Setup classes
+			classes = settings.classes;
+			if (classes) {
+				if (self.Defaults) {
+					defaultClasses = self.Defaults.classes;
+
+					if (defaultClasses && classes != defaultClasses) {
+						applyClasses(defaultClasses);
+					}
+				}
+
+				applyClasses(classes);
+			}
+
+			Tools.each('title text name visible disabled active value'.split(' '), function(name) {
+				if (name in settings) {
+					self[name](settings[name]);
+				}
+			});
+
+			self.on('click', function() {
+				if (self.disabled()) {
+					return false;
+				}
+			});
+
+			/**
+			 * Name/value object with settings for the current control.
+			 *
+			 * @field {Object} settings
+			 */
+			self.settings = settings;
+
+			self.borderBox = BoxUtils.parseBox(settings.border);
+			self.paddingBox = BoxUtils.parseBox(settings.padding);
+			self.marginBox = BoxUtils.parseBox(settings.margin);
+
+			if (settings.hidden) {
+				self.hide();
+			}
+		},
+
+		// Will generate getter/setter methods for these properties
+		Properties: 'parent,name',
+
+		/**
+		 * Returns the root element to render controls into.
+		 *
+		 * @method getContainerElm
+		 * @return {Element} HTML DOM element to render into.
+		 */
+		getContainerElm: function() {
+			return document.body;
+		},
+
+		/**
+		 * Returns a control instance for the current DOM element.
+		 *
+		 * @method getParentCtrl
+		 * @param {Element} elm HTML dom element to get parent control from.
+		 * @return {tinymce.ui.Control} Control instance or undefined.
+		 */
+		getParentCtrl: function(elm) {
+			var ctrl, lookup = this.getRoot().controlIdLookup;
+
+			while (elm && lookup) {
+				ctrl = lookup[elm.id];
+				if (ctrl) {
+					break;
+				}
+
+				elm = elm.parentNode;
+			}
+
+			return ctrl;
 		},
 
 		/**
@@ -62431,9 +60463,9 @@ define("tinymce/ui/Control", [
 			var startMinWidth, startMinHeight, initialSize;
 
 			// Measure the current element
-			borderBox = self._borderBox = self._borderBox || self.measureBox(elm, 'border');
-			self._paddingBox = self._paddingBox || self.measureBox(elm, 'padding');
-			self._marginBox = self._marginBox || self.measureBox(elm, 'margin');
+			borderBox = self.borderBox = self.borderBox || BoxUtils.measureBox(elm, 'border');
+			self.paddingBox = self.paddingBox || BoxUtils.measureBox(elm, 'padding');
+			self.marginBox = self.marginBox || BoxUtils.measureBox(elm, 'margin');
 			initialSize = DomUtils.getSize(elm);
 
 			// Setup minWidth/minHeight and width/height
@@ -62600,7 +60632,8 @@ define("tinymce/ui/Control", [
 		 * @method repaint
 		 */
 		repaint: function() {
-			var self = this, style, bodyStyle, rect, borderBox, borderW = 0, borderH = 0, lastRepaintRect, round;
+			var self = this, style, bodyStyle, bodyElm, rect, borderBox;
+			var borderW = 0, borderH = 0, lastRepaintRect, round, value;
 
 			// Use Math.round on all values on IE < 9
 			round = !document.createRange ? Math.round : function(value) {
@@ -62611,7 +60644,7 @@ define("tinymce/ui/Control", [
 			rect = self._layoutRect;
 			lastRepaintRect = self._lastRepaintRect || {};
 
-			borderBox = self._borderBox;
+			borderBox = self.borderBox;
 			borderW = borderBox.left + borderBox.right;
 			borderH = borderBox.top + borderBox.bottom;
 
@@ -62626,25 +60659,39 @@ define("tinymce/ui/Control", [
 			}
 
 			if (rect.w !== lastRepaintRect.w) {
-				style.width = round(rect.w - borderW) + 'px';
+				value = round(rect.w - borderW);
+				style.width = (value >= 0 ? value : 0) + 'px';
 				lastRepaintRect.w = rect.w;
 			}
 
 			if (rect.h !== lastRepaintRect.h) {
-				style.height = round(rect.h - borderH) + 'px';
+				value = round(rect.h - borderH);
+				style.height = (value >= 0 ? value : 0) + 'px';
 				lastRepaintRect.h = rect.h;
 			}
 
 			// Update body if needed
 			if (self._hasBody && rect.innerW !== lastRepaintRect.innerW) {
-				bodyStyle = self.getEl('body').style;
-				bodyStyle.width = round(rect.innerW) + 'px';
+				value = round(rect.innerW);
+
+				bodyElm = self.getEl('body');
+				if (bodyElm) {
+					bodyStyle = bodyElm.style;
+					bodyStyle.width = (value >= 0 ? value : 0) + 'px';
+				}
+
 				lastRepaintRect.innerW = rect.innerW;
 			}
 
 			if (self._hasBody && rect.innerH !== lastRepaintRect.innerH) {
-				bodyStyle = bodyStyle || self.getEl('body').style;
-				bodyStyle.height = round(rect.innerH) + 'px';
+				value = round(rect.innerH);
+
+				bodyElm = bodyElm || self.getEl('body');
+				if (bodyElm) {
+					bodyStyle = bodyStyle || bodyElm.style;
+					bodyStyle.height = (value >= 0 ? value : 0) + 'px';
+				}
+
 				lastRepaintRect.innerH = rect.innerH;
 			}
 
@@ -62683,6 +60730,12 @@ define("tinymce/ui/Control", [
 								return false;
 							}
 						});
+					}
+
+					if (!callback) {
+						e.action = name;
+						this.fire('execute', e);
+						return;
 					}
 
 					return callback.call(scope, e);
@@ -62812,155 +60865,6 @@ define("tinymce/ui/Control", [
 		},
 
 		/**
-		 * Find the common ancestor for two control instances.
-		 *
-		 * @method findCommonAncestor
-		 * @param {tinymce.ui.Control} ctrl1 First control.
-		 * @param {tinymce.ui.Control} ctrl2 Second control.
-		 * @return {tinymce.ui.Control} Ancestor control instance.
-		 */
-		findCommonAncestor: function(ctrl1, ctrl2) {
-			var parentCtrl;
-
-			while (ctrl1) {
-				parentCtrl = ctrl2;
-
-				while (parentCtrl && ctrl1 != parentCtrl) {
-					parentCtrl = parentCtrl.parent();
-				}
-
-				if (ctrl1 == parentCtrl) {
-					break;
-				}
-
-				ctrl1 = ctrl1.parent();
-			}
-
-			return ctrl1;
-		},
-
-		/**
-		 * Returns true/false if the specific control has the specific class.
-		 *
-		 * @method hasClass
-		 * @param {String} cls Class to check for.
-		 * @param {String} [group] Sub element group name.
-		 * @return {Boolean} True/false if the control has the specified class.
-		 */
-		hasClass: function(cls, group) {
-			var classes = this._classes[group || 'control'];
-
-			cls = this.classPrefix + cls;
-
-			return classes && !!classes.map[cls];
-		},
-
-		/**
-		 * Adds the specified class to the control
-		 *
-		 * @method addClass
-		 * @param {String} cls Class to check for.
-		 * @param {String} [group] Sub element group name.
-		 * @return {tinymce.ui.Control} Current control object.
-		 */
-		addClass: function(cls, group) {
-			var self = this, classes, elm;
-
-			cls = this.classPrefix + cls;
-			classes = self._classes[group || 'control'];
-
-			if (!classes) {
-				classes = [];
-				classes.map = {};
-				self._classes[group || 'control'] = classes;
-			}
-
-			if (!classes.map[cls]) {
-				classes.map[cls] = cls;
-				classes.push(cls);
-
-				if (self._rendered) {
-					elm = self.getEl(group);
-
-					if (elm) {
-						elm.className = classes.join(' ');
-					}
-				}
-			}
-
-			return self;
-		},
-
-		/**
-		 * Removes the specified class from the control.
-		 *
-		 * @method removeClass
-		 * @param {String} cls Class to remove.
-		 * @param {String} [group] Sub element group name.
-		 * @return {tinymce.ui.Control} Current control object.
-		 */
-		removeClass: function(cls, group) {
-			var self = this, classes, i, elm;
-
-			cls = this.classPrefix + cls;
-			classes = self._classes[group || 'control'];
-			if (classes && classes.map[cls]) {
-				delete classes.map[cls];
-
-				i = classes.length;
-				while (i--) {
-					if (classes[i] === cls) {
-						classes.splice(i, 1);
-					}
-				}
-			}
-
-			if (self._rendered) {
-				elm = self.getEl(group);
-
-				if (elm) {
-					elm.className = classes.join(' ');
-				}
-			}
-
-			return self;
-		},
-
-		/**
-		 * Toggles the specified class on the control.
-		 *
-		 * @method toggleClass
-		 * @param {String} cls Class to remove.
-		 * @param {Boolean} state True/false state to add/remove class.
-		 * @param {String} [group] Sub element group name.
-		 * @return {tinymce.ui.Control} Current control object.
-		 */
-		toggleClass: function(cls, state, group) {
-			var self = this;
-
-			if (state) {
-				self.addClass(cls, group);
-			} else {
-				self.removeClass(cls, group);
-			}
-
-			return self;
-		},
-
-		/**
-		 * Returns the class string for the specified group name.
-		 *
-		 * @method classes
-		 * @param {String} [group] Group to get clases by.
-		 * @return {String} Classes for the specified group.
-		 */
-		classes: function(group) {
-			var classes = this._classes[group || 'control'];
-
-			return classes ? classes.join(' ') : '';
-		},
-
-		/**
 		 * Sets the inner HTML of the control element.
 		 *
 		 * @method innerHtml
@@ -62968,7 +60872,7 @@ define("tinymce/ui/Control", [
 		 * @return {tinymce.ui.Control} Current control object.
 		 */
 		innerHtml: function(html) {
-			DomUtils.innerHtml(this.getEl(), html);
+			this.$el.html(html);
 			return this;
 		},
 
@@ -62983,43 +60887,10 @@ define("tinymce/ui/Control", [
 			var id = suffix ? this._id + '-' + suffix : this._id;
 
 			if (!this._elmCache[id]) {
-				this._elmCache[id] = DomUtils.get(id);
+				this._elmCache[id] = $('#' + id)[0];
 			}
 
 			return this._elmCache[id];
-		},
-
-		/**
-		 * Sets/gets the visible for the control.
-		 *
-		 * @method visible
-		 * @param {Boolean} state Value to set to control.
-		 * @return {Boolean/tinymce.ui.Control} Current control on a set operation or current state on a get.
-		 */
-		visible: function(state) {
-			var self = this, parentCtrl;
-
-			if (typeof state !== "undefined") {
-				if (self._visible !== state) {
-					if (self._rendered) {
-						self.getEl().style.display = state ? '' : 'none';
-					}
-
-					self._visible = state;
-
-					// Parent container needs to reflow
-					parentCtrl = self.parent();
-					if (parentCtrl) {
-						parentCtrl._lastRect = null;
-					}
-
-					self.fire(state ? 'show' : 'hide');
-				}
-
-				return self;
-			}
-
-			return self._visible;
 		},
 
 		/**
@@ -63083,11 +60954,11 @@ define("tinymce/ui/Control", [
 
 			if (typeof value === "undefined") {
 				return self._aria[name];
-			} else {
-				self._aria[name] = value;
 			}
 
-			if (self._rendered) {
+			self._aria[name] = value;
+
+			if (self.state.get('rendered')) {
 				elm.setAttribute(name == 'role' ? name : 'aria-' + name, value);
 			}
 
@@ -63189,7 +61060,7 @@ define("tinymce/ui/Control", [
 			}
 
 			if (self._eventsRoot && self._eventsRoot == self) {
-				DomUtils.off(elm);
+				$(elm).off();
 			}
 
 			var lookup = self.getRoot().controlIdLookup;
@@ -63201,7 +61072,10 @@ define("tinymce/ui/Control", [
 				elm.parentNode.removeChild(elm);
 			}
 
-			self._rendered = false;
+			self.state.set('rendered', false);
+			self.state.destroy();
+
+			self.fire('remove');
 
 			return self;
 		},
@@ -63214,12 +61088,9 @@ define("tinymce/ui/Control", [
 		 * @return {tinymce.ui.Control} Current control instance.
 		 */
 		renderBefore: function(elm) {
-			var self = this;
-
-			elm.parentNode.insertBefore(DomUtils.createFragment(self.renderHtml()), elm);
-			self.postRender();
-
-			return self;
+			$(elm).before(this.renderHtml());
+			this.postRender();
+			return this;
 		},
 
 		/**
@@ -63230,13 +61101,19 @@ define("tinymce/ui/Control", [
 		 * @return {tinymce.ui.Control} Current control instance.
 		 */
 		renderTo: function(elm) {
-			var self = this;
+			$(elm || this.getContainerElm()).append(this.renderHtml());
+			this.postRender();
+			return this;
+		},
 
-			elm = elm || self.getContainerElm();
-			elm.appendChild(DomUtils.createFragment(self.renderHtml()));
-			self.postRender();
+		preRender: function() {
+		},
 
-			return self;
+		render: function() {
+		},
+
+		renderHtml: function() {
+			return '<div id="' + this._id + '" class="' + this.classes + '"></div>';
 		},
 
 		/**
@@ -63247,6 +61124,9 @@ define("tinymce/ui/Control", [
 		 */
 		postRender: function() {
 			var self = this, settings = self.settings, elm, box, parent, name, parentEventsRoot;
+
+			self.$el = $(self.getEl());
+			self.state.set('rendered', true);
 
 			// Bind on<event> settings
 			for (name in settings) {
@@ -63267,7 +61147,7 @@ define("tinymce/ui/Control", [
 				}
 			}
 
-			self.bindPendingEvents();
+			bindPendingEvents(self);
 
 			if (settings.style) {
 				elm = self.getEl();
@@ -63277,13 +61157,9 @@ define("tinymce/ui/Control", [
 				}
 			}
 
-			if (!self._visible) {
-				DomUtils.css(self.getEl(), 'display', 'none');
-			}
-
 			if (self.settings.border) {
-				box = self.borderBox();
-				DomUtils.css(self.getEl(), {
+				box = self.borderBox;
+				self.$el.css({
 					'border-top-width': box.top,
 					'border-right-width': box.right,
 					'border-bottom-width': box.bottom,
@@ -63303,7 +61179,37 @@ define("tinymce/ui/Control", [
 				self.aria(key, self._aria[key]);
 			}
 
+			if (self.state.get('visible') === false) {
+				self.getEl().style.display = 'none';
+			}
+
+			self.bindStates();
+
+			self.state.on('change:visible', function(e) {
+				var state = e.value, parentCtrl;
+
+				if (self.state.get('rendered')) {
+					self.getEl().style.display = state === false ? 'none' : '';
+
+					// Need to force a reflow here on IE 8
+					self.getEl().getBoundingClientRect();
+				}
+
+				// Parent container needs to reflow
+				parentCtrl = self.parent();
+				if (parentCtrl) {
+					parentCtrl._lastRect = null;
+				}
+
+				self.fire(state ? 'show' : 'hide');
+
+				ReflowQueue.add(self);
+			});
+
 			self.fire('postrender', {}, false);
+		},
+
+		bindStates: function() {
 		},
 
 		/**
@@ -63352,152 +61258,6 @@ define("tinymce/ui/Control", [
 			return this;
 		},
 
-		/**
-		 * Binds pending DOM events.
-		 *
-		 * @private
-		 */
-		bindPendingEvents: function() {
-			var self = this, i, l, parents, eventRootCtrl, nativeEvents, name;
-
-			function delegate(e) {
-				var control = self.getParentCtrl(e.target);
-
-				if (control) {
-					control.fire(e.type, e);
-				}
-			}
-
-			function mouseLeaveHandler() {
-				var ctrl = eventRootCtrl._lastHoverCtrl;
-
-				if (ctrl) {
-					ctrl.fire("mouseleave", {target: ctrl.getEl()});
-
-					ctrl.parents().each(function(ctrl) {
-						ctrl.fire("mouseleave", {target: ctrl.getEl()});
-					});
-
-					eventRootCtrl._lastHoverCtrl = null;
-				}
-			}
-
-			function mouseEnterHandler(e) {
-				var ctrl = self.getParentCtrl(e.target), lastCtrl = eventRootCtrl._lastHoverCtrl, idx = 0, i, parents, lastParents;
-
-				// Over on a new control
-				if (ctrl !== lastCtrl) {
-					eventRootCtrl._lastHoverCtrl = ctrl;
-
-					parents = ctrl.parents().toArray().reverse();
-					parents.push(ctrl);
-
-					if (lastCtrl) {
-						lastParents = lastCtrl.parents().toArray().reverse();
-						lastParents.push(lastCtrl);
-
-						for (idx = 0; idx < lastParents.length; idx++) {
-							if (parents[idx] !== lastParents[idx]) {
-								break;
-							}
-						}
-
-						for (i = lastParents.length - 1; i >= idx; i--) {
-							lastCtrl = lastParents[i];
-							lastCtrl.fire("mouseleave", {
-								target: lastCtrl.getEl()
-							});
-						}
-					}
-
-					for (i = idx; i < parents.length; i++) {
-						ctrl = parents[i];
-						ctrl.fire("mouseenter", {
-							target: ctrl.getEl()
-						});
-					}
-				}
-			}
-
-			function fixWheelEvent(e) {
-				e.preventDefault();
-
-				if (e.type == "mousewheel") {
-					e.deltaY = -1 / 40 * e.wheelDelta;
-
-					if (e.wheelDeltaX) {
-						e.deltaX = -1 / 40 * e.wheelDeltaX;
-					}
-				} else {
-					e.deltaX = 0;
-					e.deltaY = e.detail;
-				}
-
-				e = self.fire("wheel", e);
-			}
-
-			self._rendered = true;
-
-			nativeEvents = self._nativeEvents;
-			if (nativeEvents) {
-				// Find event root element if it exists
-				parents = self.parents().toArray();
-				parents.unshift(self);
-				for (i = 0, l = parents.length; !eventRootCtrl && i < l; i++) {
-					eventRootCtrl = parents[i]._eventsRoot;
-				}
-
-				// Event root wasn't found the use the root control
-				if (!eventRootCtrl) {
-					eventRootCtrl = parents[parents.length - 1] || self;
-				}
-
-				// Set the eventsRoot property on children that didn't have it
-				self._eventsRoot = eventRootCtrl;
-				for (l = i, i = 0; i < l; i++) {
-					parents[i]._eventsRoot = eventRootCtrl;
-				}
-
-				var eventRootDelegates = eventRootCtrl._delegates;
-				if (!eventRootDelegates) {
-					eventRootDelegates = eventRootCtrl._delegates = {};
-				}
-
-				// Bind native event delegates
-				for (name in nativeEvents) {
-					if (!nativeEvents) {
-						return false;
-					}
-
-					if (name === "wheel" && !hasWheelEventSupport) {
-						if (hasMouseWheelEventSupport) {
-							DomUtils.on(self.getEl(), "mousewheel", fixWheelEvent);
-						} else {
-							DomUtils.on(self.getEl(), "DOMMouseScroll", fixWheelEvent);
-						}
-
-						continue;
-					}
-
-					// Special treatment for mousenter/mouseleave since these doesn't bubble
-					if (name === "mouseenter" || name === "mouseleave") {
-						// Fake mousenter/mouseleave
-						if (!eventRootCtrl._hasMouseEnter) {
-							DomUtils.on(eventRootCtrl.getEl(), "mouseleave", mouseLeaveHandler);
-							DomUtils.on(eventRootCtrl.getEl(), "mouseover", mouseEnterHandler);
-							eventRootCtrl._hasMouseEnter = 1;
-						}
-					} else if (!eventRootDelegates[name]) {
-						DomUtils.on(eventRootCtrl.getEl(), name, delegate);
-						eventRootDelegates[name] = true;
-					}
-
-					// Remove the event once it's bound
-					nativeEvents[name] = false;
-				}
-			}
-		},
-
 		getRoot: function() {
 			var ctrl = this, rootControl, parents = [];
 
@@ -63536,7 +61296,12 @@ define("tinymce/ui/Control", [
 		 * @return {tinymce.ui.Control} Current control instance.
 		 */
 		reflow: function() {
-			this.repaint();
+			ReflowQueue.remove(this);
+
+			var parent = this.parent();
+			if (parent._layout && !parent._layout.isNative()) {
+				parent.reflow();
+			}
 
 			return this;
 		}
@@ -63558,24 +61323,6 @@ define("tinymce/ui/Control", [
 		 * @return {String/tinymce.ui.Control} Current control on a set operation or current value on a get.
 		 */
 		// text: function(value) {} -- Generated
-
-		/**
-		 * Sets/gets the width for the control.
-		 *
-		 * @method width
-		 * @param {Number} value Value to set to control.
-		 * @return {Number/tinymce.ui.Control} Current control on a set operation or current value on a get.
-		 */
-		// width: function(value) {} -- Generated
-
-		/**
-		 * Sets/gets the height for the control.
-		 *
-		 * @method height
-		 * @param {Number} value Value to set to control.
-		 * @return {Number/tinymce.ui.Control} Current control on a set operation or current value on a get.
-		 */
-		// height: function(value) {} -- Generated
 
 		/**
 		 * Sets/gets the disabled state on the control.
@@ -63612,7 +61359,196 @@ define("tinymce/ui/Control", [
 		 * @return {String/tinymce.ui.Control} Current control on a set operation or current value on a get.
 		 */
 		// title: function(value) {} -- Generated
+
+		/**
+		 * Sets/gets the visible for the control.
+		 *
+		 * @method visible
+		 * @param {Boolean} state Value to set to control.
+		 * @return {Boolean/tinymce.ui.Control} Current control on a set operation or current state on a get.
+		 */
+		// visible: function(value) {} -- Generated
+	};
+
+	/**
+	 * Setup state properties.
+	 */
+	Tools.each('text title visible disabled active value'.split(' '), function(name) {
+		proto[name] = function(value) {
+			if (arguments.length === 0) {
+				return this.state.get(name);
+			}
+
+			if (typeof value != "undefined") {
+				this.state.set(name, value);
+			}
+
+			return this;
+		};
 	});
+
+	Control = Class.extend(proto);
+
+	function getEventDispatcher(obj) {
+		if (!obj._eventDispatcher) {
+			obj._eventDispatcher = new EventDispatcher({
+				scope: obj,
+				toggleEvent: function(name, state) {
+					if (state && EventDispatcher.isNative(name)) {
+						if (!obj._nativeEvents) {
+							obj._nativeEvents = {};
+						}
+
+						obj._nativeEvents[name] = true;
+
+						if (obj.state.get('rendered')) {
+							bindPendingEvents(obj);
+						}
+					}
+				}
+			});
+		}
+
+		return obj._eventDispatcher;
+	}
+
+	function bindPendingEvents(eventCtrl) {
+		var i, l, parents, eventRootCtrl, nativeEvents, name;
+
+		function delegate(e) {
+			var control = eventCtrl.getParentCtrl(e.target);
+
+			if (control) {
+				control.fire(e.type, e);
+			}
+		}
+
+		function mouseLeaveHandler() {
+			var ctrl = eventRootCtrl._lastHoverCtrl;
+
+			if (ctrl) {
+				ctrl.fire("mouseleave", {target: ctrl.getEl()});
+
+				ctrl.parents().each(function(ctrl) {
+					ctrl.fire("mouseleave", {target: ctrl.getEl()});
+				});
+
+				eventRootCtrl._lastHoverCtrl = null;
+			}
+		}
+
+		function mouseEnterHandler(e) {
+			var ctrl = eventCtrl.getParentCtrl(e.target), lastCtrl = eventRootCtrl._lastHoverCtrl, idx = 0, i, parents, lastParents;
+
+			// Over on a new control
+			if (ctrl !== lastCtrl) {
+				eventRootCtrl._lastHoverCtrl = ctrl;
+
+				parents = ctrl.parents().toArray().reverse();
+				parents.push(ctrl);
+
+				if (lastCtrl) {
+					lastParents = lastCtrl.parents().toArray().reverse();
+					lastParents.push(lastCtrl);
+
+					for (idx = 0; idx < lastParents.length; idx++) {
+						if (parents[idx] !== lastParents[idx]) {
+							break;
+						}
+					}
+
+					for (i = lastParents.length - 1; i >= idx; i--) {
+						lastCtrl = lastParents[i];
+						lastCtrl.fire("mouseleave", {
+							target: lastCtrl.getEl()
+						});
+					}
+				}
+
+				for (i = idx; i < parents.length; i++) {
+					ctrl = parents[i];
+					ctrl.fire("mouseenter", {
+						target: ctrl.getEl()
+					});
+				}
+			}
+		}
+
+		function fixWheelEvent(e) {
+			e.preventDefault();
+
+			if (e.type == "mousewheel") {
+				e.deltaY = -1 / 40 * e.wheelDelta;
+
+				if (e.wheelDeltaX) {
+					e.deltaX = -1 / 40 * e.wheelDeltaX;
+				}
+			} else {
+				e.deltaX = 0;
+				e.deltaY = e.detail;
+			}
+
+			e = eventCtrl.fire("wheel", e);
+		}
+
+		nativeEvents = eventCtrl._nativeEvents;
+		if (nativeEvents) {
+			// Find event root element if it exists
+			parents = eventCtrl.parents().toArray();
+			parents.unshift(eventCtrl);
+			for (i = 0, l = parents.length; !eventRootCtrl && i < l; i++) {
+				eventRootCtrl = parents[i]._eventsRoot;
+			}
+
+			// Event root wasn't found the use the root control
+			if (!eventRootCtrl) {
+				eventRootCtrl = parents[parents.length - 1] || eventCtrl;
+			}
+
+			// Set the eventsRoot property on children that didn't have it
+			eventCtrl._eventsRoot = eventRootCtrl;
+			for (l = i, i = 0; i < l; i++) {
+				parents[i]._eventsRoot = eventRootCtrl;
+			}
+
+			var eventRootDelegates = eventRootCtrl._delegates;
+			if (!eventRootDelegates) {
+				eventRootDelegates = eventRootCtrl._delegates = {};
+			}
+
+			// Bind native event delegates
+			for (name in nativeEvents) {
+				if (!nativeEvents) {
+					return false;
+				}
+
+				if (name === "wheel" && !hasWheelEventSupport) {
+					if (hasMouseWheelEventSupport) {
+						$(eventCtrl.getEl()).on("mousewheel", fixWheelEvent);
+					} else {
+						$(eventCtrl.getEl()).on("DOMMouseScroll", fixWheelEvent);
+					}
+
+					continue;
+				}
+
+				// Special treatment for mousenter/mouseleave since these doesn't bubble
+				if (name === "mouseenter" || name === "mouseleave") {
+					// Fake mousenter/mouseleave
+					if (!eventRootCtrl._hasMouseEnter) {
+						$(eventRootCtrl.getEl()).on("mouseleave", mouseLeaveHandler).on("mouseover", mouseEnterHandler);
+						eventRootCtrl._hasMouseEnter = 1;
+					}
+				} else if (!eventRootDelegates[name]) {
+					$(eventRootCtrl.getEl()).on(name, delegate);
+					eventRootDelegates[name] = true;
+				}
+
+				// Remove the event once it's bound
+				nativeEvents[name] = false;
+			}
+		}
+	}
 
 	return Control;
 });
@@ -63622,8 +61558,8 @@ define("tinymce/ui/Control", [
 /**
  * Factory.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -63730,8 +61666,8 @@ define("tinymce/ui/Factory", [], function() {
 /**
  * KeyboardNavigation.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -63755,6 +61691,10 @@ define("tinymce/ui/KeyboardNavigation", [
 	return function(settings) {
 		var root = settings.root, focusedElement, focusedControl;
 
+		function isElement(node) {
+			return node && node.nodeType === 1;
+		}
+
 		try {
 			focusedElement = document.activeElement;
 		} catch (ex) {
@@ -63775,7 +61715,11 @@ define("tinymce/ui/KeyboardNavigation", [
 		function getRole(elm) {
 			elm = elm || focusedElement;
 
-			return elm && elm.getAttribute('role');
+			if (isElement(elm)) {
+				return elm.getAttribute('role');
+			}
+
+			return null;
 		}
 
 		/**
@@ -63806,7 +61750,7 @@ define("tinymce/ui/KeyboardNavigation", [
 		function getAriaProp(name) {
 			var elm = focusedElement;
 
-			if (elm) {
+			if (isElement(elm)) {
 				return elm.getAttribute('aria-' + name);
 			}
 		}
@@ -64131,8 +62075,8 @@ define("tinymce/ui/KeyboardNavigation", [
 /**
  * Container.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -64154,16 +62098,15 @@ define("tinymce/ui/Container", [
 	"tinymce/ui/Factory",
 	"tinymce/ui/KeyboardNavigation",
 	"tinymce/util/Tools",
-	"tinymce/ui/DomUtils"
-], function(Control, Collection, Selector, Factory, KeyboardNavigation, Tools, DomUtils) {
+	"tinymce/dom/DomQuery",
+	"tinymce/ui/ClassList",
+	"tinymce/ui/ReflowQueue"
+], function(Control, Collection, Selector, Factory, KeyboardNavigation, Tools, $, ClassList, ReflowQueue) {
 	"use strict";
 
 	var selectorCache = {};
 
 	return Control.extend({
-		layout: '',
-		innerClass: 'container-inner',
-
 		/**
 		 * Constructs a new control instance with the specified settings.
 		 *
@@ -64178,24 +62121,37 @@ define("tinymce/ui/Container", [
 
 			self._super(settings);
 			settings = self.settings;
-			self._fixed = settings.fixed;
+
+			if (settings.fixed) {
+				self.state.set('fixed', true);
+			}
+
 			self._items = new Collection();
 
 			if (self.isRtl()) {
-				self.addClass('rtl');
+				self.classes.add('rtl');
 			}
 
-			self.addClass('container');
-			self.addClass('container-body', 'body');
+			self.bodyClasses = new ClassList(function() {
+				if (self.state.get('rendered')) {
+					self.getEl('body').className = this.toString();
+				}
+			});
+			self.bodyClasses.prefix = self.classPrefix;
+
+			self.classes.add('container');
+			self.bodyClasses.add('container-body');
 
 			if (settings.containerCls) {
-				self.addClass(settings.containerCls);
+				self.classes.add(settings.containerCls);
 			}
 
-			self._layout = Factory.create((settings.layout || self.layout) + 'layout');
+			self._layout = Factory.create((settings.layout || '') + 'layout');
 
 			if (self.settings.items) {
 				self.add(self.settings.items);
+			} else {
+				self.add(self.render());
 			}
 
 			// TODO: Fix this!
@@ -64372,26 +62328,26 @@ define("tinymce/ui/Container", [
 
 			// Render any new items
 			self.items().each(function(ctrl, index) {
-				var containerElm, fragment;
+				var containerElm;
 
 				ctrl.parent(self);
 
-				if (!ctrl._rendered) {
+				if (!ctrl.state.get('rendered')) {
 					containerElm = self.getEl('body');
-					fragment = DomUtils.createFragment(ctrl.renderHtml());
 
 					// Insert or append the item
 					if (containerElm.hasChildNodes() && index <= containerElm.childNodes.length - 1) {
-						containerElm.insertBefore(fragment, containerElm.childNodes[index]);
+						$(containerElm.childNodes[index]).before(ctrl.renderHtml());
 					} else {
-						containerElm.appendChild(fragment);
+						$(containerElm).append(ctrl.renderHtml());
 					}
 
 					ctrl.postRender();
+					ReflowQueue.add(ctrl);
 				}
 			});
 
-			self._layout.applyClasses(self);
+			self._layout.applyClasses(self.items().filter(':visible'));
 			self._lastRect = null;
 
 			return self;
@@ -64490,9 +62446,6 @@ define("tinymce/ui/Container", [
 			return data;
 		},
 
-		preRender: function() {
-		},
-
 		/**
 		 * Renders the control as a HTML string.
 		 *
@@ -64506,8 +62459,8 @@ define("tinymce/ui/Container", [
 			layout.preRender(self);
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '"' + (role ? ' role="' + this.settings.role + '"' : '') + '>' +
-					'<div id="' + self._id + '-body" class="' + self.classes('body') + '">' +
+				'<div id="' + self._id + '" class="' + self.classes + '"' + (role ? ' role="' + this.settings.role + '"' : '') + '>' +
+					'<div id="' + self._id + '-body" class="' + self.bodyClasses + '">' +
 						(self.settings.html || '') + layout.renderHtml(self) +
 					'</div>' +
 				'</div>'
@@ -64527,15 +62480,15 @@ define("tinymce/ui/Container", [
 			self._super();
 
 			self._layout.postRender(self);
-			self._rendered = true;
+			self.state.set('rendered', true);
 
 			if (self.settings.style) {
-				DomUtils.css(self.getEl(), self.settings.style);
+				self.$el.css(self.settings.style);
 			}
 
 			if (self.settings.border) {
-				box = self.borderBox();
-				DomUtils.css(self.getEl(), {
+				box = self.borderBox;
+				self.$el.css({
 					'border-top-width': box.top,
 					'border-right-width': box.right,
 					'border-bottom-width': box.bottom,
@@ -64600,6 +62553,8 @@ define("tinymce/ui/Container", [
 		reflow: function() {
 			var i;
 
+			ReflowQueue.remove(this);
+
 			if (this.visible()) {
 				Control.repaintControls = [];
 				Control.repaintControls.map = {};
@@ -64629,8 +62584,8 @@ define("tinymce/ui/Container", [
 /**
  * DragHelper.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -64654,12 +62609,12 @@ define("tinymce/ui/Container", [
  * @class tinymce.ui.DragHelper
  */
 define("tinymce/ui/DragHelper", [
-	"tinymce/ui/DomUtils"
-], function(DomUtils) {
+	"tinymce/dom/DomQuery"
+], function($) {
 	"use strict";
 
-	function getDocumentSize() {
-		var doc = document, documentElement, body, scrollWidth, clientWidth;
+	function getDocumentSize(doc) {
+		var documentElement, body, scrollWidth, clientWidth;
 		var offsetWidth, scrollHeight, clientHeight, offsetHeight, max = Math.max;
 
 		documentElement = doc.documentElement;
@@ -64679,8 +62634,19 @@ define("tinymce/ui/DragHelper", [
 		};
 	}
 
+	function updateWithTouchData(e) {
+		var keys, i;
+
+		if (e.changedTouches) {
+			keys = "screenX screenY pageX pageY clientX clientY".split(' ');
+			for (i = 0; i < keys.length; i++) {
+				e[keys[i]] = e.changedTouches[0][keys[i]];
+			}
+		}
+	}
+
 	return function(id, settings) {
-		var eventOverlayElm, doc = document, downButton, start, stop, drag, startX, startY;
+		var $eventOverlay, doc = settings.document || document, downButton, start, stop, drag, startX, startY;
 
 		settings = settings || {};
 
@@ -64689,7 +62655,9 @@ define("tinymce/ui/DragHelper", [
 		}
 
 		start = function(e) {
-			var docSize = getDocumentSize(), handleElm, cursor;
+			var docSize = getDocumentSize(doc), handleElm, cursor;
+
+			updateWithTouchData(e);
 
 			e.preventDefault();
 			downButton = e.button;
@@ -64697,16 +62665,14 @@ define("tinymce/ui/DragHelper", [
 			startX = e.screenX;
 			startY = e.screenY;
 
-			// Grab cursor from handle
+			// Grab cursor from handle so we can place it on overlay
 			if (window.getComputedStyle) {
 				cursor = window.getComputedStyle(handleElm, null).getPropertyValue("cursor");
 			} else {
 				cursor = handleElm.runtimeStyle.cursor;
 			}
 
-			// Create event overlay and add it to document
-			eventOverlayElm = doc.createElement('div');
-			DomUtils.css(eventOverlayElm, {
+			$eventOverlay = $('<div>').css({
 				position: "absolute",
 				top: 0, left: 0,
 				width: docSize.width,
@@ -64714,19 +62680,16 @@ define("tinymce/ui/DragHelper", [
 				zIndex: 0x7FFFFFFF,
 				opacity: 0.0001,
 				cursor: cursor
-			});
+			}).appendTo(doc.body);
 
-			doc.body.appendChild(eventOverlayElm);
+			$(doc).on('mousemove touchmove', drag).on('mouseup touchend', stop);
 
-			// Bind mouse events
-			DomUtils.on(doc, 'mousemove', drag);
-			DomUtils.on(doc, 'mouseup', stop);
-
-			// Begin drag
 			settings.start(e);
 		};
 
 		drag = function(e) {
+			updateWithTouchData(e);
+
 			if (e.button !== downButton) {
 				return stop(e);
 			}
@@ -64739,10 +62702,11 @@ define("tinymce/ui/DragHelper", [
 		};
 
 		stop = function(e) {
-			DomUtils.off(doc, 'mousemove', drag);
-			DomUtils.off(doc, 'mouseup', stop);
+			updateWithTouchData(e);
 
-			eventOverlayElm.parentNode.removeChild(eventOverlayElm);
+			$(doc).off('mousemove touchmove', drag).off('mouseup touchend', stop);
+
+			$eventOverlay.remove();
 
 			if (settings.stop) {
 				settings.stop(e);
@@ -64755,10 +62719,10 @@ define("tinymce/ui/DragHelper", [
 		 * @method destroy
 		 */
 		this.destroy = function() {
-			DomUtils.off(getHandleElm());
+			$(getHandleElm()).off();
 		};
 
-		DomUtils.on(getHandleElm(), 'mousedown', start);
+		$(getHandleElm()).on('mousedown touchstart', start);
 	};
 });
 
@@ -64767,8 +62731,8 @@ define("tinymce/ui/DragHelper", [
 /**
  * Scrollable.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -64781,9 +62745,9 @@ define("tinymce/ui/DragHelper", [
  * @mixin tinymce.ui.Scrollable
  */
 define("tinymce/ui/Scrollable", [
-	"tinymce/ui/DomUtils",
+	"tinymce/dom/DomQuery",
 	"tinymce/ui/DragHelper"
-], function(DomUtils, DragHelper) {
+], function($, DragHelper) {
 	"use strict";
 
 	return {
@@ -64808,16 +62772,14 @@ define("tinymce/ui/Scrollable", [
 						posNameLower = posName.toLowerCase();
 						sizeNameLower = sizeName.toLowerCase();
 
-						if (self.getEl('absend')) {
-							DomUtils.css(self.getEl('absend'), posNameLower, self.layoutRect()[contentSizeName] - 1);
-						}
+						$(self.getEl('absend')).css(posNameLower, self.layoutRect()[contentSizeName] - 1);
 
 						if (!hasScroll) {
-							DomUtils.css(scrollBarElm, 'display', 'none');
+							$(scrollBarElm).css('display', 'none');
 							return;
 						}
 
-						DomUtils.css(scrollBarElm, 'display', 'block');
+						$(scrollBarElm).css('display', 'block');
 						containerElm = self.getEl('body');
 						scrollThumbElm = self.getEl('scroll' + axisName + "t");
 						containerSize = containerElm["client" + sizeName] - (margin * 2);
@@ -64828,12 +62790,12 @@ define("tinymce/ui/Scrollable", [
 						rect = {};
 						rect[posNameLower] = containerElm["offset" + posName] + margin;
 						rect[sizeNameLower] = containerSize;
-						DomUtils.css(scrollBarElm, rect);
+						$(scrollBarElm).css(rect);
 
 						rect = {};
 						rect[posNameLower] = containerElm["scroll" + posName] * ratio;
 						rect[sizeNameLower] = containerSize * ratio;
-						DomUtils.css(scrollThumbElm, rect);
+						$(scrollThumbElm).css(rect);
 					}
 				}
 
@@ -64849,16 +62811,16 @@ define("tinymce/ui/Scrollable", [
 				function addScrollAxis(axisName, posName, sizeName, deltaPosName, ax) {
 					var scrollStart, axisId = self._id + '-scroll' + axisName, prefix = self.classPrefix;
 
-					self.getEl().appendChild(DomUtils.createFragment(
+					$(self.getEl()).append(
 						'<div id="' + axisId + '" class="' + prefix + 'scrollbar ' + prefix + 'scrollbar-' + axisName + '">' +
 							'<div id="' + axisId + 't" class="' + prefix + 'scrollbar-thumb"></div>' +
 						'</div>'
-					));
+					);
 
 					self.draghelper = new DragHelper(axisId + 't', {
 						start: function() {
 							scrollStart = self.getEl('body')["scroll" + posName];
-							DomUtils.addClass(DomUtils.get(axisId), prefix + 'active');
+							$('#' + axisId).addClass(prefix + 'active');
 						},
 
 						drag: function(e) {
@@ -64874,18 +62836,12 @@ define("tinymce/ui/Scrollable", [
 						},
 
 						stop: function() {
-							DomUtils.removeClass(DomUtils.get(axisId), prefix + 'active');
+							$('#' + axisId).removeClass(prefix + 'active');
 						}
 					});
-/*
-					self.on('click', function(e) {
-						if (e.target.id == self._id + '-scrollv') {
-
-						}
-					});*/
 				}
 
-				self.addClass('scroll');
+				self.classes.add('scroll');
 
 				addScrollAxis("v", "Top", "Height", "Y", "Width");
 				addScrollAxis("h", "Left", "Width", "X", "Height");
@@ -64905,7 +62861,7 @@ define("tinymce/ui/Scrollable", [
 						repaintScroll();
 					});
 
-					DomUtils.on(self.getEl('body'), "scroll", repaintScroll);
+					$(self.getEl('body')).on("scroll", repaintScroll);
 				}
 
 				repaintScroll();
@@ -64919,8 +62875,8 @@ define("tinymce/ui/Scrollable", [
 /**
  * Panel.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -64962,7 +62918,7 @@ define("tinymce/ui/Panel", [
 
 			if (typeof innerHtml == "undefined") {
 				innerHtml = (
-					'<div id="' + self._id + '-body" class="' + self.classes('body') + '">' +
+					'<div id="' + self._id + '-body" class="' + self.bodyClasses + '">' +
 						layout.renderHtml(self) +
 					'</div>'
 				);
@@ -64975,7 +62931,7 @@ define("tinymce/ui/Panel", [
 			}
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '" hidefocus="1" tabindex="-1" role="group">' +
+				'<div id="' + self._id + '" class="' + self.classes + '" hidefocus="1" tabindex="-1" role="group">' +
 					(self._preBodyHtml || '') +
 					innerHtml +
 				'</div>'
@@ -64989,8 +62945,8 @@ define("tinymce/ui/Panel", [
 /**
  * Movable.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -65016,7 +62972,7 @@ define("tinymce/ui/Movable", [
 		x = pos.x;
 		y = pos.y;
 
-		if (ctrl._fixed && DomUtils.getRuntimeStyle(document.body, 'position') == 'static') {
+		if (ctrl.state.get('fixed') && DomUtils.getRuntimeStyle(document.body, 'position') == 'static') {
 			x -= viewport.x;
 			y -= viewport.y;
 		}
@@ -65092,7 +63048,7 @@ define("tinymce/ui/Movable", [
 			for (var i = 0; i < rels.length; i++) {
 				var pos = calculateRelativePosition(this, elm, rels[i]);
 
-				if (this._fixed) {
+				if (this.state.get('fixed')) {
 					if (pos.x > 0 && pos.x + pos.w < viewPortRect.w && pos.y > 0 && pos.y + pos.h < viewPortRect.h) {
 						return rels[i];
 					}
@@ -65152,7 +63108,7 @@ define("tinymce/ui/Movable", [
 			var self = this;
 
 			// TODO: Move this to some global class
-			function contrain(value, max, size) {
+			function constrain(value, max, size) {
 				if (value < 0) {
 					return 0;
 				}
@@ -65169,11 +63125,11 @@ define("tinymce/ui/Movable", [
 				var viewPortRect = DomUtils.getViewPort(window);
 				var layoutRect = self.layoutRect();
 
-				x = contrain(x, viewPortRect.w + viewPortRect.x, layoutRect.w);
-				y = contrain(y, viewPortRect.h + viewPortRect.y, layoutRect.h);
+				x = constrain(x, viewPortRect.w + viewPortRect.x, layoutRect.w);
+				y = constrain(y, viewPortRect.h + viewPortRect.y, layoutRect.h);
 			}
 
-			if (self._rendered) {
+			if (self.state.get('rendered')) {
 				self.layoutRect({x: x, y: y}).repaint();
 			} else {
 				self.settings.x = x;
@@ -65192,8 +63148,8 @@ define("tinymce/ui/Movable", [
 /**
  * Resizable.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -65263,8 +63219,8 @@ define("tinymce/ui/Resizable", [
 /**
  * FloatPanel.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -65283,23 +63239,48 @@ define("tinymce/ui/FloatPanel", [
 	"tinymce/ui/Panel",
 	"tinymce/ui/Movable",
 	"tinymce/ui/Resizable",
-	"tinymce/ui/DomUtils"
-], function(Panel, Movable, Resizable, DomUtils) {
+	"tinymce/ui/DomUtils",
+	"tinymce/dom/DomQuery"
+], function(Panel, Movable, Resizable, DomUtils, $) {
 	"use strict";
 
 	var documentClickHandler, documentScrollHandler, windowResizeHandler, visiblePanels = [];
 	var zOrder = [], hasModal;
 
-	function bindDocumentClickHandler() {
-		function isChildOf(ctrl, parent) {
-			while (ctrl) {
-				if (ctrl == parent) {
-					return true;
+	function isChildOf(ctrl, parent) {
+		while (ctrl) {
+			if (ctrl == parent) {
+				return true;
+			}
+
+			ctrl = ctrl.parent();
+		}
+	}
+
+	function skipOrHidePanels(e) {
+		// Hide any float panel when a click/focus out is out side that float panel and the
+		// float panels direct parent for example a click on a menu button
+		var i = visiblePanels.length;
+
+		while (i--) {
+			var panel = visiblePanels[i], clickCtrl = panel.getParentCtrl(e.target);
+
+			if (panel.settings.autohide) {
+				if (clickCtrl) {
+					if (isChildOf(clickCtrl, panel) || panel.parent() === clickCtrl) {
+						continue;
+					}
 				}
 
-				ctrl = ctrl.parent();
+				e = panel.fire('autohide', {target: e.target});
+				if (!e.isDefaultPrevented()) {
+					panel.hide();
+				}
 			}
 		}
+	}
+
+	function bindDocumentClickHandler() {
 
 		if (!documentClickHandler) {
 			documentClickHandler = function(e) {
@@ -65308,28 +63289,10 @@ define("tinymce/ui/FloatPanel", [
 					return;
 				}
 
-				// Hide any float panel when a click is out side that float panel and the
-				// float panels direct parent for example a click on a menu button
-				var i = visiblePanels.length;
-				while (i--) {
-					var panel = visiblePanels[i], clickCtrl = panel.getParentCtrl(e.target);
-
-					if (panel.settings.autohide) {
-						if (clickCtrl) {
-							if (isChildOf(clickCtrl, panel) || panel.parent() === clickCtrl) {
-								continue;
-							}
-						}
-
-						e = panel.fire('autohide', {target: e.target});
-						if (!e.isDefaultPrevented()) {
-							panel.hide();
-						}
-					}
-				}
+				skipOrHidePanels(e);
 			};
 
-			DomUtils.on(document, 'click', documentClickHandler);
+			$(document).on('click touchstart', documentClickHandler);
 		}
 	}
 
@@ -65344,7 +63307,7 @@ define("tinymce/ui/FloatPanel", [
 				}
 			};
 
-			DomUtils.on(window, 'scroll', documentScrollHandler);
+			$(window).on('scroll', documentScrollHandler);
 		}
 	}
 
@@ -65361,7 +63324,7 @@ define("tinymce/ui/FloatPanel", [
 				}
 			};
 
-			DomUtils.on(window, 'resize', windowResizeHandler);
+			$(window).on('resize', windowResizeHandler);
 		}
 	}
 
@@ -65389,7 +63352,7 @@ define("tinymce/ui/FloatPanel", [
 		}
 
 		if (panel.settings.autofix) {
-			if (!panel._fixed) {
+			if (!panel.state.get('fixed')) {
 				panel._autoFixY = panel.layoutRect().y;
 
 				if (panel._autoFixY < scrollY) {
@@ -65436,7 +63399,7 @@ define("tinymce/ui/FloatPanel", [
 		var modalBlockEl = document.getElementById(ctrl.classPrefix + 'modal-block');
 
 		if (topModal) {
-			DomUtils.css(modalBlockEl, 'z-index', topModal.zIndex - 1);
+			$(modalBlockEl).css('z-index', topModal.zIndex - 1);
 		} else if (modalBlockEl) {
 			modalBlockEl.parentNode.removeChild(modalBlockEl);
 			hasModal = false;
@@ -65461,7 +63424,7 @@ define("tinymce/ui/FloatPanel", [
 			self._super(settings);
 			self._eventsRoot = self;
 
-			self.addClass('floatpanel');
+			self.classes.add('floatpanel');
 
 			// Hide floatpanes on click out side the root button
 			if (settings.autohide) {
@@ -65480,18 +63443,19 @@ define("tinymce/ui/FloatPanel", [
 
 			self.on('postrender show', function(e) {
 				if (e.control == self) {
-					var modalBlockEl, prefix = self.classPrefix;
+					var $modalBlockEl, prefix = self.classPrefix;
 
 					if (self.modal && !hasModal) {
-						modalBlockEl = DomUtils.createFragment('<div id="' + prefix + 'modal-block" class="' +
-							prefix + 'reset ' + prefix + 'fade"></div>');
-						modalBlockEl = modalBlockEl.firstChild;
-
-						self.getContainerElm().appendChild(modalBlockEl);
+						$modalBlockEl = $('#' + prefix + 'modal-block');
+						if (!$modalBlockEl[0]) {
+							$modalBlockEl = $(
+								'<div id="' + prefix + 'modal-block" class="' + prefix + 'reset ' + prefix + 'fade"></div>'
+							).appendTo(self.getContainerElm());
+						}
 
 						setTimeout(function() {
-							DomUtils.addClass(modalBlockEl, prefix + 'in');
-							DomUtils.addClass(self.getEl(), prefix + 'in');
+							$modalBlockEl.addClass(prefix + 'in');
+							$(self.getEl()).addClass(prefix + 'in');
 						}, 0);
 
 						hasModal = true;
@@ -65503,7 +63467,7 @@ define("tinymce/ui/FloatPanel", [
 
 			self.on('show', function() {
 				self.parents().each(function(ctrl) {
-					if (ctrl._fixed) {
+					if (ctrl.state.get('fixed')) {
 						self.fixed(true);
 						return false;
 					}
@@ -65512,15 +63476,15 @@ define("tinymce/ui/FloatPanel", [
 
 			if (settings.popover) {
 				self._preBodyHtml = '<div class="' + self.classPrefix + 'arrow"></div>';
-				self.addClass('popover').addClass('bottom').addClass(self.isRtl() ? 'end' : 'start');
+				self.classes.add('popover').add('bottom').add(self.isRtl() ? 'end' : 'start');
 			}
 		},
 
 		fixed: function(state) {
 			var self = this;
 
-			if (self._fixed != state) {
-				if (self._rendered) {
+			if (self.state.get('fixed') != state) {
+				if (self.state.get('rendered')) {
 					var viewport = DomUtils.getViewPort();
 
 					if (state) {
@@ -65530,8 +63494,8 @@ define("tinymce/ui/FloatPanel", [
 					}
 				}
 
-				self.toggleClass('fixed', state);
-				self._fixed = state;
+				self.classes.toggle('fixed', state);
+				self.state.set('fixed', state);
 			}
 
 			return self;
@@ -65666,8 +63630,8 @@ define("tinymce/ui/FloatPanel", [
 /**
  * Window.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -65684,9 +63648,83 @@ define("tinymce/ui/Window", [
 	"tinymce/ui/FloatPanel",
 	"tinymce/ui/Panel",
 	"tinymce/ui/DomUtils",
-	"tinymce/ui/DragHelper"
-], function(FloatPanel, Panel, DomUtils, DragHelper) {
+	"tinymce/dom/DomQuery",
+	"tinymce/ui/DragHelper",
+	"tinymce/ui/BoxUtils",
+	"tinymce/Env"
+], function(FloatPanel, Panel, DomUtils, $, DragHelper, BoxUtils, Env) {
 	"use strict";
+
+	var windows = [], oldMetaValue = '';
+
+	function toggleFullScreenState(state) {
+		var noScaleMetaValue = 'width=device-width,initial-scale=1.0,user-scalable=0,minimum-scale=1.0,maximum-scale=1.0',
+			viewport = $("meta[name=viewport]")[0],
+			contentValue;
+
+		if (Env.overrideViewPort === false) {
+			return;
+		}
+
+		if (!viewport) {
+			viewport = document.createElement('meta');
+			viewport.setAttribute('name', 'viewport');
+			document.getElementsByTagName('head')[0].appendChild(viewport);
+		}
+
+		contentValue = viewport.getAttribute('content');
+		if (contentValue && typeof oldMetaValue != 'undefined') {
+			oldMetaValue = contentValue;
+		}
+
+		viewport.setAttribute('content', state ? noScaleMetaValue : oldMetaValue);
+	}
+
+	function toggleBodyFullScreenClasses(classPrefix) {
+		for (var i = 0; i < windows.length; i++) {
+			if (windows[i]._fullscreen) {
+				return;
+			}
+		}
+
+		$([document.documentElement, document.body]).removeClass(classPrefix + 'fullscreen');
+	}
+
+	function handleWindowResize() {
+		var lastSize = {
+			w: window.innerWidth,
+			h: window.innerHeight
+		};
+
+		window.setInterval(function() {
+			var w = window.innerWidth,
+				h = window.innerHeight;
+
+			if (lastSize.w != w || lastSize.h != h) {
+				lastSize = {
+					w: w,
+					h: h
+				};
+
+				$(window).trigger('resize');
+			}
+		}, 0);
+
+		function reposition() {
+			var i, rect = DomUtils.getWindowSize(), layoutRect;
+
+			for (i = 0; i < windows.length; i++) {
+				layoutRect = windows[i].layoutRect();
+
+				windows[i].moveTo(
+					windows[i].settings.x || Math.max(0, rect.w / 2 - layoutRect.w / 2),
+					windows[i].settings.y || Math.max(0, rect.h / 2 - layoutRect.h / 2)
+				);
+			}
+		}
+
+		$(window).on('resize', reposition);
+	}
 
 	var Window = FloatPanel.extend({
 		modal: true,
@@ -65719,11 +63757,12 @@ define("tinymce/ui/Window", [
 			self._super(settings);
 
 			if (self.isRtl()) {
-				self.addClass('rtl');
+				self.classes.add('rtl');
 			}
 
-			self.addClass('window');
-			self._fixed = true;
+			self.classes.add('window');
+			self.bodyClasses.add('window-body');
+			self.state.set('fixed', true);
 
 			// Create statusbar
 			if (settings.buttons) {
@@ -65740,7 +63779,7 @@ define("tinymce/ui/Window", [
 					items: settings.buttons
 				});
 
-				self.statusbar.addClass('foot');
+				self.statusbar.classes.add('foot');
 				self.statusbar.parent(self);
 			}
 
@@ -65840,8 +63879,8 @@ define("tinymce/ui/Window", [
 
 			var rect = DomUtils.getWindowSize();
 
-			layoutRect.x = Math.max(0, rect.w / 2 - layoutRect.w / 2);
-			layoutRect.y = Math.max(0, rect.h / 2 - layoutRect.h / 2);
+			layoutRect.x = self.settings.x || Math.max(0, rect.w / 2 - layoutRect.w / 2);
+			layoutRect.y = self.settings.y || Math.max(0, rect.h / 2 - layoutRect.h / 2);
 
 			return layoutRect;
 		},
@@ -65882,10 +63921,10 @@ define("tinymce/ui/Window", [
 			}
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '" hidefocus="1">' +
+				'<div id="' + id + '" class="' + self.classes + '" hidefocus="1">' +
 					'<div class="' + self.classPrefix + 'reset" role="application">' +
 						headerHtml +
-						'<div id="' + id + '-body" class="' + self.classes('body') + '">' +
+						'<div id="' + id + '-body" class="' + self.bodyClasses + '">' +
 							html +
 						'</div>' +
 						footerHtml +
@@ -65905,7 +63944,7 @@ define("tinymce/ui/Window", [
 			var self = this, documentElement = document.documentElement, slowRendering, prefix = self.classPrefix, layoutRect;
 
 			if (state != self._fullscreen) {
-				DomUtils.on(window, 'resize', function() {
+				$(window).on('resize', function() {
 					var time;
 
 					if (self._fullscreen) {
@@ -65936,22 +63975,20 @@ define("tinymce/ui/Window", [
 				self._fullscreen = state;
 
 				if (!state) {
-					self._borderBox = self.parseBox(self.settings.border);
+					self.borderBox = BoxUtils.parseBox(self.settings.border);
 					self.getEl('head').style.display = '';
 					layoutRect.deltaH += layoutRect.headerH;
-					DomUtils.removeClass(documentElement, prefix + 'fullscreen');
-					DomUtils.removeClass(document.body, prefix + 'fullscreen');
-					self.removeClass('fullscreen');
+					$([documentElement, document.body]).removeClass(prefix + 'fullscreen');
+					self.classes.remove('fullscreen');
 					self.moveTo(self._initial.x, self._initial.y).resizeTo(self._initial.w, self._initial.h);
 				} else {
 					self._initial = {x: layoutRect.x, y: layoutRect.y, w: layoutRect.w, h: layoutRect.h};
 
-					self._borderBox = self.parseBox('0');
+					self.borderBox = BoxUtils.parseBox('0');
 					self.getEl('head').style.display = 'none';
 					layoutRect.deltaH -= layoutRect.headerH + 2;
-					DomUtils.addClass(documentElement, prefix + 'fullscreen');
-					DomUtils.addClass(document.body, prefix + 'fullscreen');
-					self.addClass('fullscreen');
+					$([documentElement, document.body]).addClass(prefix + 'fullscreen');
+					self.classes.add('fullscreen');
 
 					var rect = DomUtils.getWindowSize();
 					self.moveTo(0, 0).resizeTo(rect.w, rect.h);
@@ -65970,7 +64007,7 @@ define("tinymce/ui/Window", [
 			var self = this, startPos;
 
 			setTimeout(function() {
-				self.addClass('in');
+				self.classes.add('in');
 			}, 0);
 
 			self._super();
@@ -65999,6 +64036,9 @@ define("tinymce/ui/Window", [
 					self.close();
 				}
 			});
+
+			windows.push(self);
+			toggleFullScreenState(true);
 		},
 
 		/**
@@ -66018,7 +64058,7 @@ define("tinymce/ui/Window", [
 		 * @return {tinymce.ui.Control} Current control instance.
 		 */
 		remove: function() {
-			var self = this, prefix = self.classPrefix;
+			var self = this, i;
 
 			self.dragHelper.destroy();
 			self._super();
@@ -66027,10 +64067,15 @@ define("tinymce/ui/Window", [
 				this.statusbar.remove();
 			}
 
-			if (self._fullscreen) {
-				DomUtils.removeClass(document.documentElement, prefix + 'fullscreen');
-				DomUtils.removeClass(document.body, prefix + 'fullscreen');
+			i = windows.length;
+			while (i--) {
+				if (windows[i] === self) {
+					windows.splice(i, 1);
+				}
 			}
+
+			toggleFullScreenState(windows.length > 0);
+			toggleBodyFullScreenClasses(self.classPrefix);
 		},
 
 		/**
@@ -66045,6 +64090,10 @@ define("tinymce/ui/Window", [
 		}
 	});
 
+	if (!Env.desktop) {
+		handleWindowResize();
+	}
+
 	return Window;
 });
 
@@ -66053,8 +64102,8 @@ define("tinymce/ui/Window", [
 /**
  * MessageBox.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -66064,7 +64113,7 @@ define("tinymce/ui/Window", [
  * This class is used to create MessageBoxes like alerts/confirms etc.
  *
  * @class tinymce.ui.MessageBox
- * @extends tinymce.ui.Window
+ * @extends tinymce.ui.FloatPanel
  */
 define("tinymce/ui/MessageBox", [
 	"tinymce/ui/Window"
@@ -66258,8 +64307,8 @@ define("tinymce/ui/MessageBox", [
 /**
  * WindowManager.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -66502,8 +64551,8 @@ define("tinymce/WindowManager", [
 /**
  * Quirks.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -66514,6 +64563,7 @@ define("tinymce/WindowManager", [
 /**
  * This file includes fixes for various browser quirks it's made to make it easy to add/remove browser specific fixes.
  *
+ * @private
  * @class tinymce.util.Quirks
  */
 define("tinymce/util/Quirks", [
@@ -66573,7 +64623,7 @@ define("tinymce/util/Quirks", [
 		 * @param {DragEvent} e Event object
 		 */
 		function setMceInteralContent(e) {
-			var selectionHtml;
+			var selectionHtml, internalContent;
 
 			if (e.dataTransfer) {
 				if (editor.selection.isCollapsed() && e.target.tagName == 'IMG') {
@@ -66584,7 +64634,8 @@ define("tinymce/util/Quirks", [
 
 				// Safari/IE doesn't support custom dataTransfer items so we can only use URL and Text
 				if (selectionHtml.length > 0) {
-					e.dataTransfer.setData(mceInternalDataType, mceInternalUrlPrefix + escape(selectionHtml));
+					internalContent = mceInternalUrlPrefix + escape(editor.id) + ',' + escape(selectionHtml);
+					e.dataTransfer.setData(mceInternalDataType, internalContent);
 				}
 			}
 		}
@@ -66599,17 +64650,22 @@ define("tinymce/util/Quirks", [
 		 * @returns {String} mce-internal content
 		 */
 		function getMceInternalContent(e) {
-			var internalContent, content;
+			var internalContent;
 
 			if (e.dataTransfer) {
 				internalContent = e.dataTransfer.getData(mceInternalDataType);
 
 				if (internalContent && internalContent.indexOf(mceInternalUrlPrefix) >= 0) {
-					content = unescape(internalContent.substr(mceInternalUrlPrefix.length));
+					internalContent = internalContent.substr(mceInternalUrlPrefix.length).split(',');
+
+					return {
+						id: unescape(internalContent[0]),
+						html: unescape(internalContent[1])
+					};
 				}
 			}
 
-			return content;
+			return null;
 		}
 
 		/**
@@ -66711,6 +64767,22 @@ define("tinymce/util/Quirks", [
 				}
 
 				return true;
+			}
+
+			function isSiblingsIgnoreWhiteSpace(node1, node2) {
+				var node;
+
+				for (node = node1.nextSibling; node && node != node2; node = node.nextSibling) {
+					if (node.nodeType == 3 && $.trim(node.data).length === 0) {
+						continue;
+					}
+
+					if (node !== node2) {
+						return false;
+					}
+				}
+
+				return node === node2;
 			}
 
 			function findCaretNode(node, forward, startNode) {
@@ -66824,8 +64896,12 @@ define("tinymce/util/Quirks", [
 					return rng;
 				}
 
-				if (textBlock != targetTextBlock) {
+				if (targetTextBlock && textBlock != targetTextBlock) {
 					if (!isForward) {
+						if (!isSiblingsIgnoreWhiteSpace(targetTextBlock, textBlock)) {
+							return rng;
+						}
+
 						if (targetCaretNode.nodeType == 1) {
 							if (targetCaretNode.nodeName == "BR") {
 								rng.setStartBefore(targetCaretNode);
@@ -66842,6 +64918,10 @@ define("tinymce/util/Quirks", [
 							rng.setEndBefore(caretNode);
 						}
 					} else {
+						if (!isSiblingsIgnoreWhiteSpace(textBlock, targetTextBlock)) {
+							return rng;
+						}
+
 						if (caretNode.nodeType == 1) {
 							if (caretNode.nodeName == "BR") {
 								rng.setStartBefore(caretNode);
@@ -67053,6 +65133,7 @@ define("tinymce/util/Quirks", [
 			editor.on('drop', function(e) {
 				if (!isDefaultPrevented(e)) {
 					var internalContent = getMceInternalContent(e);
+
 					if (internalContent) {
 						e.preventDefault();
 
@@ -67070,19 +65151,25 @@ define("tinymce/util/Quirks", [
 
 							customDelete();
 							selection.setRng(pointRng);
-							insertClipboardContents(internalContent);
+							insertClipboardContents(internalContent.html);
 						}, 0);
 					}
 				}
 			});
 
 			editor.on('cut', function(e) {
-				if (!isDefaultPrevented(e) && e.clipboardData) {
+				if (!isDefaultPrevented(e) && e.clipboardData && !editor.selection.isCollapsed()) {
 					e.preventDefault();
 					e.clipboardData.clearData();
 					e.clipboardData.setData('text/html', editor.selection.getContent());
 					e.clipboardData.setData('text/plain', editor.selection.getContent({format: 'text'}));
-					customDelete(true);
+
+					// Needed delay for https://code.google.com/p/chromium/issues/detail?id=363288#c3
+					// Nested delete/forwardDelete not allowed on execCommand("cut")
+					// This is ugly but not sure how to work around it otherwise
+					window.setTimeout(function() {
+						customDelete(true);
+					}, 0);
 				}
 			});
 		}
@@ -67824,9 +65911,9 @@ define("tinymce/util/Quirks", [
 		function blockCmdArrowNavigation() {
 			if (Env.mac) {
 				editor.on('keydown', function(e) {
-					if (VK.metaKeyPressed(e) && (e.keyCode == 37 || e.keyCode == 39)) {
+					if (VK.metaKeyPressed(e) && !e.shiftKey && (e.keyCode == 37 || e.keyCode == 39)) {
 						e.preventDefault();
-						editor.selection.getSel().modify('move', e.keyCode == 37 ? 'backward' : 'forward', 'word');
+						editor.selection.getSel().modify('move', e.keyCode == 37 ? 'backward' : 'forward', 'lineboundary');
 					}
 				});
 			}
@@ -67883,6 +65970,7 @@ define("tinymce/util/Quirks", [
 		 * a click event when a contentEditable is focused. This function fakes click events
 		 * by using touchstart/touchend and measuring the time and distance travelled.
 		 */
+		/*
 		function touchClickEvent() {
 			editor.on('touchstart', function(e) {
 				var elm, time, startTouch, changedTouches;
@@ -67932,6 +66020,7 @@ define("tinymce/util/Quirks", [
 				});
 			});
 		}
+		*/
 
 		/**
 		 * WebKit has a bug where it will allow forms to be submitted if they are inside a contentEditable element.
@@ -67977,12 +66066,13 @@ define("tinymce/util/Quirks", [
 			editor.on('drop', function(e) {
 				if (!isDefaultPrevented(e)) {
 					var internalContent = getMceInternalContent(e);
-					if (internalContent) {
+
+					if (internalContent && internalContent.id != editor.id) {
 						e.preventDefault();
 
 						var rng = RangeUtils.getCaretRangeFromPoint(e.x, e.y, editor.getDoc());
 						selection.setRng(rng);
-						insertClipboardContents(internalContent);
+						insertClipboardContents(internalContent.html);
 					}
 				}
 			});
@@ -68002,7 +66092,7 @@ define("tinymce/util/Quirks", [
 			blockFormSubmitInsideEditor();
 			disableBackspaceIntoATable();
 			removeAppleInterchangeBrs();
-			touchClickEvent();
+			//touchClickEvent();
 
 			// iOS
 			if (Env.iOS) {
@@ -68053,145 +66143,13 @@ define("tinymce/util/Quirks", [
 	};
 });
 
-// Included from: js/tinymce/classes/util/Observable.js
-
-/**
- * Observable.js
- *
- * Copyright, Moxiecode Systems AB
- * Released under LGPL License.
- *
- * License: http://www.tinymce.com/license
- * Contributing: http://www.tinymce.com/contributing
- */
-
-/**
- * This mixin will add event binding logic to classes.
- *
- * @mixin tinymce.util.Observable
- */
-define("tinymce/util/Observable", [
-	"tinymce/util/EventDispatcher"
-], function(EventDispatcher) {
-	function getEventDispatcher(obj) {
-		if (!obj._eventDispatcher) {
-			obj._eventDispatcher = new EventDispatcher({
-				scope: obj,
-				toggleEvent: function(name, state) {
-					if (EventDispatcher.isNative(name) && obj.toggleNativeEvent) {
-						obj.toggleNativeEvent(name, state);
-					}
-				}
-			});
-		}
-
-		return obj._eventDispatcher;
-	}
-
-	return {
-		/**
-		 * Fires the specified event by name.
-		 *
-		 * @method fire
-		 * @param {String} name Name of the event to fire.
-		 * @param {Object?} args Event arguments.
-		 * @param {Boolean?} bubble True/false if the event is to be bubbled.
-		 * @return {Object} Event args instance passed in.
-		 * @example
-		 * instance.fire('event', {...});
-		 */
-		fire: function(name, args, bubble) {
-			var self = this;
-
-			// Prevent all events except the remove event after the instance has been removed
-			if (self.removed && name !== "remove") {
-				return args;
-			}
-
-			args = getEventDispatcher(self).fire(name, args, bubble);
-
-			// Bubble event up to parents
-			if (bubble !== false && self.parent) {
-				var parent = self.parent();
-				while (parent && !args.isPropagationStopped()) {
-					parent.fire(name, args, false);
-					parent = parent.parent();
-				}
-			}
-
-			return args;
-		},
-
-		/**
-		 * Binds an event listener to a specific event by name.
-		 *
-		 * @method on
-		 * @param {String} name Event name or space separated list of events to bind.
-		 * @param {callback} callback Callback to be executed when the event occurs.
-		 * @param {Boolean} first Optional flag if the event should be prepended. Use this with care.
-		 * @return {Object} Current class instance.
-		 * @example
-		 * instance.on('event', function(e) {
-		 *     // Callback logic
-		 * });
-		 */
-		on: function(name, callback, prepend) {
-			return getEventDispatcher(this).on(name, callback, prepend);
-		},
-
-		/**
-		 * Unbinds an event listener to a specific event by name.
-		 *
-		 * @method off
-		 * @param {String?} name Name of the event to unbind.
-		 * @param {callback?} callback Callback to unbind.
-		 * @return {Object} Current class instance.
-		 * @example
-		 * // Unbind specific callback
-		 * instance.off('event', handler);
-		 *
-		 * // Unbind all listeners by name
-		 * instance.off('event');
-		 *
-		 * // Unbind all events
-		 * instance.off();
-		 */
-		off: function(name, callback) {
-			return getEventDispatcher(this).off(name, callback);
-		},
-
-		/**
-		 * Bind the event callback and once it fires the callback is removed.
-		 *
-		 * @method once
-		 * @param {String} name Name of the event to bind.
-		 * @param {callback} callback Callback to bind only once.
-		 * @return {Object} Current class instance.
-		 */
-		once: function(name, callback) {
-			return getEventDispatcher(this).once(name, callback);
-		},
-
-		/**
-		 * Returns true/false if the object has a event of the specified name.
-		 *
-		 * @method hasEventListeners
-		 * @param {String} name Name of the event to check for.
-		 * @return {Boolean} true/false if the event exists or not.
-		 */
-		hasEventListeners: function(name) {
-			return getEventDispatcher(this).has(name);
-		}
-	};
-});
-
 // Included from: js/tinymce/classes/EditorObservable.js
 
 /**
  * EditorObservable.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -68397,8 +66355,8 @@ define("tinymce/EditorObservable", [
 /**
  * Shortcuts.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -68407,6 +66365,7 @@ define("tinymce/EditorObservable", [
 /**
  * Contains all logic for handling of keyboard shortcuts.
  *
+ * @class tinymce.Shortcuts
  * @example
  * editor.shortcuts.add('ctrl+a', function() {});
  * editor.shortcuts.add('meta+a', function() {}); // "meta" maps to Command on Mac and Ctrl on PC
@@ -68566,13 +66525,892 @@ define("tinymce/Shortcuts", [
 	};
 });
 
+// Included from: js/tinymce/classes/util/Promise.js
+
+/**
+ * Promise.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * Promise polyfill under MIT license: https://github.com/taylorhakes/promise-polyfill
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/* eslint-disable */
+/* jshint ignore:start */
+
+/**
+ * Modifed to be a feature fill and wrapped as tinymce module.
+ */
+define("tinymce/util/Promise", [], function() {
+	if (window.Promise) {
+		return window.Promise;
+	}
+
+	// Use polyfill for setImmediate for performance gains
+	var asap = Promise.immediateFn || (typeof setImmediate === 'function' && setImmediate) ||
+		function(fn) { setTimeout(fn, 1); };
+
+	// Polyfill for Function.prototype.bind
+	function bind(fn, thisArg) {
+		return function() {
+			fn.apply(thisArg, arguments);
+		};
+	}
+
+	var isArray = Array.isArray || function(value) { return Object.prototype.toString.call(value) === "[object Array]"; };
+
+	function Promise(fn) {
+		if (typeof this !== 'object') throw new TypeError('Promises must be constructed via new');
+		if (typeof fn !== 'function') throw new TypeError('not a function');
+		this._state = null;
+		this._value = null;
+		this._deferreds = [];
+
+		doResolve(fn, bind(resolve, this), bind(reject, this));
+	}
+
+	function handle(deferred) {
+		var me = this;
+		if (this._state === null) {
+			this._deferreds.push(deferred);
+			return;
+		}
+		asap(function() {
+			var cb = me._state ? deferred.onFulfilled : deferred.onRejected;
+			if (cb === null) {
+				(me._state ? deferred.resolve : deferred.reject)(me._value);
+				return;
+			}
+			var ret;
+			try {
+				ret = cb(me._value);
+			}
+			catch (e) {
+				deferred.reject(e);
+				return;
+			}
+			deferred.resolve(ret);
+		});
+	}
+
+	function resolve(newValue) {
+		try { //Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
+			if (newValue === this) throw new TypeError('A promise cannot be resolved with itself.');
+			if (newValue && (typeof newValue === 'object' || typeof newValue === 'function')) {
+				var then = newValue.then;
+				if (typeof then === 'function') {
+					doResolve(bind(then, newValue), bind(resolve, this), bind(reject, this));
+					return;
+				}
+			}
+			this._state = true;
+			this._value = newValue;
+			finale.call(this);
+		} catch (e) { reject.call(this, e); }
+	}
+
+	function reject(newValue) {
+		this._state = false;
+		this._value = newValue;
+		finale.call(this);
+	}
+
+	function finale() {
+		for (var i = 0, len = this._deferreds.length; i < len; i++) {
+			handle.call(this, this._deferreds[i]);
+		}
+		this._deferreds = null;
+	}
+
+	function Handler(onFulfilled, onRejected, resolve, reject){
+		this.onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : null;
+		this.onRejected = typeof onRejected === 'function' ? onRejected : null;
+		this.resolve = resolve;
+		this.reject = reject;
+	}
+
+	/**
+	 * Take a potentially misbehaving resolver function and make sure
+	 * onFulfilled and onRejected are only called once.
+	 *
+	 * Makes no guarantees about asynchrony.
+	 */
+	function doResolve(fn, onFulfilled, onRejected) {
+		var done = false;
+		try {
+			fn(function (value) {
+				if (done) return;
+				done = true;
+				onFulfilled(value);
+			}, function (reason) {
+				if (done) return;
+				done = true;
+				onRejected(reason);
+			});
+		} catch (ex) {
+			if (done) return;
+			done = true;
+			onRejected(ex);
+		}
+	}
+
+	Promise.prototype['catch'] = function (onRejected) {
+		return this.then(null, onRejected);
+	};
+
+	Promise.prototype.then = function(onFulfilled, onRejected) {
+		var me = this;
+		return new Promise(function(resolve, reject) {
+			handle.call(me, new Handler(onFulfilled, onRejected, resolve, reject));
+		});
+	};
+
+	Promise.all = function () {
+		var args = Array.prototype.slice.call(arguments.length === 1 && isArray(arguments[0]) ? arguments[0] : arguments);
+
+		return new Promise(function (resolve, reject) {
+			if (args.length === 0) return resolve([]);
+			var remaining = args.length;
+			function res(i, val) {
+				try {
+					if (val && (typeof val === 'object' || typeof val === 'function')) {
+						var then = val.then;
+						if (typeof then === 'function') {
+							then.call(val, function (val) { res(i, val); }, reject);
+							return;
+						}
+					}
+					args[i] = val;
+					if (--remaining === 0) {
+						resolve(args);
+					}
+				} catch (ex) {
+					reject(ex);
+				}
+			}
+			for (var i = 0; i < args.length; i++) {
+				res(i, args[i]);
+			}
+		});
+	};
+
+	Promise.resolve = function (value) {
+		if (value && typeof value === 'object' && value.constructor === Promise) {
+			return value;
+		}
+
+		return new Promise(function (resolve) {
+			resolve(value);
+		});
+	};
+
+	Promise.reject = function (value) {
+		return new Promise(function (resolve, reject) {
+			reject(value);
+		});
+	};
+
+	Promise.race = function (values) {
+		return new Promise(function (resolve, reject) {
+			for(var i = 0, len = values.length; i < len; i++) {
+				values[i].then(resolve, reject);
+			}
+		});
+	};
+
+	return Promise;
+});
+
+/* jshint ignore:end */
+/* eslint-enable */
+
+// Included from: js/tinymce/classes/util/Fun.js
+
+/**
+ * Fun.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Functional utility class.
+ *
+ * @private
+ * @class tinymce.util.Fun
+ */
+define("tinymce/util/Fun", [], function() {
+	function constant(value) {
+		return function() {
+			return value;
+		};
+	}
+
+	return {
+		constant: constant
+	};
+});
+
+// Included from: js/tinymce/classes/file/Uploader.js
+
+/**
+ * Uploader.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Upload blobs or blob infos to the specified URL or handler.
+ *
+ * @private
+ * @class tinymce.file.Uploader
+ * @example
+ * var uploader = new Uploader({
+ *     url: '/upload.php',
+ *     basePath: '/base/path',
+ *     credentials: true,
+ *     handler: function(data, success, failure) {
+ *         ...
+ *     }
+ * });
+ *
+ * uploader.upload(blobInfos).then(function(result) {
+ *     ...
+ * });
+ */
+define("tinymce/file/Uploader", [
+	"tinymce/util/Promise",
+	"tinymce/util/Tools",
+	"tinymce/util/Fun"
+], function(Promise, Tools, Fun) {
+	return function(settings) {
+		var cachedPromises = {};
+
+		function fileName(blobInfo) {
+			var ext, extensions;
+
+			extensions = {
+				'image/jpeg': 'jpg',
+				'image/jpg': 'jpg',
+				'image/gif': 'gif',
+				'image/png': 'png'
+			};
+
+			ext = extensions[blobInfo.blob().type.toLowerCase()] || 'dat';
+
+			return blobInfo.id() + '.' + ext;
+		}
+
+		function pathJoin(path1, path2) {
+			if (path1) {
+				return path1.replace(/\/$/, '') + '/' + path2.replace(/^\//, '');
+			}
+
+			return path2;
+		}
+
+		function blobInfoToData(blobInfo) {
+			return {
+				id: blobInfo.id,
+				blob: blobInfo.blob,
+				base64: blobInfo.base64,
+				filename: Fun.constant(fileName(blobInfo))
+			};
+		}
+
+		function defaultHandler(blobInfo, success, failure) {
+			var xhr, formData;
+
+			xhr = new XMLHttpRequest();
+			xhr.open('POST', settings.url);
+			xhr.withCredentials = settings.credentials;
+
+			xhr.onload = function() {
+				var json;
+
+				if (xhr.status != 200) {
+					failure("HTTP Error: " + xhr.status);
+					return;
+				}
+
+				json = JSON.parse(xhr.responseText);
+
+				if (!json || typeof json.location != "string") {
+					failure("Invalid JSON: " + xhr.responseText);
+					return;
+				}
+
+				success(pathJoin(settings.basePath, json.location));
+			};
+
+			formData = new FormData();
+			formData.append('file', blobInfo.blob(), fileName(blobInfo));
+
+			xhr.send(formData);
+		}
+
+		function upload(blobInfos) {
+			var promises;
+
+			// If no url is configured then resolve
+			if (!settings.url && settings.handler === defaultHandler) {
+				return new Promise(function(resolve) {
+					resolve([]);
+				});
+			}
+
+			function uploadBlobInfo(blobInfo) {
+				return new Promise(function(resolve) {
+					var handler = settings.handler;
+
+					handler(blobInfoToData(blobInfo), function(url) {
+						resolve({
+							url: url,
+							blobInfo: blobInfo,
+							status: true
+						});
+					}, function(failure) {
+						resolve({
+							url: '',
+							blobInfo: blobInfo,
+							status: false,
+							error: failure
+						});
+					});
+				});
+			}
+
+			promises = Tools.map(blobInfos, function(blobInfo) {
+				var newPromise, id = blobInfo.id();
+
+				if (cachedPromises[id]) {
+					return cachedPromises[id];
+				}
+
+				newPromise = uploadBlobInfo(blobInfo).then(function(result) {
+					delete cachedPromises[id];
+					return result;
+				})['catch'](function(error) {
+					delete cachedPromises[id];
+					return error;
+				});
+
+				cachedPromises[id] = newPromise;
+
+				return newPromise;
+			});
+
+			return Promise.all(promises);
+		}
+
+		settings = Tools.extend({
+			credentials: false,
+			handler: defaultHandler
+		}, settings);
+
+		return {
+			upload: upload
+		};
+	};
+});
+
+// Included from: js/tinymce/classes/file/Conversions.js
+
+/**
+ * Conversions.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Converts blob/uris back and forth.
+ *
+ * @private
+ * @class tinymce.file.Conversions
+ */
+define("tinymce/file/Conversions", [
+	"tinymce/util/Promise"
+], function(Promise) {
+	function blobUriToBlob(url) {
+		return new Promise(function(resolve) {
+			var xhr = new XMLHttpRequest();
+
+			xhr.open('GET', url, true);
+			xhr.responseType = 'blob';
+
+			xhr.onload = function() {
+				if (this.status == 200) {
+					resolve(this.response);
+				}
+			};
+
+			xhr.send();
+		});
+	}
+
+	function parseDataUri(uri) {
+		var type, matches;
+
+		uri = decodeURIComponent(uri).split(',');
+
+		matches = /data:([^;]+)/.exec(uri[0]);
+		if (matches) {
+			type = matches[1];
+		}
+
+		return {
+			type: type,
+			data: uri[1]
+		};
+	}
+
+	function dataUriToBlob(uri) {
+		return new Promise(function(resolve) {
+			var str, arr, i;
+
+			uri = parseDataUri(uri);
+
+			// Might throw error if data isn't proper base64
+			try {
+				str = atob(uri.data);
+			} catch (e) {
+				resolve(new Blob([]));
+				return;
+			}
+
+			arr = new Uint8Array(str.length);
+
+			for (i = 0; i < arr.length; i++) {
+				arr[i] = str.charCodeAt(i);
+			}
+
+			resolve(new Blob([arr], {type: uri.type}));
+		});
+	}
+
+	function uriToBlob(url) {
+		if (url.indexOf('blob:') === 0) {
+			return blobUriToBlob(url);
+		}
+
+		if (url.indexOf('data:') === 0) {
+			return dataUriToBlob(url);
+		}
+
+		return null;
+	}
+
+	function blobToDataUri(blob) {
+		return new Promise(function(resolve) {
+			var reader = new FileReader();
+
+			reader.onloadend = function() {
+				resolve(reader.result);
+			};
+
+			reader.readAsDataURL(blob);
+		});
+	}
+
+	return {
+		uriToBlob: uriToBlob,
+		blobToDataUri: blobToDataUri,
+		parseDataUri: parseDataUri
+	};
+});
+
+// Included from: js/tinymce/classes/file/ImageScanner.js
+
+/**
+ * ImageScanner.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Finds images with data uris or blob uris. If data uris are found it will convert them into blob uris.
+ *
+ * @private
+ * @class tinymce.file.ImageScanner
+ */
+define("tinymce/file/ImageScanner", [
+	"tinymce/util/Promise",
+	"tinymce/util/Arr",
+	"tinymce/file/Conversions",
+	"tinymce/Env"
+], function(Promise, Arr, Conversions, Env) {
+	var count = 0;
+
+	return function(blobCache) {
+		var cachedPromises = {};
+
+		function findAll(elm) {
+			var images, promises;
+
+			function imageToBlobInfo(img, resolve) {
+				var base64, blobInfo;
+
+				if (img.src.indexOf('blob:') === 0) {
+					blobInfo = blobCache.getByUri(img.src);
+
+					if (blobInfo) {
+						resolve({
+							image: img,
+							blobInfo: blobInfo
+						});
+					}
+
+					return;
+				}
+
+				base64 = Conversions.parseDataUri(img.src).data;
+				blobInfo = blobCache.findFirst(function(cachedBlobInfo) {
+					return cachedBlobInfo.base64() === base64;
+				});
+
+				if (blobInfo) {
+					resolve({
+						image: img,
+						blobInfo: blobInfo
+					});
+				} else {
+					Conversions.uriToBlob(img.src).then(function(blob) {
+						var blobInfoId = 'blobid' + (count++),
+							blobInfo = blobCache.create(blobInfoId, blob, base64);
+
+						blobCache.add(blobInfo);
+
+						resolve({
+							image: img,
+							blobInfo: blobInfo
+						});
+					});
+				}
+			}
+
+			images = Arr.filter(elm.getElementsByTagName('img'), function(img) {
+				var src = img.src;
+
+				if (!Env.fileApi) {
+					return false;
+				}
+
+				if (img.hasAttribute('data-mce-bogus')) {
+					return false;
+				}
+
+				if (img.hasAttribute('data-mce-placeholder')) {
+					return false;
+				}
+
+				if (!src || src == Env.transparentSrc) {
+					return false;
+				}
+
+				return src.indexOf('data:') === 0 || src.indexOf('blob:') === 0;
+			});
+
+			promises = Arr.map(images, function(img) {
+				var newPromise;
+
+				if (cachedPromises[img.src]) {
+					// Since the cached promise will return the cached image
+					// We need to wrap it and resolve with the actual image
+					return new Promise(function(resolve) {
+						cachedPromises[img.src].then(function(imageInfo) {
+							resolve({
+								image: img,
+								blobInfo: imageInfo.blobInfo
+							});
+						});
+					});
+				}
+
+				newPromise = new Promise(function(resolve) {
+					imageToBlobInfo(img, resolve);
+				}).then(function(result) {
+					delete cachedPromises[result.image.src];
+					return result;
+				})['catch'](function(error) {
+					delete cachedPromises[img.src];
+					return error;
+				});
+
+				cachedPromises[img.src] = newPromise;
+
+				return newPromise;
+			});
+
+			return Promise.all(promises);
+		}
+
+		return {
+			findAll: findAll
+		};
+	};
+});
+
+// Included from: js/tinymce/classes/file/BlobCache.js
+
+/**
+ * BlobCache.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Hold blob info objects where a blob has extra internal information.
+ *
+ * @private
+ * @class tinymce.file.BlobCache
+ */
+define("tinymce/file/BlobCache", [
+	"tinymce/util/Arr",
+	"tinymce/util/Fun"
+], function(Arr, Fun) {
+	return function() {
+		var cache = [], constant = Fun.constant;
+
+		function create(id, blob, base64) {
+			return {
+				id: constant(id),
+				blob: constant(blob),
+				base64: constant(base64),
+				blobUri: constant(URL.createObjectURL(blob))
+			};
+		}
+
+		function add(blobInfo) {
+			if (!get(blobInfo.id())) {
+				cache.push(blobInfo);
+			}
+		}
+
+		function get(id) {
+			return findFirst(function(cachedBlobInfo) {
+				return cachedBlobInfo.id() === id;
+			});
+		}
+
+		function findFirst(predicate) {
+			return Arr.filter(cache, predicate)[0];
+		}
+
+		function getByUri(blobUri) {
+			return findFirst(function(blobInfo) {
+				return blobInfo.blobUri() == blobUri;
+			});
+		}
+
+		function destroy() {
+			Arr.each(cache, function(cachedBlobInfo) {
+				URL.revokeObjectURL(cachedBlobInfo.blobUri());
+			});
+
+			cache = [];
+		}
+
+		return {
+			create: create,
+			add: add,
+			get: get,
+			getByUri: getByUri,
+			findFirst: findFirst,
+			destroy: destroy
+		};
+	};
+});
+
+// Included from: js/tinymce/classes/EditorUpload.js
+
+/**
+ * EditorUpload.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Handles image uploads, updates undo stack and patches over various internal functions.
+ *
+ * @private
+ * @class tinymce.EditorUpload
+ */
+define("tinymce/EditorUpload", [
+	"tinymce/util/Arr",
+	"tinymce/file/Uploader",
+	"tinymce/file/ImageScanner",
+	"tinymce/file/BlobCache"
+], function(Arr, Uploader, ImageScanner, BlobCache) {
+	return function(editor) {
+		var blobCache = new BlobCache(), uploader, imageScanner;
+
+		// Replaces strings without regexps to avoid FF regexp to big issue
+		function replaceString(content, search, replace) {
+			var index = 0;
+
+			do {
+				index = content.indexOf(search, index);
+
+				if (index !== -1) {
+					content = content.substring(0, index) + replace + content.substr(index + search.length);
+					index += replace.length - search.length + 1;
+				}
+			} while (index !== -1);
+
+			return content;
+		}
+
+		function replaceImageUrl(content, targetUrl, replacementUrl) {
+			content = replaceString(content, 'src="' + targetUrl + '"', 'src="' + replacementUrl + '"');
+			content = replaceString(content, 'data-mce-src="' + targetUrl + '"', 'data-mce-src="' + replacementUrl + '"');
+
+			return content;
+		}
+
+		function replaceUrlInUndoStack(targetUrl, replacementUrl) {
+			Arr.each(editor.undoManager.data, function(level) {
+				level.content = replaceImageUrl(level.content, targetUrl, replacementUrl);
+			});
+		}
+
+		function uploadImages(callback) {
+			if (!uploader) {
+				uploader = new Uploader({
+					url: editor.settings.images_upload_url,
+					basePath: editor.settings.images_upload_base_path,
+					credentials: editor.settings.images_upload_credentials,
+					handler: editor.settings.images_upload_handler
+				});
+			}
+
+			return scanForImages().then(function(imageInfos) {
+				var blobInfos;
+
+				blobInfos = Arr.map(imageInfos, function(imageInfo) {
+					return imageInfo.blobInfo;
+				});
+
+				return uploader.upload(blobInfos).then(function(result) {
+					result = Arr.map(result, function(uploadInfo, index) {
+						var image = imageInfos[index].image;
+
+						replaceUrlInUndoStack(image.src, uploadInfo.url);
+
+						editor.$(image).attr({
+							src: uploadInfo.url,
+							'data-mce-src': editor.convertURL(uploadInfo.url, 'src')
+						});
+
+						return {
+							element: image,
+							status: uploadInfo.status
+						};
+					});
+
+					if (callback) {
+						callback(result);
+					}
+
+					return result;
+				});
+			});
+		}
+
+		function scanForImages() {
+			if (!imageScanner) {
+				imageScanner = new ImageScanner(blobCache);
+			}
+
+			return imageScanner.findAll(editor.getBody()).then(function(result) {
+				Arr.each(result, function(resultItem) {
+					replaceUrlInUndoStack(resultItem.image.src, resultItem.blobInfo.blobUri());
+					resultItem.image.src = resultItem.blobInfo.blobUri();
+				});
+
+				return result;
+			});
+		}
+
+		function destroy() {
+			blobCache.destroy();
+			imageScanner = uploader = null;
+		}
+
+		function replaceBlobWithBase64(content) {
+			return content.replace(/src="(blob:[^"]+)"/g, function(match, blobUri) {
+				var blobInfo = blobCache.getByUri(blobUri);
+
+				if (!blobInfo) {
+					blobInfo = Arr.reduce(editor.editorManager.editors, function(result, editor) {
+						return result || editor.editorUpload.blobCache.getByUri(blobUri);
+					}, null);
+				}
+
+				if (blobInfo) {
+					return 'src="data:' + blobInfo.blob().type + ';base64,' + blobInfo.base64() + '"';
+				}
+
+				return match[0];
+			});
+		}
+
+		editor.on('setContent paste', scanForImages);
+
+		editor.on('RawSaveContent', function(e) {
+			e.content = replaceBlobWithBase64(e.content);
+		});
+
+		editor.on('getContent', function(e) {
+			if (e.source_view || e.format == 'raw') {
+				return;
+			}
+
+			e.content = replaceBlobWithBase64(e.content);
+		});
+
+		return {
+			blobCache: blobCache,
+			uploadImages: uploadImages,
+			scanForImages: scanForImages,
+			destroy: destroy
+		};
+	};
+});
+
 // Included from: js/tinymce/classes/Editor.js
 
 /**
  * Editor.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -68634,12 +67472,13 @@ define("tinymce/Editor", [
 	"tinymce/Env",
 	"tinymce/util/Tools",
 	"tinymce/EditorObservable",
-	"tinymce/Shortcuts"
+	"tinymce/Shortcuts",
+	"tinymce/EditorUpload"
 ], function(
 	DOMUtils, DomQuery, AddOnManager, NodeChange, Node, DomSerializer, Serializer,
 	Selection, Formatter, UndoManager, EnterKey, ForceBlocks, EditorCommands,
 	URI, ScriptLoader, EventUtils, WindowManager,
-	Schema, DomParser, Quirks, Env, Tools, EditorObservable, Shortcuts
+	Schema, DomParser, Quirks, Env, Tools, EditorObservable, Shortcuts, EditorUpload
 ) {
 	// Shorten these names
 	var DOM = DOMUtils.DOM, ThemeManager = AddOnManager.ThemeManager, PluginManager = AddOnManager.PluginManager;
@@ -68662,7 +67501,6 @@ define("tinymce/Editor", [
 	 * @param {String} id Unique id for the editor.
 	 * @param {Object} settings Settings for the editor.
 	 * @param {tinymce.EditorManager} editorManager EditorManager instance.
-	 * @author Moxiecode
 	 */
 	function Editor(id, settings, editorManager) {
 		var self = this, documentBaseUrl, baseUri;
@@ -68821,6 +67659,10 @@ define("tinymce/Editor", [
 
 		if (settings.cache_suffix) {
 			Env.cacheSuffix = settings.cache_suffix.replace(/^[\?\&]+/, '');
+		}
+
+		if (settings.override_viewport === false) {
+			Env.overrideViewPort = false;
 		}
 
 		// Call setup
@@ -69048,7 +67890,7 @@ define("tinymce/Editor", [
 			var w, h, minHeight, n, o, Theme, url, bodyId, bodyClass, re, i, initializedPlugins = [];
 
 			this.editorManager.i18n.setCode(settings.language);
-			self.rtl = this.editorManager.i18n.rtl;
+			self.rtl = settings.rtl_ui || this.editorManager.i18n.rtl;
 			self.editorManager.add(self);
 
 			settings.aria_label = settings.aria_label || DOM.getAttrib(elm, 'aria-label', self.getLang('aria.rich_text_area'));
@@ -69285,8 +68127,8 @@ define("tinymce/Editor", [
 		},
 
 		/**
-		 * This method get called by the init method ones the iframe is loaded.
-		 * It will fill the iframe with contents, setups DOM and selection objects for the iframe.
+		 * This method get called by the init method once the iframe is loaded.
+		 * It will fill the iframe with contents, sets up DOM and selection objects for the iframe.
 		 *
 		 * @method initContentBody
 		 * @private
@@ -69341,8 +68183,10 @@ define("tinymce/Editor", [
 
 			body.disabled = false;
 
+			self.editorUpload = new EditorUpload(self);
+
 			/**
-			 * Schema instance, enables you to validate elements and it's children.
+			 * Schema instance, enables you to validate elements and its children.
 			 *
 			 * @property schema
 			 * @type tinymce.html.Schema
@@ -69392,6 +68236,11 @@ define("tinymce/Editor", [
 
 					// Add internal attribute if we need to we don't on a refresh of the document
 					if (!node.attributes.map[internalName]) {
+						// Don't duplicate these since they won't get modified by any browser
+						if (value.indexOf('data:') === 0 || value.indexOf('blob:') === 0) {
+							continue;
+						}
+
 						if (name === "style") {
 							value = dom.serializeStyle(dom.parseStyle(value), node.name);
 
@@ -69586,7 +68435,9 @@ define("tinymce/Editor", [
 						editor = self.editorManager.get(settings.auto_focus);
 					}
 
-					editor.focus();
+					if (!editor.destroyed) {
+						editor.focus();
+					}
 				}, 100);
 			}
 
@@ -69767,7 +68618,7 @@ define("tinymce/Editor", [
 		},
 
 		/**
-		 * Distpaches out a onNodeChange event to all observers. This method should be called when you
+		 * Dispatches out a onNodeChange event to all observers. This method should be called when you
 		 * need to update the UI states or element path etc.
 		 *
 		 * @method nodeChanged
@@ -69858,6 +68709,32 @@ define("tinymce/Editor", [
 		},
 
 		/**
+		 * Adds a contextual toolbar to be rendered when the selector matches.
+		 *
+		 * @method addContextToolbar
+		 * @param {function/string} predicate Predicate that needs to return true if provided strings get converted into CSS predicates.
+		 * @param {String/Array} items String or array with items to add to the context toolbar.
+		 */
+		addContextToolbar: function(predicate, items) {
+			var self = this, selector;
+
+			self.contextToolbars = self.contextToolbars || [];
+
+			// Convert selector to predicate
+			if (typeof predicate == "string") {
+				selector = predicate;
+				predicate = function(elm) {
+					return self.dom.is(elm, selector);
+				};
+			}
+
+			self.contextToolbars.push({
+				predicate: predicate,
+				items: items
+			});
+		},
+
+		/**
 		 * Adds a custom command to the editor, you can also override existing commands with this method.
 		 * The command that you add can be executed with execCommand.
 		 *
@@ -69896,7 +68773,7 @@ define("tinymce/Editor", [
 		 *
 		 * @method addQueryStateHandler
 		 * @param {String} name Command name to add/override.
-		 * @param {addQueryStateHandlerCallback} callback Function to execute when the command state retrival occurs.
+		 * @param {addQueryStateHandlerCallback} callback Function to execute when the command state retrieval occurs.
 		 * @param {Object} scope Optional scope to execute the function in.
 		 */
 		addQueryStateHandler: function(name, callback, scope) {
@@ -69915,7 +68792,7 @@ define("tinymce/Editor", [
 		 *
 		 * @method addQueryValueHandler
 		 * @param {String} name Command name to add/override.
-		 * @param {addQueryValueHandlerCallback} callback Function to execute when the command value retrival occurs.
+		 * @param {addQueryValueHandlerCallback} callback Function to execute when the command value retrieval occurs.
 		 * @param {Object} scope Optional scope to execute the function in.
 		 */
 		addQueryValueHandler: function(name, callback, scope) {
@@ -70060,7 +68937,7 @@ define("tinymce/Editor", [
 
 		/**
 		 * Sets the progress state, this will display a throbber/progess for the editor.
-		 * This is ideal for asycronous operations like an AJAX save call.
+		 * This is ideal for asynchronous operations like an AJAX save call.
 		 *
 		 * @method setProgressState
 		 * @param {Boolean} state Boolean state if the progress should be shown or hidden.
@@ -70133,6 +69010,11 @@ define("tinymce/Editor", [
 
 			if (!args.no_events) {
 				self.fire('SaveContent', args);
+			}
+
+			// Always run this internal event
+			if (args.format == 'raw') {
+				self.fire('RawSaveContent', args);
 			}
 
 			html = args.content;
@@ -70541,6 +69423,7 @@ define("tinymce/Editor", [
 
 				self.editorManager.remove(self);
 				DOM.remove(self.getContainer());
+				self.editorUpload.destroy();
 				self.destroy();
 			}
 		},
@@ -70602,7 +69485,22 @@ define("tinymce/Editor", [
 			self.destroyed = 1;
 		},
 
+		/**
+		 * Uploads all data uri/blob uri images in the editor contents to server.
+		 *
+		 * @method uploadImages
+		 * @param {function} callback Optional callback with images and status for each image.
+		 * @return {tinymce.util.Promise} Promise instance.
+		 */
+		uploadImages: function(callback) {
+			return this.editorUpload.uploadImages(callback);
+		},
+
 		// Internal functions
+
+		_scanForImages: function() {
+			return this.editorUpload.scanForImages();
+		},
 
 		_refreshContentEditable: function() {
 			var self = this, body, parent;
@@ -70642,8 +69540,8 @@ define("tinymce/Editor", [
 /**
  * I18n.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -70677,6 +69575,7 @@ define("tinymce/util/I18n", [], function() {
 		/**
 		 * Returns the current language code.
 		 *
+		 * @method getCode
 		 * @return {String} Current language code.
 		 */
 		getCode: function() {
@@ -70760,8 +69659,8 @@ define("tinymce/util/I18n", [], function() {
 /**
  * FocusManager.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -71027,8 +69926,8 @@ define("tinymce/FocusManager", [
 /**
  * EditorManager.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -71054,10 +69953,28 @@ define("tinymce/EditorManager", [
 	"tinymce/util/Observable",
 	"tinymce/util/I18n",
 	"tinymce/FocusManager"
-], function(Editor, DomQuery, DOMUtils, URI, Env, Tools, Observable, I18n, FocusManager) {
+], function(Editor, $, DOMUtils, URI, Env, Tools, Observable, I18n, FocusManager) {
 	var DOM = DOMUtils.DOM;
 	var explode = Tools.explode, each = Tools.each, extend = Tools.extend;
-	var instanceCounter = 0, beforeUnloadDelegate, EditorManager;
+	var instanceCounter = 0, beforeUnloadDelegate, EditorManager, boundGlobalEvents = false;
+
+	function globalEventDelegate(e) {
+		each(EditorManager.editors, function(editor) {
+			editor.fire('ResizeWindow', e);
+		});
+	}
+
+	function toggleGlobalEvents(editors, state) {
+		if (state !== boundGlobalEvents) {
+			if (state) {
+				$(window).on('resize', globalEventDelegate);
+			} else {
+				$(window).off('resize', globalEventDelegate);
+			}
+
+			boundGlobalEvents = state;
+		}
+	}
 
 	function removeEditorFromList(editor) {
 		var editors = EditorManager.editors, removedFromList;
@@ -71104,7 +70021,7 @@ define("tinymce/EditorManager", [
 		 * @property $
 		 * @type tinymce.dom.DomQuery
 		 */
-		$: DomQuery,
+		$: $,
 
 		/**
 		 * Major version of TinyMCE build.
@@ -71120,7 +70037,7 @@ define("tinymce/EditorManager", [
 		 * @property minorVersion
 		 * @type String
 		 */
-		minorVersion: '1.9',
+		minorVersion: '2.5',
 
 		/**
 		 * Release date of TinyMCE build.
@@ -71128,7 +70045,7 @@ define("tinymce/EditorManager", [
 		 * @property releaseDate
 		 * @type String
 		 */
-		releaseDate: '2015-03-10',
+		releaseDate: '2015-08-31',
 
 		/**
 		 * Collection of editor instances.
@@ -71191,8 +70108,9 @@ define("tinymce/EditorManager", [
 					// tinymce.js tinymce.min.js tinymce.dev.js
 					// tinymce.jquery.js tinymce.jquery.min.js tinymce.jquery.dev.js
 					// tinymce.full.js tinymce.full.min.js tinymce.full.dev.js
+					var srcScript = src.substring(src.lastIndexOf('/'));
 					if (/tinymce(\.full|\.jquery|)(\.min|\.dev|)\.js/.test(src)) {
-						if (src.indexOf('.min') != -1) {
+						if (srcScript.indexOf('.min') != -1) {
 							suffix = '.min';
 						}
 
@@ -71452,6 +70370,8 @@ define("tinymce/EditorManager", [
 			editors[editor.id] = editor;
 			editors.push(editor);
 
+			toggleGlobalEvents(editors, true);
+
 			// Doesn't call setActive method since we don't want
 			// to fire a bunch of activate/deactivate calls while initializing
 			self.activeEditor = editor;
@@ -71557,6 +70477,8 @@ define("tinymce/EditorManager", [
 			}
 
 			editor.remove();
+
+			toggleGlobalEvents(editors, editors.length > 0);
 
 			return editor;
 		},
@@ -71684,13 +70606,19 @@ define("tinymce/EditorManager", [
 /**
  * LegacyInput.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
  */
 
+/**
+ * Converts legacy input to modern HTML.
+ *
+ * @class tinymce.LegacyInput
+ * @private
+ */
 define("tinymce/LegacyInput", [
 	"tinymce/EditorManager",
 	"tinymce/util/Tools"
@@ -71763,8 +70691,8 @@ define("tinymce/LegacyInput", [
 /**
  * XHR.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -71868,8 +70796,8 @@ define("tinymce/util/XHR", [
 /**
  * JSON.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -71980,8 +70908,8 @@ define("tinymce/util/JSON", [], function() {
 /**
  * JSONRequest.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72093,8 +71021,8 @@ define("tinymce/util/JSONRequest", [
 /**
  * JSONP.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72134,8 +71062,8 @@ define("tinymce/util/JSONP", [
 /**
  * LocalStorage.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72350,8 +71278,8 @@ define("tinymce/util/LocalStorage", [], function() {
 /**
  * Compat.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72432,13 +71360,19 @@ define("tinymce/Compat", [
  * @namespace tinymce.util
  */
 
+/**
+ * Contains modules to handle data binding.
+ *
+ * @namespace tinymce.data
+ */
+
 // Included from: js/tinymce/classes/ui/Layout.js
 
 /**
  * Layout.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72478,7 +71412,7 @@ define("tinymce/ui/Layout", [
 		 * @param {tinymce.ui.Container} container Container instance to preRender.
 		 */
 		preRender: function(container) {
-			container.addClass(this.settings.containerClass, 'body');
+			container.bodyClasses.add(this.settings.containerClass);
 		},
 
 		/**
@@ -72486,23 +71420,31 @@ define("tinymce/ui/Layout", [
 		 *
 		 * @private
 		 */
-		applyClasses: function(container) {
-			var self = this, settings = self.settings, items, firstClass, lastClass;
+		applyClasses: function(items) {
+			var self = this, settings = self.settings, firstClass, lastClass, firstItem, lastItem;
 
-			items = container.items().filter(':visible');
 			firstClass = settings.firstControlClass;
 			lastClass = settings.lastControlClass;
 
 			items.each(function(item) {
-				item.removeClass(firstClass).removeClass(lastClass);
+				item.classes.remove(firstClass).remove(lastClass).add(settings.controlClass);
 
-				if (settings.controlClass) {
-					item.addClass(settings.controlClass);
+				if (item.visible()) {
+					if (!firstItem) {
+						firstItem = item;
+					}
+
+					lastItem = item;
 				}
 			});
 
-			items.eq(0).addClass(firstClass);
-			items.eq(-1).addClass(lastClass);
+			if (firstItem) {
+				firstItem.classes.add(firstClass);
+			}
+
+			if (lastItem) {
+				lastItem.classes.add(lastClass);
+			}
 		},
 
 		/**
@@ -72512,17 +71454,11 @@ define("tinymce/ui/Layout", [
 		 * @param {tinymce.ui.Container} container Container to render HTML for.
 		 */
 		renderHtml: function(container) {
-			var self = this, settings = self.settings, items, html = '';
+			var self = this, html = '';
 
-			items = container.items();
-			items.eq(0).addClass(settings.firstControlClass);
-			items.eq(-1).addClass(settings.lastControlClass);
+			self.applyClasses(container.items());
 
-			items.each(function(item) {
-				if (settings.controlClass) {
-					item.addClass(settings.controlClass);
-				}
-
+			container.items().each(function(item) {
 				html += item.renderHtml();
 			});
 
@@ -72545,6 +71481,10 @@ define("tinymce/ui/Layout", [
 		 * @param {tinymce.ui.Container} container Container instance to postRender.
 		 */
 		postRender: function() {
+		},
+
+		isNative: function() {
+			return false;
 		}
 	});
 });
@@ -72554,8 +71494,8 @@ define("tinymce/ui/Layout", [
 /**
  * AbsoluteLayout.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72620,8 +71560,8 @@ define("tinymce/ui/AbsoluteLayout", [
 /**
  * Tooltip.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72647,29 +71587,6 @@ define("tinymce/ui/Tooltip", [
 		},
 
 		/**
-		 * Sets/gets the current label text.
-		 *
-		 * @method text
-		 * @param {String} [text] New label text.
-		 * @return {String|tinymce.ui.Tooltip} Current text or current label instance.
-		 */
-		text: function(value) {
-			var self = this;
-
-			if (typeof value != "undefined") {
-				self._value = value;
-
-				if (self._rendered) {
-					self.getEl().lastChild.innerHTML = self.encode(value);
-				}
-
-				return self;
-			}
-
-			return self._value;
-		},
-
-		/**
 		 * Renders the control as a HTML string.
 		 *
 		 * @method renderHtml
@@ -72679,11 +71596,21 @@ define("tinymce/ui/Tooltip", [
 			var self = this, prefix = self.classPrefix;
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '" role="presentation">' +
+				'<div id="' + self._id + '" class="' + self.classes + '" role="presentation">' +
 					'<div class="' + prefix + 'tooltip-arrow"></div>' +
-					'<div class="' + prefix + 'tooltip-inner">' + self.encode(self._text) + '</div>' +
+					'<div class="' + prefix + 'tooltip-inner">' + self.encode(self.state.get('text')) + '</div>' +
 				'</div>'
 			);
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			self.state.on('change:text', function(e) {
+				self.getEl().lastChild.innerHTML = self.encode(e.value);
+			});
+
+			return self._super();
 		},
 
 		/**
@@ -72709,8 +71636,8 @@ define("tinymce/ui/Tooltip", [
 /**
  * Widget.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72754,9 +71681,9 @@ define("tinymce/ui/Widget", [
 					if (e.control == self) {
 						var rel = tooltip.text(settings.tooltip).show().testMoveRel(self.getEl(), ['bc-tc', 'bc-tl', 'bc-tr']);
 
-						tooltip.toggleClass('tooltip-n', rel == 'bc-tc');
-						tooltip.toggleClass('tooltip-nw', rel == 'bc-tl');
-						tooltip.toggleClass('tooltip-ne', rel == 'bc-tr');
+						tooltip.classes.toggle('tooltip-n', rel == 'bc-tc');
+						tooltip.classes.toggle('tooltip-nw', rel == 'bc-tl');
+						tooltip.classes.toggle('tooltip-ne', rel == 'bc-tr');
 
 						tooltip.moveRel(self.getEl(), rel);
 					} else {
@@ -72788,50 +71715,12 @@ define("tinymce/ui/Widget", [
 		},
 
 		/**
-		 * Sets/gets the active state of the widget.
-		 *
-		 * @method active
-		 * @param {Boolean} [state] State if the control is active.
-		 * @return {Boolean|tinymce.ui.Widget} True/false or current widget instance.
-		 */
-		active: function(state) {
-			var self = this, undef;
-
-			if (state !== undef) {
-				self.aria('pressed', state);
-				self.toggleClass('active', state);
-			}
-
-			return self._super(state);
-		},
-
-		/**
-		 * Sets/gets the disabled state of the widget.
-		 *
-		 * @method disabled
-		 * @param {Boolean} [state] State if the control is disabled.
-		 * @return {Boolean|tinymce.ui.Widget} True/false or current widget instance.
-		 */
-		disabled: function(state) {
-			var self = this, undef;
-
-			if (state !== undef) {
-				self.aria('disabled', state);
-				self.toggleClass('disabled', state);
-			}
-
-			return self._super(state);
-		},
-
-		/**
 		 * Called after the control has been rendered.
 		 *
 		 * @method postRender
 		 */
 		postRender: function() {
 			var self = this, settings = self.settings;
-
-			self._rendered = true;
 
 			self._super();
 
@@ -72843,6 +71732,38 @@ define("tinymce/ui/Widget", [
 			if (settings.autofocus) {
 				self.focus();
 			}
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			function disable(state) {
+				self.aria('disabled', state);
+				self.classes.toggle('disabled', state);
+			}
+
+			function active(state) {
+				self.aria('pressed', state);
+				self.classes.toggle('active', state);
+			}
+
+			self.state.on('change:disabled', function(e) {
+				disable(e.value);
+			});
+
+			self.state.on('change:active', function(e) {
+				active(e.value);
+			});
+
+			if (self.state.get('disabled')) {
+				disable(true);
+			}
+
+			if (self.state.get('active')) {
+				active(true);
+			}
+
+			return self._super();
 		},
 
 		/**
@@ -72869,8 +71790,8 @@ define("tinymce/ui/Widget", [
 /**
  * Button.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -72913,19 +71834,30 @@ define("tinymce/ui/Button", [
 		init: function(settings) {
 			var self = this, size;
 
+			self._super(settings);
+			settings = self.settings;
+
+			size = self.settings.size;
+
 			self.on('click mousedown', function(e) {
 				e.preventDefault();
 			});
 
-			self._super(settings);
-			size = settings.size;
+			self.on('touchstart', function(e) {
+				self.fire('click', e);
+				e.preventDefault();
+			});
 
 			if (settings.subtype) {
-				self.addClass(settings.subtype);
+				self.classes.add(settings.subtype);
 			}
 
 			if (size) {
-				self.addClass('btn-' + size);
+				self.classes.add('btn-' + size);
+			}
+
+			if (settings.icon) {
+				self.icon(settings.icon);
 			}
 		},
 
@@ -72937,33 +71869,13 @@ define("tinymce/ui/Button", [
 		 * @return {String|tinymce.ui.MenuButton} Current icon or current MenuButton instance.
 		 */
 		icon: function(icon) {
-			var self = this, prefix = self.classPrefix;
-
-			if (typeof icon == 'undefined') {
-				return self.settings.icon;
+			if (!arguments.length) {
+				return this.state.get('icon');
 			}
 
-			self.settings.icon = icon;
-			icon = icon ? prefix + 'ico ' + prefix + 'i-' + self.settings.icon : '';
+			this.state.set('icon', icon);
 
-			if (self._rendered) {
-				var btnElm = self.getEl().firstChild, iconElm = btnElm.getElementsByTagName('i')[0];
-
-				if (icon) {
-					if (!iconElm || iconElm != btnElm.firstChild) {
-						iconElm = document.createElement('i');
-						btnElm.insertBefore(iconElm, btnElm.firstChild);
-					}
-
-					iconElm.className = icon;
-				} else if (iconElm) {
-					btnElm.removeChild(iconElm);
-				}
-
-				self.text(self._text); // Set text again to fix whitespace between icon + text
-			}
-
-			return self;
+			return this;
 		},
 
 		/**
@@ -72972,31 +71884,15 @@ define("tinymce/ui/Button", [
 		 * @method repaint
 		 */
 		repaint: function() {
-			var btnStyle = this.getEl().firstChild.style;
+			var btnElm = this.getEl().firstChild,
+				btnStyle;
 
-			btnStyle.width = btnStyle.height = "100%";
-
-			this._super();
-		},
-
-		/**
-		 * Sets/gets the current button text.
-		 *
-		 * @method text
-		 * @param {String} [text] New button text.
-		 * @return {String|tinymce.ui.Button} Current text or current Button instance.
-		 */
-		text: function(text) {
-			var self = this;
-
-			if (self._rendered) {
-				var textNode = self.getEl().lastChild.lastChild;
-				if (textNode) {
-					textNode.data = self.translate(text);
-				}
+			if (btnElm) {
+				btnStyle = btnElm.style;
+				btnStyle.width = btnStyle.height = "100%";
 			}
 
-			return self._super(text);
+			this._super();
 		},
 
 		/**
@@ -73007,7 +71903,7 @@ define("tinymce/ui/Button", [
 		 */
 		renderHtml: function() {
 			var self = this, id = self._id, prefix = self.classPrefix;
-			var icon = self.settings.icon, image;
+			var icon = self.state.get('icon'), image, text = self.state.get('text');
 
 			image = self.settings.image;
 			if (image) {
@@ -73023,16 +71919,64 @@ define("tinymce/ui/Button", [
 				image = '';
 			}
 
+			if (text) {
+				self.classes.add('btn-has-text');
+			}
+
 			icon = self.settings.icon ? prefix + 'ico ' + prefix + 'i-' + icon : '';
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '" tabindex="-1" aria-labelledby="' + id + '">' +
+				'<div id="' + id + '" class="' + self.classes + '" tabindex="-1" aria-labelledby="' + id + '">' +
 					'<button role="presentation" type="button" tabindex="-1">' +
 						(icon ? '<i class="' + icon + '"' + image + '></i>' : '') +
-						(self._text ? (icon ? '\u00a0' : '') + self.encode(self._text) : '') +
+						(text ? self.encode(text) : '') +
 					'</button>' +
 				'</div>'
 			);
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			function setButtonText(text) {
+				var node = self.getEl().firstChild.firstChild;
+
+				for (; node; node = node.nextSibling) {
+					if (node.nodeType == 3) {
+						node.data = self.translate(text);
+					}
+				}
+
+				self.classes.toggle('btn-has-text', !!text);
+			}
+
+			self.state.on('change:text', function(e) {
+				setButtonText(e.value);
+			});
+
+			self.state.on('change:icon', function(e) {
+				var icon = e.value, prefix = self.classPrefix;
+
+				self.settings.icon = icon;
+				icon = icon ? prefix + 'ico ' + prefix + 'i-' + self.settings.icon : '';
+
+				var btnElm = self.getEl().firstChild, iconElm = btnElm.getElementsByTagName('i')[0];
+
+				if (icon) {
+					if (!iconElm || iconElm != btnElm.firstChild) {
+						iconElm = document.createElement('i');
+						btnElm.insertBefore(iconElm, btnElm.firstChild);
+					}
+
+					iconElm.className = icon;
+				} else if (iconElm) {
+					btnElm.removeChild(iconElm);
+				}
+
+				setButtonText(self.state.get('text'));
+			});
+
+			return self._super();
 		}
 	});
 });
@@ -73042,8 +71986,8 @@ define("tinymce/ui/Button", [
 /**
  * ButtonGroup.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -73087,12 +72031,12 @@ define("tinymce/ui/ButtonGroup", [
 		renderHtml: function() {
 			var self = this, layout = self._layout;
 
-			self.addClass('btn-group');
+			self.classes.add('btn-group');
 			self.preRender();
 			layout.preRender(self);
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '">' +
+				'<div id="' + self._id + '" class="' + self.classes + '">' +
 					'<div id="' + self._id + '-body">' +
 						(self.settings.html || '') + layout.renderHtml(self) +
 					'</div>' +
@@ -73107,8 +72051,8 @@ define("tinymce/ui/ButtonGroup", [
 /**
  * Checkbox.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -73176,22 +72120,13 @@ define("tinymce/ui/Checkbox", [
 		 * @return {Boolean|tinymce.ui.Checkbox} True/false or checkbox if it's a set operation.
 		 */
 		checked: function(state) {
-			var self = this;
-
-			if (typeof state != "undefined") {
-				if (state) {
-					self.addClass('checked');
-				} else {
-					self.removeClass('checked');
-				}
-
-				self._checked = state;
-				self.aria('checked', state);
-
-				return self;
+			if (!arguments.length) {
+				return this.state.get('checked');
 			}
 
-			return self._checked;
+			this.state.set('checked', state);
+
+			return this;
 		},
 
 		/**
@@ -73202,6 +72137,10 @@ define("tinymce/ui/Checkbox", [
 		 * @return {Boolean|tinymce.ui.Checkbox} True/false or checkbox if it's a set operation.
 		 */
 		value: function(state) {
+			if (!arguments.length) {
+				return this.checked();
+			}
+
 			return this.checked(state);
 		},
 
@@ -73215,11 +72154,59 @@ define("tinymce/ui/Checkbox", [
 			var self = this, id = self._id, prefix = self.classPrefix;
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '" unselectable="on" aria-labelledby="' + id + '-al" tabindex="-1">' +
+				'<div id="' + id + '" class="' + self.classes + '" unselectable="on" aria-labelledby="' + id + '-al" tabindex="-1">' +
 					'<i class="' + prefix + 'ico ' + prefix + 'i-checkbox"></i>' +
-					'<span id="' + id + '-al" class="' + prefix + 'label">' + self.encode(self._text) + '</span>' +
+					'<span id="' + id + '-al" class="' + prefix + 'label">' + self.encode(self.state.get('text')) + '</span>' +
 				'</div>'
 			);
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			function checked(state) {
+				self.classes.toggle("checked", state);
+				self.aria('checked', state);
+			}
+
+			self.state.on('change:text', function(e) {
+				self.getEl('al').firstChild.data = self.translate(e.value);
+			});
+
+			self.state.on('change:checked change:value', function(e) {
+				self.fire('change');
+				checked(e.value);
+			});
+
+			self.state.on('change:icon', function(e) {
+				var icon = e.value, prefix = self.classPrefix;
+
+				if (typeof icon == 'undefined') {
+					return self.settings.icon;
+				}
+
+				self.settings.icon = icon;
+				icon = icon ? prefix + 'ico ' + prefix + 'i-' + self.settings.icon : '';
+
+				var btnElm = self.getEl().firstChild, iconElm = btnElm.getElementsByTagName('i')[0];
+
+				if (icon) {
+					if (!iconElm || iconElm != btnElm.firstChild) {
+						iconElm = document.createElement('i');
+						btnElm.insertBefore(iconElm, btnElm.firstChild);
+					}
+
+					iconElm.className = icon;
+				} else if (iconElm) {
+					btnElm.removeChild(iconElm);
+				}
+			});
+
+			if (self.state.get('checked')) {
+				checked(true);
+			}
+
+			return self._super();
 		}
 	});
 });
@@ -73229,8 +72216,8 @@ define("tinymce/ui/Checkbox", [
 /**
  * ComboBox.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -73247,8 +72234,9 @@ define("tinymce/ui/Checkbox", [
 define("tinymce/ui/ComboBox", [
 	"tinymce/ui/Widget",
 	"tinymce/ui/Factory",
-	"tinymce/ui/DomUtils"
-], function(Widget, Factory, DomUtils) {
+	"tinymce/ui/DomUtils",
+	"tinymce/dom/DomQuery"
+], function(Widget, Factory, DomUtils, $) {
 	"use strict";
 
 	return Widget.extend({
@@ -73263,11 +72251,12 @@ define("tinymce/ui/ComboBox", [
 			var self = this;
 
 			self._super(settings);
-			self.addClass('combobox');
+			settings = self.settings;
+
+			self.classes.add('combobox');
 			self.subinput = true;
 			self.ariaTarget = 'inp'; // TODO: Figure out a better way
 
-			settings = self.settings;
 			settings.menu = settings.menu || settings.values;
 
 			if (settings.menu) {
@@ -73276,6 +72265,10 @@ define("tinymce/ui/ComboBox", [
 
 			self.on('click', function(e) {
 				var elm = e.target, root = self.getEl();
+
+				if (!$.contains(root, elm) && elm != root) {
+					return;
+				}
 
 				while (elm && elm != root) {
 					if (elm.id && elm.id.indexOf('-open') != -1) {
@@ -73298,8 +72291,15 @@ define("tinymce/ui/ComboBox", [
 			self.on('keydown', function(e) {
 				if (e.target.nodeName == "INPUT" && e.keyCode == 13) {
 					self.parents().reverse().each(function(ctrl) {
+						var stateValue = self.state.get('value'), inputValue = self.getEl('inp').value;
+
 						e.preventDefault();
-						self.fire('change');
+
+						self.state.set('value', inputValue);
+
+						if (stateValue != inputValue) {
+							self.fire('change');
+						}
 
 						if (ctrl.hasEventListeners('submit') && ctrl.toJSON) {
 							ctrl.fire('submit', {data: ctrl.toJSON()});
@@ -73309,31 +72309,11 @@ define("tinymce/ui/ComboBox", [
 				}
 			});
 
-			if (settings.placeholder) {
-				self.addClass('placeholder');
-
-				self.on('focusin', function() {
-					if (!self._hasOnChange) {
-						DomUtils.on(self.getEl('inp'), 'change', function() {
-							self.fire('change');
-						});
-
-						self._hasOnChange = true;
-					}
-
-					if (self.hasClass('placeholder')) {
-						self.getEl('inp').value = '';
-						self.removeClass('placeholder');
-					}
-				});
-
-				self.on('focusout', function() {
-					if (self.value().length === 0) {
-						self.getEl('inp').value = settings.placeholder;
-						self.addClass('placeholder');
-					}
-				});
-			}
+			self.on('keyup', function(e) {
+				if (e.target.nodeName == "INPUT") {
+					self.state.set('value', e.target.value);
+				}
+			});
 		},
 
 		showMenu: function() {
@@ -73386,57 +72366,6 @@ define("tinymce/ui/ComboBox", [
 		},
 
 		/**
-		 * Getter/setter function for the control value.
-		 *
-		 * @method value
-		 * @param {String} [value] Value to be set.
-		 * @return {String|tinymce.ui.ComboBox} Value or self if it's a set operation.
-		 */
-		value: function(value) {
-			var self = this;
-
-			if (typeof value != "undefined") {
-				self._value = value;
-				self.removeClass('placeholder');
-
-				if (self._rendered) {
-					self.getEl('inp').value = value;
-				}
-
-				return self;
-			}
-
-			if (self._rendered) {
-				value = self.getEl('inp').value;
-
-				if (value != self.settings.placeholder) {
-					return value;
-				}
-
-				return '';
-			}
-
-			return self._value;
-		},
-
-		/**
-		 * Getter/setter function for the disabled state.
-		 *
-		 * @method value
-		 * @param {Boolean} [state] State to be set.
-		 * @return {Boolean|tinymce.ui.ComboBox} True/false or self if it's a set operation.
-		 */
-		disabled: function(state) {
-			var self = this;
-
-			if (self._rendered && typeof state != 'undefined') {
-				self.getEl('inp').disabled = state;
-			}
-
-			return self._super(state);
-		},
-
-		/**
 		 * Focuses the input area of the control.
 		 *
 		 * @method focus
@@ -73466,7 +72395,7 @@ define("tinymce/ui/ComboBox", [
 				lineHeight = (self.layoutRect().h - 2) + 'px';
 			}
 
-			DomUtils.css(elm.firstChild, {
+			$(elm.firstChild).css({
 				width: width,
 				lineHeight: lineHeight
 			});
@@ -73485,16 +72414,12 @@ define("tinymce/ui/ComboBox", [
 		postRender: function() {
 			var self = this;
 
-			DomUtils.on(this.getEl('inp'), 'change', function() {
-				self.fire('change');
+			$(this.getEl('inp')).on('change', function(e) {
+				self.state.set('value', e.target.value);
+				self.fire('change', e);
 			});
 
 			return self._super();
-		},
-
-		remove: function() {
-			DomUtils.off(this.getEl('inp'));
-			this._super();
 		},
 
 		/**
@@ -73505,7 +72430,7 @@ define("tinymce/ui/ComboBox", [
 		 */
 		renderHtml: function() {
 			var self = this, id = self._id, settings = self.settings, prefix = self.classPrefix;
-			var value = settings.value || settings.placeholder || '';
+			var value = self.state.get('value') || '';
 			var icon, text, openBtnHtml = '', extraAttrs = '';
 
 			if ("spellcheck" in settings) {
@@ -73533,7 +72458,7 @@ define("tinymce/ui/ComboBox", [
 				icon = prefix + 'ico ' + prefix + 'i-' + settings.icon;
 			}
 
-			text = self._text;
+			text = self.state.get('text');
 
 			if (icon || text) {
 				openBtnHtml = (
@@ -73545,16 +72470,52 @@ define("tinymce/ui/ComboBox", [
 					'</div>'
 				);
 
-				self.addClass('has-open');
+				self.classes.add('has-open');
 			}
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '">' +
-					'<input id="' + id + '-inp" class="' + prefix + 'textbox ' + prefix + 'placeholder" value="' +
-					value + '" hidefocus="1"' + extraAttrs + ' />' +
+				'<div id="' + id + '" class="' + self.classes + '">' +
+					'<input id="' + id + '-inp" class="' + prefix + 'textbox" value="' +
+					self.encode(value, false) + '" hidefocus="1"' + extraAttrs + ' placeholder="' +
+					self.encode(settings.placeholder) + '" />' +
 					openBtnHtml +
 				'</div>'
 			);
+		},
+
+		value: function(value) {
+			if (arguments.length) {
+				this.state.set('value', value);
+				return this;
+			}
+
+			// Make sure the real state is in sync
+			if (this.state.get('rendered')) {
+				this.state.set('value', this.getEl('inp').value);
+			}
+
+			return this.state.get('value');
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			self.state.on('change:value', function(e) {
+				if (self.getEl('inp').value != e.value) {
+					self.getEl('inp').value = e.value;
+				}
+			});
+
+			self.state.on('change:disabled', function(e) {
+				self.getEl('inp').disabled = e.value;
+			});
+
+			return self._super();
+		},
+
+		remove: function() {
+			$(this.getEl('inp')).off();
+			this._super();
 		}
 	});
 });
@@ -73564,8 +72525,8 @@ define("tinymce/ui/ComboBox", [
 /**
  * ColorBox.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -73602,7 +72563,7 @@ define("tinymce/ui/ColorBox", [
 
 			self._super(settings);
 
-			self.addClass('colorbox');
+			self.classes.add('colorbox');
 			self.on('change keyup postrender', function() {
 				self.repaintColor(self.value());
 			});
@@ -73620,16 +72581,16 @@ define("tinymce/ui/ColorBox", [
 			}
 		},
 
-		value: function(value) {
+		bindStates: function() {
 			var self = this;
 
-			if (typeof value != "undefined") {
+			self.state.on('change:value', function(e) {
 				if (self._rendered) {
-					self.repaintColor(value);
+					self.repaintColor(e.value);
 				}
-			}
+			});
 
-			return self._super(value);
+			return self._super();
 		}
 	});
 });
@@ -73639,8 +72600,8 @@ define("tinymce/ui/ColorBox", [
 /**
  * PanelButton.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -73756,8 +72717,8 @@ define("tinymce/ui/PanelButton", [
 /**
  * ColorButton.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -73789,7 +72750,7 @@ define("tinymce/ui/ColorButton", [
 		 */
 		init: function(settings) {
 			this._super(settings);
-			this.addClass('colorbutton');
+			this.classes.add('colorbutton');
 		},
 
 		/**
@@ -73828,16 +72789,16 @@ define("tinymce/ui/ColorButton", [
 		 * @return {String} HTML representing the control.
 		 */
 		renderHtml: function() {
-			var self = this, id = self._id, prefix = self.classPrefix;
+			var self = this, id = self._id, prefix = self.classPrefix, text = self.state.get('text');
 			var icon = self.settings.icon ? prefix + 'ico ' + prefix + 'i-' + self.settings.icon : '';
 			var image = self.settings.image ? ' style="background-image: url(\'' + self.settings.image + '\')"' : '';
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '" role="button" tabindex="-1" aria-haspopup="true">' +
+				'<div id="' + id + '" class="' + self.classes + '" role="button" tabindex="-1" aria-haspopup="true">' +
 					'<button role="presentation" hidefocus="1" type="button" tabindex="-1">' +
 						(icon ? '<i class="' + icon + '"' + image + '></i>' : '') +
 						'<span id="' + id + '-preview" class="' + prefix + 'preview"></span>' +
-						(self._text ? (icon ? ' ' : '') + (self._text) : '') +
+						(text ? (icon ? ' ' : '') + (text) : '') +
 					'</button>' +
 					'<button type="button" class="' + prefix + 'open" hidefocus="1" tabindex="-1">' +
 						' <i class="' + prefix + 'caret"></i>' +
@@ -73877,8 +72838,8 @@ define("tinymce/ui/ColorButton", [
 /**
  * Color.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74115,8 +73076,8 @@ define("tinymce/util/Color", [], function() {
 /**
  * ColorPicker.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74302,7 +73263,7 @@ define("tinymce/ui/ColorPicker", [
 			);
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '">' +
+				'<div id="' + id + '" class="' + self.classes + '">' +
 					'<div id="' + id + '-sv" class="' + prefix + 'colorpicker-sv">' +
 						'<div class="' + prefix + 'colorpicker-overlay1">' +
 							'<div class="' + prefix + 'colorpicker-overlay2">' +
@@ -74324,8 +73285,8 @@ define("tinymce/ui/ColorPicker", [
 /**
  * Path.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74349,7 +73310,7 @@ define("tinymce/ui/Path", [
 		 *
 		 * @constructor
 		 * @param {Object} settings Name/value object with settings.
-		 * @setting {String} delimiter Delimiter to display between items in path.
+		 * @setting {String} delimiter Delimiter to display between row in path.
 		 */
 		init: function(settings) {
 			var self = this;
@@ -74359,16 +73320,18 @@ define("tinymce/ui/Path", [
 			}
 
 			self._super(settings);
-			self.addClass('path');
+			self.classes.add('path');
 			self.canFocus = true;
 
 			self.on('click', function(e) {
 				var index, target = e.target;
 
 				if ((index = target.getAttribute('data-index'))) {
-					self.fire('select', {value: self.data()[index], index: index});
+					self.fire('select', {value: self.row()[index], index: index});
 				}
 			});
+
+			self.row(self.settings.row);
 		},
 
 		/**
@@ -74388,42 +73351,17 @@ define("tinymce/ui/Path", [
 		/**
 		 * Sets/gets the data to be used for the path.
 		 *
-		 * @method data
-		 * @param {Array} data Array with items name is rendered to path.
+		 * @method row
+		 * @param {Array} row Array with row name is rendered to path.
 		 */
-		data: function(data) {
-			var self = this;
-
-			if (typeof data !== "undefined") {
-				self._data = data;
-				self.update();
-
-				return self;
+		row: function(row) {
+			if (!arguments.length) {
+				return this.state.get('row');
 			}
 
-			return self._data;
-		},
+			this.state.set('row', row);
 
-		/**
-		 * Updated the path.
-		 *
-		 * @private
-		 */
-		update: function() {
-			this.innerHtml(this._getPathHtml());
-		},
-
-		/**
-		 * Called after the control has been rendered.
-		 *
-		 * @method postRender
-		 */
-		postRender: function() {
-			var self = this;
-
-			self._super();
-
-			self.data(self.settings.data);
+			return this;
 		},
 
 		/**
@@ -74436,14 +73374,24 @@ define("tinymce/ui/Path", [
 			var self = this;
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '">' +
-					self._getPathHtml() +
+				'<div id="' + self._id + '" class="' + self.classes + '">' +
+					self._getDataPathHtml(self.state.get('row')) +
 				'</div>'
 			);
 		},
 
-		_getPathHtml: function() {
-			var self = this, parts = self._data || [], i, l, html = '', prefix = self.classPrefix;
+		bindStates: function() {
+			var self = this;
+
+			self.state.on('change:row', function(e) {
+				self.innerHtml(self._getDataPathHtml(e.value));
+			});
+
+			return self._super();
+		},
+
+		_getDataPathHtml: function(data) {
+			var self = this, parts = data || [], i, l, html = '', prefix = self.classPrefix;
 
 			for (i = 0, l = parts.length; i < l; i++) {
 				html += (
@@ -74467,8 +73415,8 @@ define("tinymce/ui/Path", [
 /**
  * ElementPath.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74511,7 +73459,7 @@ define("tinymce/ui/ElementPath", [
 			if (editor.settings.elementpath !== false) {
 				self.on('select', function(e) {
 					editor.focus();
-					editor.selection.select(this.data()[e.index].element);
+					editor.selection.select(this.row()[e.index].element);
 					editor.nodeChanged();
 				});
 
@@ -74535,7 +73483,7 @@ define("tinymce/ui/ElementPath", [
 						}
 					}
 
-					self.data(outParents);
+					self.row(outParents);
 				});
 			}
 
@@ -74549,8 +73497,8 @@ define("tinymce/ui/ElementPath", [
 /**
  * FormItem.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74587,14 +73535,14 @@ define("tinymce/ui/FormItem", [
 		renderHtml: function() {
 			var self = this, layout = self._layout, prefix = self.classPrefix;
 
-			self.addClass('formitem');
+			self.classes.add('formitem');
 			layout.preRender(self);
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '" hidefocus="1" tabindex="-1">' +
+				'<div id="' + self._id + '" class="' + self.classes + '" hidefocus="1" tabindex="-1">' +
 					(self.settings.title ? ('<div id="' + self._id + '-title" class="' + prefix + 'title">' +
 						self.settings.title + '</div>') : '') +
-					'<div id="' + self._id + '-body" class="' + self.classes('body') + '">' +
+					'<div id="' + self._id + '-body" class="' + self.bodyClasses + '">' +
 						(self.settings.html || '') + layout.renderHtml(self) +
 					'</div>' +
 				'</div>'
@@ -74608,8 +73556,8 @@ define("tinymce/ui/FormItem", [
 /**
  * Form.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74702,56 +73650,6 @@ define("tinymce/ui/Form", [
 		},
 
 		/**
-		 * Recalcs label widths.
-		 *
-		 * @private
-		 */
-		recalcLabels: function() {
-			var self = this, maxLabelWidth = 0, labels = [], i, labelGap, items;
-
-			if (self.settings.labelGapCalc === false) {
-				return;
-			}
-
-			if (self.settings.labelGapCalc == "children") {
-				items = self.find('formitem');
-			} else {
-				items = self.items();
-			}
-
-			items.filter('formitem').each(function(item) {
-				var labelCtrl = item.items()[0], labelWidth = labelCtrl.getEl().clientWidth;
-
-				maxLabelWidth = labelWidth > maxLabelWidth ? labelWidth : maxLabelWidth;
-				labels.push(labelCtrl);
-			});
-
-			labelGap = self.settings.labelGap || 0;
-
-			i = labels.length;
-			while (i--) {
-				labels[i].settings.minWidth = maxLabelWidth + labelGap;
-			}
-		},
-
-		/**
-		 * Getter/setter for the visibility state.
-		 *
-		 * @method visible
-		 * @param {Boolean} [state] True/false state to show/hide.
-		 * @return {tinymce.ui.Form|Boolean} True/false state or current control.
-		 */
-		visible: function(state) {
-			var val = this._super(state);
-
-			if (state === true && this._rendered) {
-				this.recalcLabels();
-			}
-
-			return val;
-		},
-
-		/**
 		 * Fires a submit event with the serialized form.
 		 *
 		 * @method submit
@@ -74771,8 +73669,44 @@ define("tinymce/ui/Form", [
 			var self = this;
 
 			self._super();
-			self.recalcLabels();
 			self.fromJSON(self.settings.data);
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			self._super();
+
+			function recalcLabels() {
+				var maxLabelWidth = 0, labels = [], i, labelGap, items;
+
+				if (self.settings.labelGapCalc === false) {
+					return;
+				}
+
+				if (self.settings.labelGapCalc == "children") {
+					items = self.find('formitem');
+				} else {
+					items = self.items();
+				}
+
+				items.filter('formitem').each(function(item) {
+					var labelCtrl = item.items()[0], labelWidth = labelCtrl.getEl().clientWidth;
+
+					maxLabelWidth = labelWidth > maxLabelWidth ? labelWidth : maxLabelWidth;
+					labels.push(labelCtrl);
+				});
+
+				labelGap = self.settings.labelGap || 0;
+
+				i = labels.length;
+				while (i--) {
+					labels[i].settings.minWidth = maxLabelWidth + labelGap;
+				}
+			}
+
+			self.on('show', recalcLabels);
+			recalcLabels();
 		}
 	});
 });
@@ -74782,8 +73716,8 @@ define("tinymce/ui/Form", [
 /**
  * FieldSet.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74827,10 +73761,10 @@ define("tinymce/ui/FieldSet", [
 			layout.preRender(self);
 
 			return (
-				'<fieldset id="' + self._id + '" class="' + self.classes() + '" hidefocus="1" tabindex="-1">' +
+				'<fieldset id="' + self._id + '" class="' + self.classes + '" hidefocus="1" tabindex="-1">' +
 					(self.settings.title ? ('<legend id="' + self._id + '-title" class="' + prefix + 'fieldset-title">' +
 						self.settings.title + '</legend>') : '') +
-					'<div id="' + self._id + '-body" class="' + self.classes('body') + '">' +
+					'<div id="' + self._id + '-body" class="' + self.bodyClasses + '">' +
 						(self.settings.html || '') + layout.renderHtml(self) +
 					'</div>' +
 				'</fieldset>'
@@ -74844,8 +73778,8 @@ define("tinymce/ui/FieldSet", [
 /**
  * FilePicker.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74932,8 +73866,8 @@ define("tinymce/ui/FilePicker", [
 /**
  * FitLayout.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -74960,7 +73894,7 @@ define("tinymce/ui/FitLayout", [
 		 * @param {tinymce.ui.Container} container Container instance to recalc.
 		 */
 		recalc: function(container) {
-			var contLayoutRect = container.layoutRect(), paddingBox = container.paddingBox();
+			var contLayoutRect = container.layoutRect(), paddingBox = container.paddingBox;
 
 			container.items().filter(':visible').each(function(ctrl) {
 				ctrl.layoutRect({
@@ -74983,8 +73917,8 @@ define("tinymce/ui/FitLayout", [
 /**
  * FlexLayout.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -75025,7 +73959,7 @@ define("tinymce/ui/FlexLayout", [
 			// Get container items, properties and settings
 			items = container.items().filter(':visible');
 			contLayoutRect = container.layoutRect();
-			contPaddingBox = container._paddingBox;
+			contPaddingBox = container.paddingBox;
 			contSettings = container.settings;
 			direction = container.isRtl() ? (contSettings.direction || 'row-reversed') : contSettings.direction;
 			align = contSettings.align;
@@ -75232,8 +74166,8 @@ define("tinymce/ui/FlexLayout", [
 /**
  * FlowLayout.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -75268,6 +74202,10 @@ define("tinymce/ui/FlowLayout", [
 					ctrl.recalc();
 				}
 			});
+		},
+
+		isNative: function() {
+			return true;
 		}
 	});
 });
@@ -75277,8 +74215,8 @@ define("tinymce/ui/FlowLayout", [
 /**
  * FormatControls.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -75567,7 +74505,8 @@ define("tinymce/ui/FormatControls", [
 			alignleft: ['Align left', 'JustifyLeft'],
 			aligncenter: ['Align center', 'JustifyCenter'],
 			alignright: ['Align right', 'JustifyRight'],
-			alignjustify: ['Justify', 'JustifyFull']
+			alignjustify: ['Justify', 'JustifyFull'],
+			alignnone: ['No alignment', 'JustifyNone']
 		}, function(item, name) {
 			editor.addButton(name, {
 				tooltip: item[0],
@@ -75657,6 +74596,12 @@ define("tinymce/ui/FormatControls", [
 			selectable: true,
 			onPostRender: toggleVisualAidState,
 			cmd: 'mceToggleVisualAid'
+		});
+
+		editor.addButton('remove', {
+			tooltip: 'Remove',
+			icon: 'remove',
+			cmd: 'Delete'
 		});
 
 		each({
@@ -75819,8 +74764,8 @@ define("tinymce/ui/FormatControls", [
 /**
  * GridLayout.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -75867,7 +74812,7 @@ define("tinymce/ui/GridLayout", [
 			spacingV = settings.spacingV || settings.spacing || 0;
 			alignH = settings.alignH || settings.align;
 			alignV = settings.alignV || settings.align;
-			contPaddingBox = container._paddingBox;
+			contPaddingBox = container.paddingBox;
 			reverseRows = 'reverseRows' in settings ? settings.reverseRows : container.isRtl();
 
 			if (alignH && typeof alignH == "string") {
@@ -76055,8 +75000,8 @@ define("tinymce/ui/GridLayout", [
 /**
  * Iframe.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -76088,12 +75033,12 @@ define("tinymce/ui/Iframe", [
 		renderHtml: function() {
 			var self = this;
 
-			self.addClass('iframe');
+			self.classes.add('iframe');
 			self.canFocus = false;
 
 			/*eslint no-script-url:0 */
 			return (
-				'<iframe id="' + self._id + '" class="' + self.classes() + '" tabindex="-1" src="' +
+				'<iframe id="' + self._id + '" class="' + self.classes + '" tabindex="-1" src="' +
 				(self.settings.url || "javascript:\'\'") + '" frameborder="0"></iframe>'
 			);
 		},
@@ -76142,8 +75087,8 @@ define("tinymce/ui/Iframe", [
 /**
  * Label.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -76175,16 +75120,15 @@ define("tinymce/ui/Label", [
 			var self = this;
 
 			self._super(settings);
-			self.addClass('widget');
-			self.addClass('label');
+			self.classes.add('widget').add('label');
 			self.canFocus = false;
 
 			if (settings.multiline) {
-				self.addClass('autoscroll');
+				self.classes.add('autoscroll');
 			}
 
 			if (settings.strong) {
-				self.addClass('strong');
+				self.classes.add('strong');
 			}
 		},
 
@@ -76205,7 +75149,7 @@ define("tinymce/ui/Label", [
 				// Check if the text fits within maxW if not then try word wrapping it
 				if (size.width > layoutRect.maxW) {
 					layoutRect.minW = layoutRect.maxW;
-					self.addClass('multiline');
+					self.classes.add('multiline');
 				}
 
 				self.getEl().style.width = layoutRect.minW + 'px';
@@ -76231,23 +75175,6 @@ define("tinymce/ui/Label", [
 		},
 
 		/**
-		 * Sets/gets the current label text.
-		 *
-		 * @method text
-		 * @param {String} [text] New label text.
-		 * @return {String|tinymce.ui.Label} Current text or current label instance.
-		 */
-		text: function(text) {
-			var self = this;
-
-			if (self._rendered && text) {
-				this.innerHtml(self.encode(text));
-			}
-
-			return self._super(text);
-		},
-
-		/**
 		 * Renders the control as a HTML string.
 		 *
 		 * @method renderHtml
@@ -76257,10 +75184,20 @@ define("tinymce/ui/Label", [
 			var self = this, forId = self.settings.forId;
 
 			return (
-				'<label id="' + self._id + '" class="' + self.classes() + '"' + (forId ? ' for="' + forId + '"' : '') + '>' +
-					self.encode(self._text) +
+				'<label id="' + self._id + '" class="' + self.classes + '"' + (forId ? ' for="' + forId + '"' : '') + '>' +
+					self.encode(self.state.get('text')) +
 				'</label>'
 			);
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			self.state.on('change:text', function(e) {
+				self.innerHtml(self.encode(e.value));
+			});
+
+			return self._super();
 		}
 	});
 });
@@ -76270,8 +75207,8 @@ define("tinymce/ui/Label", [
 /**
  * Toolbar.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -76304,7 +75241,7 @@ define("tinymce/ui/Toolbar", [
 			var self = this;
 
 			self._super(settings);
-			self.addClass('toolbar');
+			self.classes.add('toolbar');
 		},
 
 		/**
@@ -76315,7 +75252,9 @@ define("tinymce/ui/Toolbar", [
 		postRender: function() {
 			var self = this;
 
-			self.items().addClass('toolbar-item');
+			self.items().each(function(ctrl) {
+				ctrl.classes.add('toolbar-item');
+			});
 
 			return self._super();
 		}
@@ -76327,8 +75266,8 @@ define("tinymce/ui/Toolbar", [
 /**
  * MenuBar.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -76339,7 +75278,7 @@ define("tinymce/ui/Toolbar", [
  *
  * @-x-less MenuBar.less
  * @class tinymce.ui.MenuBar
- * @extends tinymce.ui.Toolbar
+ * @extends tinymce.ui.Container
  */
 define("tinymce/ui/MenuBar", [
 	"tinymce/ui/Toolbar"
@@ -76363,8 +75302,8 @@ define("tinymce/ui/MenuBar", [
 /**
  * MenuButton.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -76408,16 +75347,19 @@ define("tinymce/ui/MenuButton", [
 			var self = this;
 
 			self._renderOpen = true;
-			self._super(settings);
 
-			self.addClass('menubtn');
+			self._super(settings);
+			settings = self.settings;
+
+			self.classes.add('menubtn');
 
 			if (settings.fixedWidth) {
-				self.addClass('fixed-width');
+				self.classes.add('fixed-width');
 			}
 
 			self.aria('haspopup', true);
-			self.hasPopup = true;
+
+			self.state.set('menu', settings.menu || self.render());
 		},
 
 		/**
@@ -76426,14 +75368,14 @@ define("tinymce/ui/MenuButton", [
 		 * @method showMenu
 		 */
 		showMenu: function() {
-			var self = this, settings = self.settings, menu;
+			var self = this, menu;
 
 			if (self.menu && self.menu.visible()) {
 				return self.hideMenu();
 			}
 
 			if (!self.menu) {
-				menu = settings.menu || [];
+				menu = self.state.get('menu') || [];
 
 				// Is menu array then auto constuct menu control
 				if (menu.length) {
@@ -76445,7 +75387,12 @@ define("tinymce/ui/MenuButton", [
 					menu.type = menu.type || 'menu';
 				}
 
-				self.menu = Factory.create(menu).parent(self).renderTo();
+				if (!menu.renderTo) {
+					self.menu = Factory.create(menu).parent(self).renderTo();
+				} else {
+					self.menu = menu.parent(self).show().renderTo();
+				}
+
 				self.fire('createmenu');
 				self.menu.reflow();
 				self.menu.on('cancel', function(e) {
@@ -76500,7 +75447,7 @@ define("tinymce/ui/MenuButton", [
 		 * @private
 		 */
 		activeMenu: function(state) {
-			this.toggleClass('active', state);
+			this.classes.toggle('active', state);
 		},
 
 		/**
@@ -76511,7 +75458,7 @@ define("tinymce/ui/MenuButton", [
 		 */
 		renderHtml: function() {
 			var self = this, id = self._id, prefix = self.classPrefix;
-			var icon = self.settings.icon, image;
+			var icon = self.settings.icon, image, text = self.state.get('text');
 
 			image = self.settings.image;
 			if (image) {
@@ -76532,10 +75479,10 @@ define("tinymce/ui/MenuButton", [
 			self.aria('role', self.parent() instanceof MenuBar ? 'menuitem' : 'button');
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '" tabindex="-1" aria-labelledby="' + id + '">' +
+				'<div id="' + id + '" class="' + self.classes + '" tabindex="-1" aria-labelledby="' + id + '">' +
 					'<button id="' + id + '-open" role="presentation" type="button" tabindex="-1">' +
 						(icon ? '<i class="' + icon + '"' + image + '></i>' : '') +
-						'<span>' + (self._text ? (icon ? '\u00a0' : '') + self.encode(self._text) : '') + '</span>' +
+						(text ? (icon ? '\u00a0' : '') + self.encode(text) : '') +
 						' <i class="' + prefix + 'caret"></i>' +
 					'</button>' +
 				'</div>'
@@ -76584,24 +75531,18 @@ define("tinymce/ui/MenuButton", [
 			return self._super();
 		},
 
-		/**
-		 * Sets/gets the current button text.
-		 *
-		 * @method text
-		 * @param {String} [text] New button text.
-		 * @return {String|tinymce.ui.MenuButton} Current text or current MenuButton instance.
-		 */
-		text: function(text) {
-			var self = this, i, children;
+		bindStates: function() {
+			var self = this;
 
-			if (self._rendered) {
-				children = self.getEl('open').getElementsByTagName('span');
-				for (i = 0; i < children.length; i++) {
-					children[i].innerHTML = (self.settings.icon && text ? '\u00a0' : '') + self.encode(text);
+			self.state.on('change:menu', function() {
+				if (self.menu) {
+					self.menu.remove();
 				}
-			}
 
-			return this._super(text);
+				self.menu = null;
+			});
+
+			return self._super();
 		},
 
 		/**
@@ -76621,159 +75562,13 @@ define("tinymce/ui/MenuButton", [
 	return MenuButton;
 });
 
-// Included from: js/tinymce/classes/ui/ListBox.js
-
-/**
- * ListBox.js
- *
- * Copyright, Moxiecode Systems AB
- * Released under LGPL License.
- *
- * License: http://www.tinymce.com/license
- * Contributing: http://www.tinymce.com/contributing
- */
-
-/**
- * Creates a new list box control.
- *
- * @-x-less ListBox.less
- * @class tinymce.ui.ListBox
- * @extends tinymce.ui.MenuButton
- */
-define("tinymce/ui/ListBox", [
-	"tinymce/ui/MenuButton"
-], function(MenuButton) {
-	"use strict";
-
-	return MenuButton.extend({
-		/**
-		 * Constructs a instance with the specified settings.
-		 *
-		 * @constructor
-		 * @param {Object} settings Name/value object with settings.
-		 * @setting {Array} values Array with values to add to list box.
-		 */
-		init: function(settings) {
-			var self = this, values, selected, selectedText, lastItemCtrl;
-
-			function setSelected(menuValues) {
-				// Try to find a selected value
-				for (var i = 0; i < menuValues.length; i++) {
-					selected = menuValues[i].selected || settings.value === menuValues[i].value;
-
-					if (selected) {
-						selectedText = selectedText || menuValues[i].text;
-						self._value = menuValues[i].value;
-						break;
-					}
-
-					// If the value has a submenu, try to find the selected values in that menu
-					if (menuValues[i].menu) {
-						setSelected(menuValues[i].menu);
-					}
-				}
-			}
-
-			self._values = values = settings.values;
-			if (values) {
-				setSelected(values);
-
-				// Default with first item
-				if (!selected && values.length > 0) {
-					selectedText = values[0].text;
-					self._value = values[0].value;
-				}
-
-				settings.menu = values;
-			}
-
-			settings.text = settings.text || selectedText || values[0].text;
-
-			self._super(settings);
-			self.addClass('listbox');
-
-			self.on('select', function(e) {
-				var ctrl = e.control;
-
-				if (lastItemCtrl) {
-					e.lastControl = lastItemCtrl;
-				}
-
-				if (settings.multiple) {
-					ctrl.active(!ctrl.active());
-				} else {
-					self.value(e.control.settings.value);
-				}
-
-				lastItemCtrl = ctrl;
-			});
-		},
-
-		/**
-		 * Getter/setter function for the control value.
-		 *
-		 * @method value
-		 * @param {String} [value] Value to be set.
-		 * @return {Boolean/tinymce.ui.ListBox} Value or self if it's a set operation.
-		 */
-		value: function(value) {
-			var self = this, active, selectedText, menu;
-
-			function activateByValue(menu, value) {
-				menu.items().each(function(ctrl) {
-					active = ctrl.value() === value;
-
-					if (active) {
-						selectedText = selectedText || ctrl.text();
-					}
-
-					ctrl.active(active);
-
-					if (ctrl.menu) {
-						activateByValue(ctrl.menu, value);
-					}
-				});
-			}
-
-			function setActiveValues(menuValues) {
-				for (var i = 0; i < menuValues.length; i++) {
-					active = menuValues[i].value == value;
-
-					if (active) {
-						selectedText = selectedText || menuValues[i].text;
-					}
-
-					menuValues[i].active = active;
-
-					if (menuValues[i].menu) {
-						setActiveValues(menuValues[i].menu);
-					}
-				}
-			}
-
-			if (typeof value != "undefined") {
-				if (self.menu) {
-					activateByValue(self.menu, value);
-				} else {
-					menu = self.settings.menu;
-					setActiveValues(menu);
-				}
-
-				self.text(selectedText || this.settings.text);
-			}
-
-			return self._super(value);
-		}
-	});
-});
-
 // Included from: js/tinymce/classes/ui/MenuItem.js
 
 /**
  * MenuItem.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -76784,7 +75579,7 @@ define("tinymce/ui/ListBox", [
  *
  * @-x-less MenuItem.less
  * @class tinymce.ui.MenuItem
- * @extends tinymce.ui.Widget
+ * @extends tinymce.ui.Control
  */
 define("tinymce/ui/MenuItem", [
 	"tinymce/ui/Widget",
@@ -76809,38 +75604,37 @@ define("tinymce/ui/MenuItem", [
 		 * @setting {String} shortcut Shortcut to display for menu item. Example: Ctrl+X
 		 */
 		init: function(settings) {
-			var self = this;
-
-			self.hasPopup = true;
+			var self = this, text;
 
 			self._super(settings);
 
 			settings = self.settings;
 
-			self.addClass('menu-item');
+			self.classes.add('menu-item');
 
 			if (settings.menu) {
-				self.addClass('menu-item-expand');
+				self.classes.add('menu-item-expand');
 			}
 
 			if (settings.preview) {
-				self.addClass('menu-item-preview');
+				self.classes.add('menu-item-preview');
 			}
 
-			if (self._text === '-' || self._text === '|') {
-				self.addClass('menu-item-sep');
+			text = self.state.get('text');
+			if (text === '-' || text === '|') {
+				self.classes.add('menu-item-sep');
 				self.aria('role', 'separator');
-				self._text = '-';
+				self.state.set('text', '-');
 			}
 
 			if (settings.selectable) {
 				self.aria('role', 'menuitemcheckbox');
-				self.addClass('menu-item-checkbox');
+				self.classes.add('menu-item-checkbox');
 				settings.icon = 'selected';
 			}
 
 			if (!settings.preview && !settings.selectable) {
-				self.addClass('menu-item-normal');
+				self.classes.add('menu-item-normal');
 			}
 
 			self.on('mousedown', function(e) {
@@ -76911,7 +75705,7 @@ define("tinymce/ui/MenuItem", [
 
 					menu.on('hide', function(e) {
 						if (e.control === menu) {
-							self.removeClass('selected');
+							self.classes.remove('selected');
 						}
 					});
 
@@ -76922,7 +75716,7 @@ define("tinymce/ui/MenuItem", [
 
 				menu._parentMenu = parent;
 
-				menu.addClass('menu-sub');
+				menu.classes.add('menu-sub');
 
 				var rel = menu.testMoveRel(
 					self.getEl(),
@@ -76933,11 +75727,10 @@ define("tinymce/ui/MenuItem", [
 				menu.rel = rel;
 
 				rel = 'menu-sub-' + rel;
-				menu.removeClass(menu._lastRel);
-				menu.addClass(rel);
+				menu.classes.remove(menu._lastRel).add(rel);
 				menu._lastRel = rel;
 
-				self.addClass('selected');
+				self.classes.add('selected');
 				self.aria('expanded', true);
 			}
 		},
@@ -76971,7 +75764,7 @@ define("tinymce/ui/MenuItem", [
 		 * @return {String} HTML representing the control.
 		 */
 		renderHtml: function() {
-			var self = this, id = self._id, settings = self.settings, prefix = self.classPrefix, text = self.encode(self._text);
+			var self = this, id = self._id, settings = self.settings, prefix = self.classPrefix, text = self.encode(self.state.get('text'));
 			var icon = self.settings.icon, image = '', shortcut = settings.shortcut;
 
 			// Converts shortcut format to Mac/PC variants
@@ -77005,7 +75798,7 @@ define("tinymce/ui/MenuItem", [
 			}
 
 			if (icon) {
-				self.parent().addClass('menu-has-icons');
+				self.parent().classes.add('menu-has-icons');
 			}
 
 			if (settings.image) {
@@ -77020,7 +75813,7 @@ define("tinymce/ui/MenuItem", [
 			icon = prefix + 'ico ' + prefix + 'i-' + (self.settings.icon || 'none');
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '" tabindex="-1">' +
+				'<div id="' + id + '" class="' + self.classes + '" tabindex="-1">' +
 					(text !== '-' ? '<i class="' + icon + '"' + image + '></i>\u00a0' : '') +
 					(text !== '-' ? '<span id="' + id + '-text" class="' + prefix + 'text">' + text + '</span>' : '') +
 					(shortcut ? '<div id="' + id + '-shortcut" class="' + prefix + 'menu-shortcut">' + shortcut + '</div>' : '') +
@@ -77097,8 +75890,8 @@ define("tinymce/ui/MenuItem", [
 /**
  * Menu.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77149,7 +75942,7 @@ define("tinymce/ui/Menu", [
 			}
 
 			self._super(settings);
-			self.addClass('menu');
+			self.classes.add('menu');
 		},
 
 		/**
@@ -77158,7 +75951,7 @@ define("tinymce/ui/Menu", [
 		 * @method repaint
 		 */
 		repaint: function() {
-			this.toggleClass('menu-align', true);
+			this.classes.toggle('menu-align', true);
 
 			this._super();
 
@@ -77192,25 +75985,7 @@ define("tinymce/ui/Menu", [
 
 			return self._super();
 		},
-/*
-		getContainerElm: function() {
-			var doc = document, id = this.classPrefix + 'menucontainer';
 
-			var elm = doc.getElementById(id);
-			if (!elm) {
-				elm = doc.createElement('div');
-				elm.id = id;
-				elm.setAttribute('role', 'application');
-				elm.className = this.classPrefix + '-reset';
-				elm.style.position = 'absolute';
-				elm.style.top = elm.style.left = '0';
-				elm.style.overflow = 'visible';
-				doc.body.appendChild(elm);
-			}
-
-			return elm;
-		},
-*/
 		/**
 		 * Invoked before the menu is rendered.
 		 *
@@ -77222,7 +75997,7 @@ define("tinymce/ui/Menu", [
 			self.items().each(function(ctrl) {
 				var settings = ctrl.settings;
 
-				if (settings.icon || settings.selectable) {
+				if (settings.icon || settings.image || settings.selectable) {
 					self._hasIcons = true;
 					return false;
 				}
@@ -77235,13 +76010,168 @@ define("tinymce/ui/Menu", [
 	return Menu;
 });
 
+// Included from: js/tinymce/classes/ui/ListBox.js
+
+/**
+ * ListBox.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Creates a new list box control.
+ *
+ * @-x-less ListBox.less
+ * @class tinymce.ui.ListBox
+ * @extends tinymce.ui.MenuButton
+ */
+define("tinymce/ui/ListBox", [
+	"tinymce/ui/MenuButton",
+	"tinymce/ui/Menu"
+], function(MenuButton, Menu) {
+	"use strict";
+
+	return MenuButton.extend({
+		/**
+		 * Constructs a instance with the specified settings.
+		 *
+		 * @constructor
+		 * @param {Object} settings Name/value object with settings.
+		 * @setting {Array} values Array with values to add to list box.
+		 */
+		init: function(settings) {
+			var self = this, values, selected, selectedText, lastItemCtrl;
+
+			function setSelected(menuValues) {
+				// Try to find a selected value
+				for (var i = 0; i < menuValues.length; i++) {
+					selected = menuValues[i].selected || settings.value === menuValues[i].value;
+
+					if (selected) {
+						selectedText = selectedText || menuValues[i].text;
+						self.state.set('value', menuValues[i].value);
+						return true;
+					}
+
+					// If the value has a submenu, try to find the selected values in that menu
+					if (menuValues[i].menu) {
+						if (setSelected(menuValues[i].menu)) {
+							return true;
+						}
+					}
+				}
+			}
+
+			self._super(settings);
+			settings = self.settings;
+
+			self._values = values = settings.values;
+			if (values) {
+				if (typeof settings.value != "undefined") {
+					setSelected(values);
+				}
+
+				// Default with first item
+				if (!selected && values.length > 0) {
+					selectedText = values[0].text;
+					self.state.set('value', values[0].value);
+				}
+
+				self.state.set('menu', values);
+			}
+
+			self.state.set('text', settings.text || selectedText || values[0].text);
+
+			self.classes.add('listbox');
+
+			self.on('select', function(e) {
+				var ctrl = e.control;
+
+				if (lastItemCtrl) {
+					e.lastControl = lastItemCtrl;
+				}
+
+				if (settings.multiple) {
+					ctrl.active(!ctrl.active());
+				} else {
+					self.value(e.control.value());
+				}
+
+				lastItemCtrl = ctrl;
+			});
+		},
+
+		/**
+		 * Getter/setter function for the control value.
+		 *
+		 * @method value
+		 * @param {String} [value] Value to be set.
+		 * @return {Boolean/tinymce.ui.ListBox} Value or self if it's a set operation.
+		 */
+		bindStates: function() {
+			var self = this;
+
+			function activateMenuItemsByValue(menu, value) {
+				if (menu instanceof Menu) {
+					menu.items().each(function(ctrl) {
+						if (!ctrl.hasMenus()) {
+							ctrl.active(ctrl.value() === value);
+						}
+					});
+				}
+			}
+
+			function getSelectedItem(menuValues, value) {
+				var selectedItem;
+
+				if (!menuValues) {
+					return;
+				}
+
+				for (var i = 0; i < menuValues.length; i++) {
+					if (menuValues[i].value === value) {
+						return menuValues[i];
+					}
+
+					if (menuValues[i].menu) {
+						selectedItem = getSelectedItem(menuValues[i].menu, value);
+						if (selectedItem) {
+							return selectedItem;
+						}
+					}
+				}
+			}
+
+			self.on('show', function(e) {
+				activateMenuItemsByValue(e.control, self.value());
+			});
+
+			self.state.on('change:value', function(e) {
+				var selectedItem = getSelectedItem(self.state.get('menu'), e.value);
+
+				if (selectedItem) {
+					self.text(selectedItem.text);
+				} else {
+					self.text(self.settings.text);
+				}
+			});
+
+			return self._super();
+		}
+	});
+});
+
 // Included from: js/tinymce/classes/ui/Radio.js
 
 /**
  * Radio.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77267,13 +76197,206 @@ define("tinymce/ui/Radio", [
 	});
 });
 
+// Included from: js/tinymce/classes/ui/Rect.js
+
+/**
+ * Rect.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Contains various tools for rect/position calculation.
+ *
+ * @class tinymce.ui.Rect
+ */
+define("tinymce/ui/Rect", [
+], function() {
+	"use strict";
+
+	var min = Math.min, max = Math.max, round = Math.round;
+
+	/**
+	 * Returns the rect positioned based on the relative position name
+	 * to the target rect.
+	 *
+	 * @method relativePosition
+	 * @param {Rect} rect Source rect to modify into a new rect.
+	 * @param {Rect} targetRect Rect to move relative to based on the rel option.
+	 * @param {String} rel Relative position. For example: tr-bl.
+	 */
+	function relativePosition(rect, targetRect, rel) {
+		var x, y, w, h, targetW, targetH;
+
+		x = targetRect.x;
+		y = targetRect.y;
+		w = rect.w;
+		h = rect.h;
+		targetW = targetRect.w;
+		targetH = targetRect.h;
+
+		rel = (rel || '').split('');
+
+		if (rel[0] === 'b') {
+			y += targetH;
+		}
+
+		if (rel[1] === 'r') {
+			x += targetW;
+		}
+
+		if (rel[0] === 'c') {
+			y += round(targetH / 2);
+		}
+
+		if (rel[1] === 'c') {
+			x += round(targetW / 2);
+		}
+
+		if (rel[3] === 'b') {
+			y -= h;
+		}
+
+		if (rel[4] === 'r') {
+			x -= w;
+		}
+
+		if (rel[3] === 'c') {
+			y -= round(h / 2);
+		}
+
+		if (rel[4] === 'c') {
+			x -= round(w / 2);
+		}
+
+		return {x: x, y: y, w: w, h: h};
+	}
+
+	/**
+	 * Tests various positions to get the most suitable one.
+	 *
+	 * @method findBestRelativePosition
+	 * @param {Rect} Rect Rect to use as source.
+	 * @param {Rect} targetRect Rect to move relative to.
+	 * @param {Rect} constrainRect Rect to constrain within.
+	 * @param {Array} Array of relative positions to test against.
+	 */
+	function findBestRelativePosition(rect, targetRect, constrainRect, rels) {
+		var pos, i;
+
+		for (i = 0; i < rels.length; i++) {
+			pos = relativePosition(rect, targetRect, rels[i]);
+
+			if (pos.x >= constrainRect.x && pos.x + pos.w <= constrainRect.w + constrainRect.x &&
+				pos.y >= constrainRect.y && pos.y + pos.h <= constrainRect.h + constrainRect.y) {
+				return rels[i];
+			}
+		}
+	}
+
+	/**
+	 * Inflates the rect in all directions.
+	 *
+	 * @method inflate
+	 * @param {Rect} rect Rect to expand.
+	 * @param {Number} w Relative width to expand by.
+	 * @param {Number} h Relative height to expand by.
+	 * @return {Rect} New expanded rect.
+	 */
+	function inflate(rect, w, h) {
+		return {
+			x: rect.x - w,
+			y: rect.y - h,
+			w: rect.w + w * 2,
+			h: rect.h + h * 2
+		};
+	}
+
+	/**
+	 * Returns the intersection of the specified rectangles.
+	 *
+	 * @method intersect
+	 * @param {Rect} rect The first rectangle to compare.
+	 * @param {Rect} cropRect The second rectangle to compare.
+	 * @return {Rect} The intersection of the two rectangles or null if they don't intersect.
+	 */
+	function intersect(rect1, rect2) {
+		var x1, y1, x2, y2;
+
+		x1 = max(rect1.x, rect2.x);
+		y1 = max(rect1.y, rect2.y);
+		x2 = min(rect1.x + rect1.w, rect2.x + rect2.w);
+		y2 = min(rect1.y + rect1.h, rect2.y + rect2.h);
+
+		if (x2 - x1 < 0 || y2 - y1 < 0) {
+			return null;
+		}
+
+		return {x: x1, y: y1, w: x2 - x1, h: y2 - y1};
+	}
+
+	/**
+	 * Returns a rect clamped within the specified clamp rect. This forces the
+	 * rect to be inside the clamp rect.
+	 *
+	 * @method clamp
+	 * @param {Rect} rect Rectangle to force within clamp rect.
+	 * @param {Rect} clampRect Rectable to force within.
+	 * @param {Boolean} fixedSize True/false if size should be fixed.
+	 * @return {Rect} Clamped rect.
+	 */
+	function clamp(rect, clampRect, fixedSize) {
+		var underflowX1, underflowY1, overflowX2, overflowY2,
+			x1, y1, x2, y2, cx2, cy2;
+
+		x1 = rect.x;
+		y1 = rect.y;
+		x2 = rect.x + rect.w;
+		y2 = rect.y + rect.h;
+		cx2 = clampRect.x + clampRect.w;
+		cy2 = clampRect.y + clampRect.h;
+
+		underflowX1 = max(0, clampRect.x - x1);
+		underflowY1 = max(0, clampRect.y - y1);
+		overflowX2 = max(0, x2 - cx2);
+		overflowY2 = max(0, y2 - cy2);
+
+		x1 += underflowX1;
+		y1 += underflowY1;
+
+		if (fixedSize) {
+			x2 += underflowX1;
+			y2 += underflowY1;
+			x1 -= overflowX2;
+			y1 -= overflowY2;
+		}
+
+		x2 -= overflowX2;
+		y2 -= overflowY2;
+
+		return {x: x1, y: y1, w: x2 - x1, h: y2 - y1};
+	}
+
+	return {
+		inflate: inflate,
+		relativePosition: relativePosition,
+		findBestRelativePosition: findBestRelativePosition,
+		intersect: intersect,
+		clamp: clamp
+	};
+});
+
 // Included from: js/tinymce/classes/ui/ResizeHandle.js
 
 /**
  * ResizeHandle.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77302,16 +76425,16 @@ define("tinymce/ui/ResizeHandle", [
 		renderHtml: function() {
 			var self = this, prefix = self.classPrefix;
 
-			self.addClass('resizehandle');
+			self.classes.add('resizehandle');
 
 			if (self.settings.direction == "both") {
-				self.addClass('resizehandle-both');
+				self.classes.add('resizehandle-both');
 			}
 
 			self.canFocus = false;
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '">' +
+				'<div id="' + self._id + '" class="' + self.classes + '">' +
 					'<i class="' + prefix + 'ico ' + prefix + 'i-resize"></i>' +
 				'</div>'
 			);
@@ -77356,13 +76479,177 @@ define("tinymce/ui/ResizeHandle", [
 	});
 });
 
+// Included from: js/tinymce/classes/ui/Slider.js
+
+/**
+ * Slider.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Slider control.
+ *
+ * @-x-less Slider.less
+ * @class tinymce.ui.Slider
+ * @extends tinymce.ui.Widget
+ */
+define("tinymce/ui/Slider", [
+	"tinymce/ui/Widget",
+	"tinymce/ui/DragHelper",
+	"tinymce/ui/DomUtils"
+], function(Widget, DragHelper, DomUtils) {
+	"use strict";
+
+	function constrain(value, minVal, maxVal) {
+		if (value < minVal) {
+			value = minVal;
+		}
+
+		if (value > maxVal) {
+			value = maxVal;
+		}
+
+		return value;
+	}
+
+	function updateSliderHandle(ctrl, value) {
+		var maxHandlePos, shortSizeName, sizeName, stylePosName, styleValue;
+
+		if (ctrl.settings.orientation == "v") {
+			stylePosName = "top";
+			sizeName = "height";
+			shortSizeName = "h";
+		} else {
+			stylePosName = "left";
+			sizeName = "width";
+			shortSizeName = "w";
+		}
+
+		maxHandlePos = (ctrl.layoutRect()[shortSizeName] || 100) - DomUtils.getSize(ctrl.getEl('handle'))[sizeName];
+
+		styleValue = (maxHandlePos * ((value - ctrl._minValue) / (ctrl._maxValue - ctrl._minValue))) + 'px';
+		ctrl.getEl('handle').style[stylePosName] = styleValue;
+		ctrl.getEl('handle').style.height = ctrl.layoutRect().h + 'px';
+	}
+
+	return Widget.extend({
+		init: function(settings) {
+			var self = this;
+
+			if (!settings.previewFilter) {
+				settings.previewFilter = function(value) {
+					return Math.round(value * 100) / 100.0;
+				};
+			}
+
+			self._super(settings);
+			self.classes.add('slider');
+
+			if (settings.orientation == "v") {
+				self.classes.add('vertical');
+			}
+
+			self._minValue = settings.minValue || 0;
+			self._maxValue = settings.maxValue || 100;
+			self._initValue = self.state.get('value');
+		},
+
+		renderHtml: function() {
+			var self = this, id = self._id, prefix = self.classPrefix;
+
+			return (
+				'<div id="' + id + '" class="' + self.classes + '">' +
+					'<div id="' + id + '-handle" class="' + prefix + 'slider-handle"></div>' +
+				'</div>'
+			);
+		},
+
+		reset: function() {
+			this.value(this._initValue).repaint();
+		},
+
+		postRender: function() {
+			var self = this, startPos, startHandlePos, handlePos = 0, value, minValue, maxValue, maxHandlePos;
+			var screenCordName, stylePosName, sizeName, shortSizeName;
+
+			minValue = self._minValue;
+			maxValue = self._maxValue;
+			value = self.value();
+
+			if (self.settings.orientation == "v") {
+				screenCordName = "screenY";
+				stylePosName = "top";
+				sizeName = "height";
+				shortSizeName = "h";
+			} else {
+				screenCordName = "screenX";
+				stylePosName = "left";
+				sizeName = "width";
+				shortSizeName = "w";
+			}
+
+			self._super();
+
+			self._dragHelper = new DragHelper(self._id, {
+				handle: self._id + "-handle",
+
+				start: function(e) {
+					startPos = e[screenCordName];
+					startHandlePos = parseInt(self.getEl('handle').style[stylePosName], 10);
+					maxHandlePos = (self.layoutRect()[shortSizeName] || 100) - DomUtils.getSize(self.getEl('handle'))[sizeName];
+					self.fire('dragstart', {value: value});
+				},
+
+				drag: function(e) {
+					var delta = e[screenCordName] - startPos, handleEl = self.getEl('handle');
+
+					handlePos = constrain(startHandlePos + delta, 0, maxHandlePos);
+					handleEl.style[stylePosName] = handlePos + 'px';
+
+					value = minValue + (handlePos / maxHandlePos) * (maxValue - minValue);
+					self.value(value);
+
+					self.tooltip().text('' + self.settings.previewFilter(value)).show().moveRel(handleEl, 'bc tc');
+
+					self.fire('drag', {value: value});
+				},
+
+				stop: function() {
+					self.tooltip().hide();
+					self.fire('dragend', {value: value});
+				}
+			});
+		},
+
+		repaint: function() {
+			this._super();
+			updateSliderHandle(this, this.value());
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			self.state.on('change:value', function(e) {
+				updateSliderHandle(self, e.value);
+			});
+
+			return self._super();
+		}
+	});
+});
+
 // Included from: js/tinymce/classes/ui/Spacer.js
 
 /**
  * Spacer.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77390,10 +76677,10 @@ define("tinymce/ui/Spacer", [
 		renderHtml: function() {
 			var self = this;
 
-			self.addClass('spacer');
+			self.classes.add('spacer');
 			self.canFocus = false;
 
-			return '<div id="' + self._id + '" class="' + self.classes() + '"></div>';
+			return '<div id="' + self._id + '" class="' + self.classes + '"></div>';
 		}
 	});
 });
@@ -77403,8 +76690,8 @@ define("tinymce/ui/Spacer", [
 /**
  * SplitButton.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77415,12 +76702,13 @@ define("tinymce/ui/Spacer", [
  *
  * @-x-less SplitButton.less
  * @class tinymce.ui.SplitButton
- * @extends tinymce.ui.MenuButton
+ * @extends tinymce.ui.Button
  */
 define("tinymce/ui/SplitButton", [
 	"tinymce/ui/MenuButton",
-	"tinymce/ui/DomUtils"
-], function(MenuButton, DomUtils) {
+	"tinymce/ui/DomUtils",
+	"tinymce/dom/DomQuery"
+], function(MenuButton, DomUtils, $) {
 	return MenuButton.extend({
 		Defaults: {
 			classes: "widget btn splitbtn",
@@ -77440,12 +76728,12 @@ define("tinymce/ui/SplitButton", [
 			mainButtonElm = elm.firstChild;
 			menuButtonElm = elm.lastChild;
 
-			DomUtils.css(mainButtonElm, {
+			$(mainButtonElm).css({
 				width: rect.w - DomUtils.getSize(menuButtonElm).width,
 				height: rect.h - 2
 			});
 
-			DomUtils.css(menuButtonElm, {
+			$(menuButtonElm).css({
 				height: rect.h - 2
 			});
 
@@ -77460,7 +76748,7 @@ define("tinymce/ui/SplitButton", [
 		activeMenu: function(state) {
 			var self = this;
 
-			DomUtils.toggleClass(self.getEl().lastChild, self.classPrefix + 'active', state);
+			$(self.getEl().lastChild).toggleClass(self.classPrefix + 'active', state);
 		},
 
 		/**
@@ -77471,7 +76759,7 @@ define("tinymce/ui/SplitButton", [
 		 */
 		renderHtml: function() {
 			var self = this, id = self._id, prefix = self.classPrefix, image;
-			var icon = self.settings.icon;
+			var icon = self.state.get('icon'), text = self.state.get('text');
 
 			image = self.settings.image;
 			if (image) {
@@ -77490,10 +76778,10 @@ define("tinymce/ui/SplitButton", [
 			icon = self.settings.icon ? prefix + 'ico ' + prefix + 'i-' + icon : '';
 
 			return (
-				'<div id="' + id + '" class="' + self.classes() + '" role="button" tabindex="-1">' +
+				'<div id="' + id + '" class="' + self.classes + '" role="button" tabindex="-1">' +
 					'<button type="button" hidefocus="1" tabindex="-1">' +
 						(icon ? '<i class="' + icon + '"' + image + '></i>' : '') +
-						(self._text ? (icon ? ' ' : '') + self._text : '') +
+						(text ? (icon ? ' ' : '') + text : '') +
 					'</button>' +
 					'<button type="button" class="' + prefix + 'open" hidefocus="1" tabindex="-1">' +
 						//(icon ? '<i class="' + icon + '"></i>' : '') +
@@ -77520,7 +76808,11 @@ define("tinymce/ui/SplitButton", [
 					while (node) {
 						if ((e.aria && e.aria.key != 'down') || (node.nodeName == 'BUTTON' && node.className.indexOf('open') == -1)) {
 							e.stopImmediatePropagation();
-							onClickHandler.call(this, e);
+
+							if (onClickHandler) {
+								onClickHandler.call(this, e);
+							}
+
 							return;
 						}
 
@@ -77541,8 +76833,8 @@ define("tinymce/ui/SplitButton", [
 /**
  * StackLayout.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77565,6 +76857,10 @@ define("tinymce/ui/StackLayout", [
 			containerClass: 'stack-layout',
 			controlClass: 'stack-layout-item',
 			endClass: 'break'
+		},
+
+		isNative: function() {
+			return true;
 		}
 	});
 });
@@ -77574,8 +76870,8 @@ define("tinymce/ui/StackLayout", [
 /**
  * TabPanel.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77592,8 +76888,9 @@ define("tinymce/ui/StackLayout", [
  */
 define("tinymce/ui/TabPanel", [
 	"tinymce/ui/Panel",
+	"tinymce/dom/DomQuery",
 	"tinymce/ui/DomUtils"
-], function(Panel, DomUtils) {
+], function(Panel, $, DomUtils) {
 	"use strict";
 
 	return Panel.extend({
@@ -77615,7 +76912,7 @@ define("tinymce/ui/TabPanel", [
 
 			if (this.activeTabId) {
 				activeTabElm = this.getEl(this.activeTabId);
-				DomUtils.removeClass(activeTabElm, this.classPrefix + 'active');
+				$(activeTabElm).removeClass(this.classPrefix + 'active');
 				activeTabElm.setAttribute('aria-selected', "false");
 			}
 
@@ -77623,7 +76920,7 @@ define("tinymce/ui/TabPanel", [
 
 			activeTabElm = this.getEl('t' + idx);
 			activeTabElm.setAttribute('aria-selected', "true");
-			DomUtils.addClass(activeTabElm, this.classPrefix + 'active');
+			$(activeTabElm).addClass(this.classPrefix + 'active');
 
 			this.items()[idx].show().fire('showtab');
 			this.reflow();
@@ -77662,11 +76959,11 @@ define("tinymce/ui/TabPanel", [
 			});
 
 			return (
-				'<div id="' + self._id + '" class="' + self.classes() + '" hidefocus="1" tabindex="-1">' +
+				'<div id="' + self._id + '" class="' + self.classes + '" hidefocus="1" tabindex="-1">' +
 					'<div id="' + self._id + '-head" class="' + prefix + 'tabs" role="tablist">' +
 						tabsHtml +
 					'</div>' +
-					'<div id="' + self._id + '-body" class="' + self.classes('body') + '">' +
+					'<div id="' + self._id + '-body" class="' + self.bodyClasses + '">' +
 						layout.renderHtml(self) +
 					'</div>' +
 				'</div>'
@@ -77754,8 +77051,8 @@ define("tinymce/ui/TabPanel", [
 /**
  * TextBox.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77769,9 +77066,8 @@ define("tinymce/ui/TabPanel", [
  * @extends tinymce.ui.Widget
  */
 define("tinymce/ui/TextBox", [
-	"tinymce/ui/Widget",
-	"tinymce/ui/DomUtils"
-], function(Widget, DomUtils) {
+	"tinymce/ui/Widget"
+], function(Widget) {
 	"use strict";
 
 	return Widget.extend({
@@ -77789,70 +77085,34 @@ define("tinymce/ui/TextBox", [
 
 			self._super(settings);
 
-			self._value = settings.value || '';
-			self.addClass('textbox');
+			self.classes.add('textbox');
 
 			if (settings.multiline) {
-				self.addClass('multiline');
+				self.classes.add('multiline');
 			} else {
-				// TODO: Rework this
 				self.on('keydown', function(e) {
-					if (e.keyCode == 13) {
-						self.parents().reverse().each(function(ctrl) {
-							e.preventDefault();
+					var rootControl;
 
-							if (ctrl.hasEventListeners('submit') && ctrl.toJSON) {
-								ctrl.fire('submit', {data: ctrl.toJSON()});
+					if (e.keyCode == 13) {
+						e.preventDefault();
+
+						// Find root control that we can do toJSON on
+						self.parents().reverse().each(function(ctrl) {
+							if (ctrl.toJSON) {
+								rootControl = ctrl;
 								return false;
 							}
 						});
+
+						// Fire event on current text box with the serialized data of the whole form
+						self.fire('submit', {data: rootControl.toJSON()});
 					}
 				});
+
+				self.on('keyup', function(e) {
+					self.state.set('value', e.target.value);
+				});
 			}
-		},
-
-		/**
-		 * Getter/setter function for the disabled state.
-		 *
-		 * @method value
-		 * @param {Boolean} [state] State to be set.
-		 * @return {Boolean|tinymce.ui.ComboBox} True/false or self if it's a set operation.
-		 */
-		disabled: function(state) {
-			var self = this;
-
-			if (self._rendered && typeof state != 'undefined') {
-				self.getEl().disabled = state;
-			}
-
-			return self._super(state);
-		},
-
-		/**
-		 * Getter/setter function for the control value.
-		 *
-		 * @method value
-		 * @param {String} [value] Value to be set.
-		 * @return {String|tinymce.ui.ComboBox} Value or self if it's a set operation.
-		 */
-		value: function(value) {
-			var self = this;
-
-			if (typeof value != "undefined") {
-				self._value = value;
-
-				if (self._rendered) {
-					self.getEl().value = value;
-				}
-
-				return self;
-			}
-
-			if (self._rendered) {
-				return self.getEl().value;
-			}
-
-			return self._value;
 		},
 
 		/**
@@ -77873,7 +77133,7 @@ define("tinymce/ui/TextBox", [
 				style.lineHeight = (rect.h - borderH) + 'px';
 			}
 
-			borderBox = self._borderBox;
+			borderBox = self.borderBox;
 			borderW = borderBox.left + borderBox.right + 8;
 			borderH = borderBox.top + borderBox.bottom + (self.settings.multiline ? 8 : 0);
 
@@ -77910,7 +77170,7 @@ define("tinymce/ui/TextBox", [
 		 * @return {String} HTML representing the control.
 		 */
 		renderHtml: function() {
-			var self = this, id = self._id, settings = self.settings, value = self.encode(self._value, false), extraAttrs = '';
+			var self = this, id = self._id, settings = self.settings, value = self.encode(self.state.get('value'), false), extraAttrs = '';
 
 			if ("spellcheck" in settings) {
 				extraAttrs += ' spellcheck="' + settings.spellcheck + '"';
@@ -77934,14 +77194,28 @@ define("tinymce/ui/TextBox", [
 
 			if (settings.multiline) {
 				return (
-					'<textarea id="' + id + '" class="' + self.classes() + '" ' +
+					'<textarea id="' + id + '" class="' + self.classes + '" ' +
 					(settings.rows ? ' rows="' + settings.rows + '"' : '') +
 					' hidefocus="1"' + extraAttrs + '>' + value +
 					'</textarea>'
 				);
 			}
 
-			return '<input id="' + id + '" class="' + self.classes() + '" value="' + value + '" hidefocus="1"' + extraAttrs + ' />';
+			return '<input id="' + id + '" class="' + self.classes + '" value="' + value + '" hidefocus="1"' + extraAttrs + ' />';
+		},
+
+		value: function(value) {
+			if (arguments.length) {
+				this.state.set('value', value);
+				return this;
+			}
+
+			// Make sure the real state is in sync
+			if (this.state.get('rendered')) {
+				this.state.set('value', this.getEl().value);
+			}
+
+			return this.state.get('value');
 		},
 
 		/**
@@ -77952,15 +77226,32 @@ define("tinymce/ui/TextBox", [
 		postRender: function() {
 			var self = this;
 
-			DomUtils.on(self.getEl(), 'change', function(e) {
+			self._super();
+
+			self.$el.on('change', function(e) {
+				self.state.set('value', e.target.value);
 				self.fire('change', e);
+			});
+		},
+
+		bindStates: function() {
+			var self = this;
+
+			self.state.on('change:value', function(e) {
+				if (self.getEl().value != e.value) {
+					self.getEl().value = e.value;
+				}
+			});
+
+			self.state.on('change:disabled', function(e) {
+				self.getEl().disabled = e.value;
 			});
 
 			return self._super();
 		},
 
 		remove: function() {
-			DomUtils.off(this.getEl());
+			this.$el.off();
 			this._super();
 		}
 	});
@@ -77971,8 +77262,8 @@ define("tinymce/ui/TextBox", [
 /**
  * Throbber.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -77985,9 +77276,9 @@ define("tinymce/ui/TextBox", [
  * @class tinymce.ui.Throbber
  */
 define("tinymce/ui/Throbber", [
-	"tinymce/ui/DomUtils",
+	"tinymce/dom/DomQuery",
 	"tinymce/ui/Control"
-], function(DomUtils, Control) {
+], function($, Control) {
 	"use strict";
 
 	/**
@@ -78005,18 +77296,23 @@ define("tinymce/ui/Throbber", [
 		 *
 		 * @method show
 		 * @param {Number} [time] Time to wait before showing.
+		 * @param {function} [callback] Optional callback to execute when the throbber is shown.
 		 * @return {tinymce.ui.Throbber} Current throbber instance.
 		 */
-		self.show = function(time) {
+		self.show = function(time, callback) {
 			self.hide();
 
 			state = true;
 
 			window.setTimeout(function() {
 				if (state) {
-					elm.appendChild(DomUtils.createFragment(
+					$(elm).append(
 						'<div class="' + classPrefix + 'throbber' + (inline ? ' ' + classPrefix + 'throbber-inline' : '') + '"></div>'
-					));
+					);
+
+					if (callback) {
+						callback();
+					}
 				}
 			}, time || 0);
 
@@ -78043,7 +77339,7 @@ define("tinymce/ui/Throbber", [
 	};
 });
 
-expose(["tinymce/dom/EventUtils","tinymce/dom/Sizzle","tinymce/Env","tinymce/util/Tools","tinymce/dom/DomQuery","tinymce/html/Styles","tinymce/dom/TreeWalker","tinymce/dom/Range","tinymce/html/Entities","tinymce/dom/DOMUtils","tinymce/dom/ScriptLoader","tinymce/AddOnManager","tinymce/dom/RangeUtils","tinymce/html/Node","tinymce/html/Schema","tinymce/html/SaxParser","tinymce/html/DomParser","tinymce/html/Writer","tinymce/html/Serializer","tinymce/dom/Serializer","tinymce/dom/TridentSelection","tinymce/util/VK","tinymce/dom/ControlSelection","tinymce/dom/BookmarkManager","tinymce/dom/Selection","tinymce/dom/ElementUtils","tinymce/Formatter","tinymce/UndoManager","tinymce/EnterKey","tinymce/ForceBlocks","tinymce/EditorCommands","tinymce/util/URI","tinymce/util/Class","tinymce/util/EventDispatcher","tinymce/ui/Selector","tinymce/ui/Collection","tinymce/ui/DomUtils","tinymce/ui/Control","tinymce/ui/Factory","tinymce/ui/KeyboardNavigation","tinymce/ui/Container","tinymce/ui/DragHelper","tinymce/ui/Scrollable","tinymce/ui/Panel","tinymce/ui/Movable","tinymce/ui/Resizable","tinymce/ui/FloatPanel","tinymce/ui/Window","tinymce/ui/MessageBox","tinymce/WindowManager","tinymce/util/Quirks","tinymce/util/Observable","tinymce/EditorObservable","tinymce/Shortcuts","tinymce/Editor","tinymce/util/I18n","tinymce/FocusManager","tinymce/EditorManager","tinymce/LegacyInput","tinymce/util/XHR","tinymce/util/JSON","tinymce/util/JSONRequest","tinymce/util/JSONP","tinymce/util/LocalStorage","tinymce/Compat","tinymce/ui/Layout","tinymce/ui/AbsoluteLayout","tinymce/ui/Tooltip","tinymce/ui/Widget","tinymce/ui/Button","tinymce/ui/ButtonGroup","tinymce/ui/Checkbox","tinymce/ui/ComboBox","tinymce/ui/ColorBox","tinymce/ui/PanelButton","tinymce/ui/ColorButton","tinymce/util/Color","tinymce/ui/ColorPicker","tinymce/ui/Path","tinymce/ui/ElementPath","tinymce/ui/FormItem","tinymce/ui/Form","tinymce/ui/FieldSet","tinymce/ui/FilePicker","tinymce/ui/FitLayout","tinymce/ui/FlexLayout","tinymce/ui/FlowLayout","tinymce/ui/FormatControls","tinymce/ui/GridLayout","tinymce/ui/Iframe","tinymce/ui/Label","tinymce/ui/Toolbar","tinymce/ui/MenuBar","tinymce/ui/MenuButton","tinymce/ui/ListBox","tinymce/ui/MenuItem","tinymce/ui/Menu","tinymce/ui/Radio","tinymce/ui/ResizeHandle","tinymce/ui/Spacer","tinymce/ui/SplitButton","tinymce/ui/StackLayout","tinymce/ui/TabPanel","tinymce/ui/TextBox","tinymce/ui/Throbber"]);
+expose(["tinymce/dom/EventUtils","tinymce/dom/Sizzle","tinymce/Env","tinymce/util/Tools","tinymce/dom/DomQuery","tinymce/html/Styles","tinymce/dom/TreeWalker","tinymce/html/Entities","tinymce/dom/DOMUtils","tinymce/dom/ScriptLoader","tinymce/AddOnManager","tinymce/dom/RangeUtils","tinymce/html/Node","tinymce/html/Schema","tinymce/html/SaxParser","tinymce/html/DomParser","tinymce/html/Writer","tinymce/html/Serializer","tinymce/dom/Serializer","tinymce/util/VK","tinymce/dom/ControlSelection","tinymce/dom/BookmarkManager","tinymce/dom/Selection","tinymce/Formatter","tinymce/UndoManager","tinymce/EditorCommands","tinymce/util/URI","tinymce/util/Class","tinymce/util/EventDispatcher","tinymce/util/Observable","tinymce/ui/Selector","tinymce/ui/Collection","tinymce/ui/ReflowQueue","tinymce/ui/Control","tinymce/ui/Factory","tinymce/ui/KeyboardNavigation","tinymce/ui/Container","tinymce/ui/DragHelper","tinymce/ui/Scrollable","tinymce/ui/Panel","tinymce/ui/Movable","tinymce/ui/Resizable","tinymce/ui/FloatPanel","tinymce/ui/Window","tinymce/ui/MessageBox","tinymce/WindowManager","tinymce/EditorObservable","tinymce/Shortcuts","tinymce/util/Promise","tinymce/Editor","tinymce/util/I18n","tinymce/FocusManager","tinymce/EditorManager","tinymce/util/XHR","tinymce/util/JSON","tinymce/util/JSONRequest","tinymce/util/JSONP","tinymce/util/LocalStorage","tinymce/Compat","tinymce/ui/Layout","tinymce/ui/AbsoluteLayout","tinymce/ui/Tooltip","tinymce/ui/Widget","tinymce/ui/Button","tinymce/ui/ButtonGroup","tinymce/ui/Checkbox","tinymce/ui/ComboBox","tinymce/ui/ColorBox","tinymce/ui/PanelButton","tinymce/ui/ColorButton","tinymce/util/Color","tinymce/ui/ColorPicker","tinymce/ui/Path","tinymce/ui/ElementPath","tinymce/ui/FormItem","tinymce/ui/Form","tinymce/ui/FieldSet","tinymce/ui/FilePicker","tinymce/ui/FitLayout","tinymce/ui/FlexLayout","tinymce/ui/FlowLayout","tinymce/ui/FormatControls","tinymce/ui/GridLayout","tinymce/ui/Iframe","tinymce/ui/Label","tinymce/ui/Toolbar","tinymce/ui/MenuBar","tinymce/ui/MenuButton","tinymce/ui/MenuItem","tinymce/ui/Menu","tinymce/ui/ListBox","tinymce/ui/Radio","tinymce/ui/Rect","tinymce/ui/ResizeHandle","tinymce/ui/Slider","tinymce/ui/Spacer","tinymce/ui/SplitButton","tinymce/ui/StackLayout","tinymce/ui/TabPanel","tinymce/ui/TextBox","tinymce/ui/Throbber"]);
 })(this);
 return (function () {
           this.tinyMCE.DOM.events.domLoaded = true;
@@ -78123,16 +77419,16 @@ return (function () {
  *
  */
 
-
 define('mockup-patterns-autotoc',[
   'jquery',
-  'mockup-patterns-base'
+  'pat-base'
 ], function($, Base) {
   'use strict';
 
   var AutoTOC = Base.extend({
     name: 'autotoc',
     trigger: '.pat-autotoc',
+    parser: 'mockup',
     defaults: {
       section: 'section',
       levels: 'h1,h2,h3',
@@ -78165,27 +77461,39 @@ define('mockup-patterns-autotoc',[
 
       var asTabs = self.$el.hasClass('autotabs');
 
+      var activeId = null;
+
       $(self.options.levels, self.$el).each(function(i) {
         var $level = $(this),
-            id = $level.prop('id') ? '#' + $level.prop('id') :
+            id = $level.prop('id') ? $level.prop('id') :
                  $level.parents(self.options.section).prop('id');
-        if (!id) {
+        if (!id || $('#' + id).length > 0) {
           id = self.options.IDPrefix + self.name + '-' + i;
-          $level.prop('id', id);
+        }
+        if(window.location.hash === '#' + id){
+          activeId = id;
         }
         $('<a/>')
           .appendTo(self.$toc)
           .text($level.text())
-          .prop('href', id)
+          .attr('id', id)
+          .attr('href', '#' + id)
           .addClass(self.options.classLevelPrefixName + self.getLevel($level))
-          .on('click', function(e, doScroll) {
+          .on('click', function(e, options) {
             e.stopPropagation();
             e.preventDefault();
+            if(!options){
+              options = {
+                doScroll: true,
+                skipHash: false
+              };
+            }
+            var $el = $(this);
             self.$toc.children('.' + self.options.classActiveName).removeClass(self.options.classActiveName);
             self.$el.children('.' + self.options.classActiveName).removeClass(self.options.classActiveName);
             $(e.target).addClass(self.options.classActiveName);
             $level.parents(self.options.section).addClass(self.options.classActiveName);
-            if (doScroll !== false &&
+            if (options.doScroll !== false &&
                 self.options.scrollDuration &&
                 $level &&
                 !asTabs) {
@@ -78197,11 +77505,24 @@ define('mockup-patterns-autotoc',[
               self.$el.trigger('resize.plone-modal.patterns');
             }
             $(this).trigger('clicked');
+            if(!options.skipHash){
+              if(window.history && window.history.pushState){
+                window.history.pushState({}, '', '#' + $el.attr('id'));
+              }
+            }
           });
       });
 
-      self.$toc.find('a').first().trigger('click', false);
-
+      if(activeId){
+        $('a#' + activeId).trigger('click', {
+          doScroll: true,
+          skipHash: true
+        });
+      }else{
+        self.$toc.find('a').first().trigger('click', {
+          doScroll: false,
+          skipHash: true});
+      }
     },
     getLevel: function($el) {
       var elementLevel = 0;
@@ -80360,7 +79681,7 @@ define('text!mockup-patterns-tinymce-url/templates/selection.xml',[],function ()
     return module.exports;
 }));
 
-define('text!mockup-patterns-upload-url/templates/upload.xml',[],function () { return '<div class="upload-container upload-multiple">\n    <h2 class="title"><%- _t("Upload stuff here") %></h2>\n    <p class="help">\n        <%- _t(\'Just drag N drop stuff on the area below or press "upload" button.\') %>\n    </p>\n    <div class="upload-area">\n        <div class="fallback">\n            <input name="file" type="file" multiple />\n        </div>\n        <div class="dz-message"><p><%-_t("Drop files here...")%></p></div>\n        <div class="row">\n            <div class="col-md-9">\n                <input\n                    id="fakeUploadFile"\n                    placeholder="<%- _t("Choose File") %>"\n                    disabled="disabled"\n                    />\n            </div>\n            <div class="col-md-3">\n                <button\n                    type="button"\n                    class="btn btn-primary browse">\n                    Browse\n                </button>\n            </div>\n        </div>\n        <div class="upload-queue">\n            <div class="previews">\n            </div>\n            <div class="controls">\n                <div class="path">\n                    <label><%- _t("Upload to...") %></label>\n                    <p class="form-help">\n                        <%- _t("If nothing selected files we be added to current context.") %>\n                    </p>\n                    <input\n                        type="text"\n                        name="location"\n                        />\n                </div>\n                <div class="actions row">\n                    <div class="col-md-9">\n                        <div class="progress progress-striped active">\n                            <div class="progress-bar progress-bar-success"\n                                 role="progressbar"\n                                 aria-valuenow="0"\n                                 aria-valuemin="0"\n                                 aria-valuemax="100"\n                                 style="width: 0%">\n                                <span class="sr-only">40% Complete (success)</span>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="col-md-3 align-right">\n                        <button\n                            type="button"\n                            class="btn btn-primary upload-all">\n                            <%- _t("Upload") %>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';});
+define('text!mockup-patterns-upload-url/templates/upload.xml',[],function () { return '<div class="upload-container upload-multiple">\n    <h2 class="title"><%- _t("Upload here") %></h2>\n    <p class="help">\n        <%- _t(\'Drag and drop files from your computer onto the area below or click the "Browse" button.\') %>\n    </p>\n    <div class="upload-area">\n        <div class="fallback">\n            <input name="file" type="file" multiple />\n        </div>\n        <div class="dz-message"><p><%-_t("Drop files here...")%></p></div>\n        <div class="row browse-select">\n            <div class="col-md-9">\n                <input\n                    id="fakeUploadFile"\n                    placeholder="<%- _t("Choose File") %>"\n                    disabled="disabled"\n                    />\n            </div>\n            <div class="col-md-3">\n                <button\n                    type="button"\n                    class="btn btn-primary browse">\n                    Browse\n                </button>\n            </div>\n        </div>\n        <div class="upload-queue">\n            <div class="previews">\n            </div>\n            <div class="controls">\n                <div class="path">\n                    <label><%- _t("Upload to...") %></label>\n                    <p class="form-help">\n                        <%- _t("Select another destination folder or leave blank to add files to the current location.") %>\n                    </p>\n                    <input\n                        type="text"\n                        name="location"\n                        />\n                </div>\n                <div class="actions row">\n                    <div class="col-md-9">\n                        <div class="progress progress-striped active">\n                            <div class="progress-bar progress-bar-success"\n                                 role="progressbar"\n                                 aria-valuenow="0"\n                                 aria-valuemin="0"\n                                 aria-valuemax="100"\n                                 style="width: 0%">\n                                <span class="sr-only">40% Complete (success)</span>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="col-md-3 align-right">\n                        <button\n                            type="button"\n                            class="btn btn-primary upload-all">\n                            <%- _t("Upload") %>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n';});
 
 
 define('text!mockup-patterns-upload-url/templates/preview.xml',[],function () { return '<div class="row item form-inline">\n    <div class="col-md-1 action">\n        <button\n            type="button"\n            class="btn btn-danger btn-xs remove-item"\n            data-dz-remove=""\n            href="javascript:undefined;">\n            <span class="glyphicon glyphicon-remove"></span>\n        </button>\n    </div>\n    <div class="col-md-8 title">\n        <div class="dz-preview">\n          <div class="dz-details">\n            <div class="dz-filename"><span data-dz-name></span></div>\n          </div>\n          <div class="dz-error-message"><span data-dz-errormessage></span></div>\n        </div>\n        <div class="dz-progress">\n            <span class="dz-upload" data-dz-uploadprogress></span>\n        </div>\n    </div>\n    <div class="col-md-3 info">\n        <div class="dz-size" data-dz-size></div>\n        <img data-dz-thumbnail />\n    </div>\n</div>\n';});
@@ -80374,7 +79695,6 @@ define('text!mockup-patterns-upload-url/templates/preview.xml',[],function () { 
  *    relativePath(string): again, to be used with baseUrl to create upload url (null)
  *    initialFolder(string): UID of initial folder related items widget should have selected (null)
  *    currentPath(string): Current path related items is starting with (null)
- *    clickable(boolean): If you can click on container to also upload (false)
  *    className(string): value for class attribute in the form element ('upload')
  *    paramName(string): value for name attribute in the file input element ('file')
  *    ajaxUpload(boolean): true or false for letting the widget upload the files via ajax. If false the form will act like a normal form. (true)
@@ -80410,7 +79730,7 @@ define('text!mockup-patterns-upload-url/templates/preview.xml',[],function () { 
 define('mockup-patterns-upload',[
   'jquery',
   'underscore',
-  'mockup-patterns-base',
+  'pat-base',
   'mockup-patterns-relateditems',
   'dropzone',
   'text!mockup-patterns-upload-url/templates/upload.xml',
@@ -80426,6 +79746,7 @@ define('mockup-patterns-upload',[
   var UploadPattern = Base.extend({
     name: 'upload',
     trigger: '.pat-upload',
+    parser: 'mockup',
     defaults: {
       showTitle: true,
       url: null, // XXX MUST provide url to submit to OR be in a form
@@ -80438,7 +79759,6 @@ define('mockup-patterns-upload',[
       ajaxUpload: true,
 
       paramName: 'file',
-      clickable: true,
       addRemoveLinks: false,
       autoCleanResults: true,
       previewsContainer: '.previews',
@@ -80465,11 +79785,10 @@ define('mockup-patterns-upload',[
       // TODO: find a way to make this work in firefox (and IE)
       $(document).bind('paste', function(e){
         var oe = e.originalEvent;
-        var target = $(oe.target);
         var items = oe.clipboardData.items;
         if (items) {
           for (var i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf("image") !== -1) {
+            if (items[i].type.indexOf('image') !== -1) {
               var blob = items[i].getAsFile();
               self.dropzone.addFile(blob);
             }
@@ -80478,10 +79797,9 @@ define('mockup-patterns-upload',[
       });
       // values that will change current processing
       self.currentPath = self.options.currentPath;
-      self.numFiles = 0;
       self.currentFile = 0;
 
-      template = _.template(template, {_t: _t});
+      template = _.template(template)({_t: _t});
       self.$el.addClass(self.options.className);
       self.$el.append(template);
 
@@ -80520,8 +79838,9 @@ define('mockup-patterns-upload',[
       $('button.browse', self.$el).click(function(e) {
         e.preventDefault();
         e.stopPropagation();
-        // we trigger the dropzone dialog!
-        self.dropzone.hiddenFileInput.click();
+        if(!self.options.maxFiles || self.dropzone.files.length < self.options.maxFiles){
+          self.dropzone.hiddenFileInput.click();
+        }
       });
 
       var dzoneOptions = this.getDzoneOptions();
@@ -80541,44 +79860,61 @@ define('mockup-patterns-upload',[
         throw e;
       }
 
-      self.dropzone.on('addedfile', function(file) {
-        self.showControls();
+      self.dropzone.on('maxfilesreached', function(){
+        self.showHideControls();
+      });
+
+      self.dropzone.on('addedfile', function(/* file */) {
+        self.showHideControls();
       });
 
       self.dropzone.on('removedfile', function() {
-        if (self.dropzone.files.length < 1) {
-          self.hideControls();
-        }
+        self.showHideControls();
       });
 
       self.dropzone.on('success', function(e, response){
         // Trigger event 'uploadAllCompleted' and pass the server's reponse and
         // the path uid. This event can be listened to by patterns using the
         // upload pattern, e.g. the TinyMCE pattern's link plugin.
+        var data;
+        try{
+          data = $.parseJSON(response);
+        }catch(ex){
+          data = response;
+        }
         self.$el.trigger('uploadAllCompleted', {
-          'data': response,
-          'path_uid': self.$pathInput.val()
+          'data': data,
+          'path_uid': (self.$pathInput) ? self.$pathInput.val() : null
         });
       });
 
       if (self.options.autoCleanResults) {
         self.dropzone.on('complete', function(file) {
-          setTimeout(function() {
-            $(file.previewElement).fadeOut();
-          }, 3000);
+          if (file.status === Dropzone.SUCCESS){
+            setTimeout(function() {
+              $(file.previewElement).fadeOut();
+            }, 3000);
+          }
         });
       }
 
       self.dropzone.on('complete', function(file) {
-        if (self.dropzone.files.length < 1) {
-          self.hideControls();
+        if (file.status === Dropzone.SUCCESS && self.dropzone.files.length === 1) {
+          self.showHideControls();
+        }
+      });
+
+      self.dropzone.on('error', function(file, response, xmlhr) {
+        if (typeof(xmlhr) !== 'undefined' && xmlhr.status !== 403){
+          // If error other than 403, just print a generic message
+          $('.dz-error-message span', file.previewElement).html(_t('The file transfer failed'));
         }
       });
 
       self.dropzone.on('totaluploadprogress', function(pct) {
         // need to caclulate total pct here in reality since we're manually
         // processing each file one at a time.
-        pct = ((((self.currentFile - 1) * 100) + pct) / (self.numFiles * 100)) * 100;
+        pct = ((((self.currentFile - 1) * 100) + pct) / (self.dropzone.files.length * 100)) * 100;
         self.$progress.attr('aria-valuenow', pct).css('width', pct + '%');
       });
 
@@ -80596,14 +79932,42 @@ define('mockup-patterns-upload',[
       }
     },
 
-    showControls: function() {
+    showHideControls: function(){
+      /* we do this delayed because this can be called multiple times
+         AND we need to do this hide/show AFTER dropzone is done with
+         all it's own events. This is NASTY but the only way we can
+         enforce some numFiles with dropzone! */
       var self = this;
-      $('.controls', self.$el).fadeIn('slow');
+      if(self._showHideTimeout){
+        clearTimeout(self._showHideTimeout);
+      }
+      self._showHideTimeout = setTimeout(function(){
+        self._showHideControls();
+      }, 50);
     },
 
-    hideControls: function() {
+    _showHideControls: function(){
       var self = this;
-      $('.controls', self.$el).fadeOut('slow');
+      var $controls = $('.controls', self.$el);
+      var $browse = $('.browse-select', self.$el);
+      var $input = $('.dz-hidden-input');
+
+      if(self.options.maxFiles){
+        if(self.dropzone.files.length < self.options.maxFiles){
+          $browse.show();
+          $input.prop('disabled', false);
+        }else{
+          $browse.hide();
+          $input.prop('disabled', true);
+        }
+      }
+      if(self.dropzone.files.length > 0){
+        $controls.fadeIn('slow');
+        var file = self.dropzone.files[0];
+        $('.dz-error-message span', file.previewElement).html('');
+      }else{
+        $controls.fadeOut('slow');
+      }
     },
 
     pathJoin: function() {
@@ -80649,18 +80013,13 @@ define('mockup-patterns-upload',[
     getDzoneOptions: function() {
       var self = this;
 
-      // clickable option
-      if (typeof(self.options.clickable) === 'string') {
-        if (self.options.clickable === 'true') {
-          self.options.clickable = true;
-        } else {
-          self.options.clickable = false;
-        }
-      }
+      // This pattern REQUIRE dropzone to be clickable
+      self.options.clickable = true;
 
       var options = $.extend({}, self.options);
       options.url = self.getUrl();
-      // XXX force to only upload one at a time,
+
+      // XXX force to only upload one to the server at a time,
       // right now we don't support multiple for backends
       options.uploadMultiple = false;
 
@@ -80703,21 +80062,30 @@ define('mockup-patterns-upload',[
           fileaddedClassName = self.options.fileaddedClassName,
           finished = options.finished;
 
-      self.numFiles = self.dropzone.files.length;
       self.currentFile = 0;
 
       function process() {
         processing = true;
         if (self.dropzone.files.length === 0) {
           processing = false;
+        }
+
+        var file = self.dropzone.files[0];
+        if (processing && file.status === Dropzone.ERROR){
+          // Put the file back as "queued" for retrying
+          file.status = Dropzone.QUEUED;
+          processing = false;
+        }
+
+        if (!processing){
           self.$el.removeClass(fileaddedClassName);
           if (finished !== undefined && typeof(finished) === 'function'){
             finished();
           }
           return;
         }
-        var file = self.dropzone.files[0];
-        if ([Dropzone.SUCCESS, Dropzone.ERROR, Dropzone.CANCELED]
+
+        if ([Dropzone.SUCCESS, Dropzone.CANCELED]
             .indexOf(file.status) !== -1) {
           // remove it
           self.dropzone.removeFile(file);
@@ -80788,6 +80156,7 @@ define('mockup-patterns-upload',[
     setPath: function(path){
       var self = this;
       self.currentPath = path;
+      self.options.url = null;
       self.options.url = self.dropzone.options.url = self.getUrl();
     },
 
@@ -80816,16 +80185,16 @@ define('mockup-patterns-upload',[
 });
 
 
-define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(upload){ %>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n      <fieldset class="linkType internal" data-linkType="internal">\n        <legend>Internal</legend>\n        <div>\n          <div class="form-group main">\n            <!-- this gives the name to the "linkType" -->\n            <input type="text" name="internal" />\n          </div>\n        </div>\n      </fieldset>\n\n      <% if(upload){ %>\n      <fieldset class="linkType upload" data-linkType="upload">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <fieldset class="linkType external" data-linkType="external">\n        <legend>External</legend>\n        <div class="form-group main">\n          <label for="external"><%- externalText %></label>\n          <input type="text" name="external" />\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType email" data-linkType="email">\n        <legend>Email</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <label><%- emailText %></label>\n            <input type="text" name="email" />\n          </div>\n          <div class="form-group">\n            <label><%- subjectText %></label>\n            <input type="text" name="subject" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType anchor" data-linkType="anchor">\n        <legend>Anchor</legend>\n        <div>\n          <div class="form-group main">\n            <label>Select an anchor</label>\n            <div class="input-wrapper">\n              <select name="anchor" class="pat-select2" data-pat-select2="width:500px" />\n            </div>\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group">\n        <label>Target</label>\n        <select name="target">\n          <% _.each(targetList, function(target){ %>\n            <option value="<%- target.value %>"><%- target.text %></option>\n          <% }); %>\n        </select>\n      </div>\n      <div class="form-group">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n  </div>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/link.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(upload){ %>\n    <p class="info">Specify the object to link to. It can be on this site already ("Internal"), an object you upload ("Upload"), from an external site ("External"), an email address ("Email"), or an anchor on this page ("Anchor").</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;IDPrefix:tinymce-autotoc-">\n\n      <fieldset class="linkType internal" data-linkType="internal">\n        <legend id="tinylink-internal">Internal</legend>\n        <div>\n          <div class="form-group main">\n            <!-- this gives the name to the "linkType" -->\n            <input type="text" name="internal" />\n          </div>\n        </div>\n      </fieldset>\n\n      <% if(upload){ %>\n      <fieldset class="linkType upload" data-linkType="upload">\n        <legend id="tinylink-upload">Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <fieldset class="linkType external" data-linkType="external">\n        <legend id="tinylink-external">External</legend>\n        <div class="form-group main">\n          <label for="external"><%- externalText %></label>\n          <input type="text" name="external" />\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType email" data-linkType="email">\n        <legend id="tinylink-email">Email</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <label><%- emailText %></label>\n            <input type="text" name="email" />\n          </div>\n          <div class="form-group">\n            <label><%- subjectText %></label>\n            <input type="text" name="subject" />\n          </div>\n        </div>\n      </fieldset>\n\n      <fieldset class="linkType anchor" data-linkType="anchor">\n        <legend id="tinylink-anchor">Anchor</legend>\n        <div>\n          <div class="form-group main">\n            <label>Select an anchor</label>\n            <div class="input-wrapper">\n              <select name="anchor" class="pat-select2" data-pat-select2="width:500px" />\n            </div>\n          </div>\n        </div>\n      </fieldset>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group">\n        <label>Target</label>\n        <select name="target">\n          <% _.each(targetList, function(target){ %>\n            <option value="<%- target.value %>"><%- target.text %></option>\n          <% }); %>\n        </select>\n      </div>\n      <div class="form-group">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary context" name="insert" value="<%- insertBtn %>" />\n  </div>\n</div>\n';});
 
 
-define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(_.contains(linkTypes, \'uploadImage\')){ %>\n    <p class="info">Drag and drop files from your desktop onto dialog to upload</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;">\n\n        <% if(_.contains(linkTypes, \'image\')){ %>\n      <fieldset class="linkType image" data-linkType="image">\n        <legend>Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales, function(scale){ %>\n                  <option value="<%- scale.part %>" <% if(scale.name === options.defaultScale){ %>selected<% } %> >\n                    <%- scale.label %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n        <% } %>\n\n      <% if(_.contains(linkTypes, \'uploadImage\')){ %>\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend>Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <% if(_.contains(linkTypes, \'externalImage\')){ %>\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend>External image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n      <% } %>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
+define('text!mockup-patterns-tinymce-url/templates/image.xml',[],function () { return '<div>\n  <div class="linkModal">\n    <h1><%- insertHeading %></h1>\n    <% if(_.contains(linkTypes, \'uploadImage\')){ %>\n    <p class="info">Specify an image. It can be on this site already ("Internal Image"), an image you upload ("Upload"), or from an external site ("External Image").</p>\n    <% } %>\n\n    <div class="linkTypes pat-autotoc autotabs"\n         data-pat-autotoc="section:fieldset;levels:legend;IDPrefix:tinymce-autotoc-">\n\n        <% if(_.contains(linkTypes, \'image\')){ %>\n      <fieldset class="linkType image" data-linkType="image">\n        <legend id="tinylink-image">Internal Image</legend>\n        <div class="form-inline">\n          <div class="form-group main">\n            <input type="text" name="image" />\n          </div>\n          <div class="form-group scale">\n            <label><%- scaleText %></label>\n            <select name="scale">\n              <option value="">Original</option>\n                <% _.each(scales, function(scale){ %>\n                  <option value="<%- scale.part %>" <% if(scale.name === options.defaultScale){ %>selected<% } %> >\n                    <%- scale.label %>\n                  </option>\n                <% }); %>\n            </select>\n          </div>\n        </div>\n      </fieldset>\n        <% } %>\n\n      <% if(_.contains(linkTypes, \'uploadImage\')){ %>\n      <fieldset class="linkType uploadImage" data-linkType="uploadImage">\n        <legend id="tinylink-uploadImage">Upload</legend>\n        <div class="uploadify-me"></div>\n      </fieldset>\n      <% } %>\n\n      <% if(_.contains(linkTypes, \'externalImage\')){ %>\n      <fieldset class="linkType externalImage" data-linkType="externalImage">\n        <legend id="tinylink-externalImage">External Image</legend>\n        <div>\n          <div class="form-group main">\n            <label><%- externalImageText %></label>\n            <input type="text" name="externalImage" />\n          </div>\n        </div>\n      </fieldset>\n      <% } %>\n\n    </div><!-- / tabs -->\n\n    <div class="common-controls">\n      <div class="form-group title">\n        <label><%- titleText %></label>\n        <input type="text" name="title" />\n      </div>\n      <div class="form-group text">\n        <label><%- altText %></label>\n        <input type="text" name="alt" />\n      </div>\n      <div class="form-group align">\n        <label><%- imageAlignText %></label>\n        <select name="align">\n          <% _.each([\'inline\', \'right\', \'left\'], function(align){ %>\n              <option value="<%- align %>">\n              <%- align.charAt(0).toUpperCase() + align.slice(1) %>\n              </option>\n          <% }); %>\n        <select>\n      </div>\n    </div>\n\n    <input type="submit" class="plone-btn" name="cancel" value="<%- cancelBtn %>" />\n    <input type="submit" class="plone-btn plone-btn-primary context" name="insert" value="<%- insertBtn %>" />\n\n  </div>\n</div>\n';});
 
 define('mockup-patterns-tinymce-url/js/links',[
   'jquery',
   'underscore',
   'pat-registry',
-  'mockup-patterns-base',
+  'pat-base',
   'mockup-patterns-relateditems',
   'mockup-patterns-modal',
   'tinymce',
@@ -80836,8 +80205,6 @@ define('mockup-patterns-tinymce-url/js/links',[
   'use strict';
 
   var LinkType = Base.extend({
-    name: 'linktype',
-    trigger: '.pat-linktype',
     defaults: {
       linkModal: null // required
     },
@@ -80847,11 +80214,14 @@ define('mockup-patterns-tinymce-url/js/links',[
       this.tinypattern = this.options.tinypattern;
       this.tiny = this.tinypattern.tiny;
       this.dom = this.tiny.dom;
-      this.$input = this.$el.find('input');
+    },
+
+    getEl: function(){
+      return this.$el.find('input');
     },
 
     value: function() {
-      return this.$input.val();
+      return this.getEl().val();
     },
 
     toUrl: function() {
@@ -80859,11 +80229,11 @@ define('mockup-patterns-tinymce-url/js/links',[
     },
 
     load: function(element) {
-      this.$input.attr('value', this.tiny.dom.getAttrib(element, 'data-val'));
+      this.getEl().attr('value', this.tiny.dom.getAttrib(element, 'data-val'));
     },
 
     set: function(val) {
-      this.$input.attr('value', val);
+      this.getEl().attr('value', val);
     },
 
     attributes: function() {
@@ -80873,20 +80243,42 @@ define('mockup-patterns-tinymce-url/js/links',[
     }
   });
 
+  var ExternalLink = LinkType.extend({
+    init: function() {
+      LinkType.prototype.init.call(this);
+      this.getEl().on('change', function(){
+        // check here if we should automatically add in http:// to url
+        var val = $(this).val();
+        if((new RegExp("https?\:\/\/")).test(val)){
+          // already valid url
+          return;
+        }
+        var domain = $(this).val().split('/')[0];
+        if(domain.indexOf('.') !== -1){
+          $(this).val('http://' + val);
+        }
+      });
+    }
+  });
+
   var InternalLink = LinkType.extend({
     init: function() {
       LinkType.prototype.init.call(this);
-      this.$input.addClass('pat-relateditems');
+      this.getEl().addClass('pat-relateditems');
       this.createRelatedItems();
     },
 
+    getEl: function(){
+      return this.$el.find('input:not(.select2-input)');
+    },
+
     createRelatedItems: function() {
-      this.relatedItems = new RelatedItems(this.$input,
+      this.relatedItems = new RelatedItems(this.getEl(),
         this.linkModal.options.relatedItems);
     },
 
     value: function() {
-      var val = this.$input.select2('data');
+      var val = this.getEl().select2('data');
       if (val && typeof(val) === 'object') {
         val = val[0];
       }
@@ -80908,11 +80300,12 @@ define('mockup-patterns-tinymce-url/js/links',[
     },
 
     set: function(val) {
+      var $el = this.getEl();
       // kill it and then reinitialize since select2 will load data then
-      this.$input.select2('destroy');
-      this.$input.attr('data-relateditems', undefined); // reset the pattern
-      this.$input.parent().replaceWith(this.$input);
-      this.$input.attr('value', val);
+      $el.select2('destroy');
+      $el.removeData('pattern-relateditems'); // reset the pattern
+      $el.parent().replaceWith($el);
+      $el.attr('value', val);
       this.createRelatedItems();
     },
 
@@ -80927,11 +80320,32 @@ define('mockup-patterns-tinymce-url/js/links',[
     }
   });
 
-  var UploadLink = InternalLink.extend({
-    toUrl: function() {
-      // Make a URL from the servers uuid of the uploaded file.
-      var upload_data = $('.pat-upload').data('uploaddata');
-      return 'resolveuid/' + upload_data.UID;
+  var UploadLink = LinkType.extend({
+    /* need to do it a bit differently here.
+       when a user uploads and tries to upload from
+       it, you need to delegate to the real insert
+       linke types */
+    getDelegatedLinkType: function(){
+      if(this.linkModal.linkType === 'uploadImage'){
+        return this.linkModal.linkTypes.image;
+      }else{
+        return this.linkModal.linkTypes.internal;
+      }
+    },
+    toUrl: function(){
+      return this.getDelegatedLinkType().toUrl();
+    },
+    attributes: function(){
+      return this.getDelegatedLinkType().attributes();
+    },
+    set: function(val){
+      return this.getDelegatedLinkType().set(val);
+    },
+    load: function(element){
+      return this.getDelegatedLinkType().load(element);
+    },
+    value: function(){
+      return this.getDelegatedLinkType().value();
     }
   });
 
@@ -81078,36 +80492,6 @@ define('mockup-patterns-tinymce-url/js/links',[
   });
 
   tinymce.PluginManager.add('ploneimage', function(editor) {
-      if(editor.settings.paste_data_images){
-        editor.on('paste', function(e){
-          var target = $(e.currentTarget);
-          var counter = 0;
-          function handlePaste(){
-            if($('img', target).length > 0){
-              // TODO: more options?
-              $('img', target).each(function(i,e){
-                if($(e).attr('src').indexOf('data:image') === 0){
-                  var byteString = atob($(e).attr('src').split(',')[1]);
-                  var ia = new Uint8Array(byteString.length);
-                  for (var i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
-                  }
-                  var blob = new Blob([ia],  {type: 'image/png'});
-                  editor.settings.addImagePasted(blob);
-                }
-              });
-              $('img', target).remove();
-            }else{
-              // wait for image to be pasted
-              if(counter < 3){
-                counter += 1;
-                setTimeout(handlePaste, 1);                
-              }
-            }
-          }
-          handlePaste();
-        });
-      }
     editor.addButton('ploneimage', {
       icon: 'image',
       tooltip: 'Insert/edit image',
@@ -81178,7 +80562,7 @@ define('mockup-patterns-tinymce-url/js/links',[
       linkTypeClassMapping: {
         'internal': InternalLink,
         'upload': UploadLink,
-        'external': LinkType,
+        'external': ExternalLink,
         'email': EmailLink,
         'anchor': AnchorLink,
         'image': ImageLink,
@@ -81310,8 +80694,10 @@ define('mockup-patterns-tinymce-url/js/links',[
 
     updateImage: function(src) {
       var self = this;
+      var title = self.$title.val();
       var data = $.extend(true, {}, {
         src: src,
+        title: title ? title : null,
         alt: self.$alt.val(),
         'class': 'image-' + self.$align.val(),
         'data-linkType': self.linkType,
@@ -81357,11 +80743,13 @@ define('mockup-patterns-tinymce-url/js/links',[
         self.options.upload.relatedItems.selectableTypes = self.options.folderTypes;
         self.$upload.addClass('pat-upload').patternUpload(self.options.upload);
         self.$upload.on('uploadAllCompleted', function(evt, data) {
-          // Add upload data and path_uid to the upload node's data attributes.
-          self.$upload.attr({
-            'data-uploaddata': data.data,
-            'data-path': data.path_uid
-          });
+          if(self.linkTypes.image){
+            self.linkTypes.image.set(data.data.UID);
+            $('#tinylink-image' , self.modal.$modal).trigger('click');
+          }else{
+            self.linkTypes.internal.set(data.data.UID);
+            $('#tinylink-internal', self.modal.$modal).trigger('click');
+          }
         });
       }
 
@@ -81421,13 +80809,17 @@ define('mockup-patterns-tinymce-url/js/links',[
         }
         if (self.imgElm) {
           var src = self.dom.getAttrib(self.imgElm, 'src');
+          self.$title.val(self.dom.getAttrib(self.imgElm, 'title'));
           self.$alt.val(self.dom.getAttrib(self.imgElm, 'alt'));
           linkType = self.dom.getAttrib(self.imgElm, 'data-linktype');
           if (linkType) {
             self.linkType = linkType;
             self.linkTypes[self.linkType].load(self.imgElm);
             var scale = self.dom.getAttrib(self.imgElm, 'data-scale');
-            self.$scale.val(scale);
+            if(scale){
+              self.$scale.val(scale);
+            }
+            $('#tinylink-' + self.linkType, self.modal.$modal).trigger('click');
           }else if (src) {
             self.guessImageLink(src);
           }
@@ -81450,6 +80842,7 @@ define('mockup-patterns-tinymce-url/js/links',[
         if (linkType) {
           self.linkType = linkType;
           self.linkTypes[self.linkType].load(self.anchorElm);
+          $('#tinylink-' + self.linkType, self.modal.$modal).trigger('click');
         }else if (href) {
           self.guessAnchorLink(href);
         }
@@ -81518,8 +80911,8 @@ define("tinymce-modern-theme", ["tinymce"], function() {
 /**
  * theme.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -81528,7 +80921,8 @@ define("tinymce-modern-theme", ["tinymce"], function() {
 /*global tinymce:true */
 
 tinymce.ThemeManager.add('modern', function(editor) {
-	var self = this, settings = editor.settings, Factory = tinymce.ui.Factory, each = tinymce.each, DOM = tinymce.DOM;
+	var self = this, settings = editor.settings, Factory = tinymce.ui.Factory,
+		each = tinymce.each, DOM = tinymce.DOM, Rect = tinymce.ui.Rect, FloatPanel = tinymce.ui.FloatPanel;
 
 	// Default menus
 	var defaultMenus = {
@@ -81544,119 +80938,121 @@ tinymce.ThemeManager.add('modern', function(editor) {
 	var defaultToolbar = "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | " +
 		"bullist numlist outdent indent | link image";
 
+	function createToolbar(items, size) {
+		var toolbarItems = [], buttonGroup;
+
+		if (!items) {
+			return;
+		}
+
+		each(items.split(/[ ,]/), function(item) {
+			var itemName;
+
+			function bindSelectorChanged() {
+				var selection = editor.selection;
+
+				if (itemName == "bullist") {
+					selection.selectorChanged('ul > li', function(state, args) {
+						var nodeName, i = args.parents.length;
+
+						while (i--) {
+							nodeName = args.parents[i].nodeName;
+							if (nodeName == "OL" || nodeName == "UL") {
+								break;
+							}
+						}
+
+						item.active(state && nodeName == "UL");
+					});
+				}
+
+				if (itemName == "numlist") {
+					selection.selectorChanged('ol > li', function(state, args) {
+						var nodeName, i = args.parents.length;
+
+						while (i--) {
+							nodeName = args.parents[i].nodeName;
+							if (nodeName == "OL" || nodeName == "UL") {
+								break;
+							}
+						}
+
+						item.active(state && nodeName == "OL");
+					});
+				}
+
+				if (item.settings.stateSelector) {
+					selection.selectorChanged(item.settings.stateSelector, function(state) {
+						item.active(state);
+					}, true);
+				}
+
+				if (item.settings.disabledStateSelector) {
+					selection.selectorChanged(item.settings.disabledStateSelector, function(state) {
+						item.disabled(state);
+					});
+				}
+			}
+
+			if (item == "|") {
+				buttonGroup = null;
+			} else {
+				if (Factory.has(item)) {
+					item = {type: item, size: size};
+					toolbarItems.push(item);
+					buttonGroup = null;
+				} else {
+					if (!buttonGroup) {
+						buttonGroup = {type: 'buttongroup', items: []};
+						toolbarItems.push(buttonGroup);
+					}
+
+					if (editor.buttons[item]) {
+						// TODO: Move control creation to some UI class
+						itemName = item;
+						item = editor.buttons[itemName];
+
+						if (typeof item == "function") {
+							item = item();
+						}
+
+						item.type = item.type || 'button';
+						item.size = size;
+
+						item = Factory.create(item);
+						buttonGroup.items.push(item);
+
+						if (editor.initialized) {
+							bindSelectorChanged();
+						} else {
+							editor.on('init', bindSelectorChanged);
+						}
+					}
+				}
+			}
+		});
+
+		return {
+			type: 'toolbar',
+			layout: 'flow',
+			items: toolbarItems
+		};
+	}
+
 	/**
 	 * Creates the toolbars from config and returns a toolbar array.
 	 *
+	 * @param {String} size Optional toolbar item size.
 	 * @return {Array} Array with toolbars.
 	 */
-	function createToolbars() {
+	function createToolbars(size) {
 		var toolbars = [];
 
 		function addToolbar(items) {
-			var toolbarItems = [], buttonGroup;
-
-			if (!items) {
-				return;
+			if (items) {
+				toolbars.push(createToolbar(items, size));
+				return true;
 			}
-
-			each(items.split(/[ ,]/), function(item) {
-				var itemName;
-
-				function bindSelectorChanged() {
-					var selection = editor.selection;
-
-					if (itemName == "bullist") {
-						selection.selectorChanged('ul > li', function(state, args) {
-							var nodeName, i = args.parents.length;
-
-							while (i--) {
-								nodeName = args.parents[i].nodeName;
-								if (nodeName == "OL" || nodeName == "UL") {
-									break;
-								}
-							}
-
-							item.active(state && nodeName == "UL");
-						});
-					}
-
-					if (itemName == "numlist") {
-						selection.selectorChanged('ol > li', function(state, args) {
-							var nodeName, i = args.parents.length;
-
-							while (i--) {
-								nodeName = args.parents[i].nodeName;
-								if (nodeName == "OL" || nodeName == "UL") {
-									break;
-								}
-							}
-
-							item.active(state && nodeName == "OL");
-						});
-					}
-
-					if (item.settings.stateSelector) {
-						selection.selectorChanged(item.settings.stateSelector, function(state) {
-							item.active(state);
-						}, true);
-					}
-
-					if (item.settings.disabledStateSelector) {
-						selection.selectorChanged(item.settings.disabledStateSelector, function(state) {
-							item.disabled(state);
-						});
-					}
-				}
-
-				if (item == "|") {
-					buttonGroup = null;
-				} else {
-					if (Factory.has(item)) {
-						item = {type: item};
-
-						if (settings.toolbar_items_size) {
-							item.size = settings.toolbar_items_size;
-						}
-
-						toolbarItems.push(item);
-						buttonGroup = null;
-					} else {
-						if (!buttonGroup) {
-							buttonGroup = {type: 'buttongroup', items: []};
-							toolbarItems.push(buttonGroup);
-						}
-
-						if (editor.buttons[item]) {
-							// TODO: Move control creation to some UI class
-							itemName = item;
-							item = editor.buttons[itemName];
-
-							if (typeof item == "function") {
-								item = item();
-							}
-
-							item.type = item.type || 'button';
-
-							if (settings.toolbar_items_size) {
-								item.size = settings.toolbar_items_size;
-							}
-
-							item = Factory.create(item);
-							buttonGroup.items.push(item);
-
-							if (editor.initialized) {
-								bindSelectorChanged();
-							} else {
-								editor.on('init', bindSelectorChanged);
-							}
-						}
-					}
-				}
-			});
-
-			toolbars.push({type: 'toolbar', layout: 'flow', items: toolbarItems});
-
-			return true;
 		}
 
 		// Convert toolbar array to multiple options
@@ -81876,6 +81272,236 @@ tinymce.ThemeManager.add('modern', function(editor) {
 	}
 
 	/**
+	 * Handles contextual toolbars.
+	 */
+	function addContextualToolbars() {
+		var scrollContainer;
+
+		function getContextToolbars() {
+			return editor.contextToolbars || [];
+		}
+
+		function getElementRect(elm) {
+			var pos, targetRect, root;
+
+			pos = tinymce.DOM.getPos(editor.getContentAreaContainer());
+			targetRect = editor.dom.getRect(elm);
+			root = editor.dom.getRoot();
+
+			// Adjust targetPos for scrolling in the editor
+			if (root.nodeName == 'BODY') {
+				targetRect.x -= root.ownerDocument.documentElement.scrollLeft || root.scrollLeft;
+				targetRect.y -= root.ownerDocument.documentElement.scrollTop || root.scrollTop;
+			}
+
+			targetRect.x += pos.x;
+			targetRect.y += pos.y;
+
+			return targetRect;
+		}
+
+		function hideAllFloatingPanels() {
+			each(editor.contextToolbars, function(toolbar) {
+				if (toolbar.panel) {
+					toolbar.panel.hide();
+				}
+			});
+		}
+
+		function reposition(match) {
+			var relPos, panelRect, elementRect, contentAreaRect, panel, relRect, testPositions;
+
+			if (editor.removed) {
+				return;
+			}
+
+			if (!match || !match.toolbar.panel) {
+				hideAllFloatingPanels();
+				return;
+			}
+
+			testPositions = [
+				'tc-bc', 'bc-tc',
+				'tl-bl', 'bl-tl',
+				'tr-br', 'br-tr'
+			];
+
+			panel = match.toolbar.panel;
+			panel.show();
+
+			elementRect = getElementRect(match.element);
+			panelRect = tinymce.DOM.getRect(panel.getEl());
+			contentAreaRect = tinymce.DOM.getRect(editor.getContentAreaContainer() || editor.getBody());
+
+			if (!editor.inline) {
+				contentAreaRect.w = editor.getDoc().documentElement.offsetWidth;
+			}
+
+			// Inflate the elementRect so it doesn't get placed above resize handles
+			if (editor.selection.controlSelection.isResizable(match.element)) {
+				elementRect = Rect.inflate(elementRect, 0, 7);
+			}
+
+			relPos = Rect.findBestRelativePosition(panelRect, elementRect, contentAreaRect, testPositions);
+
+			if (relPos) {
+				each(testPositions.concat('inside'), function(pos) {
+					panel.classes.toggle('tinymce-inline-' + pos, pos == relPos);
+				});
+
+				relRect = Rect.relativePosition(panelRect, elementRect, relPos);
+				panel.moveTo(relRect.x, relRect.y);
+			} else {
+				each(testPositions, function(pos) {
+					panel.classes.toggle('tinymce-inline-' + pos, false);
+				});
+
+				panel.classes.toggle('tinymce-inline-inside', true);
+
+				elementRect = Rect.intersect(contentAreaRect, elementRect);
+
+				if (elementRect) {
+					relPos = Rect.findBestRelativePosition(panelRect, elementRect, contentAreaRect, [
+						'tc-tc', 'tl-tl', 'tr-tr'
+					]);
+
+					if (relPos) {
+						relRect = Rect.relativePosition(panelRect, elementRect, relPos);
+						panel.moveTo(relRect.x, relRect.y);
+					} else {
+						panel.moveTo(elementRect.x, elementRect.y);
+					}
+				} else {
+					panel.hide();
+				}
+			}
+
+			//drawRect(contentAreaRect, 'blue');
+			//drawRect(elementRect, 'red');
+			//drawRect(panelRect, 'green');
+		}
+
+		function repositionHandler() {
+			function execute() {
+				if (editor.selection) {
+					reposition(findFrontMostMatch(editor.selection.getNode()));
+				}
+			}
+
+			if (window.requestAnimationFrame) {
+				window.requestAnimationFrame(execute);
+			} else {
+				execute();
+			}
+		}
+
+		function bindScrollEvent() {
+			if (!scrollContainer) {
+				scrollContainer = editor.selection.getScrollContainer() || editor.getWin();
+				tinymce.$(scrollContainer).on('scroll', repositionHandler);
+
+				editor.on('remove', function() {
+					tinymce.$(scrollContainer).off('scroll');
+				});
+			}
+		}
+
+		function showContextToolbar(match) {
+			var panel;
+
+			if (match.toolbar.panel) {
+				match.toolbar.panel.show();
+				reposition(match);
+				return;
+			}
+
+			bindScrollEvent();
+
+			panel = Factory.create({
+				type: 'floatpanel',
+				role: 'application',
+				classes: 'tinymce tinymce-inline',
+				layout: 'flex',
+				direction: 'column',
+				align: 'stretch',
+				autohide: false,
+				autofix: true,
+				fixed: true,
+				border: 1,
+				items: createToolbar(match.toolbar.items)
+			});
+
+			match.toolbar.panel = panel;
+			panel.renderTo(document.body).reflow();
+			reposition(match);
+		}
+
+		function hideAllContextToolbars() {
+			tinymce.each(getContextToolbars(), function(toolbar) {
+				if (toolbar.panel) {
+					toolbar.panel.hide();
+				}
+			});
+		}
+
+		function findFrontMostMatch(targetElm) {
+			var i, y, parentsAndSelf, toolbars = getContextToolbars();
+
+			parentsAndSelf = editor.$(targetElm).parents().add(targetElm);
+			for (i = parentsAndSelf.length - 1; i >= 0; i--) {
+				for (y = toolbars.length - 1; y >= 0; y--) {
+					if (toolbars[y].predicate(parentsAndSelf[i])) {
+						return {
+							toolbar: toolbars[y],
+							element: parentsAndSelf[i]
+						};
+					}
+				}
+			}
+
+			return null;
+		}
+
+		editor.on('click keyup blur', function() {
+			// Needs to be delayed to avoid Chrome img focus out bug
+			window.setTimeout(function() {
+				var match;
+
+				if (editor.removed) {
+					return;
+				}
+
+				match = findFrontMostMatch(editor.selection.getNode());
+				if (match) {
+					showContextToolbar(match);
+				} else {
+					hideAllContextToolbars();
+				}
+			}, 0);
+		});
+
+		editor.on('ObjectResizeStart', function() {
+			var match = findFrontMostMatch(editor.selection.getNode());
+
+			if (match && match.toolbar.panel) {
+				match.toolbar.panel.hide();
+			}
+		});
+
+		editor.on('nodeChange ResizeEditor ResizeWindow', repositionHandler);
+
+		editor.on('remove', function() {
+			tinymce.each(getContextToolbars(), function(toolbar) {
+				if (toolbar.panel) {
+					toolbar.panel.remove();
+				}
+			});
+
+			editor.contextToolbars = {};
+		});
+	}
+
+	/**
 	 * Renders the inline editor UI.
 	 *
 	 * @return {Object} Name/value object with theme data.
@@ -81914,7 +81540,12 @@ tinymce.ThemeManager.add('modern', function(editor) {
 
 		function hide() {
 			if (panel) {
+				// We require two events as the inline float panel based toolbar does not have autohide=true
 				panel.hide();
+
+				// All other autohidden float panels will be closed below.
+				FloatPanel.hideAll();
+
 				DOM.removeClass(editor.getBody(), 'mce-edit-focus');
 			}
 		}
@@ -81942,7 +81573,7 @@ tinymce.ThemeManager.add('modern', function(editor) {
 				border: 1,
 				items: [
 					settings.menubar === false ? null : {type: 'menubar', border: '0 0 1 0', items: createMenuButtons()},
-					createToolbars()
+					createToolbars(settings.toolbar_items_size)
 				]
 			});
 
@@ -81958,6 +81589,7 @@ tinymce.ThemeManager.add('modern', function(editor) {
 
 			addAccessibilityKeys(panel);
 			show();
+			addContextualToolbars();
 
 			editor.on('nodeChange', reposition);
 			editor.on('activate', show);
@@ -82018,7 +81650,7 @@ tinymce.ThemeManager.add('modern', function(editor) {
 			border: 1,
 			items: [
 				settings.menubar === false ? null : {type: 'menubar', border: '0 0 1 0', items: createMenuButtons()},
-				createToolbars(),
+				createToolbars(settings.toolbar_items_size),
 				{type: 'panel', name: 'iframe', layout: 'stack', classes: 'edit-area', html: '', border: '1 0 0 0'}
 			]
 		});
@@ -82072,8 +81704,9 @@ tinymce.ThemeManager.add('modern', function(editor) {
 			panel = null;
 		});
 
-		// Add accesibility shortkuts
+		// Add accesibility shortcuts
 		addAccessibilityKeys(panel);
+		addContextualToolbars();
 
 		return {
 			iframeContainer: panel.find('#iframe')[0].getEl(),
@@ -82144,8 +81777,8 @@ define("tinymce-advlist", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -82249,8 +81882,8 @@ define("tinymce-anchor", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -82302,8 +81935,8 @@ define("tinymce-autolink", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright 2011, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -82394,6 +82027,11 @@ tinymce.PluginManager.add('autolink', function(editor) {
 			} else {
 				rng.setEndAfter(container);
 			}
+		}
+
+		// Never create a link when we are inside a link
+		if (editor.selection.getNode().tagName == 'A') {
+			return;
 		}
 
 		// We need at least five characters to form a URL,
@@ -82505,8 +82143,8 @@ define("tinymce-autoresize", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -82676,8 +82314,8 @@ define("tinymce-autosave", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -82849,8 +82487,8 @@ define("tinymce-bbcode", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -82881,7 +82519,7 @@ define("tinymce-bbcode", ["tinymce"], function() {
 		getInfo: function() {
 			return {
 				longname: 'BBCode Plugin',
-				author: 'Moxiecode Systems AB',
+				author: 'Ephox Corp',
 				authorurl: 'http://www.tinymce.com',
 				infourl: 'http://www.tinymce.com/wiki.php/Plugin:bbcode'
 			};
@@ -82980,8 +82618,8 @@ define("tinymce-charmap", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -83360,16 +82998,18 @@ tinymce.PluginManager.add('charmap', function(editor) {
 		});
 	}
 
+	editor.addCommand('mceShowCharmap', showDialog);
+
 	editor.addButton('charmap', {
 		icon: 'charmap',
 		tooltip: 'Special character',
-		onclick: showDialog
+		cmd: 'mceShowCharmap'
 	});
 
 	editor.addMenuItem('charmap', {
 		icon: 'charmap',
 		text: 'Special character',
-		onclick: showDialog,
+		cmd: 'mceShowCharmap',
 		context: 'insert'
 	});
 });
@@ -83384,8 +83024,8 @@ define("tinymce-code", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -83452,8 +83092,8 @@ define("tinymce-colorpicker", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -83572,8 +83212,8 @@ define("tinymce-contextmenu", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -83633,8 +83273,9 @@ tinymce.PluginManager.add('contextmenu', function(editor) {
 
 			menu = new tinymce.ui.Menu({
 				items: items,
-				context: 'contextmenu'
-			}).addClass('contextmenu').renderTo();
+				context: 'contextmenu',
+				classes: 'contextmenu'
+			}).renderTo();
 
 			editor.on('remove', function() {
 				menu.remove();
@@ -83667,8 +83308,8 @@ define("tinymce-directionality", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -83739,8 +83380,8 @@ define("tinymce-emoticons", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -83813,8 +83454,8 @@ define("tinymce-fullpage", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -84312,8 +83953,8 @@ define("tinymce-fullscreen", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -84456,8 +84097,8 @@ define("tinymce-hr", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -84495,8 +84136,8 @@ define("tinymce-image", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -84517,7 +84158,7 @@ tinymce.PluginManager.add('image', function(editor) {
 		}
 
 		img.onload = function() {
-			done(img.clientWidth, img.clientHeight);
+			done(Math.max(img.width, img.clientWidth), Math.max(img.height, img.clientHeight));
 		};
 
 		img.onerror = function() {
@@ -84785,6 +84426,7 @@ tinymce.PluginManager.add('image', function(editor) {
 					win.find('#src').value(e.control.value()).fire('change');
 				},
 				onPostRender: function() {
+					/*eslint consistent-this: 0*/
 					imageListCtrl = this;
 				}
 			};
@@ -85052,8 +84694,8 @@ define("tinymce-importcss", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -85124,7 +84766,9 @@ tinymce.PluginManager.add('importcss', function(editor) {
 			each(doc.styleSheets, function(styleSheet) {
 				append(styleSheet);
 			});
-		} catch (e) {}
+		} catch (e) {
+			// Ignore
+		}
 
 		return selectors;
 	}
@@ -85256,8 +84900,8 @@ define("tinymce-insertdatetime", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -85386,8 +85030,8 @@ define("tinymce-layer", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -85620,8 +85264,8 @@ define("tinymce-legacyoutput", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -85840,8 +85484,8 @@ define("tinymce-link", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -86035,6 +85679,7 @@ tinymce.PluginManager.add('link', function(editor) {
 				onselect: linkListChangeHandler,
 				value: editor.convertURL(data.href, 'href'),
 				onPostRender: function() {
+					/*eslint consistent-this:0*/
 					linkListCtrl = this;
 				}
 			};
@@ -86189,7 +85834,7 @@ tinymce.PluginManager.add('link', function(editor) {
 
 				// Is not protocol prefixed
 				if ((editor.settings.link_assume_external_targets && !/^\w+:/i.test(href)) ||
-					(!editor.settings.link_assume_external_targets && /^\s*www\./i.test(href))) {
+					(!editor.settings.link_assume_external_targets && /^\s*www[\.|\d\.]/i.test(href))) {
 					delayedConfirm(
 						'The URL you entered seems to be an external link. Do you want to add the required http:// prefix?',
 						function(state) {
@@ -86251,8 +85896,8 @@ define("tinymce-lists", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -86600,23 +86245,21 @@ tinymce.PluginManager.add('lists', function(editor) {
 				}
 
 				return true;
-			} else {
-				if (ulParent.nodeName == 'LI') {
-					ul = ulParent;
-					newBlock = createNewTextBlock(li, 'LI');
-				} else if (isListNode(ulParent)) {
-					newBlock = createNewTextBlock(li, 'LI');
-				} else {
-					newBlock = createNewTextBlock(li);
-				}
-
-				splitList(ul, li, newBlock);
-				normalizeList(ul.parentNode);
-
-				return true;
 			}
 
-			return false;
+			if (ulParent.nodeName == 'LI') {
+				ul = ulParent;
+				newBlock = createNewTextBlock(li, 'LI');
+			} else if (isListNode(ulParent)) {
+				newBlock = createNewTextBlock(li, 'LI');
+			} else {
+				newBlock = createNewTextBlock(li);
+			}
+
+			splitList(ul, li, newBlock);
+			normalizeList(ul.parentNode);
+
+			return true;
 		}
 
 		function indent(li) {
@@ -87073,8 +86716,8 @@ define("tinymce-media", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -87086,11 +86729,11 @@ define("tinymce-media", ["tinymce"], function() {
 
 tinymce.PluginManager.add('media', function(editor, url) {
 	var urlPatterns = [
-		{regex: /youtu\.be\/([\w\-.]+)/, type: 'iframe', w: 425, h: 350, url: '//www.youtube.com/embed/$1'},
-		{regex: /youtube\.com(.+)v=([^&]+)/, type: 'iframe', w: 425, h: 350, url: '//www.youtube.com/embed/$2'},
-		{regex: /vimeo\.com\/([0-9]+)/, type: 'iframe', w: 425, h: 350, url: '//player.vimeo.com/video/$1?title=0&byline=0&portrait=0&color=8dc7dc'},
-		{regex: /vimeo\.com\/(.*)\/([0-9]+)/, type: "iframe", w: 425, h: 350, url: "//player.vimeo.com/video/$2?title=0&amp;byline=0"},
-		{regex: /maps\.google\.([a-z]{2,3})\/maps\/(.+)msid=(.+)/, type: 'iframe', w: 425, h: 350, url: '//maps.google.com/maps/ms?msid=$2&output=embed"'}
+		{regex: /youtu\.be\/([\w\-.]+)/, type: 'iframe', w: 425, h: 350, url: '//www.youtube.com/embed/$1', allowFullscreen: true},
+		{regex: /youtube\.com(.+)v=([^&]+)/, type: 'iframe', w: 425, h: 350, url: '//www.youtube.com/embed/$2', allowFullscreen: true},
+		{regex: /vimeo\.com\/([0-9]+)/, type: 'iframe', w: 425, h: 350, url: '//player.vimeo.com/video/$1?title=0&byline=0&portrait=0&color=8dc7dc', allowfullscreen: true},
+		{regex: /vimeo\.com\/(.*)\/([0-9]+)/, type: "iframe", w: 425, h: 350, url: "//player.vimeo.com/video/$2?title=0&amp;byline=0", allowfullscreen: true},
+		{regex: /maps\.google\.([a-z]{2,3})\/maps\/(.+)msid=(.+)/, type: 'iframe', w: 425, h: 350, url: '//maps.google.com/maps/ms?msid=$2&output=embed"', allowFullscreen: false}
 	];
 
 	var embedChange = (tinymce.Env.ie && tinymce.Env.ie <= 8) ? 'onChange' : 'onInput';
@@ -87247,7 +86890,7 @@ tinymce.PluginManager.add('media', function(editor, url) {
 
 				{
 					title: 'Embed',
-					type: "panel",
+					type: "container",
 					layout: 'flex',
 					direction: 'column',
 					align: 'stretch',
@@ -87337,6 +86980,7 @@ tinymce.PluginManager.add('media', function(editor, url) {
 
 				data.source1 = url;
 				data.type = pattern.type;
+				data.allowFullscreen = pattern.allowFullscreen;
 				data.width = data.width || pattern.w;
 				data.height = data.height || pattern.h;
 			}
@@ -87360,7 +87004,8 @@ tinymce.PluginManager.add('media', function(editor, url) {
 			});
 
 			if (data.type == "iframe") {
-				html += '<iframe src="' + data.source1 + '" width="' + data.width + '" height="' + data.height + '"></iframe>';
+				var allowFullscreen = data.allowFullscreen ? ' allowFullscreen="1"' : '';
+				html += '<iframe src="' + data.source1 + '" width="' + data.width + '" height="' + data.height + '"' + allowFullscreen + '></iframe>';
 			} else if (data.source1mime == "application/x-shockwave-flash") {
 				html += '<object data="' + data.source1 + '" width="' + data.width + '" height="' + data.height + '" type="application/x-shockwave-flash">';
 
@@ -87466,7 +87111,7 @@ tinymce.PluginManager.add('media', function(editor, url) {
 			return html;
 		}
 
-		var writer = new tinymce.html.Writer();
+		var writer = new tinymce.html.Writer(), blocked;
 
 		new tinymce.html.SaxParser({
 			validate: false,
@@ -87486,6 +87131,8 @@ tinymce.PluginManager.add('media', function(editor, url) {
 			},
 
 			start: function(name, attrs, empty) {
+				blocked = true;
+
 				if (name == 'script' || name == 'noscript') {
 					return;
 				}
@@ -87494,13 +87141,18 @@ tinymce.PluginManager.add('media', function(editor, url) {
 					if (attrs[i].name.indexOf('on') === 0) {
 						return;
 					}
+
+					if (attrs[i].name == 'style') {
+						attrs[i].value = editor.dom.serializeStyle(editor.dom.parseStyle(attrs[i].value), name);
+					}
 				}
 
 				writer.start(name, attrs, empty);
+				blocked = false;
 			},
 
 			end: function(name) {
-				if (name == 'script' || name == 'noscript') {
+				if (blocked) {
 					return;
 				}
 
@@ -87851,6 +87503,8 @@ tinymce.PluginManager.add('media', function(editor, url) {
 		context: 'insert',
 		prependToContext: true
 	});
+
+	this.showDialog = showDialog;
 });
 
 
@@ -87864,8 +87518,8 @@ define("tinymce-nonbreaking", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -87926,8 +87580,8 @@ define("tinymce-noneditable", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -88548,8 +88202,8 @@ define("tinymce-pagebreak", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -88565,7 +88219,7 @@ tinymce.PluginManager.add('pagebreak', function(editor) {
 	}), 'gi');
 
 	var pageBreakPlaceHolderHtml = '<img src="' + tinymce.Env.transparentSrc + '" class="' +
-		pageBreakClass + '" data-mce-resize="false" />';
+		pageBreakClass + '" data-mce-resize="false" data-mce-placeholder />';
 
 	// Register commands
 	editor.addCommand('mcePageBreak', function() {
@@ -88633,6 +88287,7 @@ tinymce.PluginManager.add('pagebreak', function(editor) {
 		});
 	});
 });
+
 
   }).apply(root, arguments);
 });
@@ -88706,10 +88361,12 @@ define("tinymce-paste", ["tinymce"], function() {
 	}
 
 	function expose(ids) {
-		for (var i = 0; i < ids.length; i++) {
-			var target = exports;
-			var id = ids[i];
-			var fragments = id.split(/[.\/]/);
+		var i, target, id, fragments, privateModules;
+
+		for (i = 0; i < ids.length; i++) {
+			target = exports;
+			id = ids[i];
+			fragments = id.split(/[.\/]/);
 
 			for (var fi = 0; fi < fragments.length - 1; ++fi) {
 				if (target[fragments[fi]] === undefined) {
@@ -88721,6 +88378,21 @@ define("tinymce-paste", ["tinymce"], function() {
 
 			target[fragments[fragments.length - 1]] = modules[id];
 		}
+		
+		// Expose private modules for unit tests
+		if (exports.AMDLC_TESTS) {
+			privateModules = exports.privateModules || {};
+
+			for (id in modules) {
+				privateModules[id] = modules[id];
+			}
+
+			for (i = 0; i < ids.length; i++) {
+				delete privateModules[ids[i]];
+			}
+
+			exports.privateModules = privateModules;
+		}
 	}
 
 // Included from: js/tinymce/plugins/paste/classes/Utils.js
@@ -88728,8 +88400,8 @@ define("tinymce-paste", ["tinymce"], function() {
 /**
  * Utils.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -88860,8 +88532,8 @@ define("tinymce/pasteplugin/Utils", [
 /**
  * Clipboard.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -88924,7 +88596,7 @@ define("tinymce/pasteplugin/Clipboard", [
 				}
 
 				if (!args.isDefaultPrevented()) {
-					editor.insertContent(html, {merge: editor.settings.paste_merge_formats !== false});
+					editor.insertContent(html, {merge: editor.settings.paste_merge_formats !== false, data: {paste: true}});
 				}
 			}
 		}
@@ -89448,19 +89120,40 @@ define("tinymce/pasteplugin/Clipboard", [
 
 			// Remove all data images from paste for example from Gecko
 			// except internal images like video elements
-			editor.parser.addNodeFilter('img', function(nodes) {
-				if (!editor.settings.paste_data_images) {
+			editor.parser.addNodeFilter('img', function(nodes, name, args) {
+				function isPasteInsert(args) {
+					return args.data && args.data.paste === true;
+				}
+
+				function remove(node) {
+					if (!node.attr('data-mce-object') && src !== Env.transparentSrc) {
+						node.remove();
+					}
+				}
+
+				function isWebKitFakeUrl(src) {
+					return src.indexOf("webkit-fake-url") === 0;
+				}
+
+				function isDataUri(src) {
+					return src.indexOf("data:") === 0;
+				}
+
+				if (!editor.settings.paste_data_images && isPasteInsert(args)) {
 					var i = nodes.length;
 
 					while (i--) {
 						var src = nodes[i].attributes.map.src;
 
-						// Some browsers automatically produce data uris on paste
+						if (!src) {
+							continue;
+						}
+
 						// Safari on Mac produces webkit-fake-url see: https://bugs.webkit.org/show_bug.cgi?id=49141
-						if (src && /^(data:image|webkit\-fake\-url)/.test(src)) {
-							if (!nodes[i].attr('data-mce-object') && src !== Env.transparentSrc) {
-								nodes[i].remove();
-							}
+						if (isWebKitFakeUrl(src)) {
+							remove(nodes[i]);
+						} else if (!editor.settings.allow_html_data_urls && isDataUri(src)) {
+							remove(nodes[i]);
 						}
 					}
 				}
@@ -89474,8 +89167,8 @@ define("tinymce/pasteplugin/Clipboard", [
 /**
  * WordFilter.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -89975,8 +89668,8 @@ define("tinymce/pasteplugin/WordFilter", [
 /**
  * Quirks.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -90137,8 +89830,8 @@ define("tinymce/pasteplugin/Quirks", [
 /**
  * Plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -90258,8 +89951,8 @@ define("tinymce-preview", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -90355,8 +90048,8 @@ define("tinymce-print", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -90396,8 +90089,8 @@ define("tinymce-save", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -90499,8 +90192,8 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -90701,34 +90394,34 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 					node.parentNode.removeChild(node);
 
 					return el;
-				} else {
-					// Replace startNode -> [innerNodes...] -> endNode (in that order)
-					before = doc.createTextNode(startNode.data.substring(0, range.startNodeIndex));
-					after = doc.createTextNode(endNode.data.substring(range.endNodeIndex));
-					var elA = makeReplacementNode(startNode.data.substring(range.startNodeIndex), matchIndex);
-					var innerEls = [];
-
-					for (var i = 0, l = range.innerNodes.length; i < l; ++i) {
-						var innerNode = range.innerNodes[i];
-						var innerEl = makeReplacementNode(innerNode.data, matchIndex);
-						innerNode.parentNode.replaceChild(innerEl, innerNode);
-						innerEls.push(innerEl);
-					}
-
-					var elB = makeReplacementNode(endNode.data.substring(0, range.endNodeIndex), matchIndex);
-
-					parentNode = startNode.parentNode;
-					parentNode.insertBefore(before, startNode);
-					parentNode.insertBefore(elA, startNode);
-					parentNode.removeChild(startNode);
-
-					parentNode = endNode.parentNode;
-					parentNode.insertBefore(elB, endNode);
-					parentNode.insertBefore(after, endNode);
-					parentNode.removeChild(endNode);
-
-					return elB;
 				}
+
+				// Replace startNode -> [innerNodes...] -> endNode (in that order)
+				before = doc.createTextNode(startNode.data.substring(0, range.startNodeIndex));
+				after = doc.createTextNode(endNode.data.substring(range.endNodeIndex));
+				var elA = makeReplacementNode(startNode.data.substring(range.startNodeIndex), matchIndex);
+				var innerEls = [];
+
+				for (var i = 0, l = range.innerNodes.length; i < l; ++i) {
+					var innerNode = range.innerNodes[i];
+					var innerEl = makeReplacementNode(innerNode.data, matchIndex);
+					innerNode.parentNode.replaceChild(innerEl, innerNode);
+					innerEls.push(innerEl);
+				}
+
+				var elB = makeReplacementNode(endNode.data.substring(0, range.endNodeIndex), matchIndex);
+
+				parentNode = startNode.parentNode;
+				parentNode.insertBefore(before, startNode);
+				parentNode.insertBefore(elA, startNode);
+				parentNode.removeChild(startNode);
+
+				parentNode = endNode.parentNode;
+				parentNode.insertBefore(elB, endNode);
+				parentNode.insertBefore(after, endNode);
+				parentNode.removeChild(endNode);
+
+				return elB;
 			};
 		}
 
@@ -90758,7 +90451,9 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 		var self = this, currentIndex = -1;
 
 		function showDialog() {
-			var last = {};
+			var last = {}, selectedText;
+
+			selectedText = tinymce.trim(editor.selection.getContent({format: 'text'}));
 
 			function updateButtonStates() {
 				win.statusbar.find('#next').disabled(!findSpansByIndex(currentIndex + 1).length);
@@ -90821,7 +90516,7 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 					};
 				},
 				buttons: [
-					{text: "Find", onclick: function() {
+					{text: "Find", subtype: 'primary', onclick: function() {
 						win.submit();
 					}},
 					{text: "Replace", disabled: true, onclick: function() {
@@ -90853,7 +90548,7 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 					labelGap: 30,
 					spacing: 10,
 					items: [
-						{type: 'textbox', name: 'find', size: 40, label: 'Find', value: editor.selection.getNode().src},
+						{type: 'textbox', name: 'find', size: 40, label: 'Find', value: selectedText},
 						{type: 'textbox', name: 'replace', size: 40, label: 'Replace with'},
 						{type: 'checkbox', name: 'case', text: 'Match case', label: ' '},
 						{type: 'checkbox', name: 'words', text: 'Whole words', label: ' '}
@@ -90961,7 +90656,13 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 		}
 
 		function removeNode(node) {
-			node.parentNode.removeChild(node);
+			var dom = editor.dom, parent = node.parentNode;
+
+			dom.remove(node);
+
+			if (dom.isEmpty(parent)) {
+				dom.remove(parent);
+			}
 		}
 
 		self.find = function(text, matchCase, wholeWord) {
@@ -90994,19 +90695,21 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 			}
 		};
 
+		function isMatchSpan(node) {
+			var matchIndex = getElmIndex(node);
+
+			return matchIndex !== null && matchIndex.length > 0;
+		}
+
 		self.replace = function(text, forward, all) {
 			var i, nodes, node, matchIndex, currentMatchIndex, nextIndex = currentIndex, hasMore;
 
 			forward = forward !== false;
 
 			node = editor.getBody();
-			nodes = tinymce.toArray(node.getElementsByTagName('span'));
+			nodes = tinymce.grep(tinymce.toArray(node.getElementsByTagName('span')), isMatchSpan);
 			for (i = 0; i < nodes.length; i++) {
 				var nodeIndex = getElmIndex(nodes[i]);
-
-				if (nodeIndex === null || !nodeIndex.length) {
-					continue;
-				}
 
 				matchIndex = currentMatchIndex = parseInt(nodeIndex, 10);
 				if (all || matchIndex === currentIndex) {
@@ -91018,11 +90721,7 @@ define("tinymce-searchreplace", ["tinymce"], function() {
 					}
 
 					while (nodes[++i]) {
-						matchIndex = getElmIndex(nodes[i]);
-
-						if (nodeIndex === null || !nodeIndex.length) {
-							continue;
-						}
+						matchIndex = parseInt(getElmIndex(nodes[i]), 10);
 
 						if (matchIndex === currentMatchIndex) {
 							removeNode(nodes[i]);
@@ -91164,10 +90863,12 @@ define("tinymce-spellchecker", ["tinymce"], function() {
 	}
 
 	function expose(ids) {
-		for (var i = 0; i < ids.length; i++) {
-			var target = exports;
-			var id = ids[i];
-			var fragments = id.split(/[.\/]/);
+		var i, target, id, fragments, privateModules;
+
+		for (i = 0; i < ids.length; i++) {
+			target = exports;
+			id = ids[i];
+			fragments = id.split(/[.\/]/);
 
 			for (var fi = 0; fi < fragments.length - 1; ++fi) {
 				if (target[fragments[fi]] === undefined) {
@@ -91179,6 +90880,21 @@ define("tinymce-spellchecker", ["tinymce"], function() {
 
 			target[fragments[fragments.length - 1]] = modules[id];
 		}
+		
+		// Expose private modules for unit tests
+		if (exports.AMDLC_TESTS) {
+			privateModules = exports.privateModules || {};
+
+			for (id in modules) {
+				privateModules[id] = modules[id];
+			}
+
+			for (i = 0; i < ids.length; i++) {
+				delete privateModules[ids[i]];
+			}
+
+			exports.privateModules = privateModules;
+		}
 	}
 
 // Included from: js/tinymce/plugins/spellchecker/classes/DomTextMatcher.js
@@ -91186,8 +90902,8 @@ define("tinymce-spellchecker", ["tinymce"], function() {
 /**
  * DomTextMatcher.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -91386,34 +91102,34 @@ define("tinymce/spellcheckerplugin/DomTextMatcher", [], function() {
 					node.parentNode.removeChild(node);
 
 					return el;
-				} else {
-					// Replace startNode -> [innerNodes...] -> endNode (in that order)
-					before = doc.createTextNode(startNode.data.substring(0, range.startNodeIndex));
-					after = doc.createTextNode(endNode.data.substring(range.endNodeIndex));
-					var elA = makeReplacementNode(startNode.data.substring(range.startNodeIndex), matchIndex);
-					var innerEls = [];
-
-					for (var i = 0, l = range.innerNodes.length; i < l; ++i) {
-						var innerNode = range.innerNodes[i];
-						var innerEl = makeReplacementNode(innerNode.data, matchIndex);
-						innerNode.parentNode.replaceChild(innerEl, innerNode);
-						innerEls.push(innerEl);
-					}
-
-					var elB = makeReplacementNode(endNode.data.substring(0, range.endNodeIndex), matchIndex);
-
-					parentNode = startNode.parentNode;
-					parentNode.insertBefore(before, startNode);
-					parentNode.insertBefore(elA, startNode);
-					parentNode.removeChild(startNode);
-
-					parentNode = endNode.parentNode;
-					parentNode.insertBefore(elB, endNode);
-					parentNode.insertBefore(after, endNode);
-					parentNode.removeChild(endNode);
-
-					return elB;
 				}
+
+				// Replace startNode -> [innerNodes...] -> endNode (in that order)
+				before = doc.createTextNode(startNode.data.substring(0, range.startNodeIndex));
+				after = doc.createTextNode(endNode.data.substring(range.endNodeIndex));
+				var elA = makeReplacementNode(startNode.data.substring(range.startNodeIndex), matchIndex);
+				var innerEls = [];
+
+				for (var i = 0, l = range.innerNodes.length; i < l; ++i) {
+					var innerNode = range.innerNodes[i];
+					var innerEl = makeReplacementNode(innerNode.data, matchIndex);
+					innerNode.parentNode.replaceChild(innerEl, innerNode);
+					innerEls.push(innerEl);
+				}
+
+				var elB = makeReplacementNode(endNode.data.substring(0, range.endNodeIndex), matchIndex);
+
+				parentNode = startNode.parentNode;
+				parentNode.insertBefore(before, startNode);
+				parentNode.insertBefore(elA, startNode);
+				parentNode.removeChild(startNode);
+
+				parentNode = endNode.parentNode;
+				parentNode.insertBefore(elB, endNode);
+				parentNode.insertBefore(after, endNode);
+				parentNode.removeChild(endNode);
+
+				return elB;
 			};
 		}
 
@@ -91659,8 +91375,8 @@ define("tinymce/spellcheckerplugin/DomTextMatcher", [], function() {
 /**
  * Plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -91865,11 +91581,10 @@ define("tinymce/spellcheckerplugin/Plugin", [
 		}
 
 		function spellcheck() {
+			finish();
+
 			if (started) {
-				finish();
 				return;
-			} else {
-				finish();
 			}
 
 			function errorCallback(message) {
@@ -92106,8 +91821,8 @@ define("tinymce-tabfocus", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -92297,10 +92012,12 @@ define("tinymce-table", ["tinymce"], function() {
 	}
 
 	function expose(ids) {
-		for (var i = 0; i < ids.length; i++) {
-			var target = exports;
-			var id = ids[i];
-			var fragments = id.split(/[.\/]/);
+		var i, target, id, fragments, privateModules;
+
+		for (i = 0; i < ids.length; i++) {
+			target = exports;
+			id = ids[i];
+			fragments = id.split(/[.\/]/);
 
 			for (var fi = 0; fi < fragments.length - 1; ++fi) {
 				if (target[fragments[fi]] === undefined) {
@@ -92312,15 +92029,67 @@ define("tinymce-table", ["tinymce"], function() {
 
 			target[fragments[fragments.length - 1]] = modules[id];
 		}
+		
+		// Expose private modules for unit tests
+		if (exports.AMDLC_TESTS) {
+			privateModules = exports.privateModules || {};
+
+			for (id in modules) {
+				privateModules[id] = modules[id];
+			}
+
+			for (i = 0; i < ids.length; i++) {
+				delete privateModules[ids[i]];
+			}
+
+			exports.privateModules = privateModules;
+		}
 	}
+
+// Included from: js/tinymce/plugins/table/classes/Utils.js
+
+/**
+ * Utils.js
+ *
+ * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
+ *
+ * License: http://www.tinymce.com/license
+ * Contributing: http://www.tinymce.com/contributing
+ */
+
+/**
+ * Various utility functions.
+ *
+ * @class tinymce.tableplugin.Utils
+ * @private
+ */
+define("tinymce/tableplugin/Utils", [
+	"tinymce/Env"
+], function(Env) {
+	function getSpanVal(td, name) {
+		return parseInt(td.getAttribute(name) || 1, 10);
+	}
+
+	function paddCell(cell) {
+		if (!Env.ie || Env.ie > 10) {
+			cell.innerHTML = '<br data-mce-bogus="1" />';
+		}
+	}
+
+	return {
+		getSpanVal: getSpanVal,
+		paddCell: paddCell
+	};
+});
 
 // Included from: js/tinymce/plugins/table/classes/TableGrid.js
 
 /**
  * TableGrid.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -92336,13 +92105,10 @@ define("tinymce-table", ["tinymce"], function() {
  */
 define("tinymce/tableplugin/TableGrid", [
 	"tinymce/util/Tools",
-	"tinymce/Env"
-], function(Tools, Env) {
-	var each = Tools.each;
-
-	function getSpanVal(td, name) {
-		return parseInt(td.getAttribute(name) || 1, 10);
-	}
+	"tinymce/Env",
+	"tinymce/tableplugin/Utils"
+], function(Tools, Env, Utils) {
+	var each = Tools.each, getSpanVal = Utils.getSpanVal;
 
 	return function(editor, table) {
 		var grid, gridWidth, startPos, endPos, selectedCell, selection = editor.selection, dom = selection.dom;
@@ -92503,9 +92269,7 @@ define("tinymce/tableplugin/TableGrid", [
 			if (formatNode) {
 				cell.appendChild(formatNode);
 			} else {
-				if (!Env.ie || Env.ie > 10) {
-					cell.innerHTML = '<br data-mce-bogus="1" />';
-				}
+				Utils.paddCell(cell);
 			}
 
 			return cell;
@@ -93186,8 +92950,8 @@ define("tinymce/tableplugin/TableGrid", [
 /**
  * Quirks.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -93202,13 +92966,10 @@ define("tinymce/tableplugin/TableGrid", [
 define("tinymce/tableplugin/Quirks", [
 	"tinymce/util/VK",
 	"tinymce/Env",
-	"tinymce/util/Tools"
-], function(VK, Env, Tools) {
-	var each = Tools.each;
-
-	function getSpanVal(td, name) {
-		return parseInt(td.getAttribute(name) || 1, 10);
-	}
+	"tinymce/util/Tools",
+	"tinymce/tableplugin/Utils"
+], function(VK, Env, Tools, Utils) {
+	var each = Tools.each, getSpanVal = Utils.getSpanVal;
 
 	return function(editor) {
 		/**
@@ -93227,18 +92988,19 @@ define("tinymce/tableplugin/Quirks", [
 						moveCursorToRow(editor, sourceNode, siblingRow, upBool);
 						e.preventDefault();
 						return true;
-					} else {
-						var tableNode = editor.dom.getParent(currentRow, 'table');
-						var middleNode = currentRow.parentNode;
-						var parentNodeName = middleNode.nodeName.toLowerCase();
-						if (parentNodeName === 'tbody' || parentNodeName === (upBool ? 'tfoot' : 'thead')) {
-							var targetParent = getTargetParent(upBool, tableNode, middleNode, 'tbody');
-							if (targetParent !== null) {
-								return moveToRowInTarget(upBool, targetParent, sourceNode);
-							}
-						}
-						return escapeTable(upBool, currentRow, siblingDirection, tableNode);
 					}
+
+					var tableNode = editor.dom.getParent(currentRow, 'table');
+					var middleNode = currentRow.parentNode;
+					var parentNodeName = middleNode.nodeName.toLowerCase();
+					if (parentNodeName === 'tbody' || parentNodeName === (upBool ? 'tfoot' : 'thead')) {
+						var targetParent = getTargetParent(upBool, tableNode, middleNode, 'tbody');
+						if (targetParent !== null) {
+							return moveToRowInTarget(upBool, targetParent, sourceNode);
+						}
+					}
+
+					return escapeTable(upBool, currentRow, siblingDirection, tableNode);
 				}
 
 				function getTargetParent(upBool, topNode, secondNode, nodeName) {
@@ -93249,9 +93011,9 @@ define("tinymce/tableplugin/Quirks", [
 					} else if (position === -1) {
 						var topOrBottom = secondNode.tagName.toLowerCase() === 'thead' ? 0 : tbodies.length - 1;
 						return tbodies[topOrBottom];
-					} else {
-						return tbodies[position + (upBool ? -1 : 1)];
 					}
+
+					return tbodies[position + (upBool ? -1 : 1)];
 				}
 
 				function getFirstHeadOrFoot(upBool, parent) {
@@ -93277,17 +93039,17 @@ define("tinymce/tableplugin/Quirks", [
 					if (tableSibling) {
 						moveCursorToStartOfElement(tableSibling);
 						return true;
-					} else {
-						var parentCell = editor.dom.getParent(table, 'td,th');
-						if (parentCell) {
-							return handle(upBool, parentCell, e);
-						} else {
-							var backUpSibling = getChildForDirection(currentRow, !upBool);
-							moveCursorToStartOfElement(backUpSibling);
-							e.preventDefault();
-							return false;
-						}
 					}
+
+					var parentCell = editor.dom.getParent(table, 'td,th');
+					if (parentCell) {
+						return handle(upBool, parentCell, e);
+					}
+
+					var backUpSibling = getChildForDirection(currentRow, !upBool);
+					moveCursorToStartOfElement(backUpSibling);
+					e.preventDefault();
+					return false;
 				}
 
 				function getChildForDirection(parent, up) {
@@ -93518,20 +93280,47 @@ define("tinymce/tableplugin/Quirks", [
 		 * Delete table if all cells are selected.
 		 */
 		function deleteTable() {
+			function placeCaretInCell(cell) {
+				editor.selection.select(cell, true);
+				editor.selection.collapse(true);
+			}
+
+			function clearCell(cell) {
+				editor.$(cell).empty();
+				Utils.paddCell(cell);
+			}
+
 			editor.on('keydown', function(e) {
 				if ((e.keyCode == VK.DELETE || e.keyCode == VK.BACKSPACE) && !e.isDefaultPrevented()) {
-					var table = editor.dom.getParent(editor.selection.getStart(), 'table');
+					var table, tableCells, selectedTableCells, cell;
 
+					table = editor.dom.getParent(editor.selection.getStart(), 'table');
 					if (table) {
-						var cells = editor.dom.select('td,th', table), i = cells.length;
-						while (i--) {
-							if (!editor.dom.hasClass(cells[i], 'mce-item-selected')) {
-								return;
+						tableCells = editor.dom.select('td,th', table);
+						selectedTableCells = Tools.grep(tableCells, function(cell) {
+							return editor.dom.hasClass(cell, 'mce-item-selected');
+						});
+
+						if (selectedTableCells.length === 0) {
+							// If caret is within an empty table cell then empty it for real
+							cell = editor.dom.getParent(editor.selection.getStart(), 'td,th');
+							if (editor.selection.isCollapsed() && cell && editor.dom.isEmpty(cell)) {
+								e.preventDefault();
+								clearCell(cell);
+								placeCaretInCell(cell);
 							}
+
+							return;
 						}
 
 						e.preventDefault();
-						editor.execCommand('mceTableDelete');
+
+						if (tableCells.length == selectedTableCells.length) {
+							editor.execCommand('mceTableDelete');
+						} else {
+							Tools.each(selectedTableCells, clearCell);
+							placeCaretInCell(selectedTableCells[0]);
+						}
 					}
 				}
 			});
@@ -93561,8 +93350,8 @@ define("tinymce/tableplugin/Quirks", [
 /**
  * CellSelection.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -93740,8 +93529,8 @@ define("tinymce/tableplugin/CellSelection", [
 /**
  * Dialogs.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -93927,7 +93716,7 @@ define("tinymce/tableplugin/Dialogs", [
 			function onSubmitTableForm() {
 
 				//Explore the layers of the table till we find the first layer of tds or ths
-				function styleTDTH (elm, name, value) {
+				function styleTDTH(elm, name, value) {
 					if (elm.tagName === "TD" || elm.tagName === "TH") {
 						dom.setStyle(elm, name, value);
 					} else {
@@ -94012,7 +93801,7 @@ define("tinymce/tableplugin/Dialogs", [
 				});
 			}
 
-			function getTDTHOverallStyle (elm, name) {
+			function getTDTHOverallStyle(elm, name) {
 				var cells = editor.dom.select("td,th", elm), firstChildStyle;
 
 				function checkChildren(firstChildStyle, elms) {
@@ -94567,8 +94356,8 @@ define("tinymce/tableplugin/Dialogs", [
 /**
  * Plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -95012,8 +94801,8 @@ define("tinymce-template", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -95282,8 +95071,8 @@ define("tinymce-textcolor", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -95573,8 +95362,8 @@ define("tinymce-textpattern", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -95849,8 +95638,8 @@ define("tinymce-visualblocks", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright 2012, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -95944,8 +95733,8 @@ define("tinymce-visualchars", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -96076,8 +95865,8 @@ define("tinymce-wordcount", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -96153,8 +95942,8 @@ define("tinymce-compat3x", ["tinymce"], function() {
 /**
  * plugin.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -96465,13 +96254,14 @@ define("tinymce-compat3x", ["tinymce"], function() {
  *    folderTypes(string): TODO ('Folder,Plone Site')
  *    linkableTypes(string): TODO ('Document,Event,File,Folder,Image,News Item,Topic')
  *    tiny(object): TODO ({ plugins: [ "advlist autolink lists charmap print preview anchor", "usearchreplace visualblocks code fullscreen autoresize", "insertdatetime media table contextmenu paste plonelink ploneimage" ], menubar: "edit table format tools view insert",
-toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | unlink plonelink ploneimage", autoresize_max_height: 1500 })
+ toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | unlink plonelink ploneimage", autoresize_max_height: 1500 })
  *    prependToUrl(string): Text to prepend to generated internal urls. ('')
  *    appendToUrl(string): Text to append to generated internal urls. ('')
  *    prependToScalePart(string): Text to prepend to generated image scale url part. ('/imagescale/')
  *    appendToScalePart(string): Text to append to generated image scale url part. ('')
  *    linkAttribute(string): Ajax response data attribute to use for url. ('path')
  *    defaultScale(string): Scale name to default to. ('Original')
+ *    inline(boolean): Show tinyMCE editor inline instead in an iframe. Use this on textarea inputs. If you want to use this pattern directly on a contenteditable, pass "inline: true" to the "tiny" options object. (false)
  *
  * Documentation:
  *    # Default
@@ -96481,6 +96271,10 @@ toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignrig
  *    # With dropzone
  *
  *    {{ example-2 }}
+ *
+ *    # Inline editing
+ *
+ *    {{ example-3 }}
  *
  * Example: example-1
  *    <form>
@@ -96494,9 +96288,16 @@ toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignrig
  *    <form>
  *      <textarea class="pat-tinymce"
  *          data-pat-tinymce='{"relatedItems": {"vocabularyUrl": "/relateditems-test.json" },
- *                            "upload": {"baseUrl": "/", "relativePath": "upload"},
- *                            "pasteImages": true
+ *                            "upload": {"baseUrl": "/", "relativePath": "upload"}
  *                            }'></textarea>
+ *    </form>
+ *
+ * Example: example-3
+ *    <form>
+ *      <textarea class="pat-tinymce" data-pat-tinymce='{"inline": true}'>
+ *        <h3>I'm a content editable</h3>
+ *        <p>Try to edit me!</p>
+ *      </textarea>
  *    </form>
  *
  */
@@ -96504,7 +96305,7 @@ toolbar: "undo redo | styleselect | bold italic | alignleft aligncenter alignrig
 define('mockup-patterns-tinymce',[
   'jquery',
   'underscore',
-  'mockup-patterns-base',
+  'pat-base',
   'mockup-patterns-relateditems',
   'mockup-patterns-modal',
   'tinymce',
@@ -96566,6 +96367,7 @@ define('mockup-patterns-tinymce',[
   var TinyMCE = Base.extend({
     name: 'tinymce',
     trigger: '.pat-tinymce',
+    parser: 'mockup',
     defaults: {
       upload: {
         uploadMultiple: false,
@@ -96588,15 +96390,15 @@ define('mockup-patterns-tinymce',[
         insertHeading: _t('Insert link'),
         title: _t('Title'),
         internal: _t('Internal'),
-        external: _t('External'),
-        email: _t('Email'),
+        external: _t('External URL (can be relative within this site or absolute if it starts with http:// or https://)'),
+        email: _t('Email Address'),
         anchor: _t('Anchor'),
-        subject: _t('Subject'),
+        subject: _t('Email Subject (optional)'),
         image: _t('Image'),
         imageAlign: _t('Align'),
         scale: _t('Size'),
         alt: _t('Alternative Text'),
-        externalImage: _t('External Image URI')
+        externalImage: _t('External Image URL (can be relative within this site or absolute if it starts with http:// or https://)')
       },
       // URL generation options
       loadingBaseUrl: '../../../bower_components/tinymce-builded/js/tinymce/',
@@ -96632,7 +96434,7 @@ define('mockup-patterns-tinymce',[
         //'autoresize_max_height': 900,
         'height': 400
       },
-      pasteImages: false
+      inline: false
     },
     addLinkClicked: function() {
       var self = this;
@@ -96685,43 +96487,6 @@ define('mockup-patterns-tinymce',[
       } else {
         self.imageModal.reinitialize();
         self.imageModal.show();
-      }
-    },
-    addImagePasted: function(file){
-      var self = this;
-      if (self.pasteModal === null) {
-        var linkTypes = ['uploadImage'];
-        /*if(!self.options.upload){
-          linkTypes.splice(1, 1);
-        }*/
-        var options = $.extend(true, {}, self.options, {
-          tinypattern: self,
-          linkTypes: linkTypes,
-          initialLinkType: 'uploadImage',
-          text: {
-            insertHeading: _t('Insert Image')
-          },
-          /*relatedItems: {
-            baseCriteria: [{
-              i: 'portal_type',
-              o: 'plone.app.querystring.operation.list.contains',
-              v: self.options.imageTypes.concat(self.options.folderTypes)
-            }],
-            selectableTypes: self.options.imageTypes,
-            resultTemplate: ResultTemplate,
-            selectionTemplate: SelectionTemplate
-          }*/
-        });
-        var $el = $('<div/>').insertAfter(self.$el);
-        self.pasteModal = new LinkModal($el, options);
-        self.pasteModal.options.upload.clipboardfile = file;
-        self.pasteModal.show();
-        $('a[href=' + $('.linkType.uploadImage legend').attr('id') + ']').click();
-      } else {
-        self.pasteModal.reinitialize();
-        self.pasteModal.options.upload.clipboardfile = file;
-        self.pasteModal.show();
-        $('a[href=' + $('.linkType.uploadImage legend').attr('id') + ']').click();
       }
     },
     generateUrl: function(data) {
@@ -96782,7 +96547,7 @@ define('mockup-patterns-tinymce',[
       var self = this;
       var i18n = new I18n();
       var lang = i18n.currentLanguage;
-      if (lang !== 'en' && self.options.tiny.language !== 'en') {
+      if (lang !== 'en-us' && self.options.tiny.language !== 'en') {
         tinymce.baseURL = self.options.loadingBaseUrl;
         // does the expected language exist?
         $.ajax({
@@ -96797,7 +96562,9 @@ define('mockup-patterns-tinymce',[
             // expected lang not available, let's fallback to closest one
             if (lang.split('_') > 1){
               lang = lang.split('_')[0];
-            } else {
+            } else if(lang.split('-') > 1){
+              lang = lang.split('-')[0];
+            }else {
               lang = lang + '_' + lang.toUpperCase();
             }
             $.ajax({
@@ -96824,16 +96591,14 @@ define('mockup-patterns-tinymce',[
       // tiny needs an id in order to initialize. Creat it if not set.
       var id = utils.setId(self.$el);
       var tinyOptions = self.options.tiny;
-      tinyOptions.selector = '#' + id;
+      if (self.options.inline === true) {
+        self.options.tiny.inline = true;
+      }
+      self.tinyId = self.options.inline ? id + '-editable' : id;  // when displaying TinyMCE inline, a separate div is created.
+      tinyOptions.selector = '#' + self.tinyId;
       tinyOptions.addLinkClicked = function() {
         self.addLinkClicked.apply(self, []);
       };
-      if(self.options.pasteImages){
-        tinyOptions.paste_data_images = 'true';
-        tinyOptions.addImagePasted = function() {
-          self.addImagePasted.apply(self, []);
-        };
-      }
       tinyOptions.addImageClicked = function(file) {
         self.addImageClicked.apply(self, [file] );
       };
@@ -96870,19 +96635,41 @@ define('mockup-patterns-tinymce',[
           self.options.imageTypes = self.options.imageTypes.split(',');
         }
 
+        if (self.options.inline === true) {
+          // create a div, which will be made content-editable by TinyMCE and
+          // copy contents from textarea to it. Then hide textarea.
+          self.$el.after('<div id="' + self.tinyId + '">' + self.$el.val() + '</div>');
+          self.$el.hide();
+        }
+
         tinymce.init(tinyOptions);
-        self.tiny = tinymce.get(id);
+        self.tiny = tinymce.get(self.tinyId);
 
         /* tiny really should be doing this by default
          * but this fixes overlays not saving data */
         var $form = self.$el.parents('form');
         $form.on('submit', function() {
-          self.tiny.save();
+          if (self.options.inline === true) {
+            // save back from contenteditable to textarea
+            self.$el.val(self.tiny.getContent());
+          } else {
+            // normal case
+            self.tiny.save();
+          }
         });
       });
     },
     destroy: function() {
-      this.tiny.destroy();
+      if (this.tiny) {
+        if (this.options.inline === true) {
+          // destroy also inline editable
+          this.$el.val(this.tiny.getContent());
+          $('#' + this.tinyId).remove();
+          this.$el.show();
+        }
+        this.tiny.destroy();
+        this.tiny = undefined;
+      }
     }
   });
 
@@ -96918,8 +96705,11 @@ define('mockup-patterns-tinymce',[
  *
  *   {{ example-1 }}
  *
- * Example: example-1
+ *   # Mimetype selection on textarea with inline TinyMCE editor.
  *
+ *   {{ example-2 }}
+ *
+  * Example: example-1
  *    <textarea name="text">
  *      <h1>hello world</h1>
  *    </textarea>
@@ -96946,11 +96736,39 @@ define('mockup-patterns-tinymce',[
  *      <option value="text/plain" selected="selected">text/plain</option>
  *    </select>
  *
+ * Example: example-2
+ *    <textarea name="text2">
+ *      <h1>hello world</h1>
+ *    </textarea>
+ *    <select
+ *        name="text.mimeType"
+ *        class="pat-textareamimetypeselector"
+ *        data-pat-textareamimetypeselector='{
+ *          "textareaName": "text2",
+ *          "widgets": {
+ *            "text/html": {
+ *              "pattern": "tinymce",
+ *              "patternOptions": {
+ *                "inline": true,
+ *                "tiny": {
+ *                  "plugins": [],
+ *                  "menubar": "edit format tools",
+ *                  "toolbar": " "
+ *                }
+ *              }
+ *            }
+ *          }
+ *        }'
+ *      >
+ *      <option value="text/html">text/html</option>
+ *      <option value="text/plain" selected="selected">text/plain</option>
+ *    </select>
+ *
  */
 
 define('mockup-patterns-textareamimetypeselector',[
   'jquery',
-  'mockup-patterns-base',
+  'pat-base',
   'pat-registry',
   'mockup-patterns-tinymce'
 ], function ($, Base, registry, tinymce) {
@@ -96959,6 +96777,7 @@ define('mockup-patterns-textareamimetypeselector',[
   var TextareaMimetypeSelector = Base.extend({
     name: 'textareamimetypeselector',
     trigger: '.pat-textareamimetypeselector',
+    parser: 'mockup',
     textarea: undefined,
     currentWidget: undefined,
     defaults: {
@@ -97003,7 +96822,7 @@ define('mockup-patterns-textareamimetypeselector',[
 define('mockup-bundles-widgets',[
   'jquery',
   'pat-registry',
-  'mockup-patterns-base',
+  'pat-base',
 
   'mockup-patterns-select2',
   'mockup-patterns-passwordstrength',
