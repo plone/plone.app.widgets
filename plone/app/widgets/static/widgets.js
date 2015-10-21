@@ -31440,6 +31440,7 @@ define('mockup-utils',[
         url: self.options.vocabularyUrl,
         dataType: 'JSON',
         quietMillis: 100,
+        type:"POST",
         data: function(term, page) {
           return self.getQueryData(term, page);
         },
