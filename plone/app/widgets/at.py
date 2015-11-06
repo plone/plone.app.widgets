@@ -310,15 +310,20 @@ class SelectWidget(BaseWidget):
         if self.multiple and self.orderable:
             args['pattern_options']['orderable'] = True
 
+
         return args
 
     security = ClassSecurityInfo()
     security.declarePublic('process_form')
 
     def process_form(self, instance, field, form, empty_marker=None):
+        
         value = form.get(field.getName(), empty_marker)
         if value is empty_marker:
-            return empty_marker
+            if self.multiple:
+                return (), {}
+            else:
+                return '', {}
         if self.multiple and isinstance(value, basestring):
             value = value.strip().split(self.separator)
         return value, {}
