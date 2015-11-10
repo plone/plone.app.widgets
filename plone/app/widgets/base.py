@@ -177,8 +177,14 @@ class SelectWidget(BaseWidget):
         self.multiple = multiple
         if name is not None:
             self.name = name
+        #import pdb;pdb.set_trace();
         if value is not None:
-            self.value = value
+            if self.multiple is True and type(value) in (unicode, str):
+                separator = getattr(self, 'separator', ';')
+                self.value = value.split(separator)
+            else:
+                self.value = value
+            #
 
     def _get_items(self):
         """Get list of possible options.
@@ -215,6 +221,7 @@ class SelectWidget(BaseWidget):
         :returns: Returns list of selected option(s) values.
         :rtype: list
         """
+        import pdb;pdb.set_trace();
         value = []
         for element in self.el.iter("option"):
             if 'selected' in element.attrib and \

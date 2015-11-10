@@ -14026,11 +14026,12 @@ define('mockup-patterns-base',[
     child.__super__ = parent.prototype;
 
     // Register the pattern in the Patternslib registry.
-    if (!patternProps.name) {
-      log.warn("This mockup pattern without a name attribute will not be registered!");
-    } else if (!patternProps.trigger) {
-      log.warn("The mockup pattern '"+patternProps.name+"' does not have a trigger attribute, it will not be registered.");
-    } else {
+    //if (!patternProps.name) {
+    //  log.warn("This mockup pattern without a name attribute will not be registered!");
+    //} else if (!patternProps.trigger) {
+    //  log.warn("The mockup pattern '"+patternProps.name+"' does not have a trigger attribute, it will not be registered.");
+    //} else {
+    if (patternProps.name || patternProps.trigger)    
       Registry.register(child, patternProps.name);
     }
     return child;
