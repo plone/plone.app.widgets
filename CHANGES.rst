@@ -9,6 +9,8 @@ Fixes:
 - Removed code for unused types_link_to_folder_contents.
   [maurits]
 
+- Don't install the plone.app.widgets dummy default profile in tests.
+  [thet]
 
 2.0.1 (2015-09-21)
 ------------------
