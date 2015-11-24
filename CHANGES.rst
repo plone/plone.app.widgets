@@ -4,6 +4,11 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- Incorporate 'textcolor' plugin into configuration.  This ships with 
+  the included TinyMCE, and has configurable 'forecolor' and 'backcolor'
+  buttons in Plone 4 TinyMCE control panel.
+  [seanupton]
+
 - Fix vocabulary item path. This fixes issues when browsing through
   collective.lineage subsites.
   [petschki]

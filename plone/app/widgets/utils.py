@@ -205,7 +205,7 @@ def get_tinymce_options(context, field, request):
             '-advlist -autolink -lists -charmap -print -preview ' \
             '-anchor -searchreplace -visualblocks -code -fullscreen ' \
             '-insertdatetime -media -table -contextmenu -paste ' \
-            '-plonelink -ploneimage'
+            '-plonelink -ploneimage -textcolor'
 
         # FIXME: map old names to new names in the configuration for plone5
         # and notify migration-team
@@ -329,7 +329,6 @@ def get_tinymce_options(context, field, request):
         # nonbreaking, pagebreak - do not show up
         # emoticons - does not show up
         # ltr, rtl (directionality plugin) - do not show up
-        # forecolor, backcolor - buttons do not show up
         # spellchecker - button does not show up
         # visualblocks - do not show any additional borders/lines around p / h2
         # visualchars - does not show up
