@@ -1,6 +1,6 @@
 include *.rst
 include *.txt
 include *.GPL
-recursive-include plone/app/widgets *
+graft plone/app/widgets
 recursive-include docs/source *.rst
 global-exclude *.pyc
