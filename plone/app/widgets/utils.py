@@ -345,6 +345,12 @@ def get_tinymce_options(context, field, request):
             '{code} {fullscreen} spellchecker'.format(**button_settings)
         config['toolbar'] = toolbar
 
+        # Plone 4.x TinyMCE panel defines table format/style title, classname:
+        config['table_class_list'] = map(
+            lambda pair: {'title': pair[0], 'value': pair[1]},
+            [e.strip().split('|') for e in utility.tablestyles.split('\n')]
+        )
+
         # contextmenu is no longer available, use this setting for menubar
         # FIXME: plone5 rename setting
         # xxx toolbar_external (theme_advanced_toolbar_location not available
