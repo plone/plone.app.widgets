@@ -205,7 +205,7 @@ def get_tinymce_options(context, field, request):
             '-advlist -autolink -lists -charmap -print -preview ' \
             '-anchor -searchreplace -visualblocks -code -fullscreen ' \
             '-insertdatetime -media -table -contextmenu -paste ' \
-            '-plonelink -ploneimage'
+            '-plonelink -ploneimage -textcolor'
 
         # FIXME: map old names to new names in the configuration for plone5
         # and notify migration-team
@@ -329,7 +329,6 @@ def get_tinymce_options(context, field, request):
         # nonbreaking, pagebreak - do not show up
         # emoticons - does not show up
         # ltr, rtl (directionality plugin) - do not show up
-        # forecolor, backcolor - buttons do not show up
         # spellchecker - button does not show up
         # visualblocks - do not show any additional borders/lines around p / h2
         # visualchars - does not show up
@@ -345,6 +344,12 @@ def get_tinymce_options(context, field, request):
             '{print} {preview} {visualblocks} {visualchars} {directionality} | ' \
             '{code} {fullscreen} spellchecker'.format(**button_settings)
         config['toolbar'] = toolbar
+
+        # Plone 4.x TinyMCE panel defines table format/style title, classname:
+        config['table_class_list'] = map(
+            lambda pair: {'title': pair[0], 'value': pair[1]},
+            [e.strip().split('|') for e in utility.tablestyles.split('\n')]
+        )
 
         # contextmenu is no longer available, use this setting for menubar
         # FIXME: plone5 rename setting
