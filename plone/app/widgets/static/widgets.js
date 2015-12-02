@@ -1,5 +1,5 @@
 /** vim: et:ts=4:sw=4:sts=4
- * @license RequireJS 2.1.20 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
+ * @license RequireJS 2.1.22 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/requirejs for details
  */
@@ -12,7 +12,7 @@ var requirejs, require, define;
 (function (global) {
     var req, s, head, baseElement, dataMain, src,
         interactiveScript, currentlyAddingScript, mainScript, subPath,
-        version = '2.1.20',
+        version = '2.1.22',
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
         jsSuffixRegExp = /\.js$/,
@@ -861,21 +861,10 @@ var requirejs, require, define;
 
                     if (this.depCount < 1 && !this.defined) {
                         if (isFunction(factory)) {
-                            //If there is an error listener, favor passing
-                            //to that instead of throwing an error. However,
-                            //only do it for define()'d  modules. require
-                            //errbacks should not be called for failures in
-                            //their callbacks (#699). However if a global
-                            //onError is set, use that.
-                            if ((this.events.error && this.map.isDefine) ||
-                                req.onError !== defaultOnError) {
-                                try {
-                                    exports = context.execCb(id, factory, depExports, exports);
-                                } catch (e) {
-                                    err = e;
-                                }
-                            } else {
+                            try {
                                 exports = context.execCb(id, factory, depExports, exports);
+                            } catch (e) {
+                                err = e;
                             }
 
                             // Favor return value over exports. If node/cjs in play,
@@ -892,12 +881,30 @@ var requirejs, require, define;
                             }
 
                             if (err) {
-                                err.requireMap = this.map;
-                                err.requireModules = this.map.isDefine ? [this.map.id] : null;
-                                err.requireType = this.map.isDefine ? 'define' : 'require';
-                                return onError((this.error = err));
+                                // If there is an error listener, favor passing
+                                // to that instead of throwing an error. However,
+                                // only do it for define()'d  modules. require
+                                // errbacks should not be called for failures in
+                                // their callbacks (#699). However if a global
+                                // onError is set, use that.
+                                if ((this.events.error && this.map.isDefine) ||
+                                    req.onError !== defaultOnError) {
+                                    err.requireMap = this.map;
+                                    err.requireModules = this.map.isDefine ? [this.map.id] : null;
+                                    err.requireType = this.map.isDefine ? 'define' : 'require';
+                                    return onError((this.error = err));
+                                } else if (typeof console !== 'undefined' &&
+                                           console.error) {
+                                    // Log the error for debugging. If promises could be
+                                    // used, this would be different, but making do.
+                                    console.error(err);
+                                } else {
+                                    // Do not want to completely lose the error. While this
+                                    // will mess up processing and lead to similar results
+                                    // as bug 1440, it at least surfaces the error.
+                                    req.onError(err);
+                                }
                             }
-
                         } else {
                             //Just a literal value
                             exports = factory;
@@ -909,7 +916,11 @@ var requirejs, require, define;
                             defined[id] = exports;
 
                             if (req.onResourceLoad) {
-                                req.onResourceLoad(context, this.map, this.depMaps);
+                                var resLoadMaps = [];
+                                each(this.depMaps, function (depMap) {
+                                    resLoadMaps.push(depMap.normalizedMap || depMap);
+                                });
+                                req.onResourceLoad(context, this.map, resLoadMaps);
                             }
                         }
 
@@ -968,6 +979,7 @@ var requirejs, require, define;
                                                       this.map.parentMap);
                         on(normalizedMap,
                             'defined', bind(this, function (value) {
+                                this.map.normalizedMap = normalizedMap;
                                 this.init([], function () { return value; }, null, {
                                     enabled: true,
                                     ignore: true
@@ -1706,7 +1718,21 @@ var requirejs, require, define;
             onScriptError: function (evt) {
                 var data = getScriptData(evt);
                 if (!hasPathFallback(data.id)) {
-                    return onError(makeError('scripterror', 'Script error for: ' + data.id, evt, [data.id]));
+                    var parents = [];
+                    eachProp(registry, function(value, key) {
+                        if (key.indexOf('_@r') !== 0) {
+                            each(value.depMaps, function(depMap) {
+                                if (depMap.id === data.id) {
+                                    parents.push(key);
+                                }
+                                return true;
+                            });
+                        }
+                    });
+                    return onError(makeError('scripterror', 'Script error for "' + data.id +
+                                             (parents.length ?
+                                             '", needed by: ' + parents.join(', ') :
+                                             '"'), evt, [data.id]));
                 }
             }
         };
@@ -1933,9 +1959,9 @@ var requirejs, require, define;
                 //In a web worker, use importScripts. This is not a very
                 //efficient use of importScripts, importScripts will block until
                 //its script is downloaded and evaluated. However, if web workers
-                //are in play, the expectation that a build has been done so that
-                //only one script needs to be loaded anyway. This may need to be
-                //reevaluated if other use cases become common.
+                //are in play, the expectation is that a build has been done so
+                //that only one script needs to be loaded anyway. This may need
+                //to be reevaluated if other use cases become common.
                 importScripts(url);
 
                 //Account for anonymous modules
@@ -28548,13 +28574,17 @@ define('mockup-utils',[
       options = {};
     }
     self.options = $.extend({}, defaults, options);
-    self.$el = $('.' + self.className);
-    if(self.$el.length === 0){
-      self.$el = $('<div><div></div></div>');
-      self.$el.addClass(self.className).hide().appendTo('body');
-    }
+
+    self.init = function(){
+      self.$el = $('.' + self.className);
+      if(self.$el.length === 0){
+        self.$el = $('<div><div></div></div>');
+        self.$el.addClass(self.className).hide().appendTo('body');
+      }
+    };
 
     self.show = function(closable){
+      self.init();
       self.$el.show();
       var zIndex = self.options.zIndex;
       if (typeof(zIndex) === 'function') {
@@ -28582,6 +28612,7 @@ define('mockup-utils',[
     };
 
     self.hide = function(){
+      self.init();
       self.$el.hide();
     };
 
@@ -31875,7 +31906,11 @@ define('mockup-patterns-tree',[
  *    cached. (true)
  *    closeOnSelect(boolean): Select2 option. Whether or not the drop down should be closed when an item is selected. (false)
  *    dropdownCssClass(string): Select2 option. CSS class to add to the drop down element. ('pattern-relateditems-dropdown')
- *    folderTypes(array): Types which should be considered browsable. (["Folder"])
+ *  
+ * #this does not respect custom dx types which are also folderish:
+ * --> folderTypes(array): Types which should be considered browsable. (["Folder"])
+ * #   needs to be implemented with meta data field: is_folderish from vocabulary
+ * 
  *    homeText(string): Text to display in the initial breadcrumb item. (home)
  *    maximumSelectionSize(integer): The maximum number of items that can be selected in a multi-select control. If this number is less than 1 selection is not limited. (-1)
  *    multiple(boolean): Do not change this option. (true)
@@ -31959,29 +31994,30 @@ define('mockup-patterns-relateditems',[
       closeOnSelect: false,
       basePath: '/',
       homeText: _t('home'),
-      folderTypes: ['Folder'],
+      //folderTypes: ['Folder'],   
       selectableTypes: null, // null means everything is selectable, otherwise a list of strings to match types that are selectable
-      attributes: ['UID', 'Title', 'portal_type', 'path', 'getIcon'],
+      attributes: ['UID', 'Title', 'portal_type', 'path','getURL', 'getIcon','is_folderish','review_state'],
       dropdownCssClass: 'pattern-relateditems-dropdown',
       maximumSelectionSize: -1,
       resultTemplate: '' +
-        '<div class="pattern-relateditems-result pattern-relateditems-type-<%= portal_type %> <% if (selected) { %>pattern-relateditems-active<% } %>">' +
-        '  <a href="#" class="pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %> contenttype-<%= portal_type.toLowerCase() %>">' +
-        '    <% if (typeof getIcon !== "undefined" && getIcon) { %><span class="pattern-relateditems-result-icon"><img src="<%= getIcon %>" /></span><% } %>' +
-        '    <span class="pattern-relateditems-result-title"><%= Title %></span>' +
+        '<div class="   pattern-relateditems-result  <% if (selected) { %>pattern-relateditems-active<% } %>">' +
+        '  <a href="#" class=" pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %>">' +
+        '    <% if (typeof getIcon !== "undefined" && getIcon) { %><img src="<%= getURL %>/@@images/image/icon "> <% } %>' +
+        '    <span class="pattern-relateditems-result-title  <% if (typeof review_state !== "undefined") { %> state-<%= review_state %> <% } %>  " /span>' +
+        '    <span class="pattern-relateditems contenttype-<%- portal_type.toLowerCase() %>"><%= Title %></span>' +
         '    <span class="pattern-relateditems-result-path"><%= path %></span>' +
         '  </a>' +
         '  <span class="pattern-relateditems-buttons">' +
-        '  <% if (folderish) { %>' +
+        '  <% if (is_folderish) { %>' +
         '     <a class="pattern-relateditems-result-browse" href="#" data-path="<%= path %>"></a>' +
         '   <% } %>' +
         ' </span>' +
         '</div>',
       resultTemplateSelector: null,
       selectionTemplate: '' +
-        '<span class="pattern-relateditems-item pattern-relateditems-type-<%= portal_type %>">' +
-        ' <% if (typeof getIcon !== "undefined" && getIcon) { %><span class="pattern-relateditems-result-icon"><img src="<%= getIcon %>" /></span><% } %>' +
-        ' <span class="pattern-relateditems-item-title"><%= Title %></span>' +
+        '<span class="pattern-relateditems-item">' +
+        ' <% if (typeof getIcon !== "undefined" && getIcon) { %> <img src="<%= getURL %>/@@images/image/icon"> <% } %>' +
+        ' <span class="pattern-relateditems-item-title contenttype-<%- portal_type.toLowerCase() %> <% if (typeof review_state !== "undefined") { %> state-<%= review_state  %> <% } %>" ><%= Title %></span>' +
         ' <span class="pattern-relateditems-item-path"><%= path %></span>' +
         '</span>',
       selectionTemplateSelector: null,
@@ -32105,7 +32141,7 @@ define('mockup-patterns-relateditems',[
               label: item.Title,
               id: item.UID,
               path: item.path,
-              folder: self.options.folderTypes.indexOf(item.portal_type) !== -1
+              folder: item.is_folderish
             };
             nodes.push(node);
           });
@@ -32205,7 +32241,6 @@ define('mockup-patterns-relateditems',[
     },
     init: function() {
       var self = this;
-
       self.query = new utils.QueryHelper(
         $.extend(true, {}, self.options, {pattern: self})
       );
@@ -32213,9 +32248,9 @@ define('mockup-patterns-relateditems',[
         $.extend(true, {}, self.options, {
           pattern: self,
           baseCriteria: [{
-            i: 'portal_type',
-            o: 'plone.app.querystring.operation.list.contains',
-            v: self.options.folderTypes
+            i: 'is_folderish',
+            o: 'plone.app.querystring.operation.selection.any',
+            v: 'True'
           }]
         })
       );
@@ -32234,13 +32269,14 @@ define('mockup-patterns-relateditems',[
       };
 
       Select2.prototype.initializeOrdering.call(self);
-
       self.options.formatResult = function(item) {
-        if (!item.portal_type || _.indexOf(self.options.folderTypes, item.portal_type) === -1) {
-          item.folderish = false;
-        } else {
-          item.folderish = true;
-        }
+        if (item.is_folderish){
+            item.folderish = true;
+           }
+         else {
+               item.folderish = false;
+           }
+      
 
         item.selectable = self.isSelectable(item);
 
@@ -32591,8 +32627,8 @@ define('mockup-patterns-querystring',[
       } else if (widget === 'ReferenceWidget') {
         self.$value = $('<input type="text"/>')
                 .addClass(self.options.classValueName + '-' + widget)
+                .val(value)
                 .appendTo($wrapper)
-                .patternRelateditems()
                 .change(function() {
                   self.trigger('value-changed');
                 });
@@ -32602,7 +32638,6 @@ define('mockup-patterns-querystring',[
                 .addClass(self.options.classValueName + '-' + widget)
                 .appendTo($wrapper)
                 .val(value)
-                .patternRelateditems()
                 .change(function() {
                   self.trigger('value-changed');
                 });
@@ -36272,10 +36307,7 @@ define('mockup-patterns-modal',[
         if (self.options.automaticallyAddButtonActions) {
           actions[self.options.buttons] = {};
         }
-
-        if (self.options.loadLinksWithinModal) {
-          actions.a = {};
-        }
+        actions.a = {};
 
         $.each(actions, function(action, options) {
           var actionKeys = _.union(_.keys(self.options.actionOptions), ['templateOptions']);
@@ -36554,16 +36586,6 @@ define('mockup-patterns-modal',[
 
         self.$modal
           .addClass(self.options.templateOptions.className)
-          .on('click', function(e) {
-            e.stopPropagation();
-            if ($.nodeName(e.target, 'a')) {
-              e.preventDefault();
-
-              // TODO: open links inside modal
-              // and slide modal body
-            }
-            self.$modal.trigger('modal-click');
-          })
           .on('destroy.plone-modal.patterns', function(e) {
             e.stopPropagation();
             self.hide();
@@ -36574,8 +36596,19 @@ define('mockup-patterns-modal',[
             self.positionModal();
           })
           .appendTo(self.$wrapperInner);
-        self.$modal.data('pattern-' + self.name, self);
 
+        if (self.options.loadLinksWithinModal) {
+          self.$modal.on('click', function(e) {
+            e.stopPropagation();
+            if ($.nodeName(e.target, 'a')) {
+              e.preventDefault();
+              // TODO: open links inside modal
+              // and slide modal body
+            }
+            self.$modal.trigger('modal-click');
+          });
+        }
+        self.$modal.data('pattern-' + self.name, self);
         self.emit('after-render');
       }
     },
@@ -36584,37 +36617,7 @@ define('mockup-patterns-modal',[
     },
     init: function() {
       var self = this;
-
-      self.backdrop = new Backdrop(
-          self.$el.parents(self.options.backdrop),
-          self.options.backdropOptions);
-
-      self.$wrapper = $('> .' + self.options.templateOptions.classWrapperName, self.backdrop.$el);
-      if (self.$wrapper.size() === 0) {
-        var zIndex = self.options.backdropOptions.zIndex !== null ? parseInt(self.options.backdropOptions.zIndex, 10) + 1 : 1041;
-        self.$wrapper = $('<div/>')
-          .hide()
-          .css({
-            'z-index': zIndex,
-            'overflow-y': 'auto',
-            'position': 'fixed',
-            'height': '100%',
-            'width': '100%',
-            'bottom': '0',
-            'left': '0',
-            'right': '0',
-            'top': '0'
-          })
-          .addClass(self.options.templateOptions.classWrapperName)
-          .insertBefore(self.backdrop.$backdrop)
-          .on('click', function(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            if (self.options.backdropOptions.closeOnClick) {
-              self.backdrop.hide();
-            }
-          });
-      }
+      self.options.loadLinksWithinModal = $.parseJSON(self.options.loadLinksWithinModal);
 
       // Router
       if (self.options.routerOptions.id !== null) {
@@ -36622,12 +36625,6 @@ define('mockup-patterns-modal',[
           this.show();
         }, self, self.options.routerOptions.pathExp, self.options.routerOptions.expReplace);
       }
-
-      self.backdrop.on('hidden', function(e) {
-        if (self.$modal !== undefined && self.$modal.hasClass(self.options.templateOptions.classActiveName)) {
-          self.hide();
-        }
-      });
 
       if (self.options.backdropOptions.closeOnEsc === true) {
         $(document).on('keydown', function(e, data) {
@@ -36639,23 +36636,8 @@ define('mockup-patterns-modal',[
         });
       }
 
-      self.$wrapperInner = $('> .' + self.options.templateOptions.classWrapperInnerName, self.$wrapper);
-      if (self.$wrapperInner.size() === 0) {
-        self.$wrapperInner = $('<div/>')
-          .addClass(self.options.classWrapperInnerName)
-          .css({
-            'position': 'absolute',
-            'bottom': '0',
-            'left': '0',
-            'right': '0',
-            'top': '0'
-          })
-          .appendTo(self.$wrapper);
-      }
 
-      self.loading = new utils.Loading({
-        backdrop: self.backdrop
-      });
+
 
       $(window.parent).resize(function() {
         self.positionModal();
@@ -36830,31 +36812,28 @@ define('mockup-patterns-modal',[
         }
         returnpos.top = absTop;
       }
-
       return returnpos;
     },
+
     modalInitialized: function() {
       var self = this;
       return self.$modal !== null && self.$modal !== undefined;
     },
-    // re-position modal at any point.
-    //
-    // Uses:
-    //  options.margin
-    //  options.width
-    //  options.height
-    //  options.position
-    positionModal: function() {
-      var self = this;
 
+    positionModal: function() {
+      /* re-position modal at any point.
+       *
+       * Uses:
+       *  options.margin
+       *  options.width
+       *  options.height
+       *  options.position
+       */
+      var self = this;
       // modal isn't initialized
       if (!self.modalInitialized()) { return; }
-
       // clear out any previously set styling
       self.$modal.removeAttr('style');
-
-      // make sure the (inner) wrapper fills it's container
-      //self.$wrapperInner.css({height:'100%', width:'100%'});
 
       // if backdrop wrapper is set on body, then wrapper should have height of
       // the window, so we can do scrolling of inner wrapper
@@ -36884,7 +36863,6 @@ define('mockup-patterns-modal',[
       var modalHeight = self.$modalDialog.outerHeight(true);
       var wrapperInnerWidth = self.$wrapperInner.width();
       var wrapperInnerHeight = self.$wrapperInner.height();
-
       var pos = self.findPosition(
         horpos, vertpos, margin, modalWidth, modalHeight,
         wrapperInnerWidth, wrapperInnerHeight
@@ -36893,16 +36871,71 @@ define('mockup-patterns-modal',[
         self.$modalDialog.css(key, pos[key]);
       }
     },
+
     render: function(options) {
       var self = this;
       self.emit('render');
       self.options.render.apply(self, [options]);
       self.emit('rendered');
     },
+
     show: function() {
       var self = this;
+      self.backdrop = self.createBackdrop();
       self.createModal();
     },
+
+    createBackdrop: function() {
+      var self = this,
+          backdrop = new Backdrop(
+            self.$el.parents(self.options.backdrop),
+            self.options.backdropOptions
+          ),
+          zIndex = self.options.backdropOptions.zIndex !== null ? parseInt(self.options.backdropOptions.zIndex, 10) + 1 : 1041;
+
+      self.$wrapper = $('<div/>')
+        .hide()
+        .css({
+          'z-index': zIndex,
+          'overflow-y': 'auto',
+          'position': 'fixed',
+          'height': '100%',
+          'width': '100%',
+          'bottom': '0',
+          'left': '0',
+          'right': '0',
+          'top': '0'
+        })
+        .addClass(self.options.templateOptions.classWrapperName)
+        .insertBefore(backdrop.$backdrop)
+        .on('click', function(e) {
+          if (self.options.backdropOptions.closeOnClick) {
+            e.stopPropagation();
+            e.preventDefault();
+            backdrop.hide();
+          }
+        });
+      backdrop.on('hidden', function(e) {
+        if (self.$modal !== undefined && self.$modal.hasClass(self.options.templateOptions.classActiveName)) {
+          self.hide();
+        }
+      });
+      self.loading = new utils.Loading({
+        'backdrop': backdrop
+      });
+      self.$wrapperInner = $('<div/>')
+        .addClass(self.options.classWrapperInnerName)
+        .css({
+          'position': 'absolute',
+          'bottom': '0',
+          'left': '0',
+          'right': '0',
+          'top': '0'
+        })
+        .appendTo(self.$wrapper);
+      return backdrop;
+    },
+
     _show: function() {
       var self = this;
       self.render.apply(self, [ self.options ]);
@@ -36910,7 +36943,6 @@ define('mockup-patterns-modal',[
       self.backdrop.show();
       self.$wrapper.show();
       self.loading.hide();
-      self.$wrapper.parent().css('overflow', 'hidden');
       self.$el.addClass(self.options.templateOptions.classActiveName);
       self.$modal.addClass(self.options.templateOptions.classActiveName);
       registry.scan(self.$modal);
@@ -36935,21 +36967,21 @@ define('mockup-patterns-modal',[
           return;
         }
       }
-      if ($('.plone-modal', self.$wrapper).size() < 2) {
-        self.backdrop.hide();
-        self.$wrapper.hide();
-        self.$wrapper.parent().css('overflow', 'visible');
-        $('body').removeClass('plone-modal-open');
-      }
       self.loading.hide();
       self.$el.removeClass(self.options.templateOptions.classActiveName);
       if (self.$modal !== undefined) {
         self.$modal.remove();
         self.initModal();
       }
-      $(window.parent).off('resize.plone-modal.patterns');
+      self.$wrapper.remove();
+      if ($('.plone-modal', $('body')).size() < 1) {
+        self.backdrop.hide();
+        $('body').removeClass('plone-modal-open');
+        $(window.parent).off('resize.plone-modal.patterns');
+      }
       self.emit('hidden');
     },
+
     redraw: function(response, options) {
       var self = this;
       self.emit('beforeDraw');
@@ -36964,7 +36996,6 @@ define('mockup-patterns-modal',[
   });
 
   return Modal;
-
 });
 
 (function(root) {
@@ -77473,6 +77504,7 @@ define('mockup-patterns-autotoc',[
         if(window.location.hash === '#' + id){
           activeId = id;
         }
+        $level.data('navref', id);
         $('<a/>')
           .appendTo(self.$toc)
           .text($level.text())
@@ -80745,10 +80777,10 @@ define('mockup-patterns-tinymce-url/js/links',[
         self.$upload.on('uploadAllCompleted', function(evt, data) {
           if(self.linkTypes.image){
             self.linkTypes.image.set(data.data.UID);
-            $('#tinylink-image' , self.modal.$modal).trigger('click');
+            $('#' + $('#tinylink-image' , self.modal.$modal).data('navref')).trigger('click');
           }else{
             self.linkTypes.internal.set(data.data.UID);
-            $('#tinylink-internal', self.modal.$modal).trigger('click');
+            $('#' + $('#tinylink-internal' , self.modal.$modal).data('navref')).trigger('click');
           }
         });
       }
@@ -80758,7 +80790,32 @@ define('mockup-patterns-tinymce-url/js/links',[
         e.stopPropagation();
         self.linkType = self.modal.$modal.find('fieldset.active').data('linktype');
 
-        var href = self.getLinkUrl();
+        if(self.linkType === 'uploadImage' || self.linkType === 'upload'){
+            var patUpload = self.$upload.data().patternUpload;
+            if(patUpload.dropzone.files.length > 0){
+                patUpload.processUpload();
+                self.$upload.on('uploadAllCompleted', function(evt, data) {
+                    var counter = 0;
+                    var checkUpload = function(){
+                        if(counter < 5 && !self.linkTypes[self.linkType].value()){
+                            counter += 1;
+                            setTimeout(checkUpload, 100);
+                            return
+                        }else{
+                            var href = self.getLinkUrl();
+                            self.updateImage(href);
+                            self.hide();
+                        }
+                    }
+                    checkUpload();
+                });
+            }
+        }
+        try{
+            var href = self.getLinkUrl();
+        }catch(e){
+            return // just cut out if no url
+        }
         if (!href) {
           return; // just cut out if no url
         }
@@ -96376,7 +96433,7 @@ define('mockup-patterns-tinymce',[
       },
       relatedItems: {
         // UID attribute is required here since we're working with related items
-        attributes: ['UID', 'Title', 'Description', 'getURL', 'portal_type', 'path', 'ModificationDate', 'getIcon'],
+        attributes: ['UID', 'Title', 'portal_type', 'path','getURL', 'getIcon','is_folderish','review_state'],
         batchSize: 20,
         basePath: '/',
         vocabularyUrl: null,
