@@ -9,6 +9,7 @@
 <body>
 
   <metal:view_macro define-macro="view">
+    
     <div tal:attributes="id string:parent-fieldname-$fieldName-${context/UID|nothing}"
          tal:content="structure python:widget.view(context, field, request)"></div>
   </metal:view_macro>

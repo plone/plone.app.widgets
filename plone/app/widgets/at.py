@@ -22,6 +22,7 @@ from plone.uuid.interfaces import IUUID
 from zope.interface import implements
 from zope.component import adapts
 import json
+import plone.api.portal
 
 
 class BaseWidget(TypesWidget):
@@ -70,7 +71,17 @@ class BaseWidget(TypesWidget):
         :returns: Fields value.
         :rtype: string
         """
-        return field.getAccessor(context)()
+        data = field.getAccessor(context)()
+        if type(data) is not tuple:
+            data = (data,)
+        if field.vocabulary:
+            displayList = field.Vocabulary(context)
+            data = (displayList.getValue(x) for x in data)
+            return ', '.join(data)
+        else:
+            return ', '.join(data)
+
+
 
     def edit(self, context, field, request):
         """Render widget on edit.
@@ -138,6 +149,19 @@ class DateWidget(BaseWidget):
 
     security = ClassSecurityInfo()
     security.declarePublic('process_form')
+
+    def view(self, context, field, request):
+        """Render widget on view.
+
+        :returns: Fields value.
+        :rtype: string
+        """
+        date = field.getAccessor(context)()
+        if date:
+            return plone.api.portal.get_localized_time(date, long_format= True)
+        
+
+
 
     def process_form(self, instance, field, form, empty_marker=None):
         """Basic impl for form processing in a widget"""
@@ -211,10 +235,10 @@ class DatetimeWidget(DateWidget):
                 hour=args['value'].hour,
                 minute=args['value'].minute,
             )
-
+        
         if args['value'] and len(args['value'].split(' ')) == 1:
             args['value'] += ' 00:00'
-
+            
         args.setdefault('pattern_options', {})
         if 'time' in args['pattern_options']:
             # Time gets set in parent class to false. Remove.
@@ -222,6 +246,7 @@ class DatetimeWidget(DateWidget):
         if 'time' in self.pattern_options:
             # Re-apply custom set time options.
             args['pattern_options']['time'] = self.pattern_options['time']
+        args['pattern_options']['time'] = {'value': "00:00"}
         args['pattern_options'] = dict_merge(
             get_datetime_options(request),
             args['pattern_options'])
@@ -315,6 +340,8 @@ class SelectWidget(BaseWidget):
 
     security = ClassSecurityInfo()
     security.declarePublic('process_form')
+
+    
 
     def process_form(self, instance, field, form, empty_marker=None):
         

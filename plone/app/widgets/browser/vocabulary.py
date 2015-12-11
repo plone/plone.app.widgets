@@ -69,7 +69,6 @@ class BaseVocabularyView(BrowserView):
         """
         context = self.get_context()
         self.request.response.setHeader("Content-type", "application/json")
-
         try:
             vocabulary = self.get_vocabulary()
         except VocabLookupException, e:
