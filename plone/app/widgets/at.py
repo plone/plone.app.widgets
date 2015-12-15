@@ -72,11 +72,13 @@ class BaseWidget(TypesWidget):
         :rtype: string
         """
         data = field.getAccessor(context)()
+        if data is None:
+            return ''
         if type(data) is not tuple:
             data = (data,)
         if field.vocabulary:
             displayList = field.Vocabulary(context)
-            data = (displayList.getValue(x) for x in data)
+            data = (displayList.getValue(x) for x in data if displayList.getValue(x))
             return ', '.join(data)
         else:
             return ', '.join(data)
