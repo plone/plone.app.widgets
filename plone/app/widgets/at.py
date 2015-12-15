@@ -72,9 +72,9 @@ class BaseWidget(TypesWidget):
         :rtype: string
         """
         data = field.getAccessor(context)()
-        if data is None:
+        if not data:
             return ''
-        if type(data) is not tuple:
+        if type(data) not in (tuple, list):
             data = (data,)
         if field.vocabulary:
             displayList = field.Vocabulary(context)
