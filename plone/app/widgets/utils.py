@@ -16,8 +16,7 @@ from zope.component import ComponentLookupError
 import json
 from zope.globalrequest import getRequest
 
-_ = MessageFactory('plone.app.widgets')
-_plone = MessageFactory('plone')
+_ = MessageFactory('plone')
 
 
 try:
@@ -67,9 +66,9 @@ def get_date_options(request):
             'format': translate(
                 _('pickadate_date_format', default='mmmm d, yyyy'),
                 context=request),
-            'placeholder': translate(_plone('Enter date...'), context=request),
-            'today': translate(_plone(u"Today"), context=request),
-            'clear': translate(_plone(u"Clear"), context=request),
+            'placeholder': translate(_('Enter date...'), context=request),
+            'today': translate(_(u"Today"), context=request),
+            'clear': translate(_(u"Clear"), context=request),
         }
     }
 
@@ -80,8 +79,8 @@ def get_datetime_options(request):
         'format': translate(
             _('pickadate_time_format', default='h:i a'),
             context=request),
-        'placeholder': translate(_plone('Enter time...'), context=request),
-        'today': translate(_plone(u"Today"), context=request),
+        'placeholder': translate(_('Enter time...'), context=request),
+        'today': translate(_(u"Today"), context=request),
     }
     return options
 
@@ -126,11 +125,11 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                                      field_name)
 
     request = getRequest()
-    msgstr = translate(_plone(u'Search'), context=request)
+    msgstr = translate(_(u'Search'), context=request)
     options.setdefault('searchText', msgstr)
     msgstr = translate(_(u'Entire site'), context=request)
     options.setdefault('searchAllText', msgstr)
-    msgstr = translate(_plone('tabs_home',
+    msgstr = translate(_('tabs_home',
                        default=u'Home'),
                        context=request)
     options.setdefault('homeText', msgstr)
