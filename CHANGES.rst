@@ -10,7 +10,8 @@ New:
 
 Fixes:
 
-- *add item here*
+- Use plone i18n domain
+  [staeff]
 
 
 2.0.2 (2015-11-28)
