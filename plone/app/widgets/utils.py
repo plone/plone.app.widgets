@@ -408,17 +408,20 @@ def get_tinymce_options(context, field, request):
         else:
             initial = IUUID(folder, None)
         portal_url = get_portal_url(context)
+        nav_root = getNavigationRootObject(context, get_portal())
         folder_path = '/'.join(folder.getPhysicalPath())
         folder_url_relative = folder.absolute_url()[len(portal_url):]
 
         args['pattern_options'] = {
             'relatedItems': {
                 'vocabularyUrl': '{0}/{1}'.format(
-                    config['portal_url'],
+                    portal_url,
                     '@@getVocabulary?name=plone.app.vocabularies.Catalog'
                 ),
                 'mode': 'browse',
                 'basePath': folder_path,
+                'rootPath': '/'.join(nav_root.getPhysicalPath()) if nav_root
+                            else '/',
                 'folderTypes': utility.containsobjects.split('\n')
             },
             'upload': {
