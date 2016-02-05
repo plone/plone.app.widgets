@@ -14,12 +14,12 @@ Querystring Widget rows appear and disappear correctly
   Given I'm logged in as a 'Site Administrator'
     And I create a collection  My Collection
         Wait For Condition  return $('body.patterns-loaded').size() > 0
-        Page should contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(1)
+        Wait until page contains Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(1)
         Page should not contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When I select criteria index in row  1  Expiration date
-        Page should contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
+        Wait until page contains Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When Click Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2) .querystring-criteria-remove
-        Page should contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
+        Wait until page contains Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When Click Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(1) .querystring-criteria-remove
         Page should not contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
 
@@ -82,7 +82,7 @@ Collection Creation works
    When I select criteria index in row  1  Location
     And I select criteria operator in row  1  Absolute path
     And I save
-        Page should contain Element  jquery=.contenttype-collection:contains(My Collection)
+        Wait until page contains Element  jquery=.contenttype-collection:contains(My Collection)
 
 
 *** Keywords ***
@@ -102,7 +102,7 @@ I select criteria operator in row
 Operator slave field becomes visible
   [Arguments]  ${number}  ${selector}
   ${criteria_row} =  Convert to String  ${querywidget_selector} .querystring-criteria-wrapper:nth-child(${number})
-  Page should contain Element  css=${criteria_row} .querystring-criteria-value ${selector}
+  Wait until page contains Element  css=${criteria_row} .querystring-criteria-value ${selector}
 
 Date criteria operators are functional
   [Arguments]  ${number}
