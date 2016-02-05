@@ -7,7 +7,10 @@ addons:
     - access_key: $SAUCE_ACCESS_KEY
 install:
   - mkdir -p buildout-cache/downloads
-  - python bootstrap.py -c travis.cfg
+# Keep the setuptools and zc.buildout versions in sync with travis.cfg.
+# Or remove the -N (non-newest) from the buildout run in .travis.yml.
+  - python bootstrap.py -c travis.cfg --buildout-version=2.5.0 --setuptools-version=19.6.2
+  - bin/buildout -N -c travis.cfg annotate
   - bin/buildout -N -t 3 -c travis.cfg
 script:
   - if [ "$BROWSER" != "code-analysis" ]; then export ROBOT_DESIRED_CAPABILITIES="$BROWSER,tunnel-identifier:$TRAVIS_JOB_NUMBER"; fi
