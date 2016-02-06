@@ -10,6 +10,8 @@ New:
 
 Fixes:
 
+- Fixed timing issue in robot tests.  [maurits]
+
 - Use plone i18n domain
   [staeff]
 
