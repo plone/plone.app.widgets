@@ -29,7 +29,7 @@ setup(
         'setuptools',
         # needed because we use bundles
         'Products.ResourceRegistries>=2.1',
-        # nedded because users vocabulary was added here
+        # needed because users vocabulary was added here
         'plone.app.vocabularies>=2.1.12dev',
         # needed for compatibility with jQuery 1.9+
         'Products.CMFPlone>=5.0.dev0',
