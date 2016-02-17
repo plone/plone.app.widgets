@@ -162,16 +162,15 @@ def get_tinymce_options(context, field, request):
     We're just going to be looking up settings from
     plone pattern options
     """
-    args = {'pattern_options': {}}
+    options = {}
     try:
         pattern_options = getMultiAdapter(
             (context, request, field),
             name="plone_settings").tinymce()['data-pat-tinymce']
-        args['pattern_options'] = json.loads(pattern_options)
+        options = json.loads(pattern_options)
     except (ComponentLookupError, AttributeError):
         pass
-    return args
-
+    return options
 
 
 def get_portal():
