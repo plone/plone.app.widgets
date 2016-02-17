@@ -137,8 +137,7 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
                              vocabulary_view, field_name=None, widget=None):
-    portal = get_portal()
-    options = get_ajaxselect_options(portal, value, separator,
+    options = get_ajaxselect_options(context, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
 
@@ -160,6 +159,11 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     if getattr(widget, 'selectable_types', None):
         options['selectableTypes'] = widget.selectable_types
 
+    nav_root = getNavigationRootObject(context, get_portal())
+    options['rootPath'] = (
+        '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'
+    )
+
     return options
 
 
@@ -177,7 +181,7 @@ def get_querystring_options(context, querystring_view):
 
 
 def get_tinymce_options(context, field, request):
-    args = {'pattern_options': {}}
+    options = {}
 
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
     if utility:
@@ -412,7 +416,7 @@ def get_tinymce_options(context, field, request):
         folder_path = '/'.join(folder.getPhysicalPath())
         folder_url_relative = folder.absolute_url()[len(portal_url):]
 
-        args['pattern_options'] = {
+        options = {
             'relatedItems': {
                 'vocabularyUrl': '{0}/{1}'.format(
                     portal_url,
@@ -450,8 +454,8 @@ def get_tinymce_options(context, field, request):
         pattern_options = getMultiAdapter(
             (context, request, field),
             name="tinymce_settings")()['data-pat-tinymce']
-        args['pattern_options'] = json.loads(pattern_options)
-    return args
+        options = json.loads(pattern_options)
+    return options
 
 
 def get_portal():

@@ -580,7 +580,7 @@ class TinyMCEWidget(BaseWidget):
         args.setdefault('pattern_options', {})
         merged = dict_merge(get_tinymce_options(context, field, request),
                             args['pattern_options'])
-        args['pattern_options'] = merged['pattern_options']
+        args['pattern_options'] = merged
 
         return args
 

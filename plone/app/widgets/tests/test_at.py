@@ -305,7 +305,8 @@ class RelatedItemsWidgetTests(unittest.TestCase):
     def setUp(self):
 
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
-        self.context = Mock(absolute_url=lambda: '')
+        self.context = Mock(absolute_url=lambda: '',
+                            getPhysicalPath=lambda: ['', 'site'])
         self.field = Mock()
 
         xmlconfig.file('configure.zcml', plone.uuid,
@@ -353,6 +354,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
                                      '&field=fieldname',
+                    'rootPath': '/site',
                 },
             },
             widget._base_args(self.context, self.field, self.request),
@@ -396,6 +398,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
                                      '&field=fieldname',
+                    'rootPath': '/site',
                 },
             },
             widget._base_args(self.context, self.field, self.request),
@@ -428,6 +431,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
                                      '&field=fieldname',
+                    'rootPath': '/site',
                 },
             },
             widget._base_args(self.context, self.field, self.request),
@@ -477,6 +481,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
                                      '&field=fieldname1',
+                    'rootPath': '/site',
                 },
             },
             field1.widget._base_args(self.context, field1, self.request),
@@ -507,6 +512,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                     'vocabularyUrl': '/@@getVocabulary?name='
                                      'plone.app.vocabularies.Catalog'
                                      '&field=fieldname2',
+                    'rootPath': '/site',
                 },
             },
             field2.widget._base_args(self.context, field2, self.request),

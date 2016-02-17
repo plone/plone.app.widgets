@@ -4,6 +4,10 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- Add navigation root support to related items widget. Fix incorrect options
+  merge for TinyMCE widget.
+  [alecm]
+
 - Support Plone 4.x TinyMCE table styles enumerated in control panel via
   TinyMCE 4 configuration property 'table_class_list'.
   [seanupton]
