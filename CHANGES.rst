@@ -6,7 +6,9 @@ Changelog
 
 New:
 
-- *add item here*
+- Add navigation root support to related items widget. Fix incorrect options
+  merge for TinyMCE widget.
+  [alecm]
 
 Fixes:
 
