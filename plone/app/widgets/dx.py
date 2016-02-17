@@ -1023,7 +1023,8 @@ class DXFieldPermissionChecker(object):
                     else:
                         widget = queryMultiAdapter((field, self._request),
                                                    IFieldWidget)
-                    widget.update()
+                    if widget:
+                        widget.update()
                     if getattr(widget, 'vocabulary', None) != vocabulary_name:
                         return False
                 # Create mapping of all schema permissions
