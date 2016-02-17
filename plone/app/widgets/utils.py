@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from Acquisition import aq_base
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
 from datetime import datetime
@@ -122,7 +123,8 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     options = get_ajaxselect_options(context, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
-
+    if IAddForm.providedBy(context):
+        context = context.context
     request = getRequest()
     msgstr = translate(_(u'Search'), context=request)
     options.setdefault('searchText', msgstr)
@@ -204,3 +206,10 @@ def get_context_url(context):
     else:
         url = get_portal_url(context)
     return url
+
+
+def get_widget_form(widget):
+    form = getattr(widget, 'form', None)
+    if getattr(aq_base(form), 'parentForm', None) is not None:
+        form = form.parentForm
+    return form
