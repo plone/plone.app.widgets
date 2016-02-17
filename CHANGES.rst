@@ -4,6 +4,9 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- Ensure vocabulary lookup works on add forms for related items widget.
+  [alecm]
+
 - Add navigation root support to related items widget. Fix incorrect options
   merge for TinyMCE widget.
   [alecm]

@@ -21,6 +21,7 @@ from plone.app.widgets.utils import get_datetime_options
 from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_tinymce_options
+from plone.app.widgets.utils import get_widget_form
 from plone.autoform.interfaces import WIDGETS_KEY
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.utils import resolveDottedName
@@ -645,6 +646,15 @@ class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
     vocabulary_view = '@@getVocabulary'
     orderable = False
 
+    def update(self):
+        super(AjaxSelectWidget, self).update()
+        field = getattr(self, 'field', None)
+        if ICollection.providedBy(self.field):
+            field = self.field.value_type
+        if (not self.vocabulary and field is not None and
+                getattr(field, 'vocabularyName', None)):
+            self.vocabulary = field.vocabularyName
+
     def _base_args(self):
         """Method which will calculate _base class arguments.
 
@@ -668,9 +678,10 @@ class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
         field_name = self.field and self.field.__name__ or None
 
         context = self.context
+        form = get_widget_form(self)
         # We need special handling for AddForms
-        if IAddForm.providedBy(getattr(self, 'form')):
-            context = self.form
+        if IAddForm.providedBy(form):
+            context = form
 
         vocabulary_name = self.vocabulary
         field = None
@@ -679,8 +690,6 @@ class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
             field = self.field
         elif ICollection.providedBy(self.field):
             field = self.field.value_type
-        if not vocabulary_name and field is not None:
-            vocabulary_name = field.vocabularyName
 
         args['pattern_options'] = dict_merge(
             get_ajaxselect_options(context, args['value'], self.separator,
@@ -712,8 +721,21 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
 
     separator = ';'
     vocabulary = None
+    vocabulary_override = False
     vocabulary_view = '@@getVocabulary'
     orderable = False
+
+    def update(self):
+        super(RelatedItemsWidget, self).update()
+        field = getattr(self, 'field', None)
+        if ICollection.providedBy(self.field):
+            field = self.field.value_type
+        if (not self.vocabulary and field is not None and
+                getattr(field, 'vocabularyName', None)):
+            self.vocabulary = field.vocabularyName
+            self.vocabulary_override = True
+        else:
+            self.vocabulary = 'plone.app.vocabularies.Catalog'
 
     def _base_args(self):
         """Method which will calculate _base class arguments.
@@ -741,21 +763,22 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
             field = self.field.value_type
 
         vocabulary_name = self.vocabulary
-        if not vocabulary_name:
-            if field is not None and field.vocabularyName:
-                vocabulary_name = field.vocabularyName
-            else:
-                vocabulary_name = 'plone.app.vocabularies.Catalog'
-
         field_name = self.field and self.field.__name__ or None
+
+        context = self.context
+        form = get_widget_form(self)
+        # We need special handling for AddForms
+        if IAddForm.providedBy(form):
+            context = form
+
         args['pattern_options'] = dict_merge(
-            get_relateditems_options(self.context, args['value'],
+            get_relateditems_options(context, args['value'],
                                      self.separator, vocabulary_name,
                                      self.vocabulary_view, field_name,
                                      widget=self),
             args['pattern_options'])
 
-        if not self.vocabulary:  # widget vocab takes precedence over field
+        if not self.vocabulary_override:  # widget vocab takes precedence over field
             if field and getattr(field, 'vocabulary', None):
                 form_url = self.request.getURL()
                 source_url = "%s/++widget++%s/@@getSource" % (
@@ -1000,6 +1023,7 @@ class DXFieldPermissionChecker(object):
                     else:
                         widget = queryMultiAdapter((field, self._request),
                                                    IFieldWidget)
+                    widget.update()
                     if getattr(widget, 'vocabulary', None) != vocabulary_name:
                         return False
                 # Create mapping of all schema permissions

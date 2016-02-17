@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from Acquisition import aq_inner, aq_parent
+from Acquisition import aq_inner, aq_parent, aq_base
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.interfaces._content import IFolderish
 from Products.CMFCore.utils import getToolByName
@@ -140,14 +140,16 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     options = get_ajaxselect_options(context, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
-
-    msgstr = translate(_plone(u'Search'), context=context.REQUEST)
+    if IAddForm.providedBy(context):
+        context = context.context
+    request = getattr(context, 'REQUEST')
+    msgstr = translate(_plone(u'Search'), context=request)
     options.setdefault('searchText', msgstr)
-    msgstr = translate(_(u'Entire site'), context=context.REQUEST)
+    msgstr = translate(_(u'Entire site'), context=request)
     options.setdefault('searchAllText', msgstr)
     msgstr = translate(_plone('tabs_home',
                               default=u'Home'),
-                       context=context.REQUEST)
+                       context=request)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
 
@@ -491,3 +493,10 @@ def get_context_url(context):
     else:
         url = get_portal_url(context)
     return url
+
+
+def get_widget_form(widget):
+    form = getattr(widget, 'form', None)
+    if getattr(aq_base(form), 'parentForm', None) is not None:
+        form = form.parentForm
+    return form
