@@ -12,8 +12,7 @@ New:
 
 Fixes:
 
-- Ensure vocabulary lookup works on add forms for related items widget.
-  [alecm]
+- *add item here*
 
 
 2.0.3 (2016-02-14)
