@@ -119,7 +119,8 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
                              vocabulary_view, field_name=None):
-    options = get_ajaxselect_options(context, value, separator,
+    portal = get_portal()
+    options = get_ajaxselect_options(portal, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
 
@@ -133,12 +134,6 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                        context=request)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
-
-    nav_root = getNavigationRootObject(context, get_portal())
-    options['rootPath'] = (
-        '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'
-    )
-
     return options
 
 
