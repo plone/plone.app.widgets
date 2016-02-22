@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from Acquisition import aq_base
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
 from datetime import datetime
@@ -10,7 +11,7 @@ from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
-from z3c.form.interfaces import IAddForm
+from z3c.form.interfaces import IForm
 from zope.component import getMultiAdapter
 from zope.component import ComponentLookupError
 import json
@@ -119,11 +120,11 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
                              vocabulary_view, field_name=None):
-    portal = get_portal()
-    options = get_ajaxselect_options(portal, value, separator,
+    options = get_ajaxselect_options(context, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
-
+    if IForm.providedBy(context):
+        context = context.context
     request = getRequest()
     msgstr = translate(_(u'Search'), context=request)
     options.setdefault('searchText', msgstr)
@@ -134,6 +135,12 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                        context=request)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
+
+    nav_root = getNavigationRootObject(context, get_portal())
+    options['rootPath'] = (
+        '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'
+    )
+
     return options
 
 
@@ -155,15 +162,15 @@ def get_tinymce_options(context, field, request):
     We're just going to be looking up settings from
     plone pattern options
     """
-    args = {'pattern_options': {}}
+    options = {}
     try:
         pattern_options = getMultiAdapter(
             (context, request, field),
             name="plone_settings").tinymce()['data-pat-tinymce']
-        args['pattern_options'] = json.loads(pattern_options)
+        options = json.loads(pattern_options)
     except (ComponentLookupError, AttributeError):
         pass
-    return args
+    return options
 
 
 def get_portal():
@@ -189,7 +196,7 @@ def get_portal_url(context):
 
 
 def get_context_url(context):
-    if IAddForm.providedBy(context):
+    if IForm.providedBy(context):
         # Use the request URL if we are looking at an addform
         url = context.request.get('URL')
     elif hasattr(context, 'absolute_url'):
@@ -199,3 +206,10 @@ def get_context_url(context):
     else:
         url = get_portal_url(context)
     return url
+
+
+def get_widget_form(widget):
+    form = getattr(widget, 'form', None)
+    if getattr(aq_base(form), 'parentForm', None) is not None:
+        form = form.parentForm
+    return form
