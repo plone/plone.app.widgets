@@ -18,6 +18,8 @@ Fixes:
 - Ensure we have all content for tree query in relateditems
   [Gagaro]
 
+- Sort relateditems tree by sortable_title.
+  [Gagaro]
 
 2.0.3 (2016-02-14)
 ------------------
