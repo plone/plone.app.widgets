@@ -140,7 +140,9 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
         'treeVocabularyUrl',
         '{}/@@getVocabulary?name=plone.app.vocabularies.Catalog'.format(
             portal is not None and portal.absolute_url() or '')
-   )
+    )
+    options.setdefault('sort_on', 'sortable_title')
+    options.setdefault('sort_order', 'ascending')
 
     nav_root = getNavigationRootObject(context, get_portal())
     options['rootPath'] = (
