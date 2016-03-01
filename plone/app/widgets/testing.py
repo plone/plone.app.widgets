@@ -120,10 +120,10 @@ class PloneAppWidgetsDXLayer(PloneAppWidgetsLayer):
 PLONEAPPWIDGETS_FIXTURE_DX = PloneAppWidgetsDXLayer()
 
 PLONEAPPWIDGETS_INTEGRATION_TESTING = IntegrationTesting(
-    bases=(PLONEAPPWIDGETS_FIXTURE_DX,),
+    bases=(PLONEAPPWIDGETS_FIXTURE,),
     name="PloneAppWidgetsLayer:Integration")
 PLONEAPPWIDGETS_DX_INTEGRATION_TESTING = IntegrationTesting(
-    bases=(PLONEAPPWIDGETS_FIXTURE,),
+    bases=(PLONEAPPWIDGETS_FIXTURE_DX,),
     name="PloneAppWidgetsLayer:DXIntegration")
 PLONEAPPWIDGETS_DX_ROBOT_TESTING = FunctionalTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE_DX,
