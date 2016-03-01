@@ -17,6 +17,9 @@ Fixes:
 - Fix related items to search for the whole site rather than from the navigation root only.
   [Gagaro]
 
+- Fix Integration testing layers, their bases (the plain one and the DX one) were wrong.
+  [gforcada]
+
 
 2.0.4 (2016-02-27)
 ------------------
