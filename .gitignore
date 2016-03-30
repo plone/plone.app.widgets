@@ -2,7 +2,6 @@
 *.mo
 *.py?
 *.sw?
-/setup.cfg
 /build
 /.coverage
 /.installed.cfg
