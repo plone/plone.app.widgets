@@ -4,12 +4,13 @@ sudo: false
 cache:
   directories:
   - eggs
+  - parts/node
 # addons:
 #   sauce_connect: true
 install:
 - python bootstrap.py
 - bin/buildout annotate
-- bin/buildout -Nq
+- bin/buildout
 before_script:
 - export ROBOT_DESIRED_CAPABILITIES="$BROWSER,tunnel-identifier:$TRAVIS_JOB_NUMBER"
 - export DISPLAY=:99.0
@@ -20,7 +21,7 @@ script:
 - bin/test
 after_success:
 - bin/createcoverage
-- pip install -q coveralls
+- pip install coveralls
 - coveralls
 # env:
 #   matrix:
