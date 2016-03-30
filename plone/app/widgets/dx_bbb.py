@@ -85,6 +85,7 @@ if HAS_RF:
     def RelatedItemsFieldWidget(field, request):
         widget = FieldWidget(field, RelatedItemsWidget(request))
         widget.vocabulary = 'plone.app.vocabularies.Catalog'
+        widget.vocabulary_override = True
         return widget
 
 if HAS_PAC:
