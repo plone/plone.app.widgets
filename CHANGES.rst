@@ -4,6 +4,9 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- fix vocabulary lookup for related items widget.
+  [petschki]
+
 - Ensure vocabulary lookup works on add forms for related items widget.
   [alecm]
 
@@ -15,7 +18,7 @@ Changelog
   TinyMCE 4 configuration property 'table_class_list'.
   [seanupton]
 
-- Incorporate 'textcolor' plugin into configuration.  This ships with 
+- Incorporate 'textcolor' plugin into configuration.  This ships with
   the included TinyMCE, and has configurable 'forecolor' and 'backcolor'
   buttons in Plone 4 TinyMCE control panel.
   [seanupton]
