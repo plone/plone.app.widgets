@@ -207,11 +207,27 @@ def get_tinymce_options(context, field, request):
 
         # override config plugins settings
         # XXX: the list of loaded plugins may change in plone-mockup
-        config['plugins'] = \
-            '-advlist -autolink -lists -charmap -print -preview ' \
-            '-anchor -searchreplace -visualblocks -code -fullscreen ' \
-            '-insertdatetime -media -table -contextmenu -paste ' \
-            '-plonelink -ploneimage -textcolor'
+        config['plugins'] = [
+            'advlist',
+            'autolink',
+            'lists',
+            'charmap',
+            'print',
+            'preview',
+            'anchor',
+            'searchreplace',
+            'visualblocks',
+            'code',
+            'fullscreen',
+            'insertdatetime',
+            'media',
+            'table',
+            'contextmenu',
+            'paste',
+            'plonelink',
+            'ploneimage',
+            'textcolor',
+        ]
 
         # FIXME: map old names to new names in the configuration for plone5
         # and notify migration-team
@@ -402,7 +418,7 @@ def get_tinymce_options(context, field, request):
         config['resize'] = utility.resizing
 
         if utility.autoresize:
-            config['plugins'] += ' -autoresize'
+            config['plugins'].append('autoresize')
             config['autoresize_min_height'] = config[
                 'theme_advanced_source_editor_height']
 

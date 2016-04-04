@@ -4,6 +4,11 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- update mockup widgets bundle and fix ``get_tinymce_options``
+  to return plugins as list (like Plone 5 does ...
+  see https://github.com/plone/mockup/commit/efd02e50904f55299eb7f00eddc6c9fcf762ffb1)
+  [petschki]
+
 - fix vocabulary lookup for related items widget.
   [petschki]
 
