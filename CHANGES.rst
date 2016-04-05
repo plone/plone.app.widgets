@@ -14,7 +14,8 @@ New:
 
 Fixes:
 
-- *add item here*
+- Fix related items to search for the whole site rather than from the navigation root only.
+  [Gagaro]
 
 
 2.0.4 (2016-02-27)

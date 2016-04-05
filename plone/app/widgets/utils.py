@@ -121,7 +121,7 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 def get_relateditems_options(context, value, separator, vocabulary_name,
                              vocabulary_view, field_name=None):
     portal = get_portal()
-    options = get_ajaxselect_options(context, value, separator,
+    options = get_ajaxselect_options(portal, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
     if IForm.providedBy(context):
@@ -144,9 +144,12 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     options.setdefault('sort_on', 'sortable_title')
     options.setdefault('sort_order', 'ascending')
 
-    nav_root = getNavigationRootObject(context, get_portal())
-    options['rootPath'] = (
+    nav_root = getNavigationRootObject(context, portal)
+    options['basePath'] = (
         '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'
+    )
+    options['rootPath'] = (
+        '/'.join(portal.getPhysicalPath()) if portal else '/'
     )
     return options
 
