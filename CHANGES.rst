@@ -4,14 +4,6 @@ Changelog
 2.0.5 (unreleased)
 ------------------
 
-Incompatibilities:
-
-- *add item here*
-
-New:
-
-- *add item here*
-
 Fixes:
 
 - Fix related items to search for the whole site rather than from the navigation root only.
