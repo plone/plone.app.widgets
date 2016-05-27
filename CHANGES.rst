@@ -4,6 +4,9 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
+- Update mockup bundle, including fix for link modal in TinyMCE.
+  [seanupton]
+
 - update mockup widgets bundle and fix ``get_tinymce_options``
   to return plugins as list (like Plone 5 does ...
   see https://github.com/plone/mockup/commit/efd02e50904f55299eb7f00eddc6c9fcf762ffb1)
