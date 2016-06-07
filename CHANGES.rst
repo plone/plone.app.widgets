@@ -14,7 +14,12 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Don't aquire navigation root via ``getNavigationRootObject`` but use ``getSite``, which produces same results.
+  Also fixes a problem, where related items widget options for registry controlpanel forms tried to call ``getPhysicalPath`` on a plone.app.registry ``RegistryProxy``.
+  [thet]
+
+- Remove apparently unnecessary ``utils.get_portal_url`` and replace with call to ``getSite().absolute_url()``.
+  [thet]
 
 
 2.0.5 (2016-04-28)

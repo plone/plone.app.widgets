@@ -4,7 +4,6 @@ from Acquisition import aq_base
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
 from datetime import datetime
-from plone.app.layout.navigation.root import getNavigationRootObject
 from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
@@ -144,18 +143,13 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     options.setdefault('sort_on', 'sortable_title')
     options.setdefault('sort_order', 'ascending')
 
-    nav_root = getNavigationRootObject(context, portal)
-    options['basePath'] = (
-        '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'
-    )
-    options['rootPath'] = (
-        '/'.join(portal.getPhysicalPath()) if portal else '/'
-    )
+    options['basePath'] = '/'.join(getSite().getPhysicalPath())
+    options['rootPath'] = '/'.join(portal.getPhysicalPath()) if portal else '/'
     return options
 
 
 def get_querystring_options(context, querystring_view):
-    portal_url = get_portal_url(context)
+    portal_url = getSite().absolute_url()
     try:
         base_url = context.absolute_url()
     except AttributeError:
@@ -191,20 +185,6 @@ def get_portal():
                 return potential_portal
 
 
-def get_portal_url(context):
-    portal = get_portal()
-    if portal:
-        root = getNavigationRootObject(context, portal)
-        if root:
-            try:
-                return root.absolute_url()
-            except AttributeError:
-                return portal.absolute_url()
-        else:
-            return portal.absolute_url()
-    return ''
-
-
 def get_context_url(context):
     if IForm.providedBy(context):
         # Use the request URL if we are looking at an addform
@@ -214,7 +194,7 @@ def get_context_url(context):
         if callable(url):
             url = url()
     else:
-        url = get_portal_url(context)
+        url = getSite().absolute_url()
     return url
 
 
