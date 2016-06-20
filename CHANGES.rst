@@ -1,8 +1,8 @@
 Changelog
 =========
 
-1.8.1 (unreleased)
-------------------
+1.9 (unreleased)
+----------------
 
 - Upgrade widgets bundle to latest version (2.3.0 - unreleased).
   [thet]
