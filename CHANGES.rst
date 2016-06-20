@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9 (unreleased)
+1.9 (2016-06-21)
 ----------------
 
 - Upgrade widgets bundle to latest version (2.3.0 - unreleased).
