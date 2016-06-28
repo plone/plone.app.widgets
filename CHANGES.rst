@@ -4,7 +4,12 @@ Changelog
 1.10 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- Related items data converter supports explicit value_type specified in
+  field when using collections of UUID values.  This is backward-compatible
+  with previous conversion to field values, supports str/unicode value(s),
+  whichever is specified by field (backported from related change to
+  plone.app.z3cform 2.0.1).
+  [seanupton]
 
 
 1.9 (2016-06-21)
