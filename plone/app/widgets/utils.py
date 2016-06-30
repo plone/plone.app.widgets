@@ -318,7 +318,9 @@ def get_tinymce_options(context, field, request):
 
         button_settings['directionality'] = 'attribs' in config[
             'buttons'] and 'ltr rtl' or ''
-        # TODO: mapping for spellchecker after plugin has been fixed
+        
+        # enable browser spell check by default:
+        config['browser_spellcheck'] = True
 
         # FIXME: currently save button does not show up
         if 'save' in config['buttons']\
@@ -366,6 +368,15 @@ def get_tinymce_options(context, field, request):
             lambda pair: {'title': pair[0], 'value': pair[1]},
             [e.strip().split('|') for e in utility.tablestyles.split('\n')]
         )
+
+        # if forecolor/backcolor enabled in buttons, allow paste of color
+        # in text from word processing / rich text:
+        paste_allow = []
+        if 'forecolor' in config['buttons']:
+            paste_allow.append('color')
+        if 'backcolor' in config['buttons']:
+            paste_allow.append('background')
+        config['paste_retain_style_properties'] = ' '.join(paste_allow)
 
         # contextmenu is no longer available, use this setting for menubar
         # FIXME: plone5 rename setting

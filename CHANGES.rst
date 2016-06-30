@@ -4,6 +4,15 @@ Changelog
 1.10 (unreleased)
 -----------------
 
+- Enable pasting of foreground, background color if and only if the
+  foreground and background color toolbar buttons are enabled for editing.
+  [seanupton]
+
+- Browser spell check enabled by default; this is usually desired for most
+  editing, and low-risk.  Users can use Shift + right-click (Firefox)
+  or Control + right-click (Chrome) to show correction suggestions.
+  [seanupton]
+
 - Related items options computes context for all z3c.form based forms,
   not just add forms. This is congruent with how plone.app.widgets 2.0.4+.
   [seanupton]
