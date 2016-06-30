@@ -947,7 +947,6 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         widget.context = context
         widget.selectable_types = ['SomeSelectableType', ]
         widget.update()
-        self.maxDiff = None
         self.assertEqual(
             {
                 'name': None,
