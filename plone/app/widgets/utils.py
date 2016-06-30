@@ -151,12 +151,6 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                               default=u'Home'),
                        context=request)
     options.setdefault('homeText', msgstr)
-    options.setdefault('folderTypes', ['Folder'])
-
-    properties = getToolByName(context, 'portal_properties')
-    if properties:
-        options['folderTypes'] = properties.site_properties.getProperty(
-            'typesLinkToFolderContentsInFC', options['folderTypes'])
 
     if getattr(widget, 'selectable_types', None):
         options['selectableTypes'] = widget.selectable_types
@@ -444,7 +438,6 @@ def get_tinymce_options(context, field, request):
                 'basePath': folder_path,
                 'rootPath': '/'.join(nav_root.getPhysicalPath()) if nav_root
                             else '/',
-                'folderTypes': utility.containsobjects.split('\n')
             },
             'upload': {
                 'initialFolder': initial,

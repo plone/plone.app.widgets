@@ -947,13 +947,13 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         widget.context = context
         widget.selectable_types = ['SomeSelectableType', ]
         widget.update()
+        self.maxDiff = None
         self.assertEqual(
             {
                 'name': None,
                 'value': u'',
                 'pattern': 'relateditems',
                 'pattern_options': {
-                    'folderTypes': ['SomeType'],
                     'selectableTypes': ['SomeSelectableType', ],
                     'homeText': u'Home',
                     'searchAllText': u'Entire site',
@@ -1166,12 +1166,6 @@ class RichTextWidgetTests(unittest.TestCase):
         self.assertEqual(
             base_args['pattern_options']['relatedItems']['basePath'],
             '/plone'
-        )
-        # Next, we're only testing for the existance of folderTypes parameter.
-        # Values can either be set via GenericSetup (tinymce.xml) or
-        # plone.app.registry.
-        self.assertTrue(
-            'folderTypes' in base_args['pattern_options']['relatedItems']
         )
 
         if not PLONE50:

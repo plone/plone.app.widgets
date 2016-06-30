@@ -4,6 +4,10 @@ Changelog
 1.10 (unreleased)
 -----------------
 
+- Omit 'folderTypes' parameter from configuration of related items widget.
+  This is no longer used by mockup 2.x.
+  [seanupton]
+
 - Related items data converter supports explicit value_type specified in
   field when using collections of UUID values.  This is backward-compatible
   with previous conversion to field values, supports str/unicode value(s),
