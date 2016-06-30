@@ -8,7 +8,7 @@ from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
 from plone.registry.interfaces import IRegistry
 from plone.uuid.interfaces import IUUID
-from z3c.form.interfaces import IAddForm
+from z3c.form.interfaces import IForm
 from zope.component import getMultiAdapter
 from zope.component import getUtility
 from zope.component import providedBy
@@ -140,7 +140,7 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     options = get_ajaxselect_options(context, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
-    if IAddForm.providedBy(context):
+    if IForm.providedBy(context):
         context = context.context
     request = getattr(context, 'REQUEST')
     msgstr = translate(_plone(u'Search'), context=request)
@@ -492,7 +492,7 @@ def get_portal_url(context):
 
 
 def get_context_url(context):
-    if IAddForm.providedBy(context):
+    if IForm.providedBy(context):
         # Use the request URL if we are looking at an addform
         url = context.request.get('URL')
     elif hasattr(context, 'absolute_url'):

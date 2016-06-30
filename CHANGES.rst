@@ -4,6 +4,10 @@ Changelog
 1.10 (unreleased)
 -----------------
 
+- Related items options computes context for all z3c.form based forms,
+  not just add forms. This is congruent with how plone.app.widgets 2.0.4+.
+  [seanupton]
+
 - Omit 'folderTypes' parameter from configuration of related items widget.
   This is no longer used by mockup 2.x.
   [seanupton]
