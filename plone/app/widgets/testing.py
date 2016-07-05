@@ -14,7 +14,7 @@ from z3c.form import form
 from zope.configuration import xmlconfig
 from zope.interface import Interface
 from zope.interface import directlyProvides
-from zope.interface import implements
+from zope.interface import implementer
 from zope.publisher.browser import TestRequest as BaseTestRequest
 from zope.schema import Choice
 from zope.schema import List
@@ -23,8 +23,8 @@ from zope.schema.vocabulary import SimpleTerm
 from zope.schema.vocabulary import SimpleVocabulary
 
 
+@implementer(IVocabularyFactory)
 class ExampleVocabulary(object):
-    implements(IVocabularyFactory)
 
     def __call__(self, context, query=None):
         items = [u'One', u'Two', u'Three']

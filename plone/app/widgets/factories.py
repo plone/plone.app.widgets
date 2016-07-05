@@ -1,10 +1,10 @@
-from zope.interface import implements
+from zope.interface import implementer
 from plone.namedfile.storages import MAXCHUNKSIZE
 from plone.namedfile.interfaces import IStorage
 
 
+@implementer(IStorage)
 class Zope2FileUploadStorable(object):
-    implements(IStorage)
 
     def store(self, data, blob):
         data.seek(0)
