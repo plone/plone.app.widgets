@@ -6,6 +6,7 @@ from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.interfaces import IPloneSiteRoot
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
+from plone.portlets.interfaces import IPortletAssignmentMapping
 from plone.registry.interfaces import IRegistry
 from plone.uuid.interfaces import IUUID
 from z3c.form.interfaces import IForm
@@ -430,6 +431,8 @@ def get_tinymce_options(context, field, request):
         folder = context
         if not IFolderish.providedBy(context):
             folder = aq_parent(context)
+        if IPortletAssignmentMapping.providedBy(folder):
+            folder = aq_parent(folder)
         if IPloneSiteRoot.providedBy(folder):
             initial = None
         else:

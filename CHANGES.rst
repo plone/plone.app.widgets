@@ -4,6 +4,10 @@ Changelog
 1.10 (unreleased)
 -----------------
 
+- TinyMCE folder context adjusted appropriately for use in static text
+  portlet: uploads now work, browsing now starts at appropriate root.
+  [seanupton]
+
 - Expose alternate RichTextFieldWidget factory, not tightly bound to
   plone.app.contenttypes, when plone.app.contenttypes is not installed.
   This may be useful for use by static text portlet, other Dexterity
