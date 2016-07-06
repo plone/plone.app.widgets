@@ -979,6 +979,11 @@ if HAS_PAC:
     @implementer(IFieldWidget)
     def RichTextFieldWidget(field, request):
         return FieldWidget(field, RichTextWidget(request))
+else:
+    # expose RichTextFieldWidget factory for non-PAC plone 4 sites:
+    @implementer(IFieldWidget)
+    def RichTextFieldWidget(field, request):
+        return FieldWidget(field, RichTextWidget(request))
 
 
 class MockRequest(TestRequest):

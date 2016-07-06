@@ -4,6 +4,12 @@ Changelog
 1.10 (unreleased)
 -----------------
 
+- Expose alternate RichTextFieldWidget factory, not tightly bound to
+  plone.app.contenttypes, when plone.app.contenttypes is not installed.
+  This may be useful for use by static text portlet, other Dexterity
+  content types on sties where plone.app.contenttypes is not in use.
+  [seanupton]
+
 - Enable pasting of foreground, background color if and only if the
   foreground and background color toolbar buttons are enabled for editing.
   [seanupton]
