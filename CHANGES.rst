@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10 (unreleased)
+1.9.1 (unreleased)
 -----------------
 
 - TinyMCE folder context adjusted appropriately for use in static text
