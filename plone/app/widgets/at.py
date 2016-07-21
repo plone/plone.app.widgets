@@ -147,6 +147,9 @@ class DateWidget(BaseWidget):
             return empty_marker
 
         value = value.split('-')
+        if value[0] == '':
+            # empty value, clear any previous value
+            return None, {}
 
         try:
             value = DateTime(datetime(*map(int, value)))
@@ -240,7 +243,7 @@ class DatetimeWidget(DateWidget):
 
         tmp = value.split(' ')
         if not tmp[0]:
-            # empty: clear, not preserve, any existing value
+            # empty: clear, not preserve, any previous value
             return None, {}
         value = tmp[0].split('-')
         if len(tmp) == 2 and ':' in tmp[1]:
