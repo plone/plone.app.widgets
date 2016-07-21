@@ -119,6 +119,16 @@ class DateWidgetTests(unittest.TestCase):
             (datetime(2011, 11, 22))
         )
 
+    def test_process_form_empty_existing(self):
+        form = {
+            'fieldname': ''
+        }
+        self.assertEqual(
+            self.widget.process_form(
+                self.context, self.field, form)[0],
+            None)
+        )
+
 
 class DatetimeWidgetTests(unittest.TestCase):
 

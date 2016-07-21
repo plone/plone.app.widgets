@@ -4,6 +4,10 @@ Changelog
 1.9.1 (unreleased)
 -----------------
 
+- Now possible to clear Archetypes date/time field value, replacing with
+  empty value.
+  [seanupton]
+
 - TinyMCE folder context adjusted appropriately for use in static text
   portlet: uploads now work, browsing now starts at appropriate root.
   [seanupton]
