@@ -126,7 +126,7 @@ class DateWidgetTests(unittest.TestCase):
         self.assertEqual(
             self.widget.process_form(
                 self.context, self.field, form)[0],
-            None)
+            None
         )
 
 
