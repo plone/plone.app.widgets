@@ -5,7 +5,7 @@ Changelog
 -----------------
 
 - Now possible to clear Archetypes date/time field value, replacing any
-  previous value with empty value, when desired for both date ane datetime.
+  previous value with empty value, when desired for both date and datetime.
   [seanupton]
 
 - TinyMCE folder context adjusted appropriately for use in static text
