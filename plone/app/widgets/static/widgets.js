@@ -33012,7 +33012,7 @@ define('mockup-patterns-relateditems',[
       resultTemplate: '' +
         '<div class="   pattern-relateditems-result  <% if (selected) { %>pattern-relateditems-active<% } %>">' +
         '  <a href="#" class=" pattern-relateditems-result-select <% if (selectable) { %>selectable<% } %>">' +
-        '    <% if (typeof getIcon !== "undefined" && getIcon) { %><img src="<%- getURL %>/@@images/image/icon "> <% } %>' +
+        '    <% if (getIcon === true || portal_type === "Image") { %><img src="<%- getURL %>/@@images/image/icon "> <% } %>' +
         '    <span class="pattern-relateditems-result-title  <% if (typeof review_state !== "undefined") { %> state-<%- review_state %> <% } %>  " /span>' +
         '    <span class="pattern-relateditems contenttype-<%- portal_type.toLowerCase() %>"><%- Title %></span>' +
         '    <span class="pattern-relateditems-result-path"><%- path %></span>' +
@@ -33026,7 +33026,7 @@ define('mockup-patterns-relateditems',[
       resultTemplateSelector: null,
       selectionTemplate: '' +
         '<span class="pattern-relateditems-item">' +
-        ' <% if (typeof getIcon !== "undefined" && getIcon) { %> <img src="<%- getURL %>/@@images/image/icon"> <% } %>' +
+        ' <% if (getIcon === true || portal_type === "Image") { %> <img src="<%- getURL %>/@@images/image/icon"> <% } %>' +
         ' <span class="pattern-relateditems-item-title contenttype-<%- portal_type.toLowerCase() %> <% if (typeof review_state !== "undefined") { %> state-<%- review_state  %> <% } %>" ><%- Title %></span>' +
         ' <span class="pattern-relateditems-item-path"><%- path %></span>' +
         '</span>',
@@ -33582,7 +33582,7 @@ define('mockup-patterns-querystring',[
       }
       var newOperator = "plone.app.querystring.operation.string.advanced";
 
-      if( self.indexes.path.operators[newOperator] === undefined ) {
+      if( typeof self.indexes.path.operators[newOperator] === 'undefined' ) {
         self.indexes.path.operations.push(newOperator);
         self.indexes.path.operators[newOperator] = {
           title: 'Advanced',
@@ -33644,7 +33644,7 @@ define('mockup-patterns-querystring',[
 
       self.appendOperators(index);
 
-      if (operator === undefined) {
+      if (typeof operator === 'undefined') {
         operator = self.$operator.select2('val');
       }
 
@@ -33801,7 +33801,7 @@ define('mockup-patterns-querystring',[
             });
         }else{
           var pathAndDepth = ['', -1];
-          if( value !== undefined ) {
+          if( typeof value !== 'undefined' ) {
               pathAndDepth = value.split('::');
           }
           self.$value = $('<input type="text"/>')
@@ -33838,7 +33838,7 @@ define('mockup-patterns-querystring',[
         self.$value.patternSelect2({ width: '250px' });
       }
 
-      if (value !== undefined && typeof self.$value !== 'undefined') {
+      if (typeof value !== 'undefined' && typeof self.$value !== 'undefined') {
         if ($.isArray(self.$value)) {
           $.each(value, function( i, v ) {
             self.$value[i].select2('val', v);
@@ -33948,7 +33948,7 @@ define('mockup-patterns-querystring',[
         if( ival === "path" && self.$value.val() !== '') {
           str += self.getDepthString();
         }
-        else if( self.initial !== undefined ) {
+        else if( typeof self.initial !== 'undefined' ) {
           str = vstrbase + self.initial;
           //Sometimes the RelatedItemsWidget won't be loaded by this point.
           //This only should happen on the initial page load.
@@ -34010,7 +34010,7 @@ define('mockup-patterns-querystring',[
         vval = '""';
       }
 
-      if( self.indexes[ival].operators[oval] === undefined ) {
+      if( typeof self.indexes[ival].operators[oval] === 'undefined' ) {
         return;
       }
 
@@ -34021,7 +34021,7 @@ define('mockup-patterns-querystring',[
           out = "",
           depth = $('.'+self.options.classDepthName).val();
 
-      if( depth !== "" && depth !== undefined ) {
+      if( depth !== "" && typeof depth !== 'undefined' ) {
         out += '::' + depth;
       }
       return out;
@@ -84577,7 +84577,12 @@ define('mockup-patterns-modal',[
 
         // Non-ajax link (I know it says "ajaxUrl" ...)
         if (options.displayInModal === false) {
-          window.parent.location.href = url;
+          if($action.attr('target') === '_blank'){
+            window.open(url, '_blank');
+            self.loading.hide();
+          }else{
+            window.location = url;
+          }
           return;
         }
 

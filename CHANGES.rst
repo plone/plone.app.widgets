@@ -4,6 +4,12 @@ Changelog
 1.9.1 (unreleased)
 -----------------
 
+- Update widgets bundle to the latest (2.3.0 - unreleased, 2016-08-18).
+  This includes minor widget improvements for related items widget,
+  for icon compatibility with Plone 4, and button display style.  It
+  also fixes progress bar styles for upload pattern as used in TinyMCE.
+  [seanupton]
+
 - Now possible to clear Archetypes date/time field value, replacing any
   previous value with empty value, when desired for both date and datetime.
   [seanupton]
