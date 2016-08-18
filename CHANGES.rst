@@ -4,6 +4,9 @@ Changelog
 1.9.1 (unreleased)
 -----------------
 
+- Update README with notes regarding rich text widget.
+  [seanupton]
+
 - Update widgets bundle to the latest (2.3.0 - unreleased, 2016-08-18).
   This includes minor widget improvements for related items widget,
   for icon compatibility with Plone 4, and button display style.  It

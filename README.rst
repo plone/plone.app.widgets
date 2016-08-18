@@ -53,8 +53,11 @@ The fields that are using updated widgets are:
 - **Related items field** (RelatedItemsWidget)
 - **Query string field** (QueryStringWidget) in case `plone.app.contenttypes`_
   is installed.
-
-.. - **Text field** (TinyMCEWidget)
+- **Text field** (TinyMCEWidget) for ATContentTypes 'text' field, and for
+  use in `plone.app.contenttypes` (optional).  This may be used for other
+  content types in add-ons, but may require additional configuration and/or
+  registration for broader use when `plone.app.contenttypes` is not installed
+  in a Plone 4 site.
 
 All client side code (javascript/css/images) is done and tested as part of
 `Mockup`_ project.
