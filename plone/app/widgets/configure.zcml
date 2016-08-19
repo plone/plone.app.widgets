@@ -246,6 +246,9 @@
           <adapter factory=".dx_bbb.RichTextFieldWidget" />
       </configure>
 
+      <!-- rich text widget for non-p.a.contenttypes Plone 4 -->
+      <adapter factory=".dx.RichTextFieldWidget" />
+
     </configure>
 
   </configure>

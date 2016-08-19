@@ -5,6 +5,7 @@ from Products.CMFPlone.utils import safe_callable
 from datetime import date
 from datetime import datetime
 from lxml import etree
+from plone.app.textfield.interfaces import IRichText
 from plone.app.textfield.value import RichTextValue
 from plone.app.textfield.widget import IRichTextWidget as patextfield_IRichTextWidget  # noqa
 from plone.app.textfield.widget import RichTextWidget as patextfield_RichTextWidget  # noqa
@@ -70,7 +71,7 @@ import json
 
 try:
     from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
-    from plone.app.contenttypes.behaviors.richtext import IRichText  # noqa
+    from plone.app.contenttypes.behaviors import richtext  # noqa
     HAS_PAC = True
 except ImportError:
     HAS_PAC = False
@@ -779,7 +780,7 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
                                      widget=self),
             args['pattern_options'])
 
-        if not self.vocabulary_override:  # widget vocab takes precedence over field
+        if not self.vocabulary_override:  # widget vocab precedence over field
             if field and getattr(field, 'vocabulary', None):
                 form_url = self.request.getURL()
                 source_url = "%s/++widget++%s/@@getSource" % (
@@ -975,12 +976,13 @@ if HAS_PAC:
     def QueryStringFieldWidget(field, request):
         return FieldWidget(field, QueryStringWidget(request))
 
-    @adapter(getSpecification(IRichText['text']), IFormLayer)
+    @adapter(getSpecification(richtext.IRichText['text']), IFormLayer)
     @implementer(IFieldWidget)
     def RichTextFieldWidget(field, request):
         return FieldWidget(field, RichTextWidget(request))
 else:
     # expose RichTextFieldWidget factory for non-PAC plone 4 sites:
+    @adapter(IRichText, IWidgetsLayer)
     @implementer(IFieldWidget)
     def RichTextFieldWidget(field, request):
         return FieldWidget(field, RichTextWidget(request))

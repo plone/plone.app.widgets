@@ -4,6 +4,13 @@ Changelog
 1.9.1 (unreleased)
 -----------------
 
+- Possible to use Rich Text (TinyMCE 4, properly configured) pattern
+  in Dexterity types other than plone.app.contenttypes implementation,
+  with consistent behavior with other uses of TinyMCE on Plone 4 sites.
+  This is useful for Plone 4 sites wanting to use plone.app.widgets
+  wthout requiring plone.app.contentypes.
+  [seanupton]
+
 - Update README with notes regarding rich text widget.
   [seanupton]
 
