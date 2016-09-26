@@ -2,7 +2,11 @@ Changelog
 =========
 
 1.9.1 (unreleased)
------------------
+------------------
+
+- Use the RAW text for Archetypes based TinyMCE content, this fixes
+  image handling with TinyMCE.
+  [pcdummy]
 
 - Possible to use Rich Text (TinyMCE 4, properly configured) pattern
   in Dexterity types other than plone.app.contenttypes implementation,
