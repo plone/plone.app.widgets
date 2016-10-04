@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '2.0.5.dev0'
+version = '2.0.7.dev0'
 
 setup(
     name='plone.app.widgets',
@@ -13,6 +13,7 @@ setup(
     classifiers=[
         "Framework :: Plone",
         "Framework :: Plone :: 5.0",
+        "Framework :: Plone :: 5.1",
         "Programming Language :: Python",
         "Programming Language :: Python :: 2.7",
     ],

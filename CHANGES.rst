@@ -1,16 +1,33 @@
 Changelog
 =========
 
-2.0.5 (unreleased)
+2.0.7 (unreleased)
 ------------------
 
-Incompatibilities:
+Breaking changes:
 
 - *add item here*
 
-New:
+New features:
 
 - *add item here*
+
+Bug fixes:
+
+- *add item here*
+
+
+2.0.6 (2016-08-18)
+------------------
+
+Bug fixes:
+
+- Use zope.interface decorator.
+  [gforcada]
+
+
+2.0.5 (2016-04-28)
+------------------
 
 Fixes:
 
