@@ -14,7 +14,8 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Cleanup options and remove unused ones.
+  [thet]
 
 
 2.0.6 (2016-08-18)

@@ -126,23 +126,6 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                                      field_name)
     if IForm.providedBy(context):
         context = context.context
-    request = getRequest()
-    msgstr = translate(_(u'Search'), context=request)
-    options.setdefault('searchText', msgstr)
-    msgstr = translate(_(u'Entire site'), context=request)
-    options.setdefault('searchAllText', msgstr)
-    msgstr = translate(_('tabs_home',
-                       default=u'Home'),
-                       context=request)
-    options.setdefault('homeText', msgstr)
-    options.setdefault('folderTypes', ['Folder'])
-    options.setdefault(
-        'treeVocabularyUrl',
-        '{}/@@getVocabulary?name=plone.app.vocabularies.Catalog'.format(
-            portal is not None and portal.absolute_url() or '')
-    )
-    options.setdefault('sort_on', 'sortable_title')
-    options.setdefault('sort_order', 'ascending')
 
     nav_root = getNavigationRootObject(context, portal)
     options['basePath'] = (
