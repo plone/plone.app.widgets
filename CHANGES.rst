@@ -1,8 +1,8 @@
 Changelog
 =========
 
-2.0.8 (unreleased)
-------------------
+2.1 (unreleased)
+----------------
 
 Breaking changes:
 
@@ -14,7 +14,9 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Root the related items widget path bar to the top most visible site in the url and not the portal object itself.
+  This avoids related item widgets in subsites being able to break out of their virtual hosting root.
+  [thet]
 
 
 2.0.7 (2016-11-19)
@@ -27,6 +29,13 @@ Bug fixes:
 
 - Take more time during robot tests.
   I hope that this makes a sometimes failing test always pass.  [maurits]
+- Root the related items widget path bar to the top most visible site in the url and not the portal object itself.
+  This avoids related item widgets in subsites being able to break out of their virtual hosting root.
+  [thet]
+
+- Root the related items widget path bar to the top most visible site in the url and not the portal object itself.
+  This avoids related item widgets in subsites being able to break out of their virtual hosting root.
+  [thet]
 
 
 2.0.6 (2016-08-18)

@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
 
 from Acquisition import aq_base
-from Products.CMFCore.interfaces import ISiteRoot
-from Products.CMFCore.utils import getToolByName
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
+from Products.CMFCore.interfaces import ISiteRoot
+from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone.utils import get_top_site_from_url
+from z3c.form.interfaces import IForm
+from zope.component import ComponentLookupError
+from zope.component import getMultiAdapter
 from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
+from zope.globalrequest import getRequest
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
-from z3c.form.interfaces import IForm
-from zope.component import getMultiAdapter
-from zope.component import ComponentLookupError
+
 import json
-from zope.globalrequest import getRequest
+
 
 _ = MessageFactory('plone')
 
@@ -120,13 +123,13 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
                              vocabulary_view, field_name=None):
-    portal = get_portal()
-    options = get_ajaxselect_options(portal, value, separator,
-                                     vocabulary_name, vocabulary_view,
-                                     field_name)
     if IForm.providedBy(context):
         context = context.context
     request = getRequest()
+    site = get_top_site_from_url(context, request)
+    options = get_ajaxselect_options(site, value, separator,
+                                     vocabulary_name, vocabulary_view,
+                                     field_name)
     msgstr = translate(_(u'Search'), context=request)
     options.setdefault('searchText', msgstr)
     msgstr = translate(_(u'Entire site'), context=request)
@@ -136,21 +139,13 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                        context=request)
     options.setdefault('homeText', msgstr)
     options.setdefault('folderTypes', ['Folder'])
-    options.setdefault(
-        'treeVocabularyUrl',
-        '{}/@@getVocabulary?name=plone.app.vocabularies.Catalog'.format(
-            portal is not None and portal.absolute_url() or '')
-    )
     options.setdefault('sort_on', 'sortable_title')
     options.setdefault('sort_order', 'ascending')
 
-    nav_root = getNavigationRootObject(context, portal)
-    options['basePath'] = (
-        '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'
-    )
-    options['rootPath'] = (
-        '/'.join(portal.getPhysicalPath()) if portal else '/'
-    )
+    nav_root = getNavigationRootObject(context, site)
+    options['basePath'] = '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'  # noqa
+    options['rootPath'] = '/'.join(site.getPhysicalPath()) if site else '/'
+    options['rootUrl'] = site.absolute_url() if site else ''
     return options
 
 
