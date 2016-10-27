@@ -361,7 +361,7 @@ class AjaxSelectWidget(BaseWidget):
         args['name'] = field.getName()
         value = request.get(field.getName(), field.getAccessor(context)())
         if isinstance(value, basestring):
-            value = value.split(self.separator)
+            value = value.strip().split(self.separator)
         args['value'] = self.separator.join(value)
 
         args.setdefault('pattern_options', {})
