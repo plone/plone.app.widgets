@@ -359,8 +359,10 @@ class AjaxSelectWidget(BaseWidget):
             self.vocabulary = vocabulary_factory
 
         args['name'] = field.getName()
-        args['value'] = self.separator.join(request.get(
-            field.getName(), field.getAccessor(context)()))
+        value = request.get(field.getName(), field.getAccessor(context)())
+        if isinstance(value, basestring):
+            value = value.strip().split(self.separator)
+        args['value'] = self.separator.join(value)
 
         args.setdefault('pattern_options', {})
         args['pattern_options'] = dict_merge(
