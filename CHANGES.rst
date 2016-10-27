@@ -4,6 +4,10 @@ Changelog
 1.9.1 (unreleased)
 ------------------
 
+- Fix value for at.AjaxSelectWidget when the edit form returns with
+  validation errors
+  [petschki]
+
 - Use the RAW text for Archetypes based TinyMCE content, this fixes
   image handling with TinyMCE.
   [pcdummy]
