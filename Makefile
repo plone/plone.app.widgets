@@ -3,9 +3,6 @@ NIX_PATH=~/.nix-defexpr/channels/
 all: bootstrap
 	bin/buildout -v
 
-travis: bootstrap
-	bin/buildout -c travis.cfg -v
-
 bootstrap:
 	NIX_PATH=${NIX_PATH} nix-build --out-link nixenv dev.nix
 	./nixenv/bin/virtualenv --distribute --clear .
