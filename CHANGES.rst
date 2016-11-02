@@ -14,7 +14,8 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Take more time during robot tests.
+  I hope that this makes a sometimes failing test always pass.  [maurits]
 
 
 2.0.6 (2016-08-18)
