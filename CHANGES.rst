@@ -14,6 +14,9 @@ New features:
 
 Bug fixes:
 
+- No longer test on Travis.  We are tested on jenkins.plone.org, and
+  the Travis setup on master is pretty broken.  [maurits]
+
 - Take more time during robot tests.
   I hope that this makes a sometimes failing test always pass.  [maurits]
 
