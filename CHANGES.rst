@@ -4,14 +4,6 @@ Changelog
 2.0.7 (unreleased)
 ------------------
 
-Breaking changes:
-
-- *add item here*
-
-New features:
-
-- *add item here*
-
 Bug fixes:
 
 - No longer test on Travis.  We are tested on jenkins.plone.org, and
