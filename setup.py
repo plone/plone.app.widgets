@@ -2,7 +2,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-version = '2.1.1.dev0'
+version = '2.2.dev0'
 
 setup(
     name='plone.app.widgets',
@@ -14,7 +14,6 @@ setup(
     ),
     classifiers=[
         'Framework :: Plone',
-        'Framework :: Plone :: 5.0',
         'Framework :: Plone :: 5.1',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
@@ -33,7 +32,7 @@ setup(
         'plone.app.dexterity',
         'plone.app.event>=1.2',
         'plone.app.vocabularies>=2.1.12dev',  # users vocabulary used
-        'plone.app.z3cform'
+        'plone.app.z3cform',
         'Products.CMFPlone>=5.0.dev0',  # compatibility with jQuery 1.9+
         'setuptools',
     ],

@@ -1,8 +1,8 @@
 Changelog
 =========
 
-2.1.1 (unreleased)
-------------------
+2.2 (unreleased)
+----------------
 
 Breaking changes:
 
@@ -20,7 +20,9 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Cleanup: removed unecessary dependencies and conditional imports.
+  Also added utf8headers and run isort.
+  [jensens]
 
 
 2.1 (2017-02-20)
@@ -35,10 +37,6 @@ Bug fixes:
 - Root the related items widget path bar to the top most visible site in the url and not the portal object itself.
   This avoids related item widgets in subsites being able to break out of their virtual hosting root.
   [thet]
-
-- Cleanup: removed unecessary dependencies and conditional imports.
-  Also added utf8headers and run isort.
-  [jensens]
 
 
 2.0.7 (2016-11-19)
