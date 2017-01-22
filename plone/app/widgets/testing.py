@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from doctest import ELLIPSIS
 from doctest import NORMALIZE_WHITESPACE
 from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
@@ -12,9 +11,9 @@ from plone.autoform.form import AutoExtensibleForm
 from plone.testing import z2
 from z3c.form import form
 from zope.configuration import xmlconfig
-from zope.interface import Interface
-from zope.interface import directlyProvides
 from zope.interface import implementer
+from zope.interface import Interface
+from zope.interface import provider
 from zope.publisher.browser import TestRequest as BaseTestRequest
 from zope.schema import Choice
 from zope.schema import List
@@ -31,44 +30,25 @@ class ExampleVocabulary(object):
         tmp = SimpleVocabulary([
             SimpleTerm(it.lower(), it.lower(), it)
             for it in items
-            if query is None
-            or query.lower() in it.lower()
+            if query is None or query.lower() in it.lower()
         ])
         tmp.test = 1
         return tmp
 
 
+@provider(IVocabularyFactory)
 def ExampleFunctionVocabulary(context, query=None):
     items = [u'First', u'Second', u'Third']
     tmp = SimpleVocabulary([
         SimpleTerm(it.lower(), it.lower(), it)
         for it in items
-        if query is None
-        or query.lower() in it.lower()
+        if query is None or query.lower() in it.lower()
     ])
     return tmp
-directlyProvides(ExampleFunctionVocabulary, IVocabularyFactory)
 
 
 class TestRequest(BaseTestRequest):
     pass
-
-
-class DummyContext(object):
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-
-class DummyATField(object):
-
-    def getName(self):
-        return 'dummyname'
-
-    def getAccessor(self, context):
-        def accessor():
-            return 'dummyvalue'
-        return accessor
 
 
 class PloneAppWidgetsLayer(PloneSandboxLayer):
@@ -112,7 +92,7 @@ class PloneAppWidgetsDXLayer(PloneAppWidgetsLayer):
 
     def setUpPloneSite(self, portal):
         super(PloneAppWidgetsDXLayer, self).setUpPloneSite(portal)
-        portal.portal_workflow.setDefaultChain("simple_publication_workflow")
+        portal.portal_workflow.setDefaultChain('simple_publication_workflow')
         # we need contenttypes before installing widgets
         self.applyProfile(portal, 'plone.app.contenttypes:default')
 
@@ -121,15 +101,15 @@ PLONEAPPWIDGETS_FIXTURE_DX = PloneAppWidgetsDXLayer()
 
 PLONEAPPWIDGETS_INTEGRATION_TESTING = IntegrationTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE_DX,),
-    name="PloneAppWidgetsLayer:Integration")
+    name='PloneAppWidgetsLayer:Integration')
 PLONEAPPWIDGETS_DX_INTEGRATION_TESTING = IntegrationTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE,),
-    name="PloneAppWidgetsLayer:DXIntegration")
+    name='PloneAppWidgetsLayer:DXIntegration')
 PLONEAPPWIDGETS_DX_ROBOT_TESTING = FunctionalTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE_DX,
            REMOTE_LIBRARY_BUNDLE_FIXTURE,
            z2.ZSERVER_FIXTURE),
-    name="PloneAppWidgetsLayerDX:Robot")
+    name='PloneAppWidgetsLayerDX:Robot')
 
 optionflags = (ELLIPSIS | NORMALIZE_WHITESPACE)
 

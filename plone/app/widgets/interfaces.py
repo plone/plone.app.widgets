@@ -1,6 +1,5 @@
 from zope.interface import Interface
 from plone.app.z3cform.interfaces import IPloneFormLayer
-from zope.filerepresentation.interfaces import IFileFactory
 
 
 class IWidgetsLayer(IPloneFormLayer):
