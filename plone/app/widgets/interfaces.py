@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from zope.interface import Interface
 from plone.app.z3cform.interfaces import IPloneFormLayer
+from zope.interface import Interface
 
 
 class IWidgetsLayer(IPloneFormLayer):

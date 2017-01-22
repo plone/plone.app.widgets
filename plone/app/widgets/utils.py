@@ -4,6 +4,7 @@ from Acquisition import aq_base
 from Acquisition import aq_parent
 from datetime import datetime
 from OFS.interfaces import IFolder
+from plone.app.event import base as pae_base
 from plone.app.layout.navigation.root import getNavigationRootObject
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
@@ -18,7 +19,6 @@ from zope.globalrequest import getRequest
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
-from plone.app.event import base as pae_base
 
 import json
 
