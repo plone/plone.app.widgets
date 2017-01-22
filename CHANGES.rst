@@ -36,6 +36,10 @@ Bug fixes:
   This avoids related item widgets in subsites being able to break out of their virtual hosting root.
   [thet]
 
+- Cleanup: removed unecessary dependencies and conditional imports.
+  Also added utf8headers and run isort.
+  [jensens]
+
 
 2.0.7 (2016-11-19)
 ------------------
