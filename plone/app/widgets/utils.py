@@ -71,9 +71,9 @@ def get_date_options(request):
                 _('pickadate_date_format', default='mmmm d, yyyy'),
                 context=request),
             'placeholder': translate(_('Enter date...'), context=request),
-            'today': translate(_(u"Today"), context=request),
-            'clear': translate(_(u"Clear"), context=request),
-        }
+        },
+        'today': translate(_(u"Today"), context=request),
+        'clear': translate(_(u"Clear"), context=request),
     }
 
 
@@ -84,7 +84,6 @@ def get_datetime_options(request):
             _('pickadate_time_format', default='h:i a'),
             context=request),
         'placeholder': translate(_('Enter time...'), context=request),
-        'today': translate(_(u"Today"), context=request),
     }
     return options
 

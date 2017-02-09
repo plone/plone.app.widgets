@@ -14,6 +14,10 @@ New features:
 
 Bug fixes:
 
+- Change options ``today`` and ``clear`` to reflect changes in mockup 2.4.
+  Refs: PR #154
+  [thet]
+
 - Root the related items widget path bar to the top most visible site in the url and not the portal object itself.
   This avoids related item widgets in subsites being able to break out of their virtual hosting root.
   [thet]
