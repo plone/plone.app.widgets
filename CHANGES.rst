@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.9.1 (unreleased)
+1.9.1 (2017-02-12)
 ------------------
 
 - Fix value for at.AjaxSelectWidget when the edit form returns with
