@@ -1,7 +1,7 @@
 Changelog
 =========
 
-2.1 (unreleased)
+2.1 (2017-02-20)
 ----------------
 
 Bug fixes:
