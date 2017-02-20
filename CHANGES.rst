@@ -4,14 +4,6 @@ Changelog
 2.1 (unreleased)
 ----------------
 
-Breaking changes:
-
-- *add item here*
-
-New features:
-
-- *add item here*
-
 Bug fixes:
 
 - Change options ``today`` and ``clear`` to reflect changes in mockup 2.4.
