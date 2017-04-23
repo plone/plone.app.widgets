@@ -368,8 +368,8 @@ class RelatedItemsDataConverter(BaseDataConverter):
                                   for uid in value
                                   if uid in objects.keys())
         else:
-            valueType = getattr(self.field.value_type, '_type', unicode)
-            return collectionType(valueType(v) for v in value)
+            return collectionType(
+                self.field.value_type.fromUnicode(v) for v in value)
 
 
 class QueryStringDataConverter(BaseDataConverter):

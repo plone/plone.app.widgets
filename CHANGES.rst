@@ -4,7 +4,10 @@ Changelog
 1.9.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Convert RelatedItemsWidget values for non-RelationList field
+  using field.fromUnicode. This fixes handling of collections
+  of value_type Choice.
+  [davisagli]
 
 
 1.9.1 (2017-02-12)
