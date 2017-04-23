@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from AccessControl import ClassSecurityInfo
 from DateTime import DateTime
+from HTMLParser import HTMLParser
 from Products.Archetypes.interfaces import IBaseObject
 from Products.Archetypes.Registry import registerWidget
 from Products.Archetypes.Widget import TypesWidget
@@ -22,6 +23,8 @@ from plone.uuid.interfaces import IUUID
 from zope.interface import implements
 from zope.component import adapts
 import json
+
+h = HTMLParser()
 
 
 class BaseWidget(TypesWidget):
@@ -383,6 +386,7 @@ class AjaxSelectWidget(BaseWidget):
         value = form.get(field.getName(), empty_marker)
         if value is empty_marker:
             return empty_marker
+        value = h.unescape(value)
         value = value.strip().split(self.separator)
         return value, {}
 

@@ -9,6 +9,9 @@ Changelog
   of value_type Choice.
   [davisagli]
 
+- Work around escaped values from select2 pattern.
+  [davisagli]
+
 
 1.9.1 (2017-02-12)
 ------------------
