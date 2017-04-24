@@ -331,10 +331,7 @@ class RelatedItemsDataConverter(BaseDataConverter):
         if not value:
             return self.field.missing_value
         separator = getattr(self.widget, 'separator', ';')
-        if IRelationList.providedBy(self.field):
-            return separator.join([IUUID(o) for o in value if o])
-        else:
-            return separator.join(v for v in value if v)
+        return separator.join([IUUID(o) for o in value if o])
 
     def toFieldValue(self, value):
         """Converts from widget value to field.
