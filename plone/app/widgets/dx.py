@@ -66,6 +66,7 @@ from zope.schema.interfaces import IField
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import ISequence
 from zope.security.interfaces import IPermission
+import cgi
 import pytz
 import json
 
@@ -706,6 +707,18 @@ class AjaxSelectWidget(BaseWidget, z3cform_TextWidget):
             args['pattern_options']['orderable'] = True
 
         return args
+
+    def render(self):
+        if self.mode != 'display':
+            return super(AjaxSelectWidget, self).render()
+
+        if not self.value:
+            return u''
+        out = [u'<ul>']
+        for value in self.value.split(self.separator):
+            out += u'<li>%s</li>' % cgi.escape(value)
+        out += [u'</ul>']
+        return u''.join(out)
 
 
 class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
