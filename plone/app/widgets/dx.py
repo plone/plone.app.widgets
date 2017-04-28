@@ -806,6 +806,12 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
 
         if not self.value:
             return u''
+
+        if IChoice.providedBy(self.field):
+            ob = uuidToObject(self.value)
+            return u'<a href="%s">%s</a>' % (
+                ob.absolute_url(), cgi.escape(ob.title))
+
         out = [u'<ul>']
         for value in self.value.split(self.separator):
             ob = uuidToObject(value)
