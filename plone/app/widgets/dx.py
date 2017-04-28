@@ -9,6 +9,7 @@ from plone.app.textfield.interfaces import IRichText
 from plone.app.textfield.value import RichTextValue
 from plone.app.textfield.widget import IRichTextWidget as patextfield_IRichTextWidget  # noqa
 from plone.app.textfield.widget import RichTextWidget as patextfield_RichTextWidget  # noqa
+from plone.app.uuid.utils import uuidToObject
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget as BaseSelectWidget
 from plone.app.widgets.base import TextareaWidget
@@ -798,6 +799,21 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
                 args['pattern_options']['vocabularyUrl'] = source_url
 
         return args
+
+    def render(self):
+        if self.mode != 'display':
+            return super(RelatedItemsWidget, self).render()
+
+        if not self.value:
+            return u''
+        out = [u'<ul>']
+        for value in self.value.split(self.separator):
+            ob = uuidToObject(value)
+            if ob is not None:
+                out += u'<li><a href="%s">%s</a></li>' % (
+                    ob.absolute_url(), cgi.escape(ob.title))
+        out += [u'</ul>']
+        return u''.join(out)
 
 
 class QueryStringWidget(BaseWidget, z3cform_TextWidget):
