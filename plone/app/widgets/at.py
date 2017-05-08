@@ -470,7 +470,7 @@ class RelatedItemsWidget(BaseWidget):
             if field.multiValued:
                 value = [IUUID(o) for o in value if o]
             else:
-                value = '' if value is None else IUUID(value)
+                value = [] if value is None else [IUUID(value)]
         else:
             value = [v.split('/')[0]
                      for v in value.strip().split(self.separator)]
@@ -480,10 +480,7 @@ class RelatedItemsWidget(BaseWidget):
             self.vocabulary = vocabulary_factory
 
         args['name'] = field.getName()
-        if field.multiValued:
-            args['value'] = self.separator.join(value)
-        else:
-            args['value'] = value
+        args['value'] = self.separator.join(value)
 
         args.setdefault('pattern_options', {})
         args['pattern_options']['maximumSelectionSize'] = \
