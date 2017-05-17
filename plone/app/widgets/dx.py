@@ -612,7 +612,10 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
             options['allowClear'] = True
 
         items = []
-        for item in self.items():
+        fetchitems = self.items
+        if callable(fetchitems):
+            fetchitems = fetchitems()
+        for item in fetchitems:
             if not isinstance(item['content'], basestring):
                 item['content'] = translate(
                     item['content'],
