@@ -7,6 +7,10 @@ Changelog
 - Fix `get_tinymce_options` for non-contentish contexts. See #161.
   [petschki]
 
+- Fix RelatedItemsWidget calling self.items, which was turned back into a
+  property in z3c.form 3.2.11. (Used in Plone > 4.3.11)
+  [fredvd]
+
 
 1.9.1 (2017-02-12)
 ------------------
