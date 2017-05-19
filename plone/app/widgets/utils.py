@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from Acquisition import aq_base
+from Acquisition import aq_parent
 from datetime import datetime
+from OFS.interfaces import IFolder
 from plone.app.layout.navigation.root import getNavigationRootObject
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
@@ -122,29 +124,53 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
                              vocabulary_view, field_name=None):
+
     if IForm.providedBy(context):
         context = context.context
+
     request = getRequest()
     site = get_top_site_from_url(context, request)
-    options = get_ajaxselect_options(site, value, separator,
-                                     vocabulary_name, vocabulary_view,
-                                     field_name)
-    msgstr = translate(_(u'Search'), context=request)
-    options.setdefault('searchText', msgstr)
-    msgstr = translate(_(u'Entire site'), context=request)
-    options.setdefault('searchAllText', msgstr)
-    msgstr = translate(_('tabs_home',
-                       default=u'Home'),
-                       context=request)
-    options.setdefault('homeText', msgstr)
-    options.setdefault('folderTypes', ['Folder'])
-    options.setdefault('sort_on', 'sortable_title')
-    options.setdefault('sort_order', 'ascending')
+    options = get_ajaxselect_options(
+        site,
+        value,
+        separator,
+        vocabulary_name,
+        vocabulary_view,
+        field_name
+    )
 
     nav_root = getNavigationRootObject(context, site)
-    options['basePath'] = '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'  # noqa
+
+    # basePath - start to search/browse in here.
+    base_path_context = context
+    if not IFolder.providedBy(base_path_context):
+        base_path_context = aq_parent(base_path_context)
+    if not base_path_context:
+        base_path_context = nav_root
+    options['basePath'] = '/'.join(base_path_context.getPhysicalPath())
+
+    # rootPath - Only display breadcrumb elements deeper than this path.
     options['rootPath'] = '/'.join(site.getPhysicalPath()) if site else '/'
+
+    # rootUrl: Visible URL up to the rootPath. This is prepended to the
+    # currentPath to generate submission URLs.
     options['rootUrl'] = site.absolute_url() if site else ''
+
+    # contextPath - current edited object. Will not be available to select.
+    options['contextPath'] = '/'.join(context.getPhysicalPath())
+
+    if base_path_context != nav_root:
+        options['favorites'] = [
+            {
+                # 'title': _(u'Current Content'),
+                'title': u'Aktueller Inhalt',
+                'path': '/'.join(base_path_context.getPhysicalPath())
+            }, {
+                'title': _(u'Start Page'),
+                'path': '/'.join(nav_root.getPhysicalPath())
+            }
+        ]
+
     return options
 
 

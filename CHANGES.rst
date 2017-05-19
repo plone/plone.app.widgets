@@ -10,7 +10,13 @@ Breaking changes:
 
 New features:
 
-- *add item here*
+- Related items widget options changes:
+  - Let the browsing/searching start path be the current context if its folderish or a level up.
+  - Include the ``contextPath`` option to exclude the current context from selection.
+  - Include the ``favorites`` option with the current context and the navigation root to quickly jump to these paths.
+  - Clean up obsolete options.
+    Fixes https://github.com/plone/Products.CMFPlone/issues/1974
+    [thet]
 
 Bug fixes:
 
