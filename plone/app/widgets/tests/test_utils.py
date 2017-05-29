@@ -34,15 +34,15 @@ class UtilsTests(unittest.TestCase):
                            # works, even if it was imported before.,,
             orig_HAS_PAE = utils.HAS_PAE
             utils.HAS_PAE = True
-            self.assertEquals(utils.first_weekday(), 0)
+            self.assertEqual(utils.first_weekday(), 0)
             base.first_weekday = lambda: 1
-            self.assertEquals(utils.first_weekday(), 1)
+            self.assertEqual(utils.first_weekday(), 1)
             base.first_weekday = lambda: 5
-            self.assertEquals(utils.first_weekday(), 1)
+            self.assertEqual(utils.first_weekday(), 1)
 
             # test without plone.app.event installed
             utils.HAS_PAE = False
-            self.assertEquals(utils.first_weekday(), 0)
+            self.assertEqual(utils.first_weekday(), 0)
 
         # restore original state
         utils.HAS_PAE = orig_HAS_PAE
@@ -90,32 +90,32 @@ class TestRelatedItemsOptions(unittest.TestCase):
         # context_url contains something, otherwise this test is meaningless
         self.assertTrue(bool(context_url))
 
-        self.assertEquals(
+        self.assertEqual(
             options['rootUrl'],
             root_url
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['rootPath'],
             root_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['vocabularyUrl'],
             root_url + '/@@vocab?name=test_vocab&field=testfield'
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['basePath'],
             context_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['contextPath'],
             context_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['separator'],
             '#!@'
         )
@@ -162,42 +162,42 @@ class TestRelatedItemsOptions(unittest.TestCase):
         # context_url contains something, otherwise this test is meaningless
         self.assertTrue(bool(context_url))
 
-        self.assertEquals(
+        self.assertEqual(
             options['rootUrl'],
             root_url
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['rootPath'],
             root_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['vocabularyUrl'],
             root_url + '/@@vocab?name=test_vocab&field=testfield'
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['basePath'],
             context_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['contextPath'],
             context_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['separator'],
             '#!@'
         )
 
-        self.assertEquals(
+        self.assertEqual(
             len(options['favorites']),
             2
         )
 
-        self.assertEquals(
+        self.assertEqual(
             sorted(options['favorites'][0].keys()),
             ['path', 'title']
         )
@@ -241,32 +241,32 @@ class TestRelatedItemsOptions(unittest.TestCase):
         # context_url contains something, otherwise this test is meaningless
         self.assertTrue(bool(context_url))
 
-        self.assertEquals(
+        self.assertEqual(
             options['rootUrl'],
             root_url
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['rootPath'],
             root_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['vocabularyUrl'],
             root_url + '/@@vocab?name=test_vocab&field=testfield'
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['basePath'],
             root_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['contextPath'],
             context_path
         )
 
-        self.assertEquals(
+        self.assertEqual(
             options['separator'],
             '#!@'
         )

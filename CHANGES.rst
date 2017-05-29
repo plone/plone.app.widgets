@@ -19,8 +19,9 @@ New features:
     [thet]
 
 Bug fixes:
-
-- *add item here*
+    
+- Change deprecated unittest method ``assertEquals`` to ``assertEqual``.
+  [thet]
 
 
 2.1 (2017-02-20)
