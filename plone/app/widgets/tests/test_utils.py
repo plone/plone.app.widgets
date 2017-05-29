@@ -4,6 +4,8 @@ from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.utils import get_relateditems_options
+from plone.app.widgets.utils import get_tinymce_options
+from z3c.form.form import Form
 
 import unittest
 
@@ -274,3 +276,36 @@ class TestRelatedItemsOptions(unittest.TestCase):
         self.assertTrue(
             'favorites' not in options
         )
+
+
+class TestTinyMCEOptions(unittest.TestCase):
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
+
+    def setUp(self):
+        setRoles(self.layer['portal'], TEST_USER_ID, ['Contributor'])
+
+    def test__tinymce_options_different_contexts(self):
+        """Test if ``get_tinymce_options`` can be called with different
+        contexts, including invalid and form contexts.
+        """
+        request = self.layer['request']
+        portal = self.layer['portal']
+        portal.invokeFactory('Folder', 'sub')
+        sub = portal.sub
+        form = Form(sub, request)
+
+        # TinyMCE on portal context
+        options = get_tinymce_options(portal, None, request)
+        self.assertEqual(options['relatedItems']['basePath'], '/plone')
+
+        # TinyMCE on sub folder context
+        options = get_tinymce_options(sub, None, request)
+        self.assertEqual(options['relatedItems']['basePath'], '/plone/sub')
+
+        # TinyMCE on a Form context
+        options = get_tinymce_options(form, None, request)
+        self.assertEqual(options['relatedItems']['basePath'], '/plone/sub')
+
+        # TinyMCE on no / non-itemish context
+        options = get_tinymce_options(None, None, request)
+        self.assertEqual(options['relatedItems']['basePath'], '/plone')
