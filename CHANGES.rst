@@ -4,7 +4,8 @@ Changelog
 1.9.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix `get_tinymce_options` for non-contentish contexts. See #161.
+  [petschki]
 
 
 1.9.1 (2017-02-12)
