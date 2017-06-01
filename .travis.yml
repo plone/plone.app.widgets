@@ -41,6 +41,11 @@ after_success:
 #     - secure: "CvB/BK4EhZIiruAuiIFw/Bn80Wv/5jGiS2tOCaXd54v7lhld2VBxyCfccIcizKlSkIXzDausw24zEF0HV4E6k4z8AB12h1DH/6p31+epbrvDnQOZ1Br2grusOqMbjOutRkJ0w+upI+BTaeSI9bmYXZQdpkLA5mJCv0sBbqi4SPA="
 #     - ROBOT_BUILD_NUMBER=plone.app.widgets-travis-$TRAVIS_BUILD_NUMBER
 #     - ROBOT_REMOTE_URL=http://$SAUCE_USERNAME:$SAUCE_ACCESS_KEY@ondemand.saucelabs.com:80/wd/hub
+after_script:
+# Firefox complains: GConf-WARNING **: Got Disconnected from DBus.
+# And then it keeps hanging, causing a failed job after 30-50 minutes.
+# So we just kill Firefox.
+- pkill -9 firefox
 matrix:
   allow_failures:
     - env: BROWSER="platform:OS X 10.8,browserName:iphone,version:6.1,device-orientation:portrait"
