@@ -1,6 +1,7 @@
-from zope.interface import implementer
-from plone.namedfile.storages import MAXCHUNKSIZE
+# -*- coding: utf-8 -*-
 from plone.namedfile.interfaces import IStorage
+from plone.namedfile.storages import MAXCHUNKSIZE
+from zope.interface import implementer
 
 
 @implementer(IStorage)

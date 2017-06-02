@@ -1,8 +1,8 @@
 Changelog
 =========
 
-2.1.1 (unreleased)
-------------------
+2.2 (unreleased)
+----------------
 
 Breaking changes:
 
@@ -20,7 +20,9 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Cleanup: removed unecessary dependencies and conditional imports.
+  Also added utf8headers and run isort.
+  [jensens]
 
 
 2.1 (2017-02-20)

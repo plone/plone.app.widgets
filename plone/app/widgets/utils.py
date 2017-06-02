@@ -4,6 +4,7 @@ from Acquisition import aq_base
 from Acquisition import aq_parent
 from datetime import datetime
 from OFS.interfaces import IFolder
+from plone.app.event import base as pae_base
 from plone.app.layout.navigation.root import getNavigationRootObject
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
@@ -25,26 +26,11 @@ import json
 _ = MessageFactory('plone')
 
 
-try:
-    from plone.app.event import base as pae_base
-    HAS_PAE = True
-except ImportError:
-    HAS_PAE = False
-
-
 def first_weekday():
-    if HAS_PAE:
-        wkday = pae_base.wkday_to_mon1(pae_base.first_weekday())
-        if wkday > 1:
-            return 1  # Default to Monday
-        return wkday
-    else:
-        cal = getToolByName(getSite(), 'portal_calendar', None)
-        if cal:
-            wkday = cal.firstweekday
-            if wkday == 6:  # portal_calendar's Sunday is 6
-                return 0  # Sunday
-        return 1  # other cases: Monday
+    wkday = pae_base.wkday_to_mon1(pae_base.first_weekday())
+    if wkday > 1:
+        return 1  # Default to Monday
+    return wkday
 
 
 class NotImplemented(Exception):
