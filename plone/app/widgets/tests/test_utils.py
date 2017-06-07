@@ -5,7 +5,6 @@ from plone.app.testing import TEST_USER_ID
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_tinymce_options
-from z3c.form.form import Form
 
 import unittest
 
@@ -292,7 +291,6 @@ class TestTinyMCEOptions(unittest.TestCase):
         portal = self.layer['portal']
         portal.invokeFactory('Folder', 'sub')
         sub = portal.sub
-        form = Form(sub, request)
 
         # TinyMCE on portal context
         options = get_tinymce_options(portal, None, request)
@@ -301,11 +299,3 @@ class TestTinyMCEOptions(unittest.TestCase):
         # TinyMCE on sub folder context
         options = get_tinymce_options(sub, None, request)
         self.assertEqual(options['relatedItems']['basePath'], '/plone/sub')
-
-        # TinyMCE on a Form context
-        options = get_tinymce_options(form, None, request)
-        self.assertEqual(options['relatedItems']['basePath'], '/plone/sub')
-
-        # TinyMCE on no / non-itemish context
-        options = get_tinymce_options(None, None, request)
-        self.assertEqual(options['relatedItems']['basePath'], '/plone')

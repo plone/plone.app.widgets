@@ -20,10 +20,6 @@ New features:
 
 Bug fixes:
 
-- Fix broken ``get_tinymce_options`` when called with non-contentish contexts like form or field contexts.
-  Refs: https://github.com/plone/plone.app.widgets/pull/160 
-  [thet]
-
 - Change deprecated unittest method ``assertEquals`` to ``assertEqual``.
   [thet]
 

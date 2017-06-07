@@ -195,12 +195,6 @@ def get_tinymce_options(context, field, request):
     """
     options = {}
     try:
-
-        if IForm.providedBy(context):
-            context = context.context
-        elif not ISimpleItem.providedBy(context):
-            context = getSite()
-
         pattern_options = getMultiAdapter(
             (context, request, field),
             name="plone_settings").tinymce()['data-pat-tinymce']
