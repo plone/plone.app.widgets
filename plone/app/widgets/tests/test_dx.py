@@ -16,6 +16,7 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.dexterity.fti import DexterityFTI
 from plone.registry.interfaces import IRegistry
 from plone.testing.zca import UNIT_TESTING
+from z3c.form.form import Form
 from z3c.form.interfaces import IFieldWidget, IFormLayer
 from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
@@ -1170,6 +1171,56 @@ class RichTextWidgetTests(unittest.TestCase):
         if not PLONE50:
             self.assertEqual(base_args['pattern_options']['anchorSelector'],
                              self.portal.portal_tinymce.anchor_selector)
+
+    def test_widget_params_different_contexts(self):
+        from plone.app.widgets.dx import RichTextWidget
+
+        setRoles(self.portal, TEST_USER_ID, ['Contributor'])
+
+        widget = FieldWidget(self.field, RichTextWidget(self.request))
+        self.portal.invokeFactory('Folder', 'sub')
+        sub = self.portal.sub
+        form = Form(sub, self.request)
+
+        # portal context
+        widget.context = self.portal
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone'
+        )
+
+        # sub context
+        widget.context = sub
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone/sub'
+        )
+
+        # form context
+        widget.context = form
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone/sub'
+        )
+
+        # non-contentish context
+        widget.context = None
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone'
+        )
 
     def test_widget_values(self):
         from plone.app.widgets.dx import RichTextWidget
