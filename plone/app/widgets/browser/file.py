@@ -175,4 +175,5 @@ class FileUploadView(BrowserView):
             'UID': IUUID(obj),
             'filename': filename
         })
+        self.request.response.setHeader('Content-Type', 'application/json')
         return json.dumps(result)
