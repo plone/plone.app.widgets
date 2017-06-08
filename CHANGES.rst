@@ -4,6 +4,13 @@ Changelog
 1.9.2 (unreleased)
 ------------------
 
+- Remove Plone 5 specific zcml conditions
+  [petschki]
+
+- Refactor IRichText FieldWidget adapter. Use interface from
+  plone.app.textfield to auto-enable RichTextWidget.
+  [petschki]
+
 - Fix `get_tinymce_options` for non-contentish contexts. See #161.
   [petschki]
 

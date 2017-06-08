@@ -2,6 +2,7 @@
 from plone.app.dexterity.behaviors.metadata import ICategorization
 from plone.app.dexterity.behaviors.metadata import IOwnership
 from plone.app.dexterity.behaviors.metadata import IPublication
+from plone.app.textfield.interfaces import IRichText
 from plone.app.widgets.dx import AjaxSelectWidget
 from plone.app.widgets.dx import DatetimeWidget
 from plone.app.widgets.dx import QueryStringWidget
@@ -24,10 +25,15 @@ except ImportError:
 
 try:
     from plone.app.contenttypes.behaviors.collection import ICollection
-    from plone.app.contenttypes.behaviors.richtext import IRichText
     HAS_PAC = True
 except ImportError:
     HAS_PAC = False
+
+
+@adapter(IRichText, IWidgetsLayer)
+@implementer(IFieldWidget)
+def RichTextFieldWidget(field, request):
+    return FieldWidget(field, RichTextWidget(request))
 
 
 @adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
@@ -88,13 +94,9 @@ if HAS_RF:
         widget.vocabulary_override = True
         return widget
 
+
 if HAS_PAC:
     @adapter(getSpecification(ICollection['query']), IWidgetsLayer)
     @implementer(IFieldWidget)
     def QueryStringFieldWidget(field, request):
         return FieldWidget(field, QueryStringWidget(request))
-
-    @adapter(getSpecification(IRichText['text']), IWidgetsLayer)
-    @implementer(IFieldWidget)
-    def RichTextFieldWidget(field, request):
-        return FieldWidget(field, RichTextWidget(request))

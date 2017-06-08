@@ -216,106 +216,44 @@
     <adapter factory=".dx.RelatedItemsDataConverter" />
   </configure>
 
-  <!-- plone<5 configuration -->
-  <configure zcml:condition="not-have plone-5">
+  <configure zcml:condition="installed Products.ATContentTypes">
+    <adapter
+        name="plone.app.widgets"
+        factory=".at_bbb.MetadataExtender"
+        for="Products.ATContentTypes.interface.IATContentType"
+        provides="archetypes.schemaextender.interfaces.ISchemaModifier"
+        />
+  </configure>
 
-    <configure zcml:condition="installed Products.ATContentTypes">
-      <adapter
-          name="plone.app.widgets"
-          factory=".at_bbb.MetadataExtender"
-          for="Products.ATContentTypes.interface.IATContentType"
-          provides="archetypes.schemaextender.interfaces.ISchemaModifier"
-          />
+  <configure zcml:condition="installed plone.app.dexterity">
+
+    <adapter factory=".dx_bbb.SubjectsFieldWidget" />
+    <adapter factory=".dx_bbb.LanguageFieldWidget" />
+    <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
+    <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
+    <adapter factory=".dx_bbb.ContributorsFieldWidget" />
+    <adapter factory=".dx_bbb.CreatorsFieldWidget" />
+
+    <configure zcml:condition="installed plone.app.relationfield">
+      <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
     </configure>
 
-    <configure zcml:condition="installed plone.app.dexterity">
-      <adapter factory=".dx_bbb.SubjectsFieldWidget" />
-      <adapter factory=".dx_bbb.LanguageFieldWidget" />
-      <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
-      <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
-      <adapter factory=".dx_bbb.ContributorsFieldWidget" />
-      <adapter factory=".dx_bbb.CreatorsFieldWidget" />
-
-      <configure zcml:condition="installed plone.app.relationfield">
-        <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
-      </configure>
-
-      <!-- override p.a.contenttypes specific widgets -->
-      <configure zcml:condition="installed plone.app.contenttypes">
-          <adapter factory=".dx_bbb.QueryStringFieldWidget" />
-          <adapter factory=".dx_bbb.RichTextFieldWidget" />
-      </configure>
-
-      <!-- rich text widget for non-p.a.contenttypes Plone 4 -->
-      <adapter factory=".dx.RichTextFieldWidget" />
-
+    <!-- override p.a.contenttypes specific widgets -->
+    <configure zcml:condition="installed plone.app.contenttypes">
+        <adapter factory=".dx_bbb.QueryStringFieldWidget" />
     </configure>
 
   </configure>
 
-  <!-- plone 5 configuration -->
-  <configure zcml:condition="have plone-5">
-
-    <class class=".dx.DateWidget">
-      <require permission="zope.Public"
-               interface=".dx.IDateWidget" />
-    </class>
-    <class class="zope.schema._field.Date">
-      <implements interface=".dx.IDateField"/>
-    </class>
-    <adapter
-        factory=".dx.DateFieldWidget"
-        for=".dx.IDateField
-             z3c.form.interfaces.IFormLayer" />
-
-    <class class=".dx.DatetimeWidget">
-      <require permission="zope.Public"
-               interface=".dx.IDatetimeWidget" />
-    </class>
-    <class class="zope.schema._field.Datetime">
-      <implements interface=".dx.IDatetimeField"/>
-    </class>
-    <adapter
-        factory=".dx.DatetimeFieldWidget"
-        for=".dx.IDatetimeField
-             z3c.form.interfaces.IFormLayer" />
-
-    <adapter factory=".dx.RelatedItemsFieldWidget"
-            for="z3c.relationfield.interfaces.IRelationChoice
-                  z3c.form.interfaces.IFormLayer"
-            />
-
-    <adapter factory=".dx.RelatedItemsFieldWidget"
-            for="z3c.relationfield.interfaces.IRelationList
-                  z3c.form.interfaces.IFormLayer"
-            />
-
-    <adapter
-      factory=".dx.RelatedItemsFieldWidget"
-      for="zope.schema.interfaces.IChoice
-           plone.app.vocabularies.catalog.CatalogSource
-           z3c.form.interfaces.IFormLayer" />
-
-    <adapter factory=".dx.QueryStringFieldWidget" />
-    <adapter factory=".dx.RichTextFieldWidget" />
-
+  <configure zcml:condition="installed plone.app.textfield">
+    <!-- rich text widget for plone.app.textfield -->
+    <adapter factory=".dx_bbb.RichTextFieldWidget" />
   </configure>
 
   <genericsetup:registerProfile
-    zcml:condition="not-have plone-5"
     name="default"
     title="Plone Widgets"
     directory="profiles/default"
-    description="Better widgets for Plone"
-    provides="Products.GenericSetup.interfaces.EXTENSION"
-    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
-    />
-
-  <genericsetup:registerProfile
-    zcml:condition="have plone-5"
-    name="default"
-    title="Plone Widgets"
-    directory="profiles/p5"
     description="Better widgets for Plone"
     provides="Products.GenericSetup.interfaces.EXTENSION"
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
