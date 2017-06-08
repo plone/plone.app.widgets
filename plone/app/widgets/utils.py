@@ -4,6 +4,7 @@ from Acquisition import aq_base
 from Acquisition import aq_parent
 from datetime import datetime
 from OFS.interfaces import IFolder
+from OFS.interfaces import ISimpleItem
 from plone.app.layout.navigation.root import getNavigationRootObject
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
