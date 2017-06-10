@@ -163,8 +163,7 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     if base_path_context != nav_root:
         options['favorites'] = [
             {
-                # 'title': _(u'Current Content'),
-                'title': u'Aktueller Inhalt',
+                'title': _(u'Current Content'),
                 'path': '/'.join(base_path_context.getPhysicalPath())
             }, {
                 'title': _(u'Start Page'),
