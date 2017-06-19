@@ -185,305 +185,279 @@ def get_tinymce_options(context, field, request):
     options = {}
 
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
-    if utility:
-        # Plone 4.3
-        # map Products.TinyMCE settings meant for TinyMCE 3 to version 4
-        # see http://www.tinymce.com/wiki.php/Tutorial:Migration_guide_from_3.x
-        # and https://github.com/plone/plone.app.widgets/issues/72
-        config = utility.getConfiguration(context=context,
-                                          field=field,
-                                          request=request)
+    # Plone 4.3
+    # map Products.TinyMCE settings meant for TinyMCE 3 to version 4
+    # see http://www.tinymce.com/wiki.php/Tutorial:Migration_guide_from_3.x
+    # and https://github.com/plone/plone.app.widgets/issues/72
+    config = utility.getConfiguration(context=context,
+                                      field=field,
+                                      request=request)
 
-        if config['content_css'] == "":
-            config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'  # noqa
+    if config['content_css'] == "":
+        config['content_css'] = '++resource++plone.app.widgets-tinymce-content.css'  # noqa
 
-        # FIXME: this might be needed in order to still load/support
-        # custom plugins such as collective.tinymceplugins.*
-        del config['customplugins']
+    # FIXME: this might be needed in order to still load/support
+    # custom plugins such as collective.tinymceplugins.*
+    del config['customplugins']
 
-        # remove theme settings
-        del config['theme']
+    # remove theme settings
+    del config['theme']
 
-        # override config plugins settings
-        # XXX: the list of loaded plugins may change in plone-mockup
-        config['plugins'] = [
-            'advlist',
-            'autolink',
-            'lists',
-            'charmap',
-            'print',
-            'preview',
-            'anchor',
-            'searchreplace',
-            'visualblocks',
-            'code',
-            'fullscreen',
-            'insertdatetime',
-            'media',
-            'table',
-            'contextmenu',
-            'paste',
-            'plonelink',
-            'ploneimage',
-            'textcolor',
-        ]
+    # override config plugins settings
+    # XXX: the list of loaded plugins may change in plone-mockup
+    config['plugins'] = [
+        'advlist',
+        'autolink',
+        'lists',
+        'charmap',
+        'print',
+        'preview',
+        'anchor',
+        'searchreplace',
+        'visualblocks',
+        'code',
+        'fullscreen',
+        'insertdatetime',
+        'media',
+        'table',
+        'contextmenu',
+        'paste',
+        'plonelink',
+        'ploneimage',
+        'textcolor',
+    ]
 
-        # FIXME: map old names to new names in the configuration for plone5
-        # and notify migration-team
-        # http://www.tinymce.com/wiki.php/Controls
-        # also check for buttons no longer available, such as definitionlist
-        all_buttons = [
-            'advhr',
-            'anchor',
-            'attribs',
-            'backcolor',
-            'bold',
-            'bullist',
-            'charmap',
-            'cleanup',
-            'code',
-            'copy',
-            'cut',
-            'definitionlist',
-            'emotions',
-            'forecolor',
-            'fullscreen',
-            'hr',
-            'image',
-            'indent',
-            'insertdate',
-            'inserttime',
-            'italic',
-            'justifycenter',
-            'justifyfull',
-            'justifyleft',
-            'justifyright',
-            'link',
-            'media',
-            'nonbreaking',
-            'numlist',
-            'outdent',
-            'pagebreak',
-            'paste',
-            'pastetext',
-            'pasteword',
-            'preview',
-            'print',
-            'redo',
-            'removeformat',
-            'replace',
-            'save',
-            'search',
-            'spellchecker',
-            'strikethrough',
-            'style',
-            'sub',
-            'sup',
-            'tablecontrols',
-            'underline',
-            'undo',
-            'unlink',
-            'visualaid',
-            'visualchars',
-        ]
-        button_settings = dict()
-        # FIXME: rename buttons in configuration for plone5, these mappings
-        # are only done for plone4
-        mappings = dict(justifyleft='alignleft',
-                        justifycenter='aligncenter',
-                        justifyright='alignright',
-                        justifyfull='alignjustify',
-                        link='plonelink',
-                        tablecontrols='table',
-                        image='ploneimage',
-                        emotions='emoticons',
-                        sub='subscript',
-                        sup='superscript',
-                        visualaid='visualblocks',
-                        )
-        for button in all_buttons:
-            if button in mappings:
-                newname = mappings[button]
-                button_settings[newname] = button in config[
-                    'buttons'] and newname or ''
-            else:
-                button_settings[button] = button in config[
-                    'buttons'] and button or ''
-
-        if 'search' in config['buttons'] or 'replace' in config['buttons']:
-            button_settings['searchreplace'] = 'searchreplace'
+    all_buttons = [
+        'advhr',
+        'anchor',
+        'attribs',
+        'backcolor',
+        'bold',
+        'bullist',
+        'charmap',
+        'cleanup',
+        'code',
+        'copy',
+        'cut',
+        'definitionlist',
+        'emotions',
+        'forecolor',
+        'fullscreen',
+        'hr',
+        'image',
+        'indent',
+        'insertdate',
+        'inserttime',
+        'italic',
+        'justifycenter',
+        'justifyfull',
+        'justifyleft',
+        'justifyright',
+        'link',
+        'media',
+        'nonbreaking',
+        'numlist',
+        'outdent',
+        'pagebreak',
+        'paste',
+        'pastetext',
+        'pasteword',
+        'preview',
+        'print',
+        'redo',
+        'removeformat',
+        'replace',
+        'save',
+        'search',
+        'spellchecker',
+        'strikethrough',
+        'style',
+        'sub',
+        'sup',
+        'tablecontrols',
+        'underline',
+        'undo',
+        'unlink',
+        'visualaid',
+        'visualchars',
+    ]
+    button_settings = dict()
+    mappings = dict(justifyleft='alignleft',
+                    justifycenter='aligncenter',
+                    justifyright='alignright',
+                    justifyfull='alignjustify',
+                    link='plonelink',
+                    tablecontrols='table',
+                    image='ploneimage',
+                    emotions='emoticons',
+                    sub='subscript',
+                    sup='superscript',
+                    visualaid='visualblocks',
+                    )
+    for button in all_buttons:
+        if button in mappings:
+            newname = mappings[button]
+            button_settings[newname] = button in config[
+                'buttons'] and newname or ''
         else:
-            button_settings['searchreplace'] = ''
+            button_settings[button] = button in config[
+                'buttons'] and button or ''
 
-        if 'insertdate' in config['buttons']\
-                or 'inserttime' in config['buttons']:
-            button_settings['insertdatetime'] = 'insertdatetime'
-        else:
-            button_settings['insertdatetime'] = ''
+    if 'search' in config['buttons'] or 'replace' in config['buttons']:
+        button_settings['searchreplace'] = 'searchreplace'
+    else:
+        button_settings['searchreplace'] = ''
 
-        button_settings['directionality'] = 'attribs' in config[
-            'buttons'] and 'ltr rtl' or ''
-        
-        # enable browser spell check by default:
-        config['browser_spellcheck'] = True
+    if 'insertdate' in config['buttons']\
+            or 'inserttime' in config['buttons']:
+        button_settings['insertdatetime'] = 'insertdatetime'
+    else:
+        button_settings['insertdatetime'] = ''
 
-        # FIXME: currently save button does not show up
-        if 'save' in config['buttons']\
-                and getattr(aq_inner(context), 'checkCreationFlag', None):
-            if context.checkCreationFlag():
-                # hide save button on object creation
-                button_settings['save'] = ''
+    button_settings['directionality'] = 'attribs' in config[
+        'buttons'] and 'ltr rtl' or ''
+    
+    # enable browser spell check by default:
+    config['browser_spellcheck'] = True
 
-        # these toolbar buttons are not available anymore:
-        # pasteword (cleanup is done by pastetext)
-        # cleanup
-        # definitionlist (plugin missing, might have been plone-specific)
+    # FIXME: currently save button does not show up
+    if 'save' in config['buttons']\
+            and getattr(aq_inner(context), 'checkCreationFlag', None):
+        if context.checkCreationFlag():
+            # hide save button on object creation
+            button_settings['save'] = ''
 
-        # these need to be remapped or renamed
-        # FIXME: rename plone5 registry attributes + migration for these
-        # search replace -> searchreplace
-        # insertdate and inserttime -> insertdatetime
-        # attribs (has allowed to add dir="ltr" or lang="en) ->
-        #   ltr rtl (directionality plugin)
-        # visualaid -> visualblocks
-        # emotions -> emoticons
+    # these toolbar buttons are not available anymore:
+    # pasteword (cleanup is done by pastetext)
+    # cleanup
+    # definitionlist (plugin missing, might have been plone-specific)
 
-        # buttons currently not working (probably plugin not loaded correctly)
-        # nonbreaking, pagebreak - do not show up
-        # emoticons - does not show up
-        # ltr, rtl (directionality plugin) - do not show up
-        # spellchecker - button does not show up
-        # visualblocks - do not show any additional borders/lines around p / h2
-        # visualchars - does not show up
-        # nonbreaking and pagebreak - do not show up
-        toolbar = '{save} {cut} {copy} {paste} {pastetext} | ' \
-            '{undo} {redo} {searchreplace} | styleselect {removeformat} | ' \
-            '{bold} {italic} {underline} {strikethrough} {subscript} {superscript} | ' \
-            '{forecolor} {backcolor} | ' \
-            '{alignleft} {aligncenter} {alignright} {alignjustify} | ' \
-            '{bullist} {numlist} {outdent} {indent} | {table} | ' \
-            '{ploneimage} {unlink} {plonelink} {anchor} | ' \
-            '{charmap} {hr} {insertdatetime} {emoticons} {nonbreaking} {pagebreak} '\
-            '{print} {preview} {visualblocks} {visualchars} {directionality} | ' \
-            '{code} {fullscreen} spellchecker'.format(**button_settings)
-        config['toolbar'] = toolbar
+    # buttons currently not working (probably plugin not loaded correctly)
+    # nonbreaking, pagebreak - do not show up
+    # emoticons - does not show up
+    # ltr, rtl (directionality plugin) - do not show up
+    # spellchecker - button does not show up
+    # visualblocks - do not show any additional borders/lines around p / h2
+    # visualchars - does not show up
+    # nonbreaking and pagebreak - do not show up
+    toolbar = '{save} {cut} {copy} {paste} {pastetext} | ' \
+        '{undo} {redo} {searchreplace} | styleselect {removeformat} | ' \
+        '{bold} {italic} {underline} {strikethrough} {subscript} {superscript} | ' \
+        '{forecolor} {backcolor} | ' \
+        '{alignleft} {aligncenter} {alignright} {alignjustify} | ' \
+        '{bullist} {numlist} {outdent} {indent} | {table} | ' \
+        '{ploneimage} {unlink} {plonelink} {anchor} | ' \
+        '{charmap} {hr} {insertdatetime} {emoticons} {nonbreaking} {pagebreak} '\
+        '{print} {preview} {visualblocks} {visualchars} {directionality} | ' \
+        '{code} {fullscreen} spellchecker'.format(**button_settings)
+    config['toolbar'] = toolbar
 
-        # Plone 4.x TinyMCE panel defines table format/style title, classname:
-        config['table_class_list'] = map(
-            lambda pair: {'title': pair[0], 'value': pair[1]},
-            [e.strip().split('|') for e in utility.tablestyles.split('\n')]
+    # Plone 4.x TinyMCE panel defines table format/style title, classname:
+    config['table_class_list'] = map(
+        lambda pair: {'title': pair[0], 'value': pair[1]},
+        [e.strip().split('|') for e in utility.tablestyles.split('\n')]
+    )
+
+    # if forecolor/backcolor enabled in buttons, allow paste of color
+    # in text from word processing / rich text:
+    paste_allow = []
+    if 'forecolor' in config['buttons']:
+        paste_allow.append('color')
+    if 'backcolor' in config['buttons']:
+        paste_allow.append('background')
+    config['paste_retain_style_properties'] = ' '.join(paste_allow)
+
+    # contextmenu is no longer available, use this setting for menubar
+    if not config['contextmenu']:
+        config['menubar'] = ''
+    else:
+        # TODO: would be great to deactivate menuitems in case toolbar
+        # button has been deactivated
+        # esp makes sense for link and imagedialog, charmap and code-editor
+        config['menubar'] = 'edit {table} format tools view insert'.format(
+            table=button_settings['table'],
         )
 
-        # if forecolor/backcolor enabled in buttons, allow paste of color
-        # in text from word processing / rich text:
-        paste_allow = []
-        if 'forecolor' in config['buttons']:
-            paste_allow.append('color')
-        if 'backcolor' in config['buttons']:
-            paste_allow.append('background')
-        config['paste_retain_style_properties'] = ' '.join(paste_allow)
-
-        # contextmenu is no longer available, use this setting for menubar
-        # FIXME: plone5 rename setting
-        # xxx toolbar_external (theme_advanced_toolbar_location not available
-        # in tiny 4)
-        if not config['contextmenu']:
-            config['menubar'] = ''
+    # map Plone4 TinyMCE "styles" (raw format) to TinyMCE 4 "style_formats"
+    # see http://www.tinymce.com/wiki.php/Configuration:style_formats
+    p_style_formats = []
+    u_styles = utility.styles and utility.styles.strip().split('\n') or []
+    for f in u_styles:
+        f_parts = f.split("|")
+        s_format = dict(title=f_parts[0])
+        # XXX: These node-types need review
+        if f_parts[1].lower() in ["span", "b", "i"]:
+            s_format['inline'] = f_parts[1].lower()
+        elif f_parts[1].lower() in [
+                "tr", "th", "dt", "dd", "ol", "ul", "a"
+        ]:
+            s_format['selector'] = f_parts[1].lower()
         else:
-            # TODO: would be great to deactivate menuitems in case toolbar
-            # button has been deactivated
-            # esp makes sense for link and imagedialog, charmap and code-editor
-            config['menubar'] = 'edit {table} format tools view insert'.format(
-                table=button_settings['table'],
-            )
+            s_format['block'] = f_parts[1].lower()
+        if len(f_parts) > 2:
+            s_format['classes'] = f_parts[2]
+        p_style_formats.append(s_format)
+    if p_style_formats:
+        config["style_formats"] = [
+            dict(title=u"Plone Styles", items=p_style_formats),
+        ]
+        # XXX: Maybe there should be an option to merge default styles or
+        # not
+        config["style_formats_merge"] = "true"
 
-        # map Plone4 TinyMCE "styles" (raw format) to TinyMCE 4 "style_formats"
-        # see http://www.tinymce.com/wiki.php/Configuration:style_formats
-        p_style_formats = []
-        u_styles = utility.styles and utility.styles.strip().split('\n') or []
-        for f in u_styles:
-            f_parts = f.split("|")
-            s_format = dict(title=f_parts[0])
-            # XXX: These node-types need review
-            if f_parts[1].lower() in ["span", "b", "i"]:
-                s_format['inline'] = f_parts[1].lower()
-            elif f_parts[1].lower() in [
-                    "tr", "th", "dt", "dd", "ol", "ul", "a"
-            ]:
-                s_format['selector'] = f_parts[1].lower()
-            else:
-                s_format['block'] = f_parts[1].lower()
-            if len(f_parts) > 2:
-                s_format['classes'] = f_parts[2]
-            p_style_formats.append(s_format)
-        if p_style_formats:
-            config["style_formats"] = [
-                dict(title=u"Plone Styles", items=p_style_formats),
-            ]
-            # XXX: Maybe there should be an option to merge default styles or
-            # not
-            config["style_formats_merge"] = "true"
+    # respect resizing settings
+    config['resize'] = utility.resizing
 
-        # respect resizing settings
-        config['resize'] = utility.resizing
+    if utility.autoresize:
+        config['plugins'].append('autoresize')
+        config['autoresize_min_height'] = config[
+            'theme_advanced_source_editor_height']
 
-        if utility.autoresize:
-            config['plugins'].append('autoresize')
-            config['autoresize_min_height'] = config[
-                'theme_advanced_source_editor_height']
-
-        folder = context
-        if not IFolderish.providedBy(context):
-            folder = aq_parent(context)
-        if IPortletAssignmentMapping.providedBy(folder):
-            folder = aq_parent(folder)
-        if IPloneSiteRoot.providedBy(folder):
-            initial = None
-        else:
-            initial = IUUID(folder, None)
-        portal_url = get_portal_url(context)
-        nav_root = getNavigationRootObject(context, get_portal())
-        folder_path = '/'.join(folder.getPhysicalPath())
-        folder_url_relative = folder.absolute_url()[len(portal_url):]
-
-        options = {
-            'relatedItems': {
-                'vocabularyUrl': '{0}/{1}'.format(
-                    portal_url,
-                    '@@getVocabulary?name=plone.app.vocabularies.Catalog'
-                ),
-                'mode': 'browse',
-                'basePath': folder_path,
-                'rootPath': '/'.join(nav_root.getPhysicalPath()) if nav_root
-                            else '/',
-            },
-            'upload': {
-                'initialFolder': initial,
-                'currentPath': folder_url_relative,
-                'baseUrl': config['document_base_url'],
-                'relativePath': '@@fileUpload',
-                'uploadMultiple': False,
-                'maxFiles': 1,
-                'showTitle': False
-            },
-            'tiny': config,
-            # This is for loading the languages on tinymce
-            'loadingBaseUrl': '++resource++plone.app.widgets.tinymce',
-            'prependToUrl': 'resolveuid/',
-            'linkAttribute': 'UID',
-            'prependToScalePart': '/@@images/image/',
-            'folderTypes': utility.containsobjects.split('\n'),
-            'imageTypes': utility.imageobjects.split('\n'),
-            'anchorSelector': utility.anchor_selector,
-            'linkableTypes': utility.linkable.split('\n')
-        }
+    folder = context
+    if not IFolderish.providedBy(context):
+        folder = aq_parent(context)
+    if IPortletAssignmentMapping.providedBy(folder):
+        folder = aq_parent(folder)
+    if IPloneSiteRoot.providedBy(folder):
+        initial = None
     else:
-        # Plone 5
-        # They are set on the body
-        pattern_options = getMultiAdapter(
-            (context, request, field),
-            name="tinymce_settings")()['data-pat-tinymce']
-        options = json.loads(pattern_options)
+        initial = IUUID(folder, None)
+    portal_url = get_portal_url(context)
+    nav_root = getNavigationRootObject(context, get_portal())
+    folder_path = '/'.join(folder.getPhysicalPath())
+    folder_url_relative = folder.absolute_url()[len(portal_url):]
+
+    options = {
+        'relatedItems': {
+            'vocabularyUrl': '{0}/{1}'.format(
+                portal_url,
+                '@@getVocabulary?name=plone.app.vocabularies.Catalog'
+            ),
+            'mode': 'browse',
+            'basePath': folder_path,
+            'rootPath': '/'.join(nav_root.getPhysicalPath()) if nav_root
+                        else '/',
+        },
+        'upload': {
+            'initialFolder': initial,
+            'currentPath': folder_url_relative,
+            'baseUrl': config['document_base_url'],
+            'relativePath': '@@fileUpload',
+            'uploadMultiple': False,
+            'maxFiles': 1,
+            'showTitle': False
+        },
+        'tiny': config,
+        # This is for loading the languages on tinymce
+        'loadingBaseUrl': '++resource++plone.app.widgets.tinymce',
+        'prependToUrl': 'resolveuid/',
+        'linkAttribute': 'UID',
+        'prependToScalePart': '/@@images/image/',
+        'folderTypes': utility.containsobjects.split('\n'),
+        'imageTypes': utility.imageobjects.split('\n'),
+        'anchorSelector': utility.anchor_selector,
+        'linkableTypes': utility.linkable.split('\n')
+    }
     return options
 
 
