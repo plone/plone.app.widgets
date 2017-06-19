@@ -239,8 +239,25 @@
     <adapter factory=".dx.ContributorsFieldWidget" />
     <adapter factory=".dx.CreatorsFieldWidget" />
 
+    <adapter
+        factory=".dx.RelatedItemsFieldWidget"
+        for="z3c.relationfield.interfaces.IRelationChoice
+             plone.app.widgets.interfaces.IWidgetsLayer"
+        />
+    <adapter
+        factory=".dx.RelatedItemsFieldWidget"
+        for="z3c.relationfield.interfaces.IRelationList
+             plone.app.widgets.interfaces.IWidgetsLayer"
+        />
+    <adapter
+        factory=".dx.RelatedItemsFieldWidget"
+        for="zope.schema.interfaces.IChoice
+             plone.app.vocabularies.catalog.CatalogSource
+             plone.app.widgets.interfaces.IWidgetsLayer"
+        />
+
     <configure zcml:condition="installed plone.app.relationfield">
-      <adapter factory=".dx.RelatedItemsFieldWidget" />
+      <adapter factory=".dx.RelatedItemsBehaviorFieldWidget" />
     </configure>
 
     <!-- override p.a.contenttypes specific widgets -->

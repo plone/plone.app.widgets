@@ -1040,10 +1040,24 @@ def CreatorsFieldWidget(field, request):
     return widget
 
 
+@implementer(IFieldWidget)
+def RelatedItemsFieldWidget(field, request, extra=None):
+    """Field widget for the relation choice, relation list and choice fields
+    with a vocabulary or a catalog source.
+    Plone 5 style.
+    """
+    if extra is not None:
+        request = extra
+    return FieldWidget(field, RelatedItemsWidget(request))
+
+
 if HAS_RF:
     @adapter(getSpecification(IRelatedItems['relatedItems']), IWidgetsLayer)
     @implementer(IFieldWidget)
-    def RelatedItemsFieldWidget(field, request):
+    def RelatedItemsBehaviorFieldWidget(field, request):
+        """Field widget for the related items behavior from plone.app.dexterity
+        Has a preconfigured vocabulary.
+        """
         widget = FieldWidget(field, RelatedItemsWidget(request))
         widget.vocabulary = 'plone.app.vocabularies.Catalog'
         widget.vocabulary_override = True
