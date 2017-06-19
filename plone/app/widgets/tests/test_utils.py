@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 from mock import Mock
 from mock import patch
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.registry.interfaces import IRegistry
 from zope.component import getUtility
+
 import json
 import unittest
 

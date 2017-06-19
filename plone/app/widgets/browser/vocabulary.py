@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 from AccessControl import getSecurityManager
-from Products.CMFCore.utils import getToolByName
-from Products.Five import BrowserView
 from logging import getLogger
 from plone.app.layout.navigation.interfaces import INavigationRoot
 from plone.app.layout.navigation.root import getNavigationRoot
@@ -9,6 +7,7 @@ from plone.app.querystring import queryparser
 from plone.app.widgets.interfaces import IFieldPermissionChecker
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.supermodel.utils import mergedTaggedValueDict
+from Products.Five import BrowserView
 from types import FunctionType
 from zope.component import getUtility
 from zope.component import queryAdapter
@@ -16,9 +15,11 @@ from zope.component import queryUtility
 from zope.schema.interfaces import ICollection
 from zope.schema.interfaces import IVocabularyFactory
 from zope.security.interfaces import IPermission
+
 import inspect
 import itertools
 import json
+
 
 logger = getLogger(__name__)
 

@@ -3,10 +3,10 @@
     xmlns:browser="http://namespaces.zope.org/browser">
 
   <browser:page
-    for="*"
-    name="select-widget-view"
-    class="..testing.TestSelectWidgetForm"
-    permission="zope2.View"
-    />
+      for="*"
+      name="select-widget-view"
+      class="..testing.TestSelectWidgetForm"
+      permission="zope2.View"
+      />
 
 </configure>

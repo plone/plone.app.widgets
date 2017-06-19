@@ -1,7 +1,9 @@
-from Products.Five.browser import BrowserView
+# -*- coding: utf-8 -*-
 from plone.memoize import ram
+from Products.Five.browser import BrowserView
 from zope.component import queryUtility
 from zope.i18n.interfaces import ITranslationDomain
+
 import json
 
 

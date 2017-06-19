@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from mock import Mock
-from plone.app.testing import TEST_USER_ID
-from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
 from plone.app.testing import logout
 from plone.app.testing import setRoles
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
 from plone.app.widgets.browser import vocabulary
 from plone.app.widgets.browser.file import FileUploadView
 from plone.app.widgets.browser.query import QueryStringIndexOptions
@@ -19,13 +19,15 @@ from zope.component import provideAdapter
 from zope.component import provideUtility
 from zope.component.globalregistry import base
 from zope.globalrequest import setRequest
-from zope.interface import Interface
 from zope.interface import alsoProvides
+from zope.interface import Interface
 from zope.interface import noLongerProvides
+
 import json
 import os
 import transaction
 import unittest
+
 
 _dir = os.path.dirname(__file__)
 

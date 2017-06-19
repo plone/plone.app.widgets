@@ -1,13 +1,16 @@
-from Products.CMFCore.utils import getToolByName
-from Products.Five.browser import BrowserView
+# -*- coding: utf-8 -*-
 from plone.app.widgets.interfaces import IATCTFileFactory
 from plone.app.widgets.interfaces import IDXFileFactory
 from plone.uuid.interfaces import IUUID
+from Products.CMFCore.utils import getToolByName
+from Products.Five.browser import BrowserView
+
 import json
 import logging
 import mimetypes
 import os
 import pkg_resources
+
 
 try:
     pkg_resources.get_distribution('plone.dexterity')
