@@ -16,6 +16,17 @@
   <include package=".browser" />
 
   <browser:resource
+      name="plone.app.widgets-requirejs-unset.js"
+      file="static/requirejs-unset.js"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-requirejs-reset.js"
+      file="static/requirejs-reset.js"
+      layer=".interfaces.IWidgetsLayer"
+      />
+
+  <browser:resource
       name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.eot"
       file="static/widgets-bootstrap-glyphicons-halflings-regular.eot"
       layer=".interfaces.IWidgetsLayer"

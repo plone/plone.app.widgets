@@ -15,9 +15,19 @@
     <javascript bundle="default" id="tiny_mce_gzip.js" />
     <javascript bundle="default" id="toc.js" />
 
-    <javascript remove="True"
+    <javascript
+        remove="True"
         id="++resource++plone.app.widgets.js"
         />
 
-</object>
+    <javascript
+        remove="True"
+        id="++resource++plone.app.widgets-requirejs-unset.js"
+        />
 
+    <javascript
+        remove="True"
+        id="++resource++plone.app.widgets-requirejs-reset.js"
+        />
+
+</object>
