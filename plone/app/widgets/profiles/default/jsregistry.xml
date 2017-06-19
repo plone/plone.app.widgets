@@ -25,4 +25,24 @@
         inline="False"
         />
 
+    <javascript
+        id="++resource++plone.app.widgets-requirejs-unset.js"
+        insert-before="++resource++plone.app.widgets.js"
+        cacheable="True"
+        compression="safe"
+        cookable="True"
+        enabled="True"
+        inline="False"
+        />
+
+    <javascript
+        id="++resource++plone.app.widgets-requirejs-reset.js"
+        insert-after="++resource++plone.app.widgets.js"
+        cacheable="True"
+        compression="safe"
+        cookable="True"
+        enabled="True"
+        inline="False"
+        />
+
 </object>

@@ -11,6 +11,11 @@ Changelog
   They are merged with the ``at`` respectively ``dx`` modules.
   [thet]
 
+- Unset and reset ``define`` and ``require`` before and after the plone.app.widgets JavaScript bundle.
+  This avoids the infamous ``Mismatched anonymous define`` error with unbundled JavaScript supporting RequireJS.
+  See: http://requirejs.org/docs/errors.html#mismatch
+  [thet]
+
 - Remove Plone 5 specific zcml conditions
   [petschki]
 
