@@ -1,8 +1,12 @@
 Changelog
 =========
 
-1.9.2 (unreleased)
-------------------
+1.10 (unreleased)
+-----------------
+
+- Deprecate the ``at_bbb`` and ``dx_bbb`` modules.
+  They are merged with the ``at`` respectively ``dx`` modules.
+  [thet]
 
 - Remove Plone 5 specific zcml conditions
   [petschki]

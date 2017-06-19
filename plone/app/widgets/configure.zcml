@@ -15,9 +15,6 @@
   <include package="plone.app.vocabularies" />
   <include package=".browser" />
 
-  <include package="mockup"
-      zcml:condition="installed mockup" />
-
   <browser:resource
       name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.eot"
       file="static/widgets-bootstrap-glyphicons-halflings-regular.eot"
@@ -157,29 +154,32 @@
         layer=".interfaces.IWidgetsLayer"
         />
   </configure>
-  <configure zcml:condition="installed mockup"><configure package="mockup">
-    <!-- You have to build whe widgets bundle, if mockup is installed -->
-    <browser:resource
-        name="plone.app.widgets.js"
-        file="build/widgets.js"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-    <browser:resource
-        name="plone.app.widgets.min.js.map"
-        file="build/widgets.min.js.map"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-    <browser:resource
-        name="plone.app.widgets.css"
-        file="build/widgets.min.css"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-    <browser:resource
-        name="plone.app.widgets.min.css.map"
-        file="build/widgets.min.css.map"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-  </configure></configure>
+  <configure zcml:condition="installed mockup">
+    <include package="mockup" />
+    <configure package="mockup">
+      <!-- You have to build whe widgets bundle, if mockup is installed -->
+      <browser:resource
+          name="plone.app.widgets.js"
+          file="build/widgets.js"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+      <browser:resource
+          name="plone.app.widgets.min.js.map"
+          file="build/widgets.min.js.map"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+      <browser:resource
+          name="plone.app.widgets.css"
+          file="build/widgets.min.css"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+      <browser:resource
+          name="plone.app.widgets.min.css.map"
+          file="build/widgets.min.css.map"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+    </configure>
+  </configure>
 
   <cmf:registerDirectory name="plone_widgets" />
 
@@ -189,6 +189,12 @@
     <include package="archetypes.schemaextender" />
     <adapter factory=".factories.ATCTFileFactory" />
     <adapter factory=".at.ATFieldPermissionChecker" />
+    <adapter
+        name="plone.app.widgets"
+        factory=".at.MetadataExtender"
+        for="Products.ATContentTypes.interface.IATContentType"
+        provides="archetypes.schemaextender.interfaces.ISchemaModifier"
+        />
   </configure>
 
   <configure zcml:condition="installed plone.app.dexterity">
@@ -214,40 +220,28 @@
     <adapter factory=".dx.QueryStringDataConverter" />
     <adapter factory=".dx.RelationChoiceRelatedItemsWidgetConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
-  </configure>
 
-  <configure zcml:condition="installed Products.ATContentTypes">
-    <adapter
-        name="plone.app.widgets"
-        factory=".at_bbb.MetadataExtender"
-        for="Products.ATContentTypes.interface.IATContentType"
-        provides="archetypes.schemaextender.interfaces.ISchemaModifier"
-        />
-  </configure>
-
-  <configure zcml:condition="installed plone.app.dexterity">
-
-    <adapter factory=".dx_bbb.SubjectsFieldWidget" />
-    <adapter factory=".dx_bbb.LanguageFieldWidget" />
-    <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
-    <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
-    <adapter factory=".dx_bbb.ContributorsFieldWidget" />
-    <adapter factory=".dx_bbb.CreatorsFieldWidget" />
+    <adapter factory=".dx.SubjectsFieldWidget" />
+    <adapter factory=".dx.LanguageFieldWidget" />
+    <adapter factory=".dx.EffectiveDateFieldWidget" />
+    <adapter factory=".dx.ExpirationDateFieldWidget" />
+    <adapter factory=".dx.ContributorsFieldWidget" />
+    <adapter factory=".dx.CreatorsFieldWidget" />
 
     <configure zcml:condition="installed plone.app.relationfield">
-      <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
+      <adapter factory=".dx.RelatedItemsFieldWidget" />
     </configure>
 
     <!-- override p.a.contenttypes specific widgets -->
     <configure zcml:condition="installed plone.app.contenttypes">
-        <adapter factory=".dx_bbb.QueryStringFieldWidget" />
+        <adapter factory=".dx.QueryStringFieldWidget" />
     </configure>
 
   </configure>
 
   <configure zcml:condition="installed plone.app.textfield">
     <!-- rich text widget for plone.app.textfield -->
-    <adapter factory=".dx_bbb.RichTextFieldWidget" />
+    <adapter factory=".dx.RichTextFieldWidget" />
   </configure>
 
   <genericsetup:registerProfile

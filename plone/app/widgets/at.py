@@ -1,27 +1,37 @@
 # -*- coding: utf-8 -*-
 from AccessControl import ClassSecurityInfo
+from archetypes.schemaextender.interfaces import IBrowserLayerAwareExtender
+from archetypes.schemaextender.interfaces import ISchemaModifier
 from DateTime import DateTime
-from Products.Archetypes.interfaces import IBaseObject
-from Products.Archetypes.Registry import registerWidget
-from Products.Archetypes.Widget import TypesWidget
-from Products.CMFCore.utils import getToolByName
 from datetime import datetime
+from plone.app.widgets.base import dict_merge
 from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget
 from plone.app.widgets.base import TextareaWidget
-from plone.app.widgets.base import dict_merge
 from plone.app.widgets.interfaces import IFieldPermissionChecker
-from plone.app.widgets.utils import NotImplemented
+from plone.app.widgets.interfaces import IWidgetsLayer
+from plone.app.widgets.utils import first_weekday
+from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
-from plone.app.widgets.utils import get_ajaxselect_options
-from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_querystring_options
+from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_tinymce_options
+from plone.app.widgets.utils import NotImplemented
 from plone.uuid.interfaces import IUUID
-from zope.interface import implements
+from Products.Archetypes.interfaces import IBaseObject
+from Products.Archetypes.Registry import registerWidget
+from Products.Archetypes.Widget import TypesWidget
+from Products.ATContentTypes.interface import IATContentType
+from Products.CMFCore.utils import getToolByName
 from zope.component import adapts
+from zope.i18nmessageid import MessageFactory
+from zope.interface import implements
+
 import json
+
+
+_plone = MessageFactory('plone')
 
 
 class BaseWidget(TypesWidget):
@@ -682,3 +692,97 @@ class ATFieldPermissionChecker(object):
                 return False
             return field.checkPermission('w', self.context)
         raise AttributeError('No such field: {}'.format(field_name))
+
+
+class MetadataExtender(object):
+    """
+    """
+
+    implements(ISchemaModifier, IBrowserLayerAwareExtender)
+    adapts(IATContentType)
+    layer = IWidgetsLayer
+
+    def __init__(self, context):
+        self.context = context
+
+    def fiddle(self, schema):
+        for field in schema.fields():
+            old = field.widget
+
+            if field.__name__ in ['startDate']:
+                field.widget = DatetimeWidget(
+                    label=old.label,
+                    description=old.description,
+                    pattern_options={'date': {'firstDay': first_weekday()}},
+                )
+
+            if field.__name__ in ['endDate']:
+                field.widget = DatetimeWidget(
+                    label=old.label,
+                    description=old.description,
+                    pattern_options={'date': {'firstDay': first_weekday()}},
+                )
+
+            if field.__name__ in ['subject']:
+                field.widget = KeywordsWidget(
+                    label=old.label,
+                    description=old.description,
+                )
+
+            if field.__name__ in ['language']:
+                field.widget = SelectWidget(
+                    label=old.label,
+                    description=old.description,
+                )
+
+            if field.__name__ in ['effectiveDate', 'expirationDate']:
+                field.widget = DatetimeWidget(
+                    label=old.label,
+                    description=old.description,
+                    pattern_options={'date': {'firstDay': first_weekday()}},
+                )
+
+            if field.__name__ in ['contributors']:
+                field.widget = AjaxSelectWidget(
+                    label=old.label,
+                    description=_plone(u"The names of people that have "
+                                       u"contributed to this item."),
+                    vocabulary="plone.app.vocabularies.Users",
+                )
+
+            if field.__name__ in ['creators']:
+                field.widget = AjaxSelectWidget(
+                    label=old.label,
+                    description=_plone(u"The names of people that are "
+                                       u"creators to this item."),
+                    vocabulary="plone.app.vocabularies.Users",
+                )
+
+            if field.__name__ in ['text']:
+                field.widget = TinyMCEWidget(
+                    label=old.label,
+                    description=old.description,
+                )
+
+            if field.__name__ == 'query':
+                field.widget = QueryStringWidget(
+                    label=old.label,
+                    description=old.description
+                )
+
+            if field.__name__ == 'relatedItems':
+                field.widget = RelatedItemsWidget(
+                    label=old.label,
+                    description=old.description
+                )
+
+        # if 'customViewFields' in schema:
+        #     field = schema['customViewFields']
+        #     widget = field.widget
+        #     field.widget = ChosenWidget(
+        #         label=widget.label,
+        #         description=widget.description,
+        #         js_options={
+        #             'allow_sortable': True
+        #         }
+        #     )

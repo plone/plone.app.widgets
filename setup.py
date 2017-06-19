@@ -1,6 +1,9 @@
-from setuptools import setup, find_packages
+# -*- coding: utf-8 -*-
+from setuptools import find_packages
+from setuptools import setup
 
-version = '1.9.2.dev0'
+
+version = '1.10.dev0'
 
 setup(
     name='plone.app.widgets',
@@ -40,6 +43,7 @@ setup(
         # needed for compatibility with jQuery 1.9+
         'Products.CMFPlone>=4.3.4',
         'plone.app.registry',
+        'zope.deprecation',
     ],
     extras_require={
         'test': [
