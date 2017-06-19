@@ -5,7 +5,6 @@ from Products.CMFPlone.utils import safe_callable
 from datetime import date
 from datetime import datetime
 from lxml import etree
-from plone.app.textfield.interfaces import IRichText
 from plone.app.textfield.value import RichTextValue
 from plone.app.textfield.widget import IRichTextWidget as patextfield_IRichTextWidget  # noqa
 from plone.app.textfield.widget import RichTextWidget as patextfield_RichTextWidget  # noqa
@@ -39,14 +38,11 @@ from z3c.form.converter import CollectionSequenceDataConverter
 from z3c.form.converter import SequenceDataConverter
 from z3c.form.interfaces import IAddForm
 from z3c.form.interfaces import IFieldWidget
-from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextWidget
 from z3c.form.interfaces import NO_VALUE
-from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
 from z3c.form.widget import Widget
-from zope.component import adapter
 from zope.component import adapts
 from zope.component import getUtility
 from zope.component import queryMultiAdapter
@@ -68,13 +64,6 @@ from zope.schema.interfaces import ISequence
 from zope.security.interfaces import IPermission
 import pytz
 import json
-
-try:
-    from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
-    from plone.app.contenttypes.behaviors import richtext  # noqa
-    HAS_PAC = True
-except ImportError:
-    HAS_PAC = False
 
 try:
     from z3c.relationfield.interfaces import IRelationChoice
@@ -971,24 +960,6 @@ def RelatedItemsFieldWidget(field, request, extra=None):
     if extra is not None:
         request = extra
     return FieldWidget(field, RelatedItemsWidget(request))
-
-
-if HAS_PAC:
-    @adapter(getSpecification(IDXCollection['query']), IFormLayer)
-    @implementer(IFieldWidget)
-    def QueryStringFieldWidget(field, request):
-        return FieldWidget(field, QueryStringWidget(request))
-
-    @adapter(getSpecification(richtext.IRichText['text']), IFormLayer)
-    @implementer(IFieldWidget)
-    def RichTextFieldWidget(field, request):
-        return FieldWidget(field, RichTextWidget(request))
-else:
-    # expose RichTextFieldWidget factory for non-PAC plone 4 sites:
-    @adapter(IRichText, IWidgetsLayer)
-    @implementer(IFieldWidget)
-    def RichTextFieldWidget(field, request):
-        return FieldWidget(field, RichTextWidget(request))
 
 
 class MockRequest(TestRequest):
