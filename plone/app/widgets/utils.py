@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-from Acquisition import aq_inner, aq_parent, aq_base
-from Products.CMFCore.interfaces import ISiteRoot
-from Products.CMFCore.interfaces._content import IFolderish
-from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.interfaces import IPloneSiteRoot
+from Acquisition import aq_base
+from Acquisition import aq_inner
+from Acquisition import aq_parent
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
 from plone.portlets.interfaces import IPortletAssignmentMapping
 from plone.registry.interfaces import IRegistry
 from plone.uuid.interfaces import IUUID
+from Products.CMFCore.interfaces import ISiteRoot
+from Products.CMFCore.interfaces._content import IFolderish
+from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone.interfaces import IPloneSiteRoot
 from z3c.form.interfaces import IForm
 from zope.component import getMultiAdapter
 from zope.component import getUtility
@@ -18,7 +20,9 @@ from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
+
 import json
+
 
 _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')

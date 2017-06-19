@@ -1,7 +1,9 @@
-from Products.Five import BrowserView
+# -*- coding: utf-8 -*-
 from plone.app.querystring.interfaces import IQuerystringRegistryReader
 from plone.registry.interfaces import IRegistry
+from Products.Five import BrowserView
 from zope.component import getUtility
+
 import json
 
 

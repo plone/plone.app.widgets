@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 from plone.app.testing.interfaces import ROBOT_TEST_LEVEL
 from plone.app.widgets.testing import PLONEAPPWIDGETS_DX_ROBOT_TESTING
 from plone.testing import layered
+
 import os
 import robotsuite
 import unittest

@@ -2,10 +2,10 @@
 from datetime import date
 from datetime import datetime
 from mock import Mock
-from plone.app.testing import TEST_USER_ID
-from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
 from plone.app.testing import setRoles
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
 from plone.app.widgets.browser.vocabulary import VocabularyView
 from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.testing import ExampleVocabulary
@@ -17,7 +17,8 @@ from plone.dexterity.fti import DexterityFTI
 from plone.registry.interfaces import IRegistry
 from plone.testing.zca import UNIT_TESTING
 from z3c.form.form import Form
-from z3c.form.interfaces import IFieldWidget, IFormLayer
+from z3c.form.interfaces import IFieldWidget
+from z3c.form.interfaces import IFormLayer
 from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
 from zope import schema
@@ -26,8 +27,8 @@ from zope.component import provideAdapter
 from zope.component import provideUtility
 from zope.component.globalregistry import base
 from zope.globalrequest import setRequest
-from zope.interface import Interface
 from zope.interface import alsoProvides
+from zope.interface import Interface
 from zope.schema import BytesLine
 from zope.schema import Choice
 from zope.schema import Date
@@ -36,10 +37,12 @@ from zope.schema import List
 from zope.schema import Set
 from zope.schema import TextLine
 from zope.schema import Tuple
+
 import json
 import mock
 import pytz
 import unittest
+
 
 try:
     from Products.CMFPlone.factory import _IMREALLYPLONE5  # noqa

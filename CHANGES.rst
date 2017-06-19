@@ -4,6 +4,9 @@ Changelog
 1.10 (unreleased)
 -----------------
 
+- PEP 8.
+  [thet]
+
 - Deprecate the ``at_bbb`` and ``dx_bbb`` modules.
   They are merged with the ``at`` respectively ``dx`` modules.
   [thet]

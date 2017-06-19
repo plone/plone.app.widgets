@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
+from plone.app.widgets.interfaces import IATCTFileFactory
+from plone.app.widgets.interfaces import IDXFileFactory
+from plone.i18n.normalizer.interfaces import IFileNameNormalizer
 from Products.Archetypes.event import ObjectInitializedEvent
 from Products.CMFCore.interfaces._content import IFolderish
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone import utils as ploneutils
-from plone.app.widgets.interfaces import IATCTFileFactory
-from plone.app.widgets.interfaces import IDXFileFactory
-from plone.i18n.normalizer.interfaces import IFileNameNormalizer
 from thread import allocate_lock
 from zope.component import adapts
 from zope.component import getUtility
@@ -12,8 +13,10 @@ from zope.container.interfaces import INameChooser
 from zope.event import notify
 from zope.interface import implements
 from zope.lifecycleevent import ObjectModifiedEvent
+
 import pkg_resources
 import transaction
+
 
 try:
     from plone.namedfile.file import NamedBlobImage

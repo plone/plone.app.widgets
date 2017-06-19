@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 from DateTime import DateTime
+from datetime import datetime
+from mock import Mock
+from plone.app.testing import login
+from plone.app.testing import setRoles
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
+from plone.app.widgets.browser.vocabulary import VocabularyView
+from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
+from plone.app.widgets.testing import TestRequest
+from plone.testing.zca import ZCML_DIRECTIVES
 from Products.Archetypes.atapi import BaseContent
 from Products.Archetypes.atapi import ReferenceField
 from Products.Archetypes.atapi import Schema
 from Products.Archetypes.atapi import StringField
 from Products.CMFCore.utils import getToolByName
-from datetime import datetime
-from mock import Mock
-from plone.app.testing import TEST_USER_ID
-from plone.app.testing import TEST_USER_NAME
-from plone.app.testing import login
-from plone.app.testing import setRoles
-from plone.app.widgets.browser.vocabulary import VocabularyView
-from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
-from plone.app.widgets.testing import TestRequest
-from plone.testing.zca import ZCML_DIRECTIVES
 from zope.configuration import xmlconfig
 from zope.globalrequest import setRequest
+
 import json
 import mock
 import plone.uuid

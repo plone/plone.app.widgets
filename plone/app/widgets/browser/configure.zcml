@@ -7,47 +7,47 @@
     i18n_domain="plone.app.widgets">
 
   <browser:page
-    name="getVocabulary"
-    for="*"
-    class=".vocabulary.VocabularyView"
-    permission="zope2.View"
-    />
+      name="getVocabulary"
+      for="*"
+      class=".vocabulary.VocabularyView"
+      permission="zope2.View"
+      />
 
   <browser:page
-    name="getSource"
-    for="z3c.form.interfaces.IWidget"
-    class=".vocabulary.SourceView"
-    permission="zope.Public"
-    />
+      name="getSource"
+      for="z3c.form.interfaces.IWidget"
+      class=".vocabulary.SourceView"
+      permission="zope.Public"
+      />
 
   <browser:page
-    name="fileUpload"
-    for="Products.CMFCore.interfaces._content.IFolderish"
-    class=".file.FileUploadView"
-    permission="cmf.AddPortalContent"
-    />
+      name="fileUpload"
+      for="Products.CMFCore.interfaces._content.IFolderish"
+      class=".file.FileUploadView"
+      permission="cmf.AddPortalContent"
+      />
 
   <browser:page
-    name="qsOptions"
-    for="plone.app.layout.navigation.interfaces.INavigationRoot"
-    class=".query.QueryStringIndexOptions"
-    permission="zope2.View"
-    />
+      name="qsOptions"
+      for="plone.app.layout.navigation.interfaces.INavigationRoot"
+      class=".query.QueryStringIndexOptions"
+      permission="zope2.View"
+      />
 
   <browser:page
-    zcml:condition="installed Products.Archetypes"
-    name="patterns_widget"
-    for="Products.Archetypes.interfaces.IBaseObject"
-    class=".at_widget.PatternsWidgetMacros"
-    template="patterns_widget.pt"
-    permission="zope.Public"
-    />
+      zcml:condition="installed Products.Archetypes"
+      name="patterns_widget"
+      for="Products.Archetypes.interfaces.IBaseObject"
+      class=".at_widget.PatternsWidgetMacros"
+      template="patterns_widget.pt"
+      permission="zope.Public"
+      />
 
   <browser:view
-    for="*"
-    name="plonejsi18n"
-    class=".i18n.i18njs"
-    permission="zope2.View"
-    />
+      for="*"
+      name="plonejsi18n"
+      class=".i18n.i18njs"
+      permission="zope2.View"
+      />
 
 </configure>

@@ -12,9 +12,9 @@ from plone.autoform.form import AutoExtensibleForm
 from plone.testing import z2
 from z3c.form import form
 from zope.configuration import xmlconfig
-from zope.interface import Interface
 from zope.interface import directlyProvides
 from zope.interface import implements
+from zope.interface import Interface
 from zope.publisher.browser import TestRequest as BaseTestRequest
 from zope.schema import Choice
 from zope.schema import List
