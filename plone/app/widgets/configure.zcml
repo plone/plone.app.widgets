@@ -301,4 +301,13 @@
       purge="False"
       run_deps="False" />
 
+  <genericsetup:upgradeStep
+      title="Unset / Reset RequireJS"
+      description="Integrate Scripts to unset and reset RequireJS."
+      source="2"
+      destination="3"
+      handler="plone.app.widgets.upgrades.upgrade_2_to_3"
+      profile="plone.app.widgets:default"
+      />
+
 </configure>
