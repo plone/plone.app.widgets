@@ -4,6 +4,9 @@ Changelog
 1.10 (unreleased)
 -----------------
 
+- failsafe Unset and reset ``define`` and ``require``
+  [petschki]
+
 - PEP 8.
   [thet]
 
