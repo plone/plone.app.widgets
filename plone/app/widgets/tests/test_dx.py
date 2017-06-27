@@ -982,6 +982,35 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         pattern_options = base_args['pattern_options']
         self.assertEquals(pattern_options.get('maximumSelectionSize', 0), 1)
 
+    def test_multiple_selection(self):
+        """The pattern_options key maximumSelectionSize shouldn't be
+        set when the field allows multiple selections"""
+        from plone.app.widgets.dx import RelatedItemsFieldWidget
+        from zope.schema.interfaces import ISource
+        from zope.schema.vocabulary import VocabularyRegistry
+
+        context = mock.Mock(absolute_url=lambda: 'fake_url',
+                       getPhysicalPath=lambda: ['', 'site'])
+        context.portal_properties.site_properties\
+            .getProperty.return_value = ['SomeType']
+        field = List(
+            __name__='selectfield',
+            value_type=Choice(vocabulary='foobar')
+        )
+        widget = RelatedItemsFieldWidget(field, self.request)
+        widget.context = context
+
+        vocab = mock.Mock()
+        alsoProvides(vocab, ISource)
+        with mock.patch.object(VocabularyRegistry, 'get', return_value=vocab):
+            widget.update()
+            base_args = widget._base_args()
+        patterns_options = base_args['pattern_options']
+        self.assertFalse('maximumSelectionSize' in patterns_options)
+        self.assertEqual(
+            patterns_options['vocabularyUrl'],
+            'fake_url/@@getVocabulary?name=foobar&field=selectfield',
+            )
 
     def test_converter_RelationChoice(self):
         from plone.app.widgets.dx import \
@@ -1049,6 +1078,17 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 type(converter.toFieldValue('id1;id2')[0]),
                 expected_value_type
                 )
+
+    def test_fieldwidget(self):
+        from plone.app.widgets.dx import RelatedItemsWidget
+        from plone.app.widgets.dx import RelatedItemsFieldWidget
+        field = mock.Mock(__name__='field', title=u'', required=True)
+        vocabulary = mock.Mock()
+        request = mock.Mock()
+        widget = RelatedItemsFieldWidget(field, vocabulary, request)
+        self.assertTrue(isinstance(widget, RelatedItemsWidget))
+        self.assertIs(widget.field, field)
+        self.assertIs(widget.request, request)
 
 
 def add_mock_fti(portal):

@@ -185,7 +185,6 @@ def get_tinymce_options(context, field, request):
     options = {}
 
     utility = getToolByName(aq_inner(context), 'portal_tinymce', None)
-    # Plone 4.3
     # map Products.TinyMCE settings meant for TinyMCE 3 to version 4
     # see http://www.tinymce.com/wiki.php/Tutorial:Migration_guide_from_3.x
     # and https://github.com/plone/plone.app.widgets/issues/72
