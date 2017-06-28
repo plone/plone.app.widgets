@@ -4,9 +4,11 @@ Changelog
 1.10 (unreleased)
 -----------------
 
-- failsafe Unset and reset ``define`` and ``require``
-  [petschki]
+- Insert ``++resource++plone.app.widgets.js`` resource at the beginning, before ``++resource++plone.app.jquery.js`` (but after ``++resource++plone.app.widgets-requirejs-unset.js``).
+  This makes other installations more predictable when they install resources directly after ``++resource++plone.app.jquery.js``.
+  [thet]
 
+  
 - PEP 8.
   [thet]
 
@@ -17,7 +19,7 @@ Changelog
 - Unset and reset ``define`` and ``require`` before and after the plone.app.widgets JavaScript bundle.
   This avoids the infamous ``Mismatched anonymous define`` error with unbundled JavaScript supporting RequireJS.
   See: http://requirejs.org/docs/errors.html#mismatch
-  [thet]
+  [thet, petschki]
 
 - Remove Plone 5 specific zcml conditions
   [petschki]

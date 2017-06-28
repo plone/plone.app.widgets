@@ -1,2 +1,2 @@
-if(typeof _old_define !== 'undefined') { var define = _old_define; }
-if(typeof _old_require !== 'undefined') { var require = _old_require; }
+define = typeof(_old_define) !== 'undefined' ? _old_define : undefined;
+require = typeof(_old_require) !== 'undefined' ? _old_require : undefined;
