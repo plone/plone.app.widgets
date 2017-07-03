@@ -4,10 +4,6 @@ Changelog
 2.1.1 (unreleased)
 ------------------
 
-Breaking changes:
-
-- *add item here*
-
 New features:
 
 - Related items widget options changes:
