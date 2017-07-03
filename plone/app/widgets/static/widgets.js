@@ -34194,8 +34194,8 @@ define('mockup-patterns-querystring',[
       // elements that may exist already on the page
       // XXX do this in a way so it'll work with other forms will work
       // as long as they provide sort_on and sort_reversed fields in z3c form
-      var existingSortOn = $('[id$="-sort_on"]').filter('[id^="formfield-"]');
-      var existingSortOrder = $('[id$="-sort_reversed"]').filter('[id^="formfield-"]');
+      var existingSortOn = $('[id$="-sort_on"]').filter('[id^="formfield-"],[id^="archetypes-fieldname-"]');
+      var existingSortOrder = $('[id$="-sort_reversed"]').filter('[id^="formfield-"],[id^="archetypes-fieldname-"]');
 
       $('<span/>')
         .addClass(self.options.classSortLabelName)
@@ -34206,7 +34206,7 @@ define('mockup-patterns-querystring',[
         .appendTo(self.$sortWrapper)
         .change(function() {
           self.refreshPreviewEvent.call(self);
-          $('[id$="sort_on"]', existingSortOn).val($(this).val());
+          $('input[id$="sort_on"]', existingSortOn).val($(this).val());
         });
 
       self.$sortOn.append($('<option value="">No sorting</option>')); // default no sorting
@@ -34224,9 +34224,9 @@ define('mockup-patterns-querystring',[
         .change(function() {
           self.refreshPreviewEvent.call(self);
           if ($(this).prop('checked')) {
-            $('.option input[type="checkbox"]', existingSortOrder).prop('checked', true);
+            $('input[type="checkbox"]', existingSortOrder).prop('checked', true);
           } else {
-            $('.option input[type="checkbox"]', existingSortOrder).prop('checked', false);
+            $('input[type="checkbox"]', existingSortOrder).prop('checked', false);
           }
         });
 
@@ -34243,14 +34243,16 @@ define('mockup-patterns-querystring',[
       // if the form already contains the sort fields, hide them! Their values
       // will be synced back and forth between the querystring's form elements
       if (existingSortOn.length >= 1 && existingSortOrder.length >= 1) {
-        var reversed = $('.option input[type="checkbox"]', existingSortOrder).prop('checked');
-        var sortOn = $('[id$="-sort_on"]', existingSortOn).val();
+        var reversed = $('input[type="checkbox"]', existingSortOrder).prop('checked');
+        var sortOn = $('input[id$="sort_on"]', existingSortOn).val();
         if (reversed) {
           self.$sortOrder.prop('checked', true);
         }
         self.$sortOn.select2('val', sortOn);
         $(existingSortOn).hide();
         $(existingSortOrder).hide();
+        self.$sortOn.attr('name', null);
+        self.$sortOrder.attr('name', null);
       }
     },
     refreshPreviewEvent: function(value) {
