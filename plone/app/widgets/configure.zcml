@@ -138,7 +138,7 @@
   <configure zcml:condition="not-installed mockup">
     <browser:resource
         name="plone.app.widgets.js"
-        file="static/widgets.min.js"
+        file="static/widgets.js"
         layer=".interfaces.IWidgetsLayer"
         />
     <browser:resource

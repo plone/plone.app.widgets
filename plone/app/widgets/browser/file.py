@@ -8,6 +8,7 @@ import logging
 import mimetypes
 import os
 import pkg_resources
+import transaction
 
 try:
     pkg_resources.get_distribution('plone.dexterity')
@@ -131,16 +132,25 @@ class FileUploadView(BrowserView):
         ctr = getToolByName(self.context, 'content_type_registry')
         type_ = ctr.findTypeName(filename.lower(), '', '') or 'File'
 
+        # Create images folder if necessary
+        context = self.context
+        if 'images' not in context:
+            context.invokeFactory('Folder', 'images')
+            wtool = getToolByName(self.context, 'portal_workflow')
+            wtool.doActionFor(context.images, 'publish')
+            context = context.images
+            transaction.commit()
+
         DX_BASED = False
         if HAS_DEXTERITY:
             pt = getToolByName(self.context, 'portal_types')
             if IDexterityFTI.providedBy(getattr(pt, type_)):
-                factory = IDXFileFactory(self.context)
+                factory = IDXFileFactory(context)
                 DX_BASED = True
             else:
-                factory = IATCTFileFactory(self.context)
+                factory = IATCTFileFactory(context)
         else:
-            factory = IATCTFileFactory(self.context)
+            factory = IATCTFileFactory(context)
 
         obj = factory(filename, content_type, filedata)
 
