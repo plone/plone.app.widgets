@@ -90996,6 +90996,14 @@ define('mockup-patterns-tinymce-url/js/links',[
         e.stopPropagation();
         self.linkType = self.modal.$modal.find('fieldset.active').data('linktype');
 
+        if(self.linkType === 'external') {
+          // use backend to convert to resolveuid URL when link is internal
+          $.get(portal_url + '/@@make-resolveuid-url', {url: self.getLinkUrl()}, function (href) {
+            self.updateAnchor(href);
+            self.hide();
+          });
+          return;
+        }
         if(self.linkType === 'uploadImage' || self.linkType === 'upload'){
           var patUpload = self.$upload.data().patternUpload;
           if(patUpload.dropzone.files.length > 0){
