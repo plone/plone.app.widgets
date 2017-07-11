@@ -134,7 +134,7 @@ class FileUploadView(BrowserView):
 
         # Create images folder if necessary
         context = self.context
-        if 'images' not in context:
+        if context.getId() != 'images' and 'images' not in context:
             context.invokeFactory('Folder', 'images')
             wtool = getToolByName(self.context, 'portal_workflow')
             wtool.doActionFor(context.images, 'publish')
