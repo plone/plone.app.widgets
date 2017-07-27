@@ -14,7 +14,8 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Allow related items options to work on non OFS Simple Item objects.
+  [thet]
 
 
 2.2 (2017-07-03)
