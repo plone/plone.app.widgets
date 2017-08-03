@@ -137,6 +137,7 @@ class FileUploadView(BrowserView):
         context = self.context
         if context.getId() != 'images':
             parent = aq_parent(aq_inner(context))
+            wtool = getToolByName(self.context, 'portal_workflow')
             for item in (context, parent):
                 if 'images' in item:
                     context = item.images
@@ -149,12 +150,14 @@ class FileUploadView(BrowserView):
                     continue
                 else:
                     # Publish images folder
-                    wtool = getToolByName(self.context, 'portal_workflow')
                     try:
                         wtool.doActionFor(item.images, 'publish')
                     except:
                         pass
                     context = item.images
+                    # The factory below commits a transaction (grr),
+                    # so make sure this work isn't lost.
+                    transaction.commit()
                     break
             else:
                 # If unable to create images folder in context
