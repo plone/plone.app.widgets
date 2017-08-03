@@ -1,3 +1,4 @@
+from Acquisition import aq_parent, aq_inner
 from Products.CMFCore.utils import getToolByName
 from Products.Five.browser import BrowserView
 from plone.app.widgets.interfaces import IATCTFileFactory
@@ -132,14 +133,33 @@ class FileUploadView(BrowserView):
         ctr = getToolByName(self.context, 'content_type_registry')
         type_ = ctr.findTypeName(filename.lower(), '', '') or 'File'
 
-        # Create images folder if necessary
+        # Find or create contextual `images` folder
         context = self.context
-        if context.getId() != 'images' and 'images' not in context:
-            context.invokeFactory('Folder', 'images')
-            wtool = getToolByName(self.context, 'portal_workflow')
-            wtool.doActionFor(context.images, 'publish')
-            context = context.images
-            transaction.commit()
+        if context.getId() != 'images':
+            parent = aq_parent(aq_inner(context))
+            for item in (context, parent):
+                if 'images' in item:
+                    context = item.images
+                    break
+                # No images folder yet; try to create one
+                try:
+                    item.invokeFactory('Folder', 'images')
+                except ValueError:
+                    # Not allowed to create folder here; try in parent
+                    continue
+                else:
+                    # Publish images folder
+                    wtool = getToolByName(self.context, 'portal_workflow')
+                    try:
+                        wtool.doActionFor(item.images, 'publish')
+                    except:
+                        pass
+                    context = item.images
+                    break
+            else:
+                # If unable to create images folder in context
+                # or its parent, fall back to normal Plone location
+                context = self.context
 
         DX_BASED = False
         if HAS_DEXTERITY:
