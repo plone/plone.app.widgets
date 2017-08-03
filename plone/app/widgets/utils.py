@@ -142,6 +142,9 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
 
     nav_root = getNavigationRootObject(context, site)
 
+    if not ISimpleItem.providedBy(context):
+        context = nav_root
+
     # basePath - start to search/browse in here.
     base_path_context = context
     if not IFolder.providedBy(base_path_context):
