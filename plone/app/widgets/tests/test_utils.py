@@ -3,6 +3,7 @@ from mock import patch
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
+from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_tinymce_options
 
@@ -48,6 +49,59 @@ class UtilsTests(unittest.TestCase):
         # restore original state
         utils.HAS_PAE = orig_HAS_PAE
         reload(utils)
+
+
+class TestQueryStringOptions(unittest.TestCase):
+    layer = PLONEAPPWIDGETS_INTEGRATION_TESTING
+
+    def setUp(self):
+        setRoles(self.layer['portal'], TEST_USER_ID, ['Contributor'])
+
+    def test__query_string_options(self):
+        """Test query string options on root:
+        All URLs and paths equal root url and path,
+        no favorites
+        """
+
+        portal = self.layer['portal']
+        options = get_querystring_options(
+            portal,
+            '@@qsOptions'
+        )
+
+        # Test base options
+        self.assertEqual(
+            options['indexOptionsUrl'],
+            'http://nohost/plone/@@qsOptions'
+        )
+
+        self.assertEqual(
+            options['previewCountURL'],
+            'http://nohost/plone/@@querybuildernumberofresults'
+        )
+
+        self.assertEqual(
+            options['previewURL'],
+            'http://nohost/plone/@@querybuilder_html_results'
+        )
+
+        # Test options of the AJAX select widget
+        self.assertEqual(
+            options['patternAjaxSelectOptions']['separator'],
+            ';'
+        )
+
+        # Test options of the date picker
+        self.assertEqual(
+            options['patternDateOptions']['time'],
+            False
+        )
+
+        # Test options of the related items widget
+        self.assertEqual(
+            options['patternRelateditemsOptions']['basePath'],
+            '/plone'
+        )
 
 
 class TestRelatedItemsOptions(unittest.TestCase):
