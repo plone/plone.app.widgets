@@ -4,14 +4,6 @@ Changelog
 2.2.1 (unreleased)
 ------------------
 
-Breaking changes:
-
-- *add item here*
-
-New features:
-
-- *add item here*
-
 Bug fixes:
 
 - Allow related items options to work on non OFS Simple Item objects.
