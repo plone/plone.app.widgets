@@ -576,9 +576,12 @@ class TinyMCEWidget(BaseWidget):
         properties = getToolByName(context, 'portal_properties')
         charset = properties.site_properties.getProperty('default_charset',
                                                          'utf-8')
-        args['value'] = (request.get(field.getName(),
-                                     field.getRaw(context))
-                         ).decode(charset)
+        if context.__class__.__name__ == 'FGRichLabelField':
+            args['value'] = context.getRawFgDefault().decode(charset)
+        else:
+            args['value'] = (request.get(field.getName(),
+                                         field.getRaw(context))
+                             ).decode(charset)
 
         args.setdefault('pattern_options', {})
         merged = dict_merge(get_tinymce_options(context, field, request),
