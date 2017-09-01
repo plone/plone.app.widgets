@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.10 (unreleased)
+1.10 (2017-09-01)
 -----------------
 
 - Insert ``++resource++plone.app.widgets.js`` resource at the beginning, before ``++resource++plone.app.jquery.js`` (but after ``++resource++plone.app.widgets-requirejs-unset.js``).
