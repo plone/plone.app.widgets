@@ -186,7 +186,24 @@ def get_querystring_options(context, querystring_view):
     return {
         'indexOptionsUrl': '{}/{}'.format(portal_url, querystring_view),
         'previewURL': '%s/@@querybuilder_html_results' % base_url,
-        'previewCountURL': '%s/@@querybuildernumberofresults' % base_url
+        'previewCountURL': '%s/@@querybuildernumberofresults' % base_url,
+        'patternDateOptions': get_date_options(getRequest()),
+        'patternAjaxSelectOptions': get_ajaxselect_options(
+            context,
+            None,
+            ';',
+            None,
+            None,
+            None
+        ),
+        'patternRelateditemsOptions': get_relateditems_options(
+            context,
+            None,
+            ';',
+            'plone.app.vocabularies.Catalog',
+            '@@getVocabulary',
+            'relatedItems'
+        )
     }
 
 

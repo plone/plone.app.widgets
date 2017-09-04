@@ -10,7 +10,9 @@ Breaking changes:
 
 New features:
 
-- *add item here*
+- Pass parameter of subwidgets to the query string widget to get them properly initialized.
+  Fixes a problem where the related items widget behaved differently from other areas and the date widget didn't respect the users localization.
+  [thet]
 
 Bug fixes:
 
