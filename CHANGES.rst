@@ -4,19 +4,11 @@ Changelog
 2.2.2 (unreleased)
 ------------------
 
-Breaking changes:
-
-- *add item here*
-
 New features:
 
 - Pass parameter of subwidgets to the query string widget to get them properly initialized.
   Fixes a problem where the related items widget behaved differently from other areas and the date widget didn't respect the users localization.
   [thet]
-
-Bug fixes:
-
-- *add item here*
 
 
 2.2.1 (2017-08-27)
