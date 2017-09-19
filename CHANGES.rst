@@ -2,11 +2,13 @@ Changelog
 =========
 
 2.4 (unreleased)
+2.3 (unreleased)
 ----------------
 
 Breaking changes:
 
-- *add item here*
+- PLIP 2150: Change ``plone.app.widgets.utils.get_date_options`` and ``plone.app.widgets.utils.get_datetime_options`` to reflect settings of new ``pat-date-picker`` and ``pat-datetime-picker``.
+  [thet]
 
 New features:
 
