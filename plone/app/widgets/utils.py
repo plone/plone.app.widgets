@@ -54,40 +54,28 @@ class NotImplemented(Exception):
 
 def get_date_options(request):
     calendar = request.locale.dates.calendars['gregorian']
-    today = datetime.today()
     return {
-        'time': False,
-        'date': {
-            'firstDay': calendar.week.get('firstDay') == 1 and 1 or 0,
-            'weekdaysFull': [
-                calendar.days.get(t, (None, None))[0]
-                for t in (7, 1, 2, 3, 4, 5, 6)],
-            'weekdaysShort': [
-                calendar.days.get(t, (None, None))[1]
-                for t in (7, 1, 2, 3, 4, 5, 6)],
-            'monthsFull': calendar.getMonthNames(),
-            'monthsShort': calendar.getMonthAbbreviations(),
-            'selectYears': 200,
-            'min': [today.year - 100, 1, 1],
-            'max': [today.year + 20, 1, 1],
-            'format': translate(
-                _('pickadate_date_format', default='mmmm d, yyyy'),
-                context=request),
-            'placeholder': translate(_('Enter date...'), context=request),
-        },
+        'firstDay': calendar.week.get('firstDay') == 1 and 1 or 0,
+        'behavior': 'native',
+        'week-numbers': 'show',
         'today': translate(_(u"Today"), context=request),
         'clear': translate(_(u"Clear"), context=request),
+        # 'placeholder': translate(_('Enter date...'), context=request),
+        # 'format': translate(
+        #     _('pickadate_date_format', default='mmmm d, yyyy'),
+        #     context=request
+        # ),
     }
 
 
 def get_datetime_options(request):
     options = get_date_options(request)
-    options['time'] = {
-        'format': translate(
-            _('pickadate_time_format', default='h:i a'),
-            context=request),
-        'placeholder': translate(_('Enter time...'), context=request),
-    }
+    # options['time'] = {
+    #     'format': translate(
+    #         _('pickadate_time_format', default='h:i a'),
+    #         context=request),
+    #     'placeholder': translate(_('Enter time...'), context=request),
+    # }
     return options
 
 

@@ -15,6 +15,13 @@ Breaking changes:
 - Remove five.globalrequest dependency.
   It has been deprecated upstream (Zope 4).
   [gforcada]
+2.5 (unreleased)
+----------------
+
+Breaking changes:
+
+- PLIP 2150: Change ``plone.app.widgets.utils.get_date_options`` and ``plone.app.widgets.utils.get_datetime_options`` to reflect settings of new ``pat-date-picker`` and ``pat-datetime-picker``.
+  [thet]
 
 New features:
 
