@@ -110915,7 +110915,7 @@ define('mockup-patterns-tinymce',[
     addImageClicked: function() {
       var self = this;
       if (self.imageModal === null) {
-        var linkTypes = ['uploadImage', 'image', 'externalImage'];
+        var linkTypes = ['uploadImage', 'image'];
         var options = $.extend(true, {}, self.options, {
           tinypattern: self,
           linkTypes: linkTypes,
