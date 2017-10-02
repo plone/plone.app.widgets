@@ -5,6 +5,7 @@ from Products.CMFCore.interfaces._content import IFolderish
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone.interfaces import IPloneSiteRoot
 from datetime import datetime
+from plone.app.imaging.interfaces import IImagingSchema
 from plone.app.layout.navigation.root import getNavigationRootObject
 from plone.portlets.interfaces import IPortletAssignmentMapping
 from plone.registry.interfaces import IRegistry
@@ -480,6 +481,19 @@ def get_tinymce_options(context, field, request):
             (context, request, field),
             name="tinymce_settings")()['data-pat-tinymce']
         options = json.loads(pattern_options)
+
+    # image scales
+    scale_adapter = IImagingSchema(get_portal(), alternate=None)
+    if scale_adapter:
+        scales = options['scales'] = []
+        for scale in scale_adapter.allowed_sizes:
+            scale_parts = scale.strip().split()
+            scales.append({
+                'part': scale_parts[0],
+                'name': scale_parts[0],
+                'label': scale_parts[0].title() + ' (' +
+                          scale_parts[1].replace(':', 'x') + ')'
+            })
     return options
 
 
