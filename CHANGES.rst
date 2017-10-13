@@ -46,8 +46,8 @@ New features:
   - Include the ``contextPath`` option to exclude the current context from selection.
   - Include the ``favorites`` option with the current context and the navigation root to quickly jump to these paths.
   - Clean up obsolete options.
-    Fixes https://github.com/plone/Products.CMFPlone/issues/1974
-    [thet]
+  Fixes https://github.com/plone/Products.CMFPlone/issues/1974
+  [thet]
 
 Bug fixes:
 
