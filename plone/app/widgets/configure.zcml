@@ -240,11 +240,13 @@
     <adapter factory=".dx.CreatorsFieldWidget" />
 
     <adapter
+        zcml:condition="installed z3c.relationfield"
         factory=".dx.RelatedItemsFieldWidget"
         for="z3c.relationfield.interfaces.IRelationChoice
              plone.app.widgets.interfaces.IWidgetsLayer"
         />
     <adapter
+        zcml:condition="installed z3c.relationfield"
         factory=".dx.RelatedItemsFieldWidget"
         for="z3c.relationfield.interfaces.IRelationList
              plone.app.widgets.interfaces.IWidgetsLayer"
