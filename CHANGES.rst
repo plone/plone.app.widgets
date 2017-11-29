@@ -4,7 +4,8 @@ Changelog
 1.11 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- Make z3c.relationfield a soft dependency.
+  [thet]
 
 
 1.10 (2017-09-01)
@@ -14,7 +15,7 @@ Changelog
   This makes other installations more predictable when they install resources directly after ``++resource++plone.app.jquery.js``.
   [thet]
 
-  
+
 - PEP 8.
   [thet]
 
