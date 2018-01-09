@@ -102,6 +102,9 @@ class TestQueryStringOptions(unittest.TestCase):
             options['patternRelateditemsOptions']['basePath'],
             '/plone'
         )
+        self.assertTrue(
+            'recentlyUsed' not in options['patternRelateditemsOptions']
+        )
 
 
 class TestRelatedItemsOptions(unittest.TestCase):
@@ -177,6 +180,16 @@ class TestRelatedItemsOptions(unittest.TestCase):
 
         self.assertTrue(
             'favorites' not in options
+        )
+
+        # Recently used is configured, but off per default.
+        self.assertEqual(
+            options['recentlyUsed'],
+            False
+        )
+        self.assertEqual(
+            options['recentlyUsedKey'],
+            'relateditems_recentlyused_testfield_' + TEST_USER_ID
         )
 
     def test__subfolder_relateditems_options(self):

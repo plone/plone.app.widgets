@@ -10,7 +10,10 @@ Breaking changes:
 
 New features:
 
-- *add item here*
+- Related items widget: show a recently used dropdown, but do not activate it.
+  plone.app.relationfield itself is activating the "recently used" feature.
+  The "recently used" dropdown is only available for Mockup 2.6.3+.
+  [thet]
 
 Bug fixes:
 
