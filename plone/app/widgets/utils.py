@@ -124,7 +124,8 @@ def get_ajaxselect_options(context, value, separator, vocabulary_name,
 
 
 def get_relateditems_options(context, value, separator, vocabulary_name,
-                             vocabulary_view, field_name=None):
+                             vocabulary_view, field_name=None,
+                             include_recently_added=True):
 
     if IForm.providedBy(context):
         context = context.context
@@ -174,6 +175,16 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
             }
         ]
 
+    if include_recently_added:
+        # Options for recently used key
+        tool = getToolByName(context, 'portal_membership')
+        user = tool.getAuthenticatedMember()
+        options['recentlyUsed'] = False  # Keep that off in Plone 5.1
+        options['recentlyUsedKey'] = (u'relateditems_recentlyused_%s_%s' % (
+            field_name or '',
+            user.id
+        ))  # use string substitution with %s here for automatic str casting.
+
     return options
 
 
@@ -202,7 +213,8 @@ def get_querystring_options(context, querystring_view):
             ';',
             'plone.app.vocabularies.Catalog',
             '@@getVocabulary',
-            'relatedItems'
+            'relatedItems',
+            include_recently_added=False
         )
     }
 
