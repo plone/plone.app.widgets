@@ -17,8 +17,8 @@ New features:
 
 Bug fixes:
 
-- *add item here*
-
+- Add Python 2 / 3 compatibility
+  [pbauer]
 
 2.2.2 (2017-09-05)
 ------------------

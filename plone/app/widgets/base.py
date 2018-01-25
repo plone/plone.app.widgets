@@ -4,6 +4,7 @@ from copy import deepcopy
 from lxml import etree
 
 import json
+import six
 
 
 def el_attrib(name):
@@ -63,7 +64,7 @@ def dict_merge(dict_a, dict_b):
     if not isinstance(dict_b, dict):
         return dict_b
     result = deepcopy(dict_a)
-    for k, v in dict_b.iteritems():
+    for k, v in six.iteritems(dict_b):
         if k in result and isinstance(result[k], dict):
                 result[k] = dict_merge(result[k], v)
         else:
@@ -230,7 +231,7 @@ class SelectWidget(BaseWidget):
         :param value: We are expecting option's value which should be selected.
         :type value: list or string
         """
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             value = [value]
 
         for element in self.el.iter("option"):
