@@ -14,7 +14,7 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Marked flaky robot test as non critical.  [maurits]
 
 
 2.0.7 (2016-11-19)
