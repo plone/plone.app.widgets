@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from mock import Mock
 from mock import patch
 from plone.app.testing import setRoles
@@ -6,6 +7,7 @@ from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_tinymce_options
+from six.moves import reload_module
 
 import unittest
 
@@ -26,14 +28,15 @@ class UtilsTests(unittest.TestCase):
             'plone.app.event.base': mock.module.module.module,
         }
         with patch('Products.CMFCore.utils.getToolByName', new=MockTool), \
-             patch.dict('sys.modules', modules):
+                patch.dict('sys.modules', modules):
             # test for plone.app.event installed
             from plone.app.event import base
             base.first_weekday = lambda: 0
             base.wkday_to_mon1 = lambda x: x
             from plone.app.widgets import utils
-            reload(utils)  # reload utils, so that plone.app.event mock import
-                           # works, even if it was imported before.,,
+            # reload utils, so that plone.app.event mock import
+            # works, even if it was imported before.
+            reload_module(utils)
             orig_HAS_PAE = utils.HAS_PAE
             utils.HAS_PAE = True
             self.assertEqual(utils.first_weekday(), 0)
@@ -48,7 +51,7 @@ class UtilsTests(unittest.TestCase):
 
         # restore original state
         utils.HAS_PAE = orig_HAS_PAE
-        reload(utils)
+        reload_module(utils)
 
 
 class TestQueryStringOptions(unittest.TestCase):
