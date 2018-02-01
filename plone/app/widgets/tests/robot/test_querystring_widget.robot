@@ -11,19 +11,18 @@ ${querywidget_selector}  \#formfield-form-widgets-ICollection-query
 *** Test Cases ***
 
 Querystring Widget rows appear and disappear correctly
+  [Tags]  unstable
   Given I'm logged in as a 'Site Administrator'
     And I create a collection  My Collection
         Wait For Condition  return $('body.patterns-loaded').size() > 0
         Wait until page contains Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(1)
-        Sleep  1
-        Page should not contain Element   css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
+        Wait Until Page Does Not Contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When I select criteria index in row  1  Expiration date
         Wait until page contains Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When Click Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2) .querystring-criteria-remove
         Wait until page contains Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When Click Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(1) .querystring-criteria-remove
-        Sleep  1
-        Page should not contain Element   css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
+        Wait Until Page Does Not Contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
 
 
 *** Comment out until we can figure out what is wrong with this test... ***
