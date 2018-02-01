@@ -20,6 +20,11 @@ Bug fixes:
 - Add Python 2 / 3 compatibility
   [pbauer]
 
+- Marked unstable robotframework test as noncritical.
+  And maybe fix it by using keyword ``Wait Until Page Does Not Contain Element``.
+  [maurits]
+
+
 2.2.2 (2017-09-05)
 ------------------
 
