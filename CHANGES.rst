@@ -4,10 +4,6 @@ Changelog
 2.2.3 (unreleased)
 ------------------
 
-Breaking changes:
-
-- *add item here*
-
 New features:
 
 - Related items widget: show a recently used dropdown, but do not activate it.
