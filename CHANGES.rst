@@ -4,14 +4,6 @@ Changelog
 2.0.8 (unreleased)
 ------------------
 
-Breaking changes:
-
-- *add item here*
-
-New features:
-
-- *add item here*
-
 Bug fixes:
 
 - Marked flaky robot test as non critical.  [maurits]
