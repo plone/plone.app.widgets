@@ -16,10 +16,10 @@ provide tested and modularized widgets based on the concept of *patterns*.
 .. image:: https://coveralls.io/repos/plone/plone.app.widgets/badge.png?branch=master
     :target: https://coveralls.io/r/plone/plone.app.widgets?branch=master
 
-.. image:: https://pypip.in/v/plone.app.widgets/badge.png
+.. image:: https://img.shields.io/pypi/v/plone.app.widgets.svg
     :target: https://crate.io/packages/plone.app.widgets
 
-.. image:: https://pypip.in/d/plone.app.widgets/badge.png
+.. image:: https://img.shields.io/pypi/dm/plone.app.widgets.svg
     :target: https://crate.io/packages/plone.app.widgets
 
 .. image:: https://saucelabs.com/browser-matrix/plone-pa-widgets.svg
