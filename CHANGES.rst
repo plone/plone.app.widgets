@@ -14,7 +14,7 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Minor administrative cleanups.
 
 
 2.3 (2018-02-05)
