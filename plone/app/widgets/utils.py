@@ -15,6 +15,7 @@ from zope.component import getUtility
 from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
+from zope.globalrequest import getRequest
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
@@ -143,7 +144,7 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                                      field_name)
     if IForm.providedBy(context):
         context = context.context
-    request = getattr(context, 'REQUEST')
+    request = getRequest()
     msgstr = translate(_plone(u'Search'), context=request)
     options.setdefault('searchText', msgstr)
     msgstr = translate(_(u'Entire site'), context=request)
@@ -156,10 +157,7 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     if getattr(widget, 'selectable_types', None):
         options['selectableTypes'] = widget.selectable_types
 
-    nav_root = getNavigationRootObject(context, get_portal())
-    options['rootPath'] = (
-        '/'.join(nav_root.getPhysicalPath()) if nav_root else '/'
-    )
+    options['rootPath'] = '/'
 
     return options
 

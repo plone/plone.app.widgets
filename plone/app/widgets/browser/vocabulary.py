@@ -190,8 +190,7 @@ class VocabularyView(BaseVocabularyView):
             raise VocabLookupException('No factory provided.')
         authorized = None
         sm = getSecurityManager()
-        if factory_name in _permissions\
-                and INavigationRoot.providedBy(context):
+        if factory_name in _permissions:
             # Short circuit if permission is in global registry
             authorized = sm.checkPermission(
                 _permissions[factory_name], context
