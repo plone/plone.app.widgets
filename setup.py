@@ -18,7 +18,7 @@ setup(
         "Programming Language :: Python",
         "Programming Language :: Python :: 2.7",
     ],
-    keywords='plone widgets z3cform archetypes',
+    keywords='plone widgets z3cform',
     author='Nathan Van Gheem',
     author_email='vangheem@gmail.com',
     url='https://github.com/plone/plone.app.widgets',
@@ -42,14 +42,8 @@ setup(
     extras_require={
         'test': [
             'plone.app.robotframework[debug]',
-            'plone.app.widgets[archetypes, dexterity]',
             'plone.app.testing>=4.2.4',  # we need ROBOT_TEST_LEVEL
             'mock',
-        ],
-        'archetypes': [
-            'DateTime',
-            'Products.Archetypes',
-            'archetypes.schemaextender',
         ],
         'dexterity': [
             'pytz',
