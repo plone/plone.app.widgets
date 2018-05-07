@@ -85,33 +85,6 @@ All client side code (javascript/css/images) is done and tested as part of
 For any feature / bug / comment please create an issue in the `issue tracker`_.
 
 
-Installation
-============
-
-For now only tested with latest Plone 4.3::
-
-    [buildout]
-    extends =
-        http://dist.plone.org/release/4.3-latest/versions.cfg
-        https://raw.github.com/plone/plone.app.widgets/master/versions.cfg
-    versions = versions
-    parts = instance
-
-    [instance]
-    recipe = plone.recipe.zope2instance
-    user = admin:admin
-    http-address = 8080
-    eggs =
-        Pillow
-        Plone
-        plone.app.widgets[archetypes,dexterity]
-    zcml =
-        plone.app.widgets
-
-Make sure you install the "Plone Widgets" profile when creating your Plone site
-or include ``plone.app.widgets:default`` profile in your ``metadata.xml``..
-
-
 .. _`Mockup`: http://plone.github.io/mockup
 .. _`issue tracker`: https://github.com/plone/mockup/issues?labels=widgets
 .. _`PLIP here`: https://dev.plone.org/ticket/13476
