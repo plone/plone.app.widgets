@@ -110,7 +110,7 @@ class BaseWidget(object):
         """
 
         self.update()
-        return etree.tostring(self.el)
+        return etree.tostring(self.el, encoding=six.text_type)
 
 
 class InputWidget(BaseWidget):

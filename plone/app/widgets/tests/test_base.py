@@ -44,8 +44,8 @@ class BaseWidgetTests(unittest.TestCase):
         self.assertEqual(
             widget.render(),
             '<input class="pat-example1" data-pat-example1="{'
-            '&quot;option2&quot;: &quot;value2&quot;, '
-            '&quot;option1&quot;: &quot;value1&quot;}"/>')
+            '&quot;option1&quot;: &quot;value1&quot;, '
+            '&quot;option2&quot;: &quot;value2&quot;}"/>')
 
 
 class InputWidgetTests(unittest.TestCase):
@@ -242,7 +242,7 @@ class TextareaWidgetTests(unittest.TestCase):
 
         widget = TextareaWidget(
             'example1',
-            name='expample2',
+            name='example2',
             pattern_options={
                 'option1': 'value1',
                 'option2': 'value2',
@@ -250,10 +250,10 @@ class TextareaWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<textarea class="pat-example1" name="expample2" '
+            '<textarea class="pat-example1" name="example2" '
             'data-pat-example1="{'
-            '&quot;option2&quot;: &quot;value2&quot;, '
-            '&quot;option1&quot;: &quot;value1&quot;}">'
+            '&quot;option1&quot;: &quot;value1&quot;, '
+            '&quot;option2&quot;: &quot;value2&quot;}">'
             '</textarea>')
 
     def test_set_value(self):
