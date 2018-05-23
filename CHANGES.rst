@@ -7,6 +7,8 @@ Changelog
 - Make z3c.relationfield a soft dependency.
   [thet]
 
+- TinyMCE configuration: consider ``horizontal ruler`` toolbar toggle.
+  [petschki]
 
 1.10 (2017-09-01)
 -----------------

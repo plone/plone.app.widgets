@@ -412,6 +412,9 @@ def get_tinymce_options(context, field, request):
         config['autoresize_min_height'] = config[
             'theme_advanced_source_editor_height']
 
+    if utility.toolbar_hr:
+        config['plugins'].append('hr')
+
     folder = context
     if not IFolderish.providedBy(context):
         folder = aq_parent(context)
