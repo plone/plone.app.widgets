@@ -1142,6 +1142,8 @@ class DXAddViewFieldPermissionChecker(DXFieldPermissionChecker):
 
     adapts(IAddForm)
 
+    DEFAULT_PERMISSION = 'Add portal content'
+
     def __init__(self, view):
         self.context = view.context
         # This may fail for views that aren't DefaultAddForm or
