@@ -7,6 +7,10 @@ Changelog
 - Make z3c.relationfield a soft dependency.
   [thet]
 
+- fix DEFAULT_PERMISSION for DXAddViewFieldPermissionChecker.
+  This fixes vocabulary lookups for AddForms in "non-editable" containers. (see #162)
+  [petschki]
+
 
 1.10 (2017-09-01)
 -----------------
