@@ -11,6 +11,8 @@ Changelog
   This fixes vocabulary lookups for AddForms in "non-editable" containers. (see #162)
   [petschki]
 
+- TinyMCE configuration: consider ``horizontal ruler`` toolbar toggle.
+  [petschki]
 
 1.10 (2017-09-01)
 -----------------
