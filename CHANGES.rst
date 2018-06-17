@@ -14,8 +14,8 @@ New features:
 
 Bug fixes:
 
-- *add item here*
-
+- Fix a robotframework warning.
+  [gforcada]
 
 2.3.1 (2018-03-10)
 ------------------

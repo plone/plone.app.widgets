@@ -115,7 +115,7 @@ Text matches Input
 
 Check Class On Element
   [Arguments]  ${locator}
-  ${class_value} =  Get Element Attribute  identifier=${locator}@class
+  ${class_value} =  Get Element Attribute  identifier=${locator}  class
   Should Contain  ${class_value}  ${mockup_bootstrap_class}  msg=The CSS class is not ${mockup_bootstrap_class}, this could mean that p.a.widgets resources are not properly loaded
 
 Open Dropdown
