@@ -10,7 +10,8 @@ Breaking changes:
 
 New features:
 
-- *add item here*
+- Port to python 3.
+  [davisagli] [pbauer] [gforcada]
 
 Bug fixes:
 
