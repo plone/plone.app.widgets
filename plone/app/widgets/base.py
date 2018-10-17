@@ -27,11 +27,11 @@ def el_attrib(name):
     def _set(self, value):
         if value is None:
             return
-        if type(value) in (list, tuple):
+        if isinstance(value, (list, tuple)):
             value = ' '.join(value)
-        if type(value) in (dict, set):
+        if isinstance(value, (dict, set)):
             value = json.dumps(value)
-        if type(value) is str:
+        if isinstance(value, six.binary_type):
             value = value.decode('utf8')
         self.el.attrib[name] = value
 
@@ -110,7 +110,7 @@ class BaseWidget(object):
         """
 
         self.update()
-        return etree.tostring(self.el)
+        return etree.tostring(self.el, encoding=six.text_type)
 
 
 class InputWidget(BaseWidget):

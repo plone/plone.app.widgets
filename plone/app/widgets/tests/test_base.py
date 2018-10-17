@@ -16,7 +16,7 @@ class BaseWidgetTests(unittest.TestCase):
         widget = BaseWidget('input', 'example1')
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1"/>')
+            u'<input class="pat-example1"/>')
 
         self.assertEqual(widget.klass, 'pat-example1')
 
@@ -26,7 +26,7 @@ class BaseWidgetTests(unittest.TestCase):
         widget = BaseWidget('select', 'example1')
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1"/>')
+            u'<select class="pat-example1"/>')
 
         self.assertEqual(widget.klass, 'pat-example1')
 
@@ -41,11 +41,11 @@ class BaseWidgetTests(unittest.TestCase):
                 'option2': 'value2',
             })
 
-        self.assertEqual(
-            widget.render(),
-            '<input class="pat-example1" data-pat-example1="{'
-            '&quot;option2&quot;: &quot;value2&quot;, '
-            '&quot;option1&quot;: &quot;value1&quot;}"/>')
+        html = widget.render()
+        # the order of options is non-deterministic
+        result1 = u'<input class="pat-example1" data-pat-example1="{&quot;option1&quot;: &quot;value1&quot;, &quot;option2&quot;: &quot;value2&quot;}"/>'  # noqa: E501
+        result2 = u'<input class="pat-example1" data-pat-example1="{&quot;option2&quot;: &quot;value2&quot;, &quot;option1&quot;: &quot;value1&quot;}"/>'  # noqa: E501
+        self.assertIn(html, [result1, result2])
 
 
 class InputWidgetTests(unittest.TestCase):
@@ -75,7 +75,7 @@ class InputWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" type="email" '
+            u'<input class="pat-example1" type="email" '
             'name="example2" value="example3"/>')
 
         self.assertEqual(widget.type, 'email')
@@ -85,7 +85,7 @@ class InputWidgetTests(unittest.TestCase):
         widget.value = 'example4'
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" type="text" '
+            u'<input class="pat-example1" type="text" '
             'name="example2" value="example4"/>')
 
         self.assertEqual(widget.type, 'text')
@@ -95,7 +95,7 @@ class InputWidgetTests(unittest.TestCase):
         del widget.value
         self.assertEqual(
             widget.render(),
-            '<input class="pat-example1" name="example2"/>')
+            u'<input class="pat-example1" name="example2"/>')
 
         self.assertEqual(widget.type, None)
         self.assertEqual(widget.value, None)
@@ -111,7 +111,7 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2"></select>')
+            u'<select class="pat-example1" name="example2"></select>')
         self.assertEqual(list(widget.items), [])
         self.assertEqual(widget.value, [])
 
@@ -132,7 +132,7 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2">'
+            u'<select class="pat-example1" name="example2">'
             '<option value="token1">value1</option>'
             '<option value="token2" selected="selected">value2</option>'
             '<option value="token3">value3</option>'
@@ -144,7 +144,7 @@ class SelectWidgetTests(unittest.TestCase):
         widget.value = 'token1'
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2">'
+            u'<select class="pat-example1" name="example2">'
             '<option value="token1" selected="selected">value1</option>'
             '<option value="token2">value2</option>'
             '<option value="token3">value3</option>'
@@ -156,7 +156,7 @@ class SelectWidgetTests(unittest.TestCase):
         del widget.value
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" name="example2">'
+            u'<select class="pat-example1" name="example2">'
             '<option value="token1">value1</option>'
             '<option value="token2">value2</option>'
             '<option value="token3">value3</option>'
@@ -185,7 +185,7 @@ class SelectWidgetTests(unittest.TestCase):
 
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" multiple="multiple" name="example2">'
+            u'<select class="pat-example1" multiple="multiple" name="example2">'
             '<option value="token1">value1</option>'
             '<option value="token2" selected="selected">value2</option>'
             '<option value="token3">value3</option>'
@@ -197,7 +197,7 @@ class SelectWidgetTests(unittest.TestCase):
         widget.value = ['token1', 'token2']
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" multiple="multiple" name="example2">'
+            u'<select class="pat-example1" multiple="multiple" name="example2">'
             '<option value="token1" selected="selected">value1</option>'
             '<option value="token2" selected="selected">value2</option>'
             '<option value="token3">value3</option>'
@@ -209,7 +209,7 @@ class SelectWidgetTests(unittest.TestCase):
         del widget.value
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" multiple="multiple" name="example2">'
+            u'<select class="pat-example1" multiple="multiple" name="example2">'
             '<option value="token1">value1</option>'
             '<option value="token2">value2</option>'
             '<option value="token3">value3</option>'
@@ -218,7 +218,7 @@ class SelectWidgetTests(unittest.TestCase):
         del widget.items
         self.assertEqual(
             widget.render(),
-            '<select class="pat-example1" multiple="multiple" '
+            u'<select class="pat-example1" multiple="multiple" '
             'name="example2"></select>')
 
 
@@ -231,7 +231,7 @@ class TextareaWidgetTests(unittest.TestCase):
         widget = TextareaWidget('example1', name="example2")
         self.assertEqual(
             widget.render(),
-            '<textarea class="pat-example1" name="example2"></textarea>')
+            u'<textarea class="pat-example1" name="example2"></textarea>')
 
         self.assertEqual(widget.name, 'example2')
         self.assertEqual(widget.klass, 'pat-example1')
@@ -242,19 +242,17 @@ class TextareaWidgetTests(unittest.TestCase):
 
         widget = TextareaWidget(
             'example1',
-            name='expample2',
+            name='example2',
             pattern_options={
                 'option1': 'value1',
                 'option2': 'value2',
             })
 
-        self.assertEqual(
-            widget.render(),
-            '<textarea class="pat-example1" name="expample2" '
-            'data-pat-example1="{'
-            '&quot;option2&quot;: &quot;value2&quot;, '
-            '&quot;option1&quot;: &quot;value1&quot;}">'
-            '</textarea>')
+        html = widget.render()
+        # the order of options is non-deterministic
+        result1 = u'<textarea class="pat-example1" name="example2" data-pat-example1="{&quot;option1&quot;: &quot;value1&quot;, &quot;option2&quot;: &quot;value2&quot;}"></textarea>'  # noqa: E501
+        result2 = u'<textarea class="pat-example1" name="example2" data-pat-example1="{&quot;option2&quot;: &quot;value2&quot;, &quot;option1&quot;: &quot;value1&quot;}"></textarea>'  # noqa: E501
+        self.assertIn(html, [result1, result2])
 
     def test_set_value(self):
         from plone.app.widgets.base import TextareaWidget
@@ -262,7 +260,7 @@ class TextareaWidgetTests(unittest.TestCase):
         widget = TextareaWidget('example1', name="example2", value='example3')
         self.assertEqual(
             widget.render(),
-            '<textarea class="pat-example1" name="example2">'
+            u'<textarea class="pat-example1" name="example2">'
             'example3'
             '</textarea>')
 
@@ -271,14 +269,14 @@ class TextareaWidgetTests(unittest.TestCase):
         widget.value = 'example4'
         self.assertEqual(
             widget.render(),
-            '<textarea class="pat-example1" name="example2">'
+            u'<textarea class="pat-example1" name="example2">'
             'example4'
             '</textarea>')
 
         del widget.value
         self.assertEqual(
             widget.render(),
-            '<textarea class="pat-example1" name="example2"></textarea>')
+            u'<textarea class="pat-example1" name="example2"></textarea>')
 
     def test_can_not_change_element_tag(self):
         from plone.app.widgets.base import TextareaWidget
