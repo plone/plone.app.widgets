@@ -31,8 +31,6 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
-        # needed because we use bundles
-        'Products.ResourceRegistries>=2.1',
         # needed because users vocabulary was added here
         'plone.app.vocabularies>=2.1.12dev',
         # needed for compatibility with jQuery 1.9+
