@@ -15,7 +15,9 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Do not depend on `Products.ResourceRegistries` in `setup.py`.
+  In the code there is anyway no dependency.
+  [jensens]
 
 
 2.3.1 (2018-03-10)
