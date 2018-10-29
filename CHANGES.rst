@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.11 (unreleased)
+1.11 (2018-10-29)
 -----------------
 
 - Make z3c.relationfield a soft dependency.
