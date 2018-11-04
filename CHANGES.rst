@@ -15,6 +15,9 @@ New features:
 
 Bug fixes:
 
+- Modernize robot keywords that use "Get Element Attribute"
+  [ale-rt]
+
 - Do not depend on `Products.ResourceRegistries` in `setup.py`.
   In the code there is anyway no dependency.
   [jensens]
