@@ -11,6 +11,7 @@
 
   <include package="Products.CMFPlone" />
   <include package="plone.app.vocabularies" />
+  <include package="five.globalrequest" />
 
   <include package="mockup" />
 

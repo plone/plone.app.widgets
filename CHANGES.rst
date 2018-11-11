@@ -6,9 +6,7 @@ Changelog
 
 Breaking changes:
 
-- Remove five.globalrequest dependency.
-  It has been deprecated upstream (Zope 4).
-  [gforcada]
+- *add item here*
 
 New features:
 
