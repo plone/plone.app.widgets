@@ -4,7 +4,9 @@ Changelog
 1.12 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- read relatedItems options for TinyMCE modals. This enables favorites/recent added menu
+  within TinyMCE image/link modal dialog.
+  [petschki]
 
 
 1.11 (2018-10-29)

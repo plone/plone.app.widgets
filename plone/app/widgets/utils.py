@@ -460,6 +460,14 @@ def get_tinymce_options(context, field, request):
         'anchorSelector': utility.anchor_selector,
         'linkableTypes': utility.linkable.split('\n')
     }
+    options['relatedItems'] = get_relateditems_options(
+        context,
+        None,
+        ';',
+        'plone.app.vocabularies.Catalog',
+        '@@getVocabulary',
+        'relatedItems',
+    )
     return options
 
 
