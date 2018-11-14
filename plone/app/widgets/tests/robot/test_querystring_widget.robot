@@ -11,7 +11,6 @@ ${querywidget_selector}  \#formfield-form-widgets-ICollection-query
 *** Test Cases ***
 
 Querystring Widget rows appear and disappear correctly
-  [Tags]  unstable
   Given I'm logged in as a 'Site Administrator'
     And I create a collection  My Collection
         Wait For Condition  return $('body.patterns-loaded').size() > 0
