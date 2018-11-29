@@ -4,6 +4,7 @@ from copy import deepcopy
 from lxml import etree
 
 import json
+import collections
 import six
 
 
@@ -189,9 +190,16 @@ class SelectWidget(BaseWidget):
         :returns: List of value and title pairs.
         :rtype: list
         """
-
-        for element in self.el.iter("option"):
-            yield element.attrib['value'], element.text
+        if self.el.find('optgroup') is not None:
+            return collections.OrderedDict(
+                (group.attrib['label'], [
+                    (option.attrib['value'], option.text)
+                    for option in group.iter("option")])
+                for group in self.el.iter("optgroup"))
+        else:
+            return [
+                (option.attrib['value'], option.text)
+                for option in self.el.iter("option")]
 
     def _set_items(self, value):
         """Set options for element.
@@ -200,13 +208,30 @@ class SelectWidget(BaseWidget):
                       options to choose from.
         :type value: list
         """
-        for token, title in value:
-            option = etree.SubElement(self.el, 'option')
-            option.attrib['value'] = token
-            option.text = title
+        def addOptions(el, options):
+            """
+            Add <option> elements for each vocab item.
+            """
+            for token, title in options:
+                option = etree.SubElement(el, 'option')
+                option.attrib['value'] = token
+                option.text = title
+
+        if isinstance(value, dict):
+            for group_label, options in value.items():
+                group = etree.SubElement(self.el, 'optgroup')
+                group.attrib['label'] = group_label
+                addOptions(group, options)
+        else:
+            for token, title in value:
+                option = etree.SubElement(self.el, 'option')
+                option.attrib['value'] = token
+                option.text = title
 
     def _del_items(self):
         """Removing options from inside of elements."""
+        for group in self.el.iter("optgroup"):
+            self.el.remove(group)
         for element in self.el.iter("option"):
             self.el.remove(element)
 
