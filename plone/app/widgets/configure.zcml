@@ -20,15 +20,4 @@
     factory=".factories.Zope2FileUploadStorable"
     />
 
-  <!-- BBB. Dummy profile for Plone 4 compatible Plone 5 packages, which need
-       plone.app.widgets to be installed in Plone 4. -->
-  <genericsetup:registerProfile
-    name="default"
-    title="Plone Widgets"
-    directory="profiles/p5"
-    description="Better widgets for Plone"
-    provides="Products.GenericSetup.interfaces.EXTENSION"
-    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
-    />
-
 </configure>
