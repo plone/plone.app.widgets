@@ -18,7 +18,8 @@ New features:
 
 Bug fixes:
 
-- *add item here*
+- Remove GS profile pointing to non existing directory.
+  [jensens]
 
 
 2.4.0 (2018-11-07)
