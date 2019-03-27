@@ -13,8 +13,10 @@ from z3c.form.interfaces import IForm
 from zope.component import ComponentLookupError
 from zope.component import getMultiAdapter
 from zope.component import providedBy
+from zope.component import getUtility
 from zope.component import queryUtility
 from zope.component.hooks import getSite
+from zope.deprecation import deprecate
 from zope.globalrequest import getRequest
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
@@ -91,8 +93,10 @@ def get_datetime_options(request):
     return options
 
 
+@deprecate("features were moved into the AjaxSelectWidget, remove in Plone 6")
 def get_ajaxselect_options(context, value, separator, vocabulary_name,
                            vocabulary_view, field_name=None):
+    # code now part of the widget, let it in here for BBB and remove in Plone 6
     options = {'separator': separator}
     if vocabulary_name:
         options['vocabularyUrl'] = '{}/{}?name={}'.format(
@@ -132,14 +136,37 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
 
     request = getRequest()
     site = get_top_site_from_url(context, request)
-    options = get_ajaxselect_options(
-        site,
-        value,
-        separator,
-        vocabulary_name,
-        vocabulary_view,
-        field_name
+    options = {
+        'separator': separator,
+    }
+    if not vocabulary_name:
+        # we need a vocabulary!
+        raise ValueError('RelatedItems needs a vocabulary')
+    options['vocabularyUrl'] = '{0}/{1}?name={2}'.format(
+        get_context_url(site), vocabulary_view, vocabulary_name,
     )
+    if field_name:
+        options['vocabularyUrl'] += '&field={0}'.format(field_name)
+    if value:
+        factory = getUtility(IVocabularyFactory, vocabulary_name)
+        if vocabulary_name == 'plone.app.vocabularies.Catalog':
+            vocabulary = factory(
+                site,
+                query=[
+                    {  # plone.app.querystring style expected
+                        'i': 'UID',
+                        'o': 'plone.app.querystring.operation.string.is',
+                        'v': value.split(separator)
+                    }
+                ],
+            )
+        options['initialValues'] = {}
+        for value in value.split(separator):
+            try:
+                term = vocabulary.getTerm(value)
+                options['initialValues'][term.token] = term.title
+            except LookupError:
+                options['initialValues'][value] = value
 
     nav_root = getNavigationRootObject(context, site)
 
@@ -199,14 +226,7 @@ def get_querystring_options(context, querystring_view):
         'previewURL': '%s/@@querybuilder_html_results' % base_url,
         'previewCountURL': '%s/@@querybuildernumberofresults' % base_url,
         'patternDateOptions': get_date_options(getRequest()),
-        'patternAjaxSelectOptions': get_ajaxselect_options(
-            context,
-            None,
-            ';',
-            None,
-            None,
-            None
-        ),
+        'patternAjaxSelectOptions': {'separator': ';'},
         'patternRelateditemsOptions': get_relateditems_options(
             context,
             None,
