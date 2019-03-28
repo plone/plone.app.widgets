@@ -23,16 +23,16 @@ from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
 
 import json
+import zope.deferredimport
 
 
 _ = MessageFactory('plone')
 
 
-def first_weekday():
-    wkday = pae_base.wkday_to_mon1(pae_base.first_weekday())
-    if wkday > 1:
-        return 1  # Default to Monday
-    return wkday
+zope.deferredimport.deprecated(
+    'Import first_weekday from plone.app.event.base instead',
+    first_weekday='plone.app.event:base.first_weekday',
+)
 
 
 class NotImplemented(Exception):
