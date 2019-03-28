@@ -1,17 +1,9 @@
-from zope.interface import implementer
-from plone.namedfile.storages import MAXCHUNKSIZE
-from plone.namedfile.interfaces import IStorage
+# -*- coding: utf-8 -*-
+import zope.deferredimport
 
-
-@implementer(IStorage)
-class Zope2FileUploadStorable(object):
-
-    def store(self, data, blob):
-        data.seek(0)
-
-        fp = blob.open('w')
-        block = data.read(MAXCHUNKSIZE)
-        while block:
-            fp.write(block)
-            block = data.read(MAXCHUNKSIZE)
-        fp.close()
+# can be removed in Plone 6
+zope.deferredimport.initialize()
+zope.deferredimport.deprecated(
+    'Import Zope2FileUploadStorable from plone.app.z3cform.factories instead',
+    Zope2FileUploadStorable='plone.app.z3cform:factories.Zope2FileUploadStorable',
+)
