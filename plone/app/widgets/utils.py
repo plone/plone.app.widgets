@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
 from Acquisition import aq_base
 from Acquisition import aq_parent
 from datetime import datetime
 from OFS.interfaces import IFolder
 from OFS.interfaces import ISimpleItem
+from plone.app.event import base as pae_base
 from plone.app.layout.navigation.root import getNavigationRootObject
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
@@ -12,8 +12,8 @@ from Products.CMFPlone.utils import get_top_site_from_url
 from z3c.form.interfaces import IForm
 from zope.component import ComponentLookupError
 from zope.component import getMultiAdapter
-from zope.component import providedBy
 from zope.component import getUtility
+from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
 from zope.deprecation import deprecate
@@ -28,26 +28,11 @@ import json
 _ = MessageFactory('plone')
 
 
-try:
-    from plone.app.event import base as pae_base
-    HAS_PAE = True
-except ImportError:
-    HAS_PAE = False
-
-
 def first_weekday():
-    if HAS_PAE:
-        wkday = pae_base.wkday_to_mon1(pae_base.first_weekday())
-        if wkday > 1:
-            return 1  # Default to Monday
-        return wkday
-    else:
-        cal = getToolByName(getSite(), 'portal_calendar', None)
-        if cal:
-            wkday = cal.firstweekday
-            if wkday == 6:  # portal_calendar's Sunday is 6
-                return 0  # Sunday
-        return 1  # other cases: Monday
+    wkday = pae_base.wkday_to_mon1(pae_base.first_weekday())
+    if wkday > 1:
+        return 1  # Default to Monday
+    return wkday
 
 
 class NotImplemented(Exception):
