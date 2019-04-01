@@ -5,5 +5,5 @@ import zope.deferredimport
 zope.deferredimport.initialize()
 zope.deferredimport.deprecated(
     'Import Zope2FileUploadStorable from plone.app.z3cform.factories instead',
-    Zope2FileUploadStorable='plone.app.z3cform:factories.Zope2FileUploadStorable',
+    Zope2FileUploadStorable='plone.app.z3cform.factories:Zope2FileUploadStorable',
 )

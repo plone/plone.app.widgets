@@ -31,7 +31,7 @@ _ = MessageFactory('plone')
 
 zope.deferredimport.deprecated(
     'Import first_weekday from plone.app.event.base instead',
-    first_weekday='plone.app.event:base.first_weekday',
+    first_weekday='plone.app.event.base:first_weekday',
 )
 
 
