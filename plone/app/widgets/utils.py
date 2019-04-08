@@ -4,7 +4,6 @@ from Acquisition import aq_parent
 from datetime import datetime
 from OFS.interfaces import IFolder
 from OFS.interfaces import ISimpleItem
-from plone.app.event import base as pae_base
 from plone.app.layout.navigation.root import getNavigationRootObject
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
@@ -12,7 +11,6 @@ from Products.CMFPlone.utils import get_top_site_from_url
 from z3c.form.interfaces import IForm
 from zope.component import ComponentLookupError
 from zope.component import getMultiAdapter
-from zope.component import getUtility
 from zope.component import providedBy
 from zope.component import queryUtility
 from zope.component.hooks import getSite
@@ -133,25 +131,16 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     if field_name:
         options['vocabularyUrl'] += '&field={0}'.format(field_name)
     if value:
-        factory = getUtility(IVocabularyFactory, vocabulary_name)
-        if vocabulary_name == 'plone.app.vocabularies.Catalog':
-            vocabulary = factory(
-                site,
-                query=[
-                    {  # plone.app.querystring style expected
-                        'i': 'UID',
-                        'o': 'plone.app.querystring.operation.string.is',
-                        'v': value.split(separator)
-                    }
-                ],
-            )
         options['initialValues'] = {}
+        catalog = False
+        if vocabulary_name == 'plone.app.vocabularies.Catalog':
+            catalog = getToolByName(getSite(), 'portal_catalog')
         for value in value.split(separator):
-            try:
-                term = vocabulary.getTerm(value)
-                options['initialValues'][term.token] = term.title
-            except LookupError:
-                options['initialValues'][value] = value
+            title = value
+            if catalog:
+                result = catalog(UID=value)
+                title = result[0].Title if result else value
+            options['initialValues'][value] = title
 
     nav_root = getNavigationRootObject(context, site)
 
