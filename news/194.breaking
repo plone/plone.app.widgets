@@ -1,0 +1,7 @@
+Deprecate ``get_ajaxselect_options`` (no longer used).
+``IWidgetsLayer`` and ``IWidgetsView`` are no longer used, remove them.
+Deprecated ``IFileFactory`` import, use ``zope.filerepresentation`` instead.
+Hard depend on ``plone.app.event``, it is meanwhile a dependenciy of Plone core.
+Move ``IFieldPermissionChecker`` and ``Zope2FileUploadStorable`` to ``plone.app.z3cform`` in order to slowly fade out this package.
+Use util ``first_weekday`` from ``plone.app.event`` and do not duplicate here; deprecated import placed.
+[jensens]
