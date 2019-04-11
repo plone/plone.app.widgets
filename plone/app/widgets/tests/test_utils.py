@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from mock import Mock
 from mock import patch
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
@@ -7,51 +6,8 @@ from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
 from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_tinymce_options
-from six.moves import reload_module
 
 import unittest
-
-
-class MockTool(Mock):
-    firstweekday = 6
-
-
-class UtilsTests(unittest.TestCase):
-
-    def test__first_weekday(self):
-        # make sure, plone.app.event is available and mock it.
-        mock = Mock()
-        modules = {
-            'plone': mock,
-            'plone.app': mock.module,
-            'plone.app.event': mock.module.module,
-            'plone.app.event.base': mock.module.module.module,
-        }
-        with patch('Products.CMFCore.utils.getToolByName', new=MockTool), \
-                patch.dict('sys.modules', modules):
-            # test for plone.app.event installed
-            from plone.app.event import base
-            base.first_weekday = lambda: 0
-            base.wkday_to_mon1 = lambda x: x
-            from plone.app.widgets import utils
-            # reload utils, so that plone.app.event mock import
-            # works, even if it was imported before.
-            reload_module(utils)
-            orig_HAS_PAE = utils.HAS_PAE
-            utils.HAS_PAE = True
-            self.assertEqual(utils.first_weekday(), 0)
-            base.first_weekday = lambda: 1
-            self.assertEqual(utils.first_weekday(), 1)
-            base.first_weekday = lambda: 5
-            self.assertEqual(utils.first_weekday(), 1)
-
-            # test without plone.app.event installed
-            utils.HAS_PAE = False
-            self.assertEqual(utils.first_weekday(), 0)
-
-        # restore original state
-        utils.HAS_PAE = orig_HAS_PAE
-        reload_module(utils)
 
 
 class TestQueryStringOptions(unittest.TestCase):

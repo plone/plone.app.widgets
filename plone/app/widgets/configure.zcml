@@ -8,10 +8,4 @@
 
   <include package="mockup" />
 
-  <utility
-    name="ZPublisher.HTTPRequest.FileUpload"
-    provides="plone.namedfile.interfaces.IStorage"
-    factory=".factories.Zope2FileUploadStorable"
-    />
-
 </configure>
