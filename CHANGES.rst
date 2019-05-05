@@ -8,6 +8,21 @@ Changelog
 
 .. towncrier release notes start
 
+3.0.0 (2019-05-04)
+------------------
+
+Breaking changes:
+
+
+- Deprecate ``get_ajaxselect_options`` (no longer used).
+  ``IWidgetsLayer`` and ``IWidgetsView`` are no longer used, remove them.
+  Deprecated ``IFileFactory`` import, use ``zope.filerepresentation`` instead.
+  Hard depend on ``plone.app.event``, it is meanwhile a dependenciy of Plone core.
+  Move ``IFieldPermissionChecker`` and ``Zope2FileUploadStorable`` to ``plone.app.z3cform`` in order to slowly fade out this package.
+  Use util ``first_weekday`` from ``plone.app.event`` and do not duplicate here; deprecated import placed.
+  [jensens] (#194)
+
+
 2.4.1 (2018-12-28)
 ------------------
 
