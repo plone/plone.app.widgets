@@ -2,12 +2,13 @@
 
 Resource  plone/app/robotframework/keywords.robot
 Resource  plone/app/robotframework/saucelabs.robot
+Resource  plone/app/robotframework/selenium.robot
 Resource  common.robot
 
 Library  Remote  ${PLONE_URL}/RobotRemote
 
-Test Setup  Open SauceLabs test browser
-Test Teardown  Run keywords  Report test status  Close all browsers
+Test Setup  Run Keywords  Plone test setup
+Test Teardown  Run keywords  Plone test teardown
 
 
 *** Variables ****************************************************************
@@ -75,4 +76,3 @@ Page should contain date
 Page should contain time
   [Arguments]  ${fieldlabel}  ${time}
   Page should contain  ${time}
-

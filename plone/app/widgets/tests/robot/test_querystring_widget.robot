@@ -1,9 +1,11 @@
 *** Settings ***
 
+Resource  plone/app/robotframework/saucelabs.robot
+Resource  plone/app/robotframework/selenium.robot
 Resource  common.robot
 
-Test Setup  Open SauceLabs test browser
-Test Teardown  Run keywords  Report test status  Close all browsers
+Test Setup  Run Keywords  Plone test setup
+Test Teardown  Run keywords  Plone test teardown
 
 *** Variables ***
 ${querywidget_selector}  \#formfield-form-widgets-ICollection-query
