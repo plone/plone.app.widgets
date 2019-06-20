@@ -8,6 +8,17 @@ Changelog
 
 .. towncrier release notes start
 
+3.0.1 (2019-06-19)
+------------------
+
+Bug fixes:
+
+
+- - Use the shared 'Plone test setup' and 'Plone test teardown' keywords in Robot
+    tests.
+    [Rotonen] (#195)
+
+
 3.0.0 (2019-05-04)
 ------------------
 
