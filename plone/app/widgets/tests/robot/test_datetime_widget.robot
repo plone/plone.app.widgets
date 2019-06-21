@@ -51,13 +51,13 @@ Fill date field
   Click Element  xpath=${xpath_pattern}${xpath_date_field}
   Select from list by value  xpath=${xpath_pattern}${xpath_month_select}  ${month}
   Select from list  xpath=${xpath_pattern}${xpath_year_select}  ${year}
-  Click Element  xpath=${xpath_pattern}${xpath_day_list}[text()='${day}']
+  Click Element  xpath=${xpath_pattern}${xpath_day_list}\[text()='${day}']
 
 Fill time field
   [Arguments]  ${fieldlabel}  ${time}
   ${xpath_pattern} =  Convert to String  //div[label[text()[normalize-space(.)="${fieldlabel}"]]]
   Click Element  xpath=${xpath_pattern}${xpath_time_field}
-  ${xpath_time} =  Convert to String  ${xpath_pattern}${xpath_time_list}[text()='${time}']
+  ${xpath_time} =  Convert to String  ${xpath_pattern}${xpath_time_list}\[text()='${time}']
   Wait until page contains Element  xpath=${xpath_time}
   Click Element  xpath=${xpath_time}
 
