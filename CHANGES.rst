@@ -8,6 +8,15 @@ Changelog
 
 .. towncrier release notes start
 
+3.0.2 (2019-06-27)
+------------------
+
+Bug fixes:
+
+
+- Adapt the tests to the new robotframework syntax [ale-rt] (#199)
+
+
 3.0.1 (2019-06-19)
 ------------------
 
