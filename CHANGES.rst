@@ -8,6 +8,16 @@ Changelog
 
 .. towncrier release notes start
 
+3.0.3 (2019-11-25)
+------------------
+
+Bug fixes:
+
+
+- Run robot tests as Member since the widget will move to the logged-in-bundle.
+  [agitator] (#201)
+
+
 3.0.2 (2019-06-27)
 ------------------
 
