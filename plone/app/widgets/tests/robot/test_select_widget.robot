@@ -31,24 +31,28 @@ The Select Widget has the class that bootstraps mockup JS
    Then the input fields have the mockup class
 
 The Select Widget allows to select a single value
-  Given a form
+  Given a logged-in member
+    and a form
    When I select the option  3
    Then the widget shows the element  three
 
 The Select Widget autocomplete function works
-  Given a form
+  Given a logged-in member
+    and a form
    When I type on the autocomplete field  wo
    Then the widget shows the element  two
 
 The Select Multiple Widget allows to select multiple values
-  Given a form
+  Given a logged-in member
+    and a form
 
    When I click on the element  2
     And When I click on the element  1
    Then the widget shows two elements  five  four
 
 The Select Multiple Widget autocomplete function works
-  Given a form
+  Given a logged-in member
+    and a form
    When I type on the multiple autocomplete field  s
    Then the widget shows one element  six
 
@@ -59,6 +63,9 @@ The Select Multiple Widget autocomplete function works
 
 a form
   Go to  ${form_url}
+
+a logged-in member
+  Enable autologin as  Member
 
 # When
 

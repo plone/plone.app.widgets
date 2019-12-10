@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '3.0.3.dev0'
+version = '3.0.4.dev0'
 
 setup(
     name='plone.app.widgets',
@@ -11,6 +11,7 @@ setup(
         open("CHANGES.rst").read(),
     ),
     classifiers=[
+        "Development Status :: 5 - Production/Stable",
         "Framework :: Plone",
         "Framework :: Plone :: 5.2",
         "License :: OSI Approved :: GNU General Public License (GPL)",
