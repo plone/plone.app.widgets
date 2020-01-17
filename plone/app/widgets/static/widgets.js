@@ -52313,7 +52313,7 @@ define("tinymce/dom/Selection", [
 						if (rng.startContainer.hasChildNodes()) {
 							node = rng.startContainer.childNodes[rng.startOffset];
 							if (node && node.tagName == 'IMG') {
-								self.getSel().setBaseAndExtent(node, 0, node, 1);
+								self.getSel().setBaseAndExtent(node, 0, node, 0);
 							}
 						}
 					}
