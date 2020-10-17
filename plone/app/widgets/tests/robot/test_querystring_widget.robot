@@ -15,7 +15,7 @@ ${querywidget_selector}  \#formfield-form-widgets-ICollection-query
 Querystring Widget rows appear and disappear correctly
   Given I'm logged in as a 'Site Administrator'
     And I create a collection  My Collection
-        Wait For Condition  return $('body.patterns-loaded').size() > 0
+        Wait For Condition  return !!document.querySelector('body.patterns-loaded')
         Wait until page contains Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(1)
         Wait Until Page Does Not Contain Element  css=${querywidget_selector} .querystring-criteria-wrapper:nth-child(2)
    When I select criteria index in row  1  Expiration date

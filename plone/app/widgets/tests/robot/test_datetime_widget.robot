@@ -31,7 +31,7 @@ As a contributor I can enter the date and time
    When I fill datetime field  Publishing Date  2010  1  30  4:00 a.m.
     And When I save
     And When I edit
-    Wait For Condition  return $('.autotoc-nav .active:visible').size() > 0
+    Wait For Condition  return $('.autotoc-nav .active:visible').length > 0
     And When I open tab  Dates
    Then Page should contain datetime  Publishing Date  2010  1  30  4:00 a.m.
 
