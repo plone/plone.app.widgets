@@ -8,6 +8,16 @@ Changelog
 
 .. towncrier release notes start
 
+3.0.5 (2020-10-30)
+------------------
+
+Bug fixes:
+
+
+- Robot tests: Fix deprecated jQuery.size.
+  [thet] (#207)
+
+
 3.0.4 (2020-04-20)
 ------------------
 
