@@ -39,10 +39,10 @@ I create a collection
   [Arguments]  ${title}
   Go to  ${PLONE_URL}/++add++Collection
   Wait For Condition  return !!document.querySelector('body.patterns-loaded')
-  Execute Javascript  $('#form-widgets-IDublinCore-title').val('${title}'); return 0;
+  Execute Javascript  $('#form-widgets-title').val('${title}'); return 0;
 
 I create a folder
   [Arguments]  ${title}
   Go to  ${PLONE_URL}/++add++Folder
   Wait For Condition  return !!document.querySelector('body.patterns-loaded')
-  Execute Javascript  $('#form-widgets-IDublinCore-title').val('${title}'); return 0;
+  Execute Javascript  $('#form-widgets-title').val('${title}'); return 0;

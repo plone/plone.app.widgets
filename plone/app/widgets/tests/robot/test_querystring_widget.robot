@@ -8,7 +8,7 @@ Test Setup  Run Keywords  Plone test setup
 Test Teardown  Run keywords  Plone test teardown
 
 *** Variables ***
-${querywidget_selector}  \#formfield-form-widgets-ICollection-query
+${querywidget_selector}  \#formfield-form-widgets-query
 
 *** Test Cases ***
 
