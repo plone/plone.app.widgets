@@ -8,6 +8,16 @@ Changelog
 
 .. towncrier release notes start
 
+3.0.6 (2021-09-15)
+------------------
+
+Bug fixes:
+
+
+- Remove cyclic dependency with plone.app.z3cform
+  [sneridagh] (#211)
+
+
 3.0.5 (2020-10-30)
 ------------------
 
