@@ -71,7 +71,7 @@ a logged-in member
 
 I type on the autocomplete field
   [Arguments]  ${text}
-  Wait For Condition  return $('.select2-choices:visible').length > 0
+  Wait Until Element is visible  ${dropdown_select}
   Open Dropdown  ${dropdown_select}  ${input_search}
   Input Text  ${input_search}  ${text}
   Click Element  ${results_label}
@@ -84,7 +84,7 @@ I type on the multiple autocomplete field
 
 I select the option
   [Arguments]  ${index}
-  Wait For Condition  return $('.select2-choices:visible').length > 0
+  Wait Until Element Is Visible  ${dropdown_select}
   Open Dropdown  ${dropdown_select}  ${input_search}
   Click Element  css=li.select2-results-dept-0:nth-child(${index})
 
