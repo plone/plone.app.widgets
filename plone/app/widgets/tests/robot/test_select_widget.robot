@@ -19,7 +19,7 @@ ${select_field_name}  form.widgets.select_field
 ${list_field_name}  form.widgets.list_field
 
 ${input_search}  css=div#select2-drop div.select2-search input
-${dropdown_multiple}  css=div#select2-drop ul.select2-results
+${dropdown_multiple}  css=.select2-choices
 ${dropdown_select}  css=.select2-choice
 ${results_label}  css=.select2-result-label
 
@@ -71,27 +71,28 @@ a logged-in member
 
 I type on the autocomplete field
   [Arguments]  ${text}
-  Wait For Condition  return $('.select2-choices:visible').length > 0
+  Wait Until Element is visible  ${dropdown_select}
   Open Dropdown  ${dropdown_select}  ${input_search}
   Input Text  ${input_search}  ${text}
   Click Element  ${results_label}
 
 I type on the multiple autocomplete field
   [Arguments]  ${text}
-  Wait For Condition  return $('.select2-choices:visible').length > 0
+  Wait Until Element is visible  ${dropdown_multiple}
   Execute Javascript  var $input = $('.select2-input'); $input.click().val('${text}'); var keyup = $.Event('keyup-change'); $input.trigger(keyup); return 0
   Click Element  ${results_label}
 
 I select the option
   [Arguments]  ${index}
-  Wait For Condition  return $('.select2-choices:visible').length > 0
+  Wait Until Element Is Visible  ${dropdown_select}
   Open Dropdown  ${dropdown_select}  ${input_search}
   Click Element  css=li.select2-results-dept-0:nth-child(${index})
 
 I click on the element
   [Arguments]  ${index}
-  Wait For Condition  return $('.select2-choices:visible').length > 0
-  Open Dropdown  css=#formfield-form-widgets-list_field input.select2-input  ${dropdown_multiple}
+  Wait Until Element is visible  ${dropdown_multiple}
+  Open Dropdown  ${dropdown_multiple}  ${dropdown_multiple}
+  Set Focus To Element  css=li.select2-results-dept-0:nth-child(${index})
   Click Element  css=li.select2-results-dept-0:nth-child(${index})
 
 # Then
