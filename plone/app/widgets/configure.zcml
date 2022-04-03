@@ -6,6 +6,4 @@
   <include package="Products.CMFPlone" />
   <include package="plone.app.vocabularies" />
 
-  <include package="mockup" />
-
 </configure>

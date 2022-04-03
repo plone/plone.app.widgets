@@ -52,8 +52,8 @@ class TestQueryStringOptions(unittest.TestCase):
 
         # Test options of the date picker
         self.assertEqual(
-            options['patternDateOptions']['time'],
-            False
+            options['patternDateOptions'],
+            {'behavior': 'native', 'week-numbers': 'show', 'first-day': 0, 'today': 'Today', 'clear': 'Clear'}
         )
 
         # Test options of the related items widget

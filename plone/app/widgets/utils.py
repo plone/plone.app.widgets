@@ -40,9 +40,9 @@ class NotImplemented(Exception):
 def get_date_options(request):
     calendar = request.locale.dates.calendars['gregorian']
     return {
-        'firstDay': calendar.week.get('firstDay') == 1 and 1 or 0,
         'behavior': 'native',
         'week-numbers': 'show',
+        'first-day': calendar.week.get('firstDay') == 1 and 1 or 0,
         'today': translate(_(u"Today"), context=request),
         'clear': translate(_(u"Clear"), context=request),
         # 'placeholder': translate(_('Enter date...'), context=request),
@@ -55,12 +55,6 @@ def get_date_options(request):
 
 def get_datetime_options(request):
     options = get_date_options(request)
-    # options['time'] = {
-    #     'format': translate(
-    #         _('pickadate_time_format', default='h:i a'),
-    #         context=request),
-    #     'placeholder': translate(_('Enter time...'), context=request),
-    # }
     return options
 
 
