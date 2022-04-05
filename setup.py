@@ -13,13 +13,10 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Framework :: Plone",
-        "Framework :: Plone :: 5.2",
         "Framework :: Plone :: 6.0",
         "Framework :: Plone :: Core",
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -36,9 +33,8 @@ setup(
     install_requires=[
         'setuptools',
         # needed because users vocabulary was added here
-        'plone.app.vocabularies>=2.1.12dev',
-        # needed for compatibility with jQuery 1.9+
-        'Products.CMFPlone>=5.0.dev0',
+        'plone.app.vocabularies>=2.1.12',
+        'Products.CMFPlone>=5.2',
         'six',
     ],
     extras_require={
@@ -50,7 +46,7 @@ setup(
         'dexterity': [
             'pytz',
             'plone.app.dexterity',
-            'plone.app.contenttypes>=1.1b1',
+            'plone.app.contenttypes>=1.1',
             'plone.app.event>=1.2',
         ],
     },
