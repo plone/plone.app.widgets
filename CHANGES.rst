@@ -8,6 +8,24 @@ Changelog
 
 .. towncrier release notes start
 
+4.0.0a1 (2022-04-05)
+--------------------
+
+New features:
+
+
+- PLIP 3211 - Remove implicit dependency on Mockup. (#210)
+- Update datetime pattern options for Patternslib pat-date-picker/pat-datetime-picker.
+  [petschki] (#213)
+
+
+Bug fixes:
+
+
+- fix robot tests
+  [petschki] (#214)
+
+
 3.0.6 (2021-09-15)
 ------------------
 
