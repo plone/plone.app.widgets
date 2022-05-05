@@ -20,8 +20,12 @@ from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
 
+import logging
 import json
 import zope.deferredimport
+
+
+logger = logging.getLogger("plone.app.widgets.utils")
 
 
 _ = MessageFactory('plone')
@@ -203,7 +207,7 @@ def get_tinymce_options(context, field, request):
             name="plone_settings").tinymce()['data-pat-tinymce']
         options = json.loads(pattern_options)
     except (ComponentLookupError, AttributeError):
-        pass
+        logger.warning("Can not load tinymce pattern options!", exc_info=True)
     return options
 
 
