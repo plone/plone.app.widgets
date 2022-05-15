@@ -8,6 +8,16 @@ Changelog
 
 .. towncrier release notes start
 
+4.0.0a2 (2022-05-15)
+--------------------
+
+Bug fixes:
+
+
+- add logging in exception handler when loading of tinymce settings is failing [MrTango] (#216)
+- Removed z3c.autoinclude.plugin entrypoint. [maurits] (#3188)
+
+
 4.0.0a1 (2022-04-05)
 --------------------
 
