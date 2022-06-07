@@ -82,7 +82,7 @@ Collection Creation works
    When I select criteria index in row  1  Location
     And I select criteria operator in row  1  Advanced Mode
     And I save
-        Wait until page contains Element  jquery=.contenttype-collection:contains(My Collection)
+        Wait until page contains Element  css=.contenttype-collection:contains(My Collection)
 
 
 *** Keywords ***
@@ -93,7 +93,7 @@ I select criteria index in row
   Click Element  css=${criteria_row} .querystring-criteria-index .select2-container a
   Wait until Element is Visible  css=#select2-drop .select2-input
   Input Text  css=#select2-drop .select2-input  text=${label}
-  Press Key  css=#select2-drop .select2-input  \\13
+  Press Keys  css=#select2-drop .select2-input  ENTER
 
 I select criteria operator in row
   [Arguments]  ${number}  ${label}
