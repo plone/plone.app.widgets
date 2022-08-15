@@ -90,7 +90,7 @@ Collection Creation works
 I select criteria index in row
   [Arguments]  ${number}  ${label}
   ${criteria_row} =  Convert to String  ${querywidget_selector} .querystring-criteria-wrapper:nth-child(${number})
-  Click Element  css=${criteria_row} .querystring-criteria-index .select2-container a
+  Wait For Then Click Element  css=${criteria_row} .querystring-criteria-index .select2-container a
   Wait until Element is Visible  css=#select2-drop .select2-input
   Input Text  css=#select2-drop .select2-input  text=${label}
   Press Key  css=#select2-drop .select2-input  \\13
@@ -100,7 +100,7 @@ I select criteria operator in row
   ${criteria_selector} =  Convert to String  ${querywidget_selector} .querystring-criteria-wrapper:nth-child(${number}) .querystring-criteria-operator .select2-container .select2-choice
   Click Link  css=${criteria_selector}
   Wait until Element is Visible  css=#select2-drop
-  Click Element  xpath=//div[@id="select2-drop"]/ul[@class="select2-results"]//*[contains(text(), "${label}")]
+  Wait For Then Click Element  xpath=//div[@id="select2-drop"]/ul[@class="select2-results"]//*[contains(text(), "${label}")]
   Wait until Element is not Visible  css=#select2-drop
 
 Operator slave field becomes visible
