@@ -8,6 +8,16 @@ Changelog
 
 .. towncrier release notes start
 
+4.0.0b1 (2022-08-30)
+--------------------
+
+Bug fixes:
+
+
+- Fix random failing robottests.
+  [petschki] (#219)
+
+
 4.0.0a2 (2022-05-15)
 --------------------
 
