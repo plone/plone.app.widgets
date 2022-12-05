@@ -8,6 +8,19 @@ Changelog
 
 .. towncrier release notes start
 
+4.0.0 (2022-12-05)
+------------------
+
+Bug fixes:
+
+
+- Final release for Plone 6.0.0.
+  Note that new code should not use this package, if possible.
+  Prefer using code from ``plone.app.z3cform``.
+  But some code still needs to be moved there, see `issue 220 <https://github.com/plone/plone.app.widgets/issues/220>`_.
+  [maurits] (#600)
+
+
 4.0.0b1 (2022-08-30)
 --------------------
 
