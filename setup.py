@@ -36,7 +36,7 @@ setup(
         'setuptools',
         # needed because users vocabulary was added here
         'plone.app.vocabularies>=2.1.12',
-        'Products.CMFPlone>=5.2',
+        'plone.base',
         'six',
     ],
     extras_require={

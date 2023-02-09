@@ -5,9 +5,9 @@ from datetime import datetime
 from OFS.interfaces import IFolder
 from OFS.interfaces import ISimpleItem
 from plone.app.layout.navigation.root import getNavigationRootObject
+from plone.base.utils import get_top_site_from_url
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.utils import get_top_site_from_url
 from z3c.form.interfaces import IForm
 from zope.component import ComponentLookupError
 from zope.component import getMultiAdapter
