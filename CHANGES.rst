@@ -8,6 +8,15 @@ Changelog
 
 .. towncrier release notes start
 
+4.0.1 (2023-02-22)
+------------------
+
+Bug fixes:
+
+
+- Depend on plone.base (#222)
+
+
 4.0.0 (2022-12-05)
 ------------------
 
