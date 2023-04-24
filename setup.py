@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '4.0.0b2.dev0'
+version = '4.0.2.dev0'
 
 setup(
     name='plone.app.widgets',
@@ -31,11 +31,12 @@ setup(
     namespace_packages=['plone', 'plone.app'],
     include_package_data=True,
     zip_safe=False,
+    python_requires='>=3.8',
     install_requires=[
         'setuptools',
         # needed because users vocabulary was added here
         'plone.app.vocabularies>=2.1.12',
-        'Products.CMFPlone>=5.2',
+        'plone.base',
         'six',
     ],
     extras_require={
