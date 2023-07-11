@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '4.0.2.dev0'
+version = '5.0.0'
 
 setup(
     name='plone.app.widgets',

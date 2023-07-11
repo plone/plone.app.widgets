@@ -8,6 +8,17 @@ Changelog
 
 .. towncrier release notes start
 
+5.0.0 (2023-07-11)
+------------------
+
+Breaking changes:
+
+
+- Make this package deprecated. Widget base classes moved to ``plone.app.z3cform.widgets.patterns``.
+  Also see ``plone.app.widgets.utils`` for information about moving utility methods to their new location.
+  [petschki] (#220)
+
+
 4.0.1 (2023-02-22)
 ------------------
 
