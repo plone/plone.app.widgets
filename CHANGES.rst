@@ -8,6 +8,15 @@ Changelog
 
 .. towncrier release notes start
 
+5.0.1 (2024-10-23)
+------------------
+
+Bug fixes:
+
+
+- deactivate robot tests in this package and move the tests to Products.CMFPlone @1letter (#224)
+
+
 5.0.0 (2023-07-11)
 ------------------
 
