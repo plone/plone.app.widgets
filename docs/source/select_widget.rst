@@ -82,6 +82,7 @@ uses this form:
     from plone.app.testing.layers import FunctionalTesting
     from plone.app.widgets.testing import PloneAppWidgetsLayer
     from plone.app.widgets.testing import PLONEAPPWIDGETS_FIXTURE_DX
+    from plone.testing import zope
 
 
     class SelectWidgetLayer(PloneAppWidgetsLayer):
@@ -99,7 +100,7 @@ uses this form:
     SELECT_WIDGET_FIXTURE = SelectWidgetLayer()
     SELECT_WIDGET_ROBOT_TESTING = FunctionalTesting(
         bases=(SELECT_WIDGET_FIXTURE,
-               z2.ZSERVER_FIXTURE),
+               zope.WSGI_SERVER_FIXTURE),
         name='SelectWidgetLayer:Robot')
 
 .. note::
