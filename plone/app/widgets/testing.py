@@ -9,7 +9,7 @@ from plone.app.testing.layers import IntegrationTesting
 from plone.app.z3cform.widget import SelectWidget
 from plone.autoform import directives
 from plone.autoform.form import AutoExtensibleForm
-from plone.testing import z2
+from plone.testing import zope
 from z3c.form import form
 from zope.configuration import xmlconfig
 from zope.interface import Interface
@@ -108,7 +108,7 @@ class PloneAppWidgetsDXLayer(PloneAppWidgetsLayer):
         except:
             pass
 
-        z2.installProduct(app, 'Products.DateRecurringIndex')
+        zope.installProduct(app, 'Products.DateRecurringIndex')
 
     def setUpPloneSite(self, portal):
         super(PloneAppWidgetsDXLayer, self).setUpPloneSite(portal)
@@ -128,7 +128,7 @@ PLONEAPPWIDGETS_DX_INTEGRATION_TESTING = IntegrationTesting(
 PLONEAPPWIDGETS_DX_ROBOT_TESTING = FunctionalTesting(
     bases=(PLONEAPPWIDGETS_FIXTURE_DX,
            REMOTE_LIBRARY_BUNDLE_FIXTURE,
-           z2.ZSERVER_FIXTURE),
+           zope.WSGI_SERVER_FIXTURE),
     name="PloneAppWidgetsLayerDX:Robot")
 
 optionflags = (ELLIPSIS | NORMALIZE_WHITESPACE)
