@@ -4,6 +4,5 @@ include *.GPL
 graft plone/app/widgets
 global-exclude *.pyc
 include pyproject.toml
-recursive-exclude docs *
 recursive-exclude news *
 exclude news

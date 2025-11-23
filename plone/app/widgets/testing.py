@@ -113,7 +113,7 @@ class PloneAppWidgetsDXLayer(PloneAppWidgetsLayer):
             import mockup
 
             self.loadZCML(package=mockup)
-        except:
+        except Exception:
             pass
 
         zope.installProduct(app, "Products.DateRecurringIndex")
