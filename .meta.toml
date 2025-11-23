@@ -5,5 +5,13 @@
 template = "default"
 commit-id = "2.2.2"
 
+[github]
+jobs = [
+   "qa",
+   "coverage",
+   "release_ready",
+   "circular",
+]
+
 [tox]
 test_matrix = {"6.2" = ["*"]}
