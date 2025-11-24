@@ -35,7 +35,6 @@ setup(
         # needed because users vocabulary was added here
         "plone.app.vocabularies>=2.1.12",
         "plone.base",
-        "six",
     ],
     extras_require={
         "test": [
