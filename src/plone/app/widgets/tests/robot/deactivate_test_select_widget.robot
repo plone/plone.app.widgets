@@ -128,6 +128,6 @@ Check Class On Element
   Should Contain  ${class_value}  ${mockup_bootstrap_class}  msg=The CSS class is not ${mockup_bootstrap_class}, this could mean that p.a.widgets resources are not properly loaded
 
 Open Dropdown
-  [Arguments]  ${locator}  ${validaton}
+  [Arguments]  ${locator}  ${validation}
   Click Element  ${locator}
-  Wait Until Element is Visible  ${validaton}  error=The dropdown did not show up at location ${validaton}
+  Wait Until Element is Visible  ${validation}  error=The dropdown did not show up at location ${validation}

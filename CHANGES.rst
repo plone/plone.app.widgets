@@ -577,7 +577,7 @@ Fixes:
 - Allow overriding with a custom vocabulary for Archetypes.
   [pbauer]
 
-- Reuse z3c.form SelectWidget's logic for determing what items
+- Reuse z3c.form SelectWidget's logic for determining what items
   are available rather than recreating it incompletely.
   [davisagli]
 
@@ -594,7 +594,7 @@ Fixes:
 - handle plone.app.relationfield not being installed
   [vangheem]
 
-- handle unicode data in widgets beter
+- handle unicode data in widgets better
   [vangheem]
 
 
