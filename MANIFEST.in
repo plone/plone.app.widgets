@@ -1,7 +1,7 @@
 include *.rst
 include *.txt
 include *.GPL
-graft plone/app/widgets
+graft src/plone/app/widgets
 global-exclude *.pyc
 include pyproject.toml
 recursive-exclude news *
