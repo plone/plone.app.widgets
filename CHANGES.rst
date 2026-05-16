@@ -8,6 +8,15 @@ Changelog
 
 .. towncrier release notes start
 
+6.0.0 (2026-05-16)
+------------------
+
+Internal:
+
+
+- Make final release, no further changes.
+
+
 6.0.0a1 (2025-11-26)
 --------------------
 
